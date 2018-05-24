@@ -28,9 +28,9 @@ class PipelineFlow:
         steps = [ {in: [FASTQS], out: STAR_OUT, step: 'PipelineStepRunStar', additional_files: ['s3://idseq-database/wawawa'], additional_attributes: {} },
                   {in: [STAR_OUT], out: DEDUP_OUT, step: 'PipelineStepRunPriceSeq', additional_files: ['s3://idseq-database/wawawa'], additional_attributes: {} },
                   {in: [DEDUP_OUT], out: BOWTIE_OUT, step: 'PipelineStepRunBowtie2', additional_files: ['s3://idseq-database/wawawa'], additional_attributes: {} },
-                  {in: [BOWTIE_OUT], out:  GSNAP_OUT, step: 'PipelineStepRunBowtie2', additional_files: ['s3://idseq-database/wawawa'], additional_attributes: {} },
-                  {in: [BOWTIE_OUT], out:  RAPSEARCH_OUT, step: 'PipelineStepRunBowtie2', additional_files: ['s3://idseq-database/wawawa'], additional_attributes: {} },
-                  {in: [GSNAP_OUT, RAPSEARCH_OUT], out: [TAXON_COUNT_OUT], step: 'PipelineStepRunBowtie2', additional_files: ['s3://idseq-database/wawawa'], additional_attributes: {} },
+                  {in: [BOWTIE_OUT], out:  GSNAP_OUT, step: 'PipelineStepRunGsnap', additional_files: ['s3://idseq-database/wawawa'], additional_attributes: {} },
+                  {in: [BOWTIE_OUT], out:  RAPSEARCH_OUT, step: 'PipelineStepRunRapsearch', additional_files: ['s3://idseq-database/wawawa'], additional_attributes: {} },
+                  {in: [GSNAP_OUT, RAPSEARCH_OUT], out: [TAXON_COUNT_OUT], step: 'PipelineStepRunHitcalling', additional_files: ['s3://idseq-database/wawawa'], additional_attributes: {} },
                  ]
     '''
     self.nodes = nodes

@@ -1,0 +1,53 @@
+{
+  "output_dir_s3": "s3://idseq-samples-prod/1/10/results",
+  "subsample_count": 1000000,
+  "nodes": {
+    "fastqs": ["fastq1.gz", "fastq2.gz"],
+    "star_out": ["unmapped1.fq", "unmapped2.fq"],
+    "dedup_out": ["dedup1.fa", "dedup2.fa"],
+    "bowtie_out": ["bowtie1.fa", "bowtie2.fa"],
+    "gsnap_out":  ["gsnap.m8"],
+    "rapsearch_out":  ["rapsearch.m8"],
+    "taxon_count_out": ["web_sample.json", "gsnap.filtered.m8", "rapsearch.filtered.m8"]
+  },
+
+  "steps": [
+    {
+      "in" : ["fastqs"], "out": "star_out", "step": "PipelineStepRunStar",
+      "additional_files": ["s3://idseq-database/wawawa"],
+      "additional_attributes": {}
+    },
+    {
+      "in" : ["star_out"], "out": "dedup_out", "step": "PipelineStepRunPriceSeq",
+      "additional_files": ["s3://idseq-database/wawawa"],
+      "additional_attributes": {}
+    },
+    {
+      "in" : ["star_out"], "out": "dedup_out", "step": "PipelineStepRunPriceSeq",
+      "additional_files": ["s3://idseq-database/wawawa"],
+      "additional_attributes": {}
+    },
+    {
+      "in" : ["dedup_out"], "out": "bowtie_out", "step": "PipelineStepRunBowtie2",
+      "additional_files": ["s3://idseq-database/wawawa"],
+      "additional_attributes": {}
+    },
+    {
+      "in" : ["bowtie_out"], "out": "gsnap_out", "step": "PipelineStepRunGsnap",
+      "additional_files": ["s3://idseq-database/wawawa"],
+      "additional_attributes": {}
+    },
+    {
+      "in" : ["bowtie_out"], "out": "rapserach_out", "step": "PipelineStepRunRapsearch",
+      "additional_files": ["s3://idseq-database/wawawa"],
+      "additional_attributes": {}
+    },
+    {
+      "in" : ["gsnap_out", "rapserach_out"], "out": "taxon_count_out",
+      "step": "PipelineStepRunHitcalling",
+      "additional_files": ["s3://idseq-database/wawawa"],
+      "additional_attributes": {}
+    }
+  ],
+  "head_nodes": [["fastqs", "s3://idseq-samples-prod/1/10/fastqs"]]
+}

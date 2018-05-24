@@ -1,7 +1,8 @@
 from setuptools import setup
+from idseq_dag import __version__
 
 setup(name='idseq_dag',
-      version='0.1',
+      version=__version__,
       description='executing a DAG for idseq pipeline',
       url='http://github.com/chanzuckerberg/idseq-dag',
       author='IdSeq Team @ Chan Zuckerberg Initiative',
