@@ -1,11 +1,14 @@
 {
-  "output_dir_s3": "s3://idseq-samples-prod/1/10/results",
+  "output_dir_s3": "s3://idseq-samples-prod/1/10/2357/results",
   "subsample_count": 1000000,
   "nodes": {
     "fastqs": ["fastq1.gz", "fastq2.gz"],
     "star_out": ["unmapped1.fq", "unmapped2.fq"],
-    "dedup_out": ["dedup1.fa", "dedup2.fa"],
+    "priceseq_out": ["priceseq1.fq", "priceseq2.fq"],
+    "lzw_out": ["lzw1.fa", "lzw2.fa"],
+    "cdhitdup_out": ["dedup1.fa", "dedup2.fa"],
     "bowtie_out": ["bowtie1.fa", "bowtie2.fa"],
+    "gsnap_filter_out": ["gsnap_filtere1.fa", "gsnap_filtere2.fa"],
     "gsnap_out":  ["gsnap.m8"],
     "rapsearch_out":  ["rapsearch.m8"],
     "taxon_count_out": ["web_sample.json", "gsnap.filtered.m8", "rapsearch.filtered.m8"]
@@ -14,38 +17,48 @@
   "steps": [
     {
       "in" : ["fastqs"], "out": "star_out", "step": "PipelineStepRunStar",
-      "additional_files": ["s3://idseq-database/wawawa"],
-      "additional_attributes": {}
-    },
-    {
-      "in" : ["star_out"], "out": "dedup_out", "step": "PipelineStepRunPriceSeq",
-      "additional_files": ["s3://idseq-database/wawawa"],
+      "additional_files": {"star_genome": "s3://idseq-database/star_genome"},
       "additional_attributes": {"truncate_reads_to": 75000000}
     },
     {
-      "in" : ["dedup_out"], "out": "bowtie_out", "step": "PipelineStepRunBowtie2",
-      "additional_files": ["s3://idseq-database/wawawa"],
+      "in" : ["star_out"], "out": "priceseq_out", "step": "PipelineStepRunPriceSeq",
+      "additional_files": {},
+      "additional_attributes": {}
+    },
+    {
+      "in" : ["priceseq_out"], "out": "lzw_out", "step": "PipelineStepRunLZW",
+      "additional_files": {},
+      "additional_attributes": {"threshold": 0.45}
+    },
+    {
+      "in" : ["lzw_out"], "out": "cdhitdup_out", "step": "PipelineStepRunCDHitDup",
+      "additional_files": {},
+      "additional_attributes": {}
+    },
+    {
+      "in" : ["cdhitdup_out"], "out": "bowtie_out", "step": "PipelineStepRunBowtie2",
+      "additional_files": {"bowtie_genome": "s3://idseq-database/bowtie_genome"},
       "additional_attributes": {}
     },
     {
       "in" : ["bowtie_out"], "out": "gsnap_filter_out", "step": "PipelineStepRunGsnapFilter",
-      "additional_files": ["s3://idseq-database/wawawa"],
+      "additional_files": {"gsnap_genome": "s3://idseq-database/gsnap_genome"},
       "additional_attributes": {"sub_sample_to": 1000000}
     },
     {
       "in" : ["gsnap_filter_out"], "out": "gsnap_out", "step": "PipelineStepRunGsnap",
-      "additional_files": ["s3://idseq-database/wawawa"],
-      "additional_attributes": {"chunk_size": 10000}
+      "additional_files": {},
+      "additional_attributes": {"chunk_size": 10000, "cluster": "prod"}
     },
     {
       "in" : ["gsnap_filter_out"], "out": "rapserach_out", "step": "PipelineStepRunRapsearch",
-      "additional_files": ["s3://idseq-database/wawawa"],
-      "additional_attributes": {"chunk_size": 5000}
+      "additional_files": {},
+      "additional_attributes": {"chunk_size": 5000, "cluster": "prod"}
     },
     {
       "in" : ["gsnap_out", "rapserach_out"], "out": "taxon_count_out",
       "step": "PipelineStepRunHitcalling",
-      "additional_files": ["s3://idseq-database/wawawa"],
+      "additional_files": {},
       "additional_attributes": {}
     }
   ],
