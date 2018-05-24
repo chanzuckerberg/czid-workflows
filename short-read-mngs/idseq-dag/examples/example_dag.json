@@ -20,12 +20,7 @@
     {
       "in" : ["star_out"], "out": "dedup_out", "step": "PipelineStepRunPriceSeq",
       "additional_files": ["s3://idseq-database/wawawa"],
-      "additional_attributes": {}
-    },
-    {
-      "in" : ["star_out"], "out": "dedup_out", "step": "PipelineStepRunPriceSeq",
-      "additional_files": ["s3://idseq-database/wawawa"],
-      "additional_attributes": {}
+      "additional_attributes": {"truncate_reads_to": 75000000}
     },
     {
       "in" : ["dedup_out"], "out": "bowtie_out", "step": "PipelineStepRunBowtie2",
@@ -33,14 +28,19 @@
       "additional_attributes": {}
     },
     {
-      "in" : ["bowtie_out"], "out": "gsnap_out", "step": "PipelineStepRunGsnap",
+      "in" : ["bowtie_out"], "out": "gsnap_filter_out", "step": "PipelineStepRunGsnapFilter",
       "additional_files": ["s3://idseq-database/wawawa"],
-      "additional_attributes": {}
+      "additional_attributes": {"sub_sample_to": 1000000}
     },
     {
-      "in" : ["bowtie_out"], "out": "rapserach_out", "step": "PipelineStepRunRapsearch",
+      "in" : ["gsnap_filter_out"], "out": "gsnap_out", "step": "PipelineStepRunGsnap",
       "additional_files": ["s3://idseq-database/wawawa"],
-      "additional_attributes": {}
+      "additional_attributes": {"chunk_size": 10000}
+    },
+    {
+      "in" : ["gsnap_filter_out"], "out": "rapserach_out", "step": "PipelineStepRunRapsearch",
+      "additional_files": ["s3://idseq-database/wawawa"],
+      "additional_attributes": {"chunk_size": 5000}
     },
     {
       "in" : ["gsnap_out", "rapserach_out"], "out": "taxon_count_out",
