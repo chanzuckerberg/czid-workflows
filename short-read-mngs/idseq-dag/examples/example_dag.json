@@ -1,6 +1,5 @@
 {
-  "output_dir_s3": "s3://idseq-samples-prod/1/10/2357/results",
-  "subsample_count": 1000000,
+  "output_dir_s3": "s3://idseq-samples-prod/1/10/results",
   "nodes": {
     "fastqs": ["fastq1.gz", "fastq2.gz"],
     "star_out": ["unmapped1.fq", "unmapped2.fq"],
@@ -51,12 +50,12 @@
       "additional_attributes": {"chunk_size": 10000, "cluster": "prod"}
     },
     {
-      "in" : ["gsnap_filter_out"], "out": "rapserach_out", "step": "PipelineStepRunRapsearch",
+      "in" : ["gsnap_filter_out"], "out": "rapsearch_out", "step": "PipelineStepRunRapsearch",
       "additional_files": {},
       "additional_attributes": {"chunk_size": 5000, "cluster": "prod"}
     },
     {
-      "in" : ["gsnap_out", "rapserach_out"], "out": "taxon_count_out",
+      "in" : ["gsnap_out", "rapsearch_out"], "out": "taxon_count_out",
       "step": "PipelineStepRunHitcalling",
       "additional_files": {},
       "additional_attributes": {}
