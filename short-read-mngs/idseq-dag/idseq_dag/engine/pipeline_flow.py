@@ -9,33 +9,17 @@ class PipelineFlow:
                output_dir_s3,
                output_dir_local='/mnt/idseq/results',
                ref_dir_local='/mnt/idseq/ref'):
-      '''
-        # Here is an example of nodes/steps representation
-        # Simplified for illustration
-        # nodes: specify the list of files
-        # steps: the PipelineStep s
-        # head_nodes: list of input files that are given  (not required but nth)
-        INPUT_DIR_S3 = 's3://idseq-samples-production/1/10/fastqs'
-        FASTQS = ['input1.fastq', 'input2.fastq']
-        STAR_OUT = ['unmapped1.fq', 'unmapped2.fq']
-        DEDUP_OUT = ['dedup1.fa', 'dedup2.fa']
-        BOWTIE_OUT = ['bowtie1.fa', 'bowtie2.fa']
-        GSNAP_OUT = ['gsnap.m8']
-        RAPSEARCH_OUT = ['rapsearch.m8']
-        TAXON_COUNT_OUT = ['web_sample.json']
-        nodes = [FASTQS, STAR_OUT, DEDUP_OUT, BOWTIE_OUT, GSNAP_OUT, RAPSEARCH_OUT, TAXON_COUNT_OUT]
-        head_nodes = [(FASTQS, INPUT_DIR_S3)]
-        steps = [ {in: [FASTQS], out: STAR_OUT, step: 'PipelineStepRunStar', additional_files: ['s3://idseq-database/wawawa'], additional_attributes: {} },
-                  {in: [STAR_OUT], out: DEDUP_OUT, step: 'PipelineStepRunPriceSeq', additional_files: ['s3://idseq-database/wawawa'], additional_attributes: {} },
-                  {in: [DEDUP_OUT], out: BOWTIE_OUT, step: 'PipelineStepRunBowtie2', additional_files: ['s3://idseq-database/wawawa'], additional_attributes: {} },
-                  {in: [BOWTIE_OUT], out:  GSNAP_OUT, step: 'PipelineStepRunGsnap', additional_files: ['s3://idseq-database/wawawa'], additional_attributes: {} },
-                  {in: [BOWTIE_OUT], out:  RAPSEARCH_OUT, step: 'PipelineStepRunRapsearch', additional_files: ['s3://idseq-database/wawawa'], additional_attributes: {} },
-                  {in: [GSNAP_OUT, RAPSEARCH_OUT], out: [TAXON_COUNT_OUT], step: 'PipelineStepRunHitcalling', additional_files: ['s3://idseq-database/wawawa'], additional_attributes: {} },
-                 ]
     '''
+        See examples/example_dag.json and
+            idseq_dag.main.validate_dag_json for more details.
+    '''
+    self.lazy_run = lazy_run
     self.nodes = nodes
-    self.edges = eges
+    self.steps = steps
     self.head_nodes = head_nodes
+    self.output_dir_s3 = output_dir_s3
+    self.output_dir_local = output_dir_local
+    self.ref_dir_local = ref_dir_local
 
  def start():
    '''

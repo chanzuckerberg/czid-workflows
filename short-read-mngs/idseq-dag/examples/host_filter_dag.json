@@ -1,5 +1,5 @@
 {
-  "output_dir_s3": "s3://idseq-samples-prod/1/10/results",
+  "output_dir_s3": "s3://idseq-samples-prod/samples/71/4542/results",
   "nodes": {
     "fastqs": ["RR004_water_2_S23_R1_001.fastq.gz", "RR004_water_2_S23_R2_001.fastq.gz"],
     "star_out": ["unmapped1.fq", "unmapped2.fq"],
