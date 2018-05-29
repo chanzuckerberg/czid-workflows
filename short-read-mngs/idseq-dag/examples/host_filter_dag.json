@@ -1,0 +1,46 @@
+{
+  "output_dir_s3": "s3://idseq-samples-prod/1/10/results",
+  "nodes": {
+    "fastqs": ["RR004_water_2_S23_R1_001.fastq.gz", "RR004_water_2_S23_R2_001.fastq.gz"],
+    "star_out": ["unmapped1.fq", "unmapped2.fq"],
+    "priceseq_out": ["priceseq1.fq", "priceseq2.fq"],
+    "lzw_out": ["lzw1.fa", "lzw2.fa"],
+    "cdhitdup_out": ["dedup1.fa", "dedup2.fa"],
+    "bowtie_out": ["bowtie1.fa", "bowtie2.fa"],
+    "gsnap_filter_out": ["gsnap_filtere1.fa", "gsnap_filtere2.fa"]
+  },
+
+  "steps": [
+    {
+      "in" : ["fastqs"], "out": "star_out", "step": "PipelineStepRunStar",
+      "additional_files": {"star_genome": "s3://idseq-database/star_genome"},
+      "additional_attributes": {"truncate_reads_to": 75000000}
+    },
+    {
+      "in" : ["star_out"], "out": "priceseq_out", "step": "PipelineStepRunPriceSeq",
+      "additional_files": {},
+      "additional_attributes": {}
+    },
+    {
+      "in" : ["priceseq_out"], "out": "lzw_out", "step": "PipelineStepRunLZW",
+      "additional_files": {},
+      "additional_attributes": {"threshold": 0.45}
+    },
+    {
+      "in" : ["lzw_out"], "out": "cdhitdup_out", "step": "PipelineStepRunCDHitDup",
+      "additional_files": {},
+      "additional_attributes": {}
+    },
+    {
+      "in" : ["cdhitdup_out"], "out": "bowtie_out", "step": "PipelineStepRunBowtie2",
+      "additional_files": {"bowtie_genome": "s3://idseq-database/bowtie_genome"},
+      "additional_attributes": {}
+    },
+    {
+      "in" : ["bowtie_out"], "out": "gsnap_filter_out", "step": "PipelineStepRunGsnapFilter",
+      "additional_files": {"gsnap_genome": "s3://idseq-database/gsnap_genome"},
+      "additional_attributes": {"truncate_reads_to": 10000000}
+    }
+  ],
+  "head_nodes": [["fastqs", "s3://idseq-samples-prod/samples/71/4542/fastqs"]]
+}
