@@ -7,7 +7,7 @@ import idseq_dag
 import importlib
 
 class PipelineFlow:
-    def __init__(self, lazy_run,G
+    def __init__(self, lazy_run,
                  nodes, steps, head_nodes,
                  output_dir_s3,
                  output_dir_local='/mnt/idseq/results',

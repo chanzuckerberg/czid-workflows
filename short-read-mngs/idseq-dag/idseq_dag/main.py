@@ -4,6 +4,7 @@ import sys
 import os
 import traceback
 import idseq_dag.util.s3
+from idseq_dag.engine.pipeline_flow import PipelineFlow
 
 def validate_dag_json(json_file):
     '''
@@ -44,7 +45,7 @@ def validate_dag_json(json_file):
             if node_name not in covered_nodes:
                 print("%s couldn't be generated from the steps" % node_name)
                 return False
-        return True
+        return dag
     except:
         traceback.print_exc()
         return False
@@ -54,8 +55,12 @@ def main():
     parser.add_argument('dag_json', help='pipeline dag in json file format')
     args = parser.parse_args()
     dag_json_file = args.dag_json
-    if not validate_dag_json(dag_json_file):
+    dag = validate_dag_json(dag_json_file)
+    if not dag:
         parser.print_help()
         sys.exit(1)
     print("everything is awesome. idseq dag is awesome")
+    flow = PipelineFlow(lazy_run=True, nodes = dag["nodes"], steps = dag["steps"],
+                        head_nodes = dag["head_nodes"], output_dir_s3 = dag["output_dir_s3"])
+    flow.start()
 
