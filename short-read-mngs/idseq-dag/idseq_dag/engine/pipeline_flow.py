@@ -24,6 +24,7 @@ class PipelineFlow:
 
 
  def plan(self):
+     lazy_run = self.lazy_run
 
  def start(self):
    '''
@@ -33,4 +34,5 @@ class PipelineFlow:
           3. start running based on the file dependency.
              At the end of the run all the nodes should be generated
    '''
+   execution_plan = self.plan()
 

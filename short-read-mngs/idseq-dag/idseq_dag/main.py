@@ -21,21 +21,29 @@ def validate_dag_json(json_file):
         nodes = dag["nodes"]
         steps = dag["steps"]
         head_nodes = dag["head_nodes"]
+        covered_nodes = set()
         for s in steps:
             # validate each step in/out are valid nodes
             output = nodes[s["out"]]
+            covered_nodes.add(s["out"])
             for inode in s["in"]:
                 input_n = nodes[inode]
         for hn in head_nodes:
             # validate the head nodes exist in s3
             node_name = hn[0]
             s3_path = hn[1]
+            covered_nodes.add(node_name)
             for file_name in nodes[node_name]:
                 s3_file = os.path.join(s3_path, file_name)
                 if not idseq_dag.util.s3.check_s3_presence(s3_file):
                     print("%s file doesn't exist" % s3_file)
                     return False
+        # Check that all nodes are covered
         # ALL Inputs Outputs VALIDATED
+        for node_name in nodes.keys():
+            if node_name not in covered_nodes:
+                print("%s couldn't be generated from the steps" % node_name)
+                return False
         return True
     except:
         traceback.print_exc()
