@@ -2,6 +2,7 @@ import json
 import sys
 import os
 import multiprocess
+import idseq_dag
 
 class PipelineFlow:
   def __init__(self, lazy_run,
@@ -17,11 +18,14 @@ class PipelineFlow:
     self.nodes = nodes
     self.steps = steps
     self.head_nodes = head_nodes
-    self.output_dir_s3 = output_dir_s3
+    self.output_dir_s3 = os.path.join(output_dir_s3, idseqdag.__version__)
     self.output_dir_local = output_dir_local
     self.ref_dir_local = ref_dir_local
 
- def start():
+
+ def plan(self):
+
+ def start(self):
    '''
           1. Traverse through the from the head nodes. Find the components that actually need to be run
           2. Come up with a large file download plan based on the components that need

@@ -13,7 +13,7 @@
   "steps": [
     {
       "in" : ["fastqs"], "out": "star_out", "step": "PipelineStepRunStar",
-      "additional_files": {"star_genome": "s3://idseq-database/star_genome"},
+      "additional_files": {"star_genome": "s3://idseq-database/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/STAR_genome.tar"},
       "additional_attributes": {"truncate_reads_to": 75000000}
     },
     {
@@ -33,12 +33,12 @@
     },
     {
       "in" : ["cdhitdup_out"], "out": "bowtie_out", "step": "PipelineStepRunBowtie2",
-      "additional_files": {"bowtie_genome": "s3://idseq-database/bowtie_genome"},
+      "additional_files": {"bowtie2_genome": "s3://idseq-database/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/bowtie2_genome.tar"},
       "additional_attributes": {}
     },
     {
       "in" : ["bowtie_out"], "out": "gsnap_filter_out", "step": "PipelineStepRunGsnapFilter",
-      "additional_files": {"gsnap_genome": "s3://idseq-database/gsnap_genome"},
+      "additional_files": {"gsnap_genome": "s3://idseq-database/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/hg38_pantro5_k16.tar"},
       "additional_attributes": {"truncate_reads_to": 10000000}
     }
   ],
