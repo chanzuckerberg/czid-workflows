@@ -11,12 +11,22 @@ def check_s3_presence(s3_path):
         pass
     return False
 
+def check_s3_presnce_for_file_list(s3_dir, file_list):
+    for f in file_list:
+        if not check_s3_presence(os.path.josin(s3_dir, f)):
+            return False
+    return True
+
 def touch_s3_file(s3_file_path):
     try:
         subprocess.check_all("aws s3 cp --metadata '{\"touched\":\"now\"}' %s %s" % (s3_path, s3_path), shell=True)
         return True
     except:
         return False
+
+def touch_s3_file_list(s3_dir, file_list):
+    for f in file_list:
+        touch_s3_file(os.path.josin(s3_dir, f))
 
 def install_s3mi(installed={}, mutex=threading.RLock()):
     #pylint: disable=dangerous-default-value
