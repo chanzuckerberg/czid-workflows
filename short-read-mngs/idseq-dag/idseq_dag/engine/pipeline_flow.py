@@ -1,29 +1,78 @@
+import importlib
 import json
 import sys
 import os
-import multiprocess
 import threading
+import traceback
+
 import idseq_dag
-import importlib
+import idseq_dag.util.s3
+
+DEFAULT_OUTPUT_DIR_LOCAL = '/mnt/idseq/results'
+DEFAULT_REF_DIR_LOCAL = '/mnt/idseq/ref'
 
 class PipelineFlow:
-    def __init__(self, lazy_run,
-                 nodes, steps, head_nodes,
-                 output_dir_s3,
-                 output_dir_local='/mnt/idseq/results',
-                 ref_dir_local='/mnt/idseq/ref'):
+    def __init__(self, lazy_run, dag_json):
         '''
-                See examples/example_dag.json and
-                        idseq_dag.main.validate_dag_json for more details.
+            See examples/example_dag.json and
+                idseq_dag.main.validate_dag_json for more details.
         '''
         self.lazy_run = lazy_run
-        self.nodes = nodes
-        self.steps = steps
-        self.head_nodes = head_nodes
-        self.output_dir_s3 = os.path.join(output_dir_s3, idseqdag.__version__)
-        self.output_dir_local = output_dir_local
-        self.ref_dir_local = ref_dir_local
+        dag = self.parse_and_validate_conf(dag_json)
+        (nodes, steps, head_nodes, output_dir_s3)
+        self.nodes = dag["nodes"]
+        self.steps = dag["steps"]
+        self.head_nodes = dag["head_nodes"]
+        self.output_dir_s3 = os.path.join(dag["output_dir_s3"],idseqdag.__version__)
+        self.output_dir_local = dag.get("output_dir_local", DEFAULT_OUTPUT_DIR_LOCAL)
+        self.ref_dir_local = dag.get("ref_dir_local", DEFAULT_REF_DIR_LOCAL)
 
+    def parse_and_validate_conf(self, dag_json):
+        '''
+        Validate the json format. see examples/*.json.
+        Required fields are:
+          "output_dir_s3": base results folder. a pipeline version number will be appended for real output folder.
+          "nodes": lists of files that are given or would be generated
+          "steps": steps that species actions to generate input and output
+          "head_nodes": input files that are given
+
+        '''
+        dag = json.loads(open(dag_json).read())
+        output_dir = dag["output_dir_s3"]
+        nodes = dag["nodes"]
+        steps = dag["steps"]
+        head_nodes = dag["head_nodes"]
+        covered_nodes = set()
+        for s in steps:
+            # validate each step in/out are valid nodes
+            for inode in s["in"]:
+                if inode not in nodes:
+                    print("input %s doesn't exit for step %s" % (inode, s["out"]))
+                    raise
+            if s["out"] not in nodes:
+                print("%s node doesn't exit" % s["out"])
+                raise
+            if s["out"] in covered_nodes:
+                print("%s hasn't been generated in other steps" % s["out"])
+                raise
+            covered_nodes.add(s["out"])
+        for hn in head_nodes:
+            # validate the head nodes exist in s3
+            node_name = hn[0]
+            s3_path = hn[1]
+            covered_nodes.add(node_name)
+            for file_name in nodes[node_name]:
+                s3_file = os.path.join(s3_path, file_name)
+                if s3_file not idseq_dag.util.s3.check_s3_presence(s3_file):
+                    print("%s file doesn't exist" % s3_file)
+                    raise
+        # Check that all nodes are covered
+        # ALL Inputs Outputs VALIDATED
+        for node_name in nodes.keys():
+            if node_name not in covered_nodes:
+                print("%s couldn't be generated from the steps" % node_name)
+                raise
+        return dag
 
     def plan(self):
         '''
