@@ -54,11 +54,11 @@ class PipelineFlow:
                             if covered_nodes[node]['lazy_run'] == False:
                                     lazy_run = False
                     if step_can_be_run: # All the input is satisfied
-                        steps_complete(step["step_id"])
+                        steps_complete.add(step["step_id"])
                         file_list= self.nodes[step["out"]]
                         if lazy_run and idseq_dag.util.s3.check_s3_presnce_for_file_list(self.output_dir_s3, file_list):
                             # output can be lazily generated. touch the output
-                            idseq_dag.util.s3.touch_s3_file_list(self.output_dir_s3, file_list)
+                            #idseq_dag.util.s3.touch_s3_file_list(self.output_dir_s3, file_list)
                             s3_downlodable = True
                         else:
                             # steps need to be run
@@ -83,10 +83,10 @@ class PipelineFlow:
             for node in step["in"]:
                 node_info = covered_nodes[node]
                 if node_info['s3_downloadable']:
-                    multiprocess.Process(target=self.fetch_node_from_s3, args=(node,)).start()
+                    threading.Thread(target=self.fetch_node_from_s3, args=(node,)).start()
         # use  fetch_from_s3 plus threading for the large_file_donwload for necessary steps
         for f in large_file_download_list:
-            multiprocess.Process(target=fetch_from_s3, args=(f, self.output_dir_local,)).start()
+            threading.Thread(target=fetch_from_s3, args=(f, self.output_dir_local,)).start()
 
         # Start initializing all the steps and start running them and wait until all of them are done
         step_instances = []
