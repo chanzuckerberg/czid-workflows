@@ -15,48 +15,48 @@
 
   "steps": [
     {
-      "in" : ["fastqs"], "out": "star_out", "step": "PipelineStepRunStar",
+      "in" : ["fastqs"], "out": "star_out", "class": "PipelineStepRunStar",
       "additional_files": {"star_genome": "s3://idseq-database/star_genome"},
       "additional_attributes": {"truncate_reads_to": 75000000}
     },
     {
-      "in" : ["star_out"], "out": "priceseq_out", "step": "PipelineStepRunPriceSeq",
+      "in" : ["star_out"], "out": "priceseq_out", "class": "PipelineStepRunPriceSeq",
       "additional_files": {},
       "additional_attributes": {}
     },
     {
-      "in" : ["priceseq_out"], "out": "lzw_out", "step": "PipelineStepRunLZW",
+      "in" : ["priceseq_out"], "out": "lzw_out", "class": "PipelineStepRunLZW",
       "additional_files": {},
       "additional_attributes": {"threshold": 0.45}
     },
     {
-      "in" : ["lzw_out"], "out": "cdhitdup_out", "step": "PipelineStepRunCDHitDup",
+      "in" : ["lzw_out"], "out": "cdhitdup_out", "class": "PipelineStepRunCDHitDup",
       "additional_files": {},
       "additional_attributes": {}
     },
     {
-      "in" : ["cdhitdup_out"], "out": "bowtie_out", "step": "PipelineStepRunBowtie2",
+      "in" : ["cdhitdup_out"], "out": "bowtie_out", "class": "PipelineStepRunBowtie2",
       "additional_files": {"bowtie_genome": "s3://idseq-database/bowtie_genome"},
       "additional_attributes": {}
     },
     {
-      "in" : ["bowtie_out"], "out": "gsnap_filter_out", "step": "PipelineStepRunGsnapFilter",
+      "in" : ["bowtie_out"], "out": "gsnap_filter_out", "class": "PipelineStepRunGsnapFilter",
       "additional_files": {"gsnap_genome": "s3://idseq-database/gsnap_genome"},
       "additional_attributes": {"sub_sample_to": 1000000}
     },
     {
-      "in" : ["gsnap_filter_out"], "out": "gsnap_out", "step": "PipelineStepRunGsnap",
+      "in" : ["gsnap_filter_out"], "out": "gsnap_out", "class": "PipelineStepRunGsnap",
       "additional_files": {},
       "additional_attributes": {"chunk_size": 10000, "cluster": "prod"}
     },
     {
-      "in" : ["gsnap_filter_out"], "out": "rapsearch_out", "step": "PipelineStepRunRapsearch",
+      "in" : ["gsnap_filter_out"], "out": "rapsearch_out", "class": "PipelineStepRunRapsearch",
       "additional_files": {},
       "additional_attributes": {"chunk_size": 5000, "cluster": "prod"}
     },
     {
       "in" : ["gsnap_out", "rapsearch_out"], "out": "taxon_count_out",
-      "step": "PipelineStepRunHitcalling",
+      "class": "PipelineStepRunHitcalling",
       "additional_files": {},
       "additional_attributes": {}
     }
