@@ -84,26 +84,26 @@ class PipelineFlow:
         large_file_download_list = []
         step_list = []
         for hn in self.head_nodes:
-            covered_nodes[hn[0]] = { 'round': 0, 'lazy_run': self.lazy_run, 's3_downlodable': True }
+            covered_nodes[hn[0]] = { 'depth': 0, 'lazy_run': self.lazy_run, 's3_downlodable': True }
         steps_complete = set()
         while len(steps_complete) < len(self.steps):
             # run until all the steps can be run
             current_nodes = {}
             for step in self.steps:
-                if step["step_id"] not in steps_complete:
+                if step["out"] not in steps_complete:
                     step_can_be_run = True
-                    round_max = 0
+                    depth_max = 0
                     lazy_run = True
                     for node in step["in"]:
                         if node not in covered_nodes:
                             step_can_be_run = False
                             break
                         else:
-                            round_max = max(covered_nodes[node]['round'], round_max)
+                            depth_max = max(covered_nodes[node]['depth'], depth_max)
                             if covered_nodes[node]['lazy_run'] == False:
                                     lazy_run = False
                     if step_can_be_run: # All the input is satisfied
-                        steps_complete.add(step["step_id"])
+                        steps_complete.add(step["out"])
                         file_list= self.nodes[step["out"]]
                         if lazy_run and idseq_dag.util.s3.check_s3_presnce_for_file_list(self.output_dir_s3, file_list):
                             # output can be lazily generated. touch the output
@@ -117,7 +117,7 @@ class PipelineFlow:
                             # The following can be changed to append if we want to get the round information
                             large_file_download_list += step["additional_files"].values()
                         # update nodes available for the next round
-                        current_nodes[step["out"]] = { 'round': (round_max + 1), 'lazy_run': lazy_run, 's3_downlodable': s3_downlodable}
+                        current_nodes[step["out"]] = { 'depth': (depth_max + 1), 'lazy_run': lazy_run, 's3_downlodable': s3_downlodable}
             covered_nodes.update(current_nodes)
         return (step_list, large_file_download_list, covered_nodes)
 
@@ -140,9 +140,12 @@ class PipelineFlow:
         # Start initializing all the steps and start running them and wait until all of them are done
         step_instances = []
         for step in step_list:
-            StepClass = getattr(importlib.import_module(step["module"]), step["step"])
-            step_instance = StepClass(step["in"], step["out"],
+            StepClass = getattr(importlib.import_module(step["module"]), step["class"])
+            step_output = self.nodes[step["out"]]
+            step_inputs = [self.nodes[inode] for inode in step["in"]]
+            step_instance = StepClass(step_inputs, step_output,
                                       self.output_dir_local, self.output_dir_s3, self.ref_dir_local
                                       step["additional_files"], step["additional_attributes"])
             step_instance.start()
             step_instances.append(step_instance)
+        # Collecting stats files
