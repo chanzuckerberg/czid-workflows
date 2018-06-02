@@ -4,9 +4,11 @@ import sys
 import os
 import threading
 import traceback
+import subprocess
 
 import idseq_dag
 import idseq_dag.util.s3
+from idsea_dag.engine.pipeline_step import PipelineStep
 
 DEFAULT_OUTPUT_DIR_LOCAL = '/mnt/idseq/results'
 DEFAULT_REF_DIR_LOCAL = '/mnt/idseq/ref'
@@ -24,8 +26,10 @@ class PipelineFlow:
         self.steps = dag["steps"]
         self.head_nodes = dag["head_nodes"]
         self.output_dir_s3 = os.path.join(dag["output_dir_s3"],idseqdag.__version__)
-        self.output_dir_local = dag.get("output_dir_local", DEFAULT_OUTPUT_DIR_LOCAL)
+        self.output_dir_local = dag.get("output_dir_local", DEFAULT_OUTPUT_DIR_LOCAL).rstrip('/')
         self.ref_dir_local = dag.get("ref_dir_local", DEFAULT_REF_DIR_LOCAL)
+        subprocess.check_call("mkdir -p %s %s" % (self.output_dir_local, self.ref_dir_local), shell=True)
+
 
     def parse_and_validate_conf(self, dag_json):
         '''
@@ -121,8 +125,26 @@ class PipelineFlow:
             covered_nodes.update(current_nodes)
         return (step_list, large_file_download_list, covered_nodes)
 
-    def fetch_node_from_s3(node):
-        ''' To Be Implemented. a .done file should be written to the result dir when the download is complete '''
+    def fetch_node_from_s3(self, node):
+        ''' .done file should be written to the result dir when the download is complete '''
+        head_nodes_path = {}
+        files_to_download = []
+        for hn in self.head_nodes:
+            head_nodes_path[hn[0]] = hn[1]
+        if node in head_nodes_path:
+            input_path_s3 = head_nodes_path[node]
+        else:
+            input_path_s3 = self.output_dir_s3
+
+        for f in self.nodes[node]:
+            s3_file = os.path.join(input_path_s3, f)
+            local_file = os.path.join(self.output_dir_local, f)
+            # copy the file over
+            subprocess.check_call("aws s3 cp %s %s/" % (s3_file, self.output_dir_local), shell=True)
+
+            # write the done_file
+            done_file = PipelineStep.done_file(local_file)
+            subprocess.check_call("date > %s" % done_file, shell=True)
 
     def start(self):
         # Come up with the plan
