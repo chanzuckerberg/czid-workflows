@@ -1,12 +1,12 @@
 # IDSEQ-DAG
 
-# Installation
+## Installation
 
 ```
 cd idseq-dag; pip3 install -e .
 ```
 
-# Example
+## Example
 
 ```
 idseq_dag examples/host_filter_dag.json
