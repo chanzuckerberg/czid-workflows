@@ -8,7 +8,7 @@ import subprocess
 
 import idseq_dag
 import idseq_dag.util.s3
-from idsea_dag.engine.pipeline_step import PipelineStep
+from idseq_dag.engine.pipeline_step import PipelineStep
 
 DEFAULT_OUTPUT_DIR_LOCAL = '/mnt/idseq/results'
 DEFAULT_REF_DIR_LOCAL = '/mnt/idseq/ref'
@@ -21,11 +21,10 @@ class PipelineFlow:
         '''
         self.lazy_run = lazy_run
         dag = self.parse_and_validate_conf(dag_json)
-        (nodes, steps, head_nodes, output_dir_s3)
         self.nodes = dag["nodes"]
         self.steps = dag["steps"]
         self.head_nodes = dag["head_nodes"]
-        self.output_dir_s3 = os.path.join(dag["output_dir_s3"],idseqdag.__version__)
+        self.output_dir_s3 = os.path.join(dag["output_dir_s3"],idseq_dag.__version__)
         self.output_dir_local = dag.get("output_dir_local", DEFAULT_OUTPUT_DIR_LOCAL).rstrip('/')
         self.ref_dir_local = dag.get("ref_dir_local", DEFAULT_REF_DIR_LOCAL)
         subprocess.check_call("mkdir -p %s %s" % (self.output_dir_local, self.ref_dir_local), shell=True)
@@ -51,14 +50,11 @@ class PipelineFlow:
             # validate each step in/out are valid nodes
             for inode in s["in"]:
                 if inode not in nodes:
-                    print("input %s doesn't exit for step %s" % (inode, s["out"]))
-                    raise
+                    raise ValueError("input %s doesn't exit for step %s" % (inode, s["out"]))
             if s["out"] not in nodes:
-                print("%s node doesn't exit" % s["out"])
-                raise
+                raise ValueError("%s node doesn't exit" % s["out"])
             if s["out"] in covered_nodes:
-                print("%s hasn't been generated in other steps" % s["out"])
-                raise
+                raise ValueError("%s hasn't been generated in other steps" % s["out"])
             covered_nodes.add(s["out"])
         for hn in head_nodes:
             # validate the head nodes exist in s3
@@ -67,15 +63,14 @@ class PipelineFlow:
             covered_nodes.add(node_name)
             for file_name in nodes[node_name]:
                 s3_file = os.path.join(s3_path, file_name)
-                if s3_file not idseq_dag.util.s3.check_s3_presence(s3_file):
-                    print("%s file doesn't exist" % s3_file)
-                    raise
+                if not idseq_dag.util.s3.check_s3_presence(s3_file):
+                    raise ValueError("%s file doesn't exist" % s3_file)
         # Check that all nodes are covered
         # ALL Inputs Outputs VALIDATED
         for node_name in nodes.keys():
             if node_name not in covered_nodes:
-                print("%s couldn't be generated from the steps" % node_name)
-                raise
+                raise ValueError("%s couldn't be generated from the steps" % node_name)
+
         return dag
 
     def plan(self):
@@ -105,7 +100,7 @@ class PipelineFlow:
                         else:
                             depth_max = max(covered_nodes[node]['depth'], depth_max)
                             if covered_nodes[node]['lazy_run'] == False:
-                                    lazy_run = False
+                                lazy_run = False
                     if step_can_be_run: # All the input is satisfied
                         steps_complete.add(step["out"])
                         file_list= self.nodes[step["out"]]
@@ -128,7 +123,6 @@ class PipelineFlow:
     def fetch_node_from_s3(self, node):
         ''' .done file should be written to the result dir when the download is complete '''
         head_nodes_path = {}
-        files_to_download = []
         for hn in self.head_nodes:
             head_nodes_path[hn[0]] = hn[1]
         if node in head_nodes_path:
@@ -155,9 +149,11 @@ class PipelineFlow:
                 node_info = covered_nodes[node]
                 if node_info['s3_downloadable']:
                     threading.Thread(target=self.fetch_node_from_s3, args=(node,)).start()
-        # use  fetch_from_s3 plus threading for the large_file_donwload for necessary steps
-        for f in large_file_download_list:
-            threading.Thread(target=fetch_from_s3, args=(f, self.output_dir_local,)).start()
+
+        # use fetch_from_s3 plus threading for the large_file_donwload for necessary steps
+        # TO BE IMPLEMENTED
+        #for f in large_file_download_list:
+        #    threading.Thread(target=fetch_from_s3, args=(f, self.output_dir_local,)).start()
 
         # Start initializing all the steps and start running them and wait until all of them are done
         step_instances = []
@@ -166,7 +162,7 @@ class PipelineFlow:
             step_output = self.nodes[step["out"]]
             step_inputs = [self.nodes[inode] for inode in step["in"]]
             step_instance = StepClass(step_inputs, step_output,
-                                      self.output_dir_local, self.output_dir_s3, self.ref_dir_local
+                                      self.output_dir_local, self.output_dir_s3, self.ref_dir_local,
                                       step["additional_files"], step["additional_attributes"])
             step_instance.start()
             step_instances.append(step_instance)
