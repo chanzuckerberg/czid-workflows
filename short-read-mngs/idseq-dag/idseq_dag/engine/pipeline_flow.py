@@ -147,7 +147,7 @@ class PipelineFlow:
         for step in step_list: # download the files from s3 when necessary
             for node in step["in"]:
                 node_info = covered_nodes[node]
-                if node_info['s3_downloadable']:
+                if node_info['s3_downlodable']:
                     threading.Thread(target=self.fetch_node_from_s3, args=(node,)).start()
 
         # use fetch_from_s3 plus threading for the large_file_donwload for necessary steps
