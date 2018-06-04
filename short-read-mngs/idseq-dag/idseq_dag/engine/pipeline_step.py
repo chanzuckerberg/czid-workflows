@@ -35,11 +35,7 @@ class PipelineStep:
         return [os.path.join(self.output_dir_local, f) for f in self.output_files]
 
     def start_uploading_results(self):
-        ''' Tag the output files as done and upload to s3 '''
-        for f in self.output_files_local():
-            # Tag the done files
-            done_file = self.done_file(f)
-            subprocess.check_call("date > %s" % done_file, shell=True)
+        ''' Upload output files to s3 '''
         for f in self.output_files_local():
             # upload to S3 - TODO(Boris): parallelize the following with better calls
             subprocess.check_call("aws s3 cp %s %s/" % (f, self.output_dir_s3), shell=True)
@@ -65,7 +61,7 @@ class PipelineStep:
                 local_file = os.path.join(self.output_dir_local, f)
                 self.wait_for_file_existence(local_file)
                 self.wait_for_file_existence(self.done_file(local_file))
-                flist.append(f)
+                flist.append(local_file)
             self.input_files_local.append(flist)
 
 
@@ -76,12 +72,22 @@ class PipelineStep:
         # TO BE IMPLEMENTED
         pass
 
+    def validate(self):
+        ''' Make sure all the output files are generated. '''
+        for f in self.output_files_local():
+            if not os.path.exists(f):
+                raise RuntimeError("output file %s should be generated after run" % f)
+            # Tag the done files
+            done_file = self.done_file(f)
+            subprocess.check_call("date > %s" % done_file, shell=True)
+
     def thread_run(self):
         ''' Actually running the step '''
         #Timer.start()
         self.started = True
         self.wait_for_input_files()
         self.run()
+        self.validate()
         self.finished = True
         self.save_progress()
         #Timer.finalize()

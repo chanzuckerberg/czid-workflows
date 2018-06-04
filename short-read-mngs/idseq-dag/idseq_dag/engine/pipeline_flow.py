@@ -123,6 +123,7 @@ class PipelineFlow:
     def fetch_node_from_s3(self, node):
         ''' .done file should be written to the result dir when the download is complete '''
         head_nodes_path = {}
+        print("Downloading node %s" % node)
         for hn in self.head_nodes:
             head_nodes_path[hn[0]] = hn[1]
         if node in head_nodes_path:
@@ -158,6 +159,7 @@ class PipelineFlow:
         # Start initializing all the steps and start running them and wait until all of them are done
         step_instances = []
         for step in step_list:
+            print("Starting step %s" % step["out"])
             StepClass = getattr(importlib.import_module(step["module"]), step["class"])
             step_output = self.nodes[step["out"]]
             step_inputs = [self.nodes[inode] for inode in step["in"]]
