@@ -10,7 +10,7 @@ import idseq_dag
 import idseq_dag.util.s3
 from idseq_dag.engine.pipeline_step import PipelineStep
 
-DEFAULT_OUTPUT_DIR_LOCAL = '/mnt/idseq/results'
+DEFAULT_OUTPUT_DIR_LOCAL = '/mnt/idseq/results/%d' % os.getpid()
 DEFAULT_REF_DIR_LOCAL = '/mnt/idseq/ref'
 
 class PipelineFlow:
@@ -24,10 +24,15 @@ class PipelineFlow:
         self.nodes = dag["nodes"]
         self.steps = dag["steps"]
         self.head_nodes = dag["head_nodes"]
-        self.output_dir_s3 = os.path.join(dag["output_dir_s3"],idseq_dag.__version__)
+        self.output_dir_s3 = os.path.join(dag["output_dir_s3"],
+                                          self.parse_output_version(idseq_dag.__version__))
         self.output_dir_local = dag.get("output_dir_local", DEFAULT_OUTPUT_DIR_LOCAL).rstrip('/')
         self.ref_dir_local = dag.get("ref_dir_local", DEFAULT_REF_DIR_LOCAL)
         subprocess.check_call("mkdir -p %s %s" % (self.output_dir_local, self.ref_dir_local), shell=True)
+
+    @staticmethod
+    def parse_output_version(version):
+        return ".".join(version.split(".")[0:2])
 
 
     def parse_and_validate_conf(self, dag_json):
