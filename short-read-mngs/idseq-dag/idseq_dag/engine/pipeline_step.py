@@ -8,10 +8,11 @@ from abc import abstractmethod
 
 class PipelineStep:
     ''' Each Pipeline Run Step i.e. run_star, run_bowtie, etc '''
-    def __init__(self, input_files, output_files,
+    def __init__(self, name, input_files, output_files,
                  output_dir_local, output_dir_s3, ref_dir_local,
                  additional_files, additional_attributes):
         ''' Set up all the input_files and output_files here '''
+        self.name = name
         self.input_files = input_files # list of list files
         self.output_files = output_files # s3 location
         self.output_dir_local = output_dir_local

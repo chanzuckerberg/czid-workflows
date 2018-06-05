@@ -168,7 +168,7 @@ class PipelineFlow:
             StepClass = getattr(importlib.import_module(step["module"]), step["class"])
             step_output = self.nodes[step["out"]]
             step_inputs = [self.nodes[inode] for inode in step["in"]]
-            step_instance = StepClass(step_inputs, step_output,
+            step_instance = StepClass(step["out"], step_inputs, step_output,
                                       self.output_dir_local, self.output_dir_s3, self.ref_dir_local,
                                       step["additional_files"], step["additional_attributes"])
             step_instance.start()
