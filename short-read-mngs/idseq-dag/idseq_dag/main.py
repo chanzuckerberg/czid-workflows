@@ -1,8 +1,9 @@
+#!/usr/bin/env python3
+
 import argparse
 import json
 import sys
 import os
-import traceback
 import idseq_dag.util.s3
 from idseq_dag.engine.pipeline_flow import PipelineFlow
 
@@ -17,8 +18,7 @@ def main():
                             dag_json=args.dag_json)
         print("everything is awesome. idseq dag is valid~")
     except:
-        traceback.print_exc()
         parser.print_help()
-        sys.exit(1)
+        raise
     print("start executing the dag")
     flow.start()
