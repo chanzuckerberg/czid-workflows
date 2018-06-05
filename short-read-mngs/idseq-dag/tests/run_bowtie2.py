@@ -4,8 +4,8 @@ import os
 import subprocess
 import time
 
-from idseq_dag.steps.run_bowtie2 import PipelineStepRunBowtie2
 from idseq_dag.engine.pipeline_flow import PipelineFlow
+from idseq_dag.steps.run_bowtie2 import PipelineStepRunBowtie2
 
 class RunBowtie2Test(unittest.TestCase):
 
