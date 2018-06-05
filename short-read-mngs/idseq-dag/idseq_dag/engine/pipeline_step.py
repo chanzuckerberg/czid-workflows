@@ -81,6 +81,18 @@ class PipelineStep:
             done_file = self.done_file(f)
             subprocess.check_call("date > %s" % done_file, shell=True)
 
+    def wait_until_finished(self):
+        while True:
+            if self.finished:
+                return
+            time.sleep(5)
+
+    def wait_until_all_done(self):
+        while True:
+            if self.all_done:
+                return
+            time.sleep(5)
+
     def thread_run(self):
         ''' Actually running the step '''
         #Timer.start()

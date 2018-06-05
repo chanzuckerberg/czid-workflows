@@ -125,6 +125,18 @@ class PipelineFlow:
             covered_nodes.update(current_nodes)
         return (step_list, large_file_download_list, covered_nodes)
 
+    @staticmethod
+    def fetch_input_files_from_s3(input_files, input_dir_s3, result_dir_local):
+        for f in input_files:
+            s3_file = os.path.join(input_dir_s3, f)
+            local_file = os.path.join(result_dir_local, f)
+            # copy the file over
+            subprocess.check_call("aws s3 cp %s %s/" % (s3_file, result_dir_local), shell=True)
+
+            # write the done_file
+            done_file = PipelineStep.done_file(local_file)
+            subprocess.check_call("date > %s" % done_file, shell=True)
+
     def fetch_node_from_s3(self, node):
         ''' .done file should be written to the result dir when the download is complete '''
         head_nodes_path = {}
@@ -136,15 +148,8 @@ class PipelineFlow:
         else:
             input_path_s3 = self.output_dir_s3
 
-        for f in self.nodes[node]:
-            s3_file = os.path.join(input_path_s3, f)
-            local_file = os.path.join(self.output_dir_local, f)
-            # copy the file over
-            subprocess.check_call("aws s3 cp %s %s/" % (s3_file, self.output_dir_local), shell=True)
+        PipelineFlow.fetch_input_files_from_s3(self.nodes[node], input_path_s3, self.output_dir_local)
 
-            # write the done_file
-            done_file = PipelineStep.done_file(local_file)
-            subprocess.check_call("date > %s" % done_file, shell=True)
 
     def start(self):
         # Come up with the plan
