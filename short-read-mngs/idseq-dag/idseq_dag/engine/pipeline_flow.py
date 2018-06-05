@@ -13,14 +13,14 @@ from idseq_dag.engine.pipeline_step import PipelineStep
 DEFAULT_OUTPUT_DIR_LOCAL = '/mnt/idseq/results/%d' % os.getpid()
 DEFAULT_REF_DIR_LOCAL = '/mnt/idseq/ref'
 
-class PipelineFlow:
+class PipelineFlow(object):
     def __init__(self, lazy_run, dag_json):
         '''
             See examples/example_dag.json and
                 idseq_dag.main.validate_dag_json for more details.
         '''
         self.lazy_run = lazy_run
-        dag = self.parse_and_validate_conf(dag_json)
+        dag = PipelineFlow.parse_and_validate_conf(dag_json)
         self.nodes = dag["nodes"]
         self.steps = dag["steps"]
         self.head_nodes = dag["head_nodes"]
@@ -35,7 +35,8 @@ class PipelineFlow:
         return ".".join(version.split(".")[0:2])
 
 
-    def parse_and_validate_conf(self, dag_json):
+    @staticmethod
+    def parse_and_validate_conf(dag_json):
         '''
         Validate the json format. see examples/*.json.
         Required fields are:

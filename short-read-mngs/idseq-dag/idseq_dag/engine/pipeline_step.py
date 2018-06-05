@@ -6,7 +6,7 @@ import subprocess
 import time
 from abc import abstractmethod
 
-class PipelineStep:
+class PipelineStep(object):
     ''' Each Pipeline Run Step i.e. run_star, run_bowtie, etc '''
     def __init__(self, input_files, output_files,
                  output_dir_local, output_dir_s3, ref_dir_local,
@@ -38,6 +38,7 @@ class PipelineStep:
         ''' Upload output files to s3 '''
         for f in self.output_files_local():
             # upload to S3 - TODO(Boris): parallelize the following with better calls
+            # TODO: (Jonathan)  Replace all long-running subprocess.check_call's with execute_command.
             subprocess.check_call("aws s3 cp %s %s/" % (f, self.output_dir_s3), shell=True)
 
     @staticmethod
@@ -48,6 +49,8 @@ class PipelineStep:
     @staticmethod
     def wait_for_file_existence(filename):
         ''' wait until file exists '''
+        # TODO: (Yunfang) What if the file will never appear because something else failed?
+        # It is customary in those cases for an exception to be raised in this loop.
         while True:
             if os.path.exists(filename):
                 return
