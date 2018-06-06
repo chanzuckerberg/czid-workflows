@@ -61,5 +61,5 @@
       "additional_attributes": {}
     }
   ],
-  "head_nodes": [["fastqs", "s3://idseq-samples-prod/1/10/fastqs"]]
+  "head_nodes": {"fastqs": {"s3_dir":  "s3://idseq-samples-prod/samples/1/10/fastqs", "max_reads":75000000 } }
 }

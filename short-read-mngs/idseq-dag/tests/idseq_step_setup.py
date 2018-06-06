@@ -24,14 +24,11 @@ class IdseqStepSetup(object):
         # Download input data to local
         output_dir_s3 = os.path.join(dag["output_dir_s3"], "testrun_bowtie2_%d_%d" % (int(paired),int(time.time())))
         result_dir_local = "/mnt/idseq/results/bowtie2_%d/%d" % (int(paired), os.getpid())
-        head_nodes_path = {}
-        for hn in dag["head_nodes"]:
-            head_nodes_path[hn[0]] = hn[1]
 
         input_files = []
         for node in step_info["in"]:
-            if node in head_nodes_path:
-                input_dir_s3 = head_nodes_path[node]
+            if node in dag["head_nodes"]:
+                input_dir_s3 = dag["head_nodes"]["s3_dir"]
             else:
                 input_dir_s3 = dag["output_dir_s3"]
             input_files.append(dag["nodes"][node])
@@ -102,7 +99,7 @@ class IdseqStepSetup(object):
       "additional_attributes": {"truncate_reads_to": 10000000}
     }
   ],
-  "head_nodes": [["fastqs", "s3://idseq-samples-prod/test_samples/1/fastqs"]]
+  "head_nodes": {"fastqs": {"s3_dir":  "s3://idseq-samples-prod/test_samples/1/fastqs", "max_reads":75000000 } }
 }
         ''')
 
@@ -156,7 +153,8 @@ class IdseqStepSetup(object):
       "additional_attributes": {"truncate_reads_to": 10000000}
     }
   ],
-  "head_nodes": [["fastqs", "s3://idseq-samples-prod/test_samples/1/fastqs"]]
-}
+  "head_nodes": {"fastqs": {"s3_dir":  "s3://idseq-samples-prod/test_samples/1/fastqs", "max_reads":75000000 } }
+
+  }
         ''')
 
