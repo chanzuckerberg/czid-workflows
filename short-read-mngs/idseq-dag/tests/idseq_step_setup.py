@@ -7,7 +7,7 @@ import time
 
 from idseq_dag.engine.pipeline_flow import PipelineFlow
 
-class IdseqStepSetup():
+class IdseqStepSetup(object):
     @staticmethod
     def getStepObject(step_class, step_name, paired=True):
         if paired:
@@ -22,8 +22,34 @@ class IdseqStepSetup():
         if not step_info:
             raise ValueError("no steps correspond to %s" % step_name)
 
+        # Download input data to local
+        output_dir_s3 = os.path.join(dag["output_dir_s3"], "testrun_bowtie2_%d_%d" % (int(paired),int(time.time())))
+        result_dir_local ="/mnt/idseq/results/bowtie2_%d/%d" % (int(paired), os.getpid())
+        head_nodes_path = {}
+        for hn in dag["head_nodes"]:
+            head_nodes_path[hn[0]] = hn[1]
 
+        input_files = []
+        for node in step_info["in"]:
+            if node in head_nodes_path:
+                input_dir_s3 = head_nodes_path[node]
+            else:
+                input_dir_s3 = dag["output_dir_s3"]
+            input_files.append(dag["nodes"][node])
+            PipelineFlow.fetch_input_files_from_s3(input_files[-1],
+                                                   input_dir_s3,
+                                                   result_dir_local)
 
+        return step_class(
+            name=step_name,
+            input_files=input_files,
+            output_files=dag["nodes"][step_info["out"]],
+            output_dir_local=result_dir_local,
+            output_dir_s3=output_dir_s3,
+            ref_dir_local='/mnt/idseq/ref',
+            additional_files=step_info["additional_files"],
+            additional_attributes=step_info["additional_attributes"]
+        )
 
     @staticmethod
     def paired_dag():
