@@ -11,14 +11,14 @@ from idseq_dag.steps.run_bowtie2 import PipelineStepRunBowtie2
 class RunBowtie2Test(unittest.TestCase):
 
     def test_step_paired(self):
-        runstep = IdseqStepSetup.getStepObject(PipelineStepRunBowtie2, "run_bowtie2", paired=True)
+        runstep = IdseqStepSetup.get_step_object(PipelineStepRunBowtie2, "bowtie_out", paired=True)
         runstep.start()
         runstep.wait_until_finished()
         # Check results
         # Clean up the folder
 
     def test_step_single(self):
-        runstep = IdseqStepSetup.getStepObject(PipelineStepRunBowtie2, "run_bowtie2", paired=False)
+        runstep = IdseqStepSetup.get_step_object(PipelineStepRunBowtie2, "bowtie_out", paired=False)
         runstep.start()
         runstep.wait_until_finished()
         # Check results

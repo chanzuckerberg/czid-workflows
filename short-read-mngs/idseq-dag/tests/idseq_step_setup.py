@@ -1,18 +1,17 @@
-import unittest
 import json
 
 import os
-import subprocess
 import time
 
 from idseq_dag.engine.pipeline_flow import PipelineFlow
 
 class IdseqStepSetup(object):
     @staticmethod
-    def getStepObject(step_class, step_name, paired=True):
+    def get_step_object(step_class, step_name, paired=True):
+        ''' return the PipelineStep with the default parameters ready for test. '''
         if paired:
             dag = IdseqStepSetup.paired_dag()
-        else
+        else:
             dag = IdseqStepSetup.single_dag()
         step_info =  {}
         for step in dag["steps"]:
@@ -24,7 +23,7 @@ class IdseqStepSetup(object):
 
         # Download input data to local
         output_dir_s3 = os.path.join(dag["output_dir_s3"], "testrun_bowtie2_%d_%d" % (int(paired),int(time.time())))
-        result_dir_local ="/mnt/idseq/results/bowtie2_%d/%d" % (int(paired), os.getpid())
+        result_dir_local = "/mnt/idseq/results/bowtie2_%d/%d" % (int(paired), os.getpid())
         head_nodes_path = {}
         for hn in dag["head_nodes"]:
             head_nodes_path[hn[0]] = hn[1]
@@ -53,7 +52,8 @@ class IdseqStepSetup(object):
 
     @staticmethod
     def paired_dag():
-        json.loads('''
+        ''' Return a test dag based on paired fastqs '''
+        return json.loads('''
  {
   "output_dir_s3": "s3://idseq-samples-prod/test_samples/1/results",
   "nodes": {
@@ -108,7 +108,8 @@ class IdseqStepSetup(object):
 
     @staticmethod
     def single_dag():
-        json.loads('''
+        ''' Return a test dag based on single fastq '''
+        return json.loads('''
  {
   "output_dir_s3": "s3://idseq-samples-prod/test_samples/1/results",
   "nodes": {
