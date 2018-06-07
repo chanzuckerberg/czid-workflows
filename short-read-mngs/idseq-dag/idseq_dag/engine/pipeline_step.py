@@ -86,6 +86,7 @@ class PipelineStep(object):
             subprocess.check_call("date > %s" % done_file, shell=True)
 
     def wait_until_finished(self):
+        # TODO(yf): use self.join
         while True:
             if self.finished:
                 return
@@ -107,6 +108,7 @@ class PipelineStep(object):
         self.finished = True
         self.save_progress()
         #Timer.finalize()
+        # TODO(yf): move the uploading to a diffdrent thread
         self.start_uploading_results()
         self.all_done = True
 

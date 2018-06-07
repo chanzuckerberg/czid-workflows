@@ -145,7 +145,9 @@ class PipelineFlow(object):
         else:
             input_path_s3 = self.output_dir_s3
 
-        PipelineFlow.fetch_input_files_from_s3(self.nodes[node], input_path_s3, self.output_dir_local)
+        PipelineFlow.fetch_input_files_from_s3(input_files=self.nodes[node],
+                                               input_dir_s3=input_path_s3,
+                                               result_dir_local=self.output_dir_local)
 
 
     def start(self):
