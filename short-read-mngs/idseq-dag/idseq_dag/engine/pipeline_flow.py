@@ -62,10 +62,9 @@ class PipelineFlow(object):
             if s["out"] in covered_nodes:
                 raise ValueError("%s hasn't been generated in other steps" % s["out"])
             covered_nodes.add(s["out"])
-        for hn in head_nodes:
+        for node_name, node_data in head_nodes.items():
             # validate the head nodes exist in s3
-            node_name = hn[0]
-            s3_path = hn[1]
+            s3_path = node_data["s3_dir"]
             covered_nodes.add(node_name)
             for file_name in nodes[node_name]:
                 s3_file = os.path.join(s3_path, file_name)
@@ -88,8 +87,8 @@ class PipelineFlow(object):
         covered_nodes = {}
         large_file_download_list = []
         step_list = []
-        for hn in self.head_nodes:
-            covered_nodes[hn[0]] = { 'depth': 0, 'lazy_run': self.lazy_run, 's3_downlodable': True }
+        for node_name in self.head_nodes.keys():
+            covered_nodes[node_name] = { 'depth': 0, 'lazy_run': self.lazy_run, 's3_downlodable': True }
         steps_complete = set()
         while len(steps_complete) < len(self.steps):
             # run until all the steps can be run
@@ -126,26 +125,30 @@ class PipelineFlow(object):
             covered_nodes.update(current_nodes)
         return (step_list, large_file_download_list, covered_nodes)
 
-    def fetch_node_from_s3(self, node):
-        ''' .done file should be written to the result dir when the download is complete '''
-        head_nodes_path = {}
-        print("Downloading node %s" % node)
-        for hn in self.head_nodes:
-            head_nodes_path[hn[0]] = hn[1]
-        if node in head_nodes_path:
-            input_path_s3 = head_nodes_path[node]
-        else:
-            input_path_s3 = self.output_dir_s3
-
-        for f in self.nodes[node]:
-            s3_file = os.path.join(input_path_s3, f)
-            local_file = os.path.join(self.output_dir_local, f)
+    @staticmethod
+    def fetch_input_files_from_s3(input_files, input_dir_s3, result_dir_local):
+        for f in input_files:
+            s3_file = os.path.join(input_dir_s3, f)
+            local_file = os.path.join(result_dir_local, f)
             # copy the file over
-            subprocess.check_call("aws s3 cp %s %s/" % (s3_file, self.output_dir_local), shell=True)
+            subprocess.check_call("aws s3 cp %s %s/" % (s3_file, result_dir_local), shell=True)
 
             # write the done_file
             done_file = PipelineStep.done_file(local_file)
             subprocess.check_call("date > %s" % done_file, shell=True)
+
+    def fetch_node_from_s3(self, node):
+        ''' .done file should be written to the result dir when the download is complete '''
+        print("Downloading node %s" % node)
+        if node in self.head_nodes:
+            input_path_s3 = self.head_nodes[node]["s3_dir"]
+        else:
+            input_path_s3 = self.output_dir_s3
+
+        PipelineFlow.fetch_input_files_from_s3(input_files=self.nodes[node],
+                                               input_dir_s3=input_path_s3,
+                                               result_dir_local=self.output_dir_local)
+
 
     def start(self):
         # Come up with the plan
