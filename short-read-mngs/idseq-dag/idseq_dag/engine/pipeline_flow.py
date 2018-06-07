@@ -4,10 +4,10 @@ import sys
 import os
 import threading
 import traceback
-import subprocess
 
 import idseq_dag
 import idseq_dag.util.s3
+import idseq_dag.util.command as command
 from idseq_dag.engine.pipeline_step import PipelineStep
 
 DEFAULT_OUTPUT_DIR_LOCAL = '/mnt/idseq/results/%d' % os.getpid()
@@ -28,7 +28,7 @@ class PipelineFlow(object):
                                           self.parse_output_version(idseq_dag.__version__))
         self.output_dir_local = dag.get("output_dir_local", DEFAULT_OUTPUT_DIR_LOCAL).rstrip('/')
         self.ref_dir_local = dag.get("ref_dir_local", DEFAULT_REF_DIR_LOCAL)
-        subprocess.check_call("mkdir -p %s %s" % (self.output_dir_local, self.ref_dir_local), shell=True)
+        command.execute("mkdir -p %s %s" % (self.output_dir_local, self.ref_dir_local))
 
     @staticmethod
     def parse_output_version(version):
@@ -88,7 +88,7 @@ class PipelineFlow(object):
         large_file_download_list = []
         step_list = []
         for node_name in self.head_nodes.keys():
-            covered_nodes[node_name] = { 'depth': 0, 'lazy_run': self.lazy_run, 's3_downlodable': True }
+            covered_nodes[node_name] = { 'depth': 0, 'lazy_run': self.lazy_run, 's3_downloadable': True }
         steps_complete = set()
         while len(steps_complete) < len(self.steps):
             # run until all the steps can be run
@@ -109,19 +109,19 @@ class PipelineFlow(object):
                     if step_can_be_run: # All the input is satisfied
                         steps_complete.add(step["out"])
                         file_list= self.nodes[step["out"]]
-                        if lazy_run and idseq_dag.util.s3.check_s3_presnce_for_file_list(self.output_dir_s3, file_list):
+                        if lazy_run and idseq_dag.util.s3.check_s3_presence_for_file_list(self.output_dir_s3, file_list):
                             # output can be lazily generated. touch the output
                             #idseq_dag.util.s3.touch_s3_file_list(self.output_dir_s3, file_list)
-                            s3_downlodable = True
+                            s3_downloadable = True
                         else:
                             # steps need to be run
                             lazy_run = False
-                            s3_downlodable = False
+                            s3_downloadable = False
                             step_list.append(step)
                             # The following can be changed to append if we want to get the round information
                             large_file_download_list += step["additional_files"].values()
                         # update nodes available for the next round
-                        current_nodes[step["out"]] = { 'depth': (depth_max + 1), 'lazy_run': lazy_run, 's3_downlodable': s3_downlodable}
+                        current_nodes[step["out"]] = { 'depth': (depth_max + 1), 'lazy_run': lazy_run, 's3_downloadable': s3_downloadable}
             covered_nodes.update(current_nodes)
         return (step_list, large_file_download_list, covered_nodes)
 
@@ -131,11 +131,11 @@ class PipelineFlow(object):
             s3_file = os.path.join(input_dir_s3, f)
             local_file = os.path.join(result_dir_local, f)
             # copy the file over
-            subprocess.check_call("aws s3 cp %s %s/" % (s3_file, result_dir_local), shell=True)
+            command.execute("aws s3 cp %s %s/" % (s3_file, result_dir_local))
 
             # write the done_file
             done_file = PipelineStep.done_file(local_file)
-            subprocess.check_call("date > %s" % done_file, shell=True)
+            command.execute("date > %s" % done_file)
 
     def fetch_node_from_s3(self, node):
         ''' .done file should be written to the result dir when the download is complete '''
@@ -157,7 +157,7 @@ class PipelineFlow(object):
         for step in step_list: # download the files from s3 when necessary
             for node in step["in"]:
                 node_info = covered_nodes[node]
-                if node_info['s3_downlodable']:
+                if node_info['s3_downloadable']:
                     threading.Thread(target=self.fetch_node_from_s3, args=(node,)).start()
 
         # use fetch_from_s3 plus threading for the large_file_donwload for necessary steps
