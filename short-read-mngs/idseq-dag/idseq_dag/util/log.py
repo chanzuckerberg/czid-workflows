@@ -3,10 +3,8 @@ import multiprocessing
 import os
 import sys
 import threading
-import idseq_dag.util.command as command
 
 print_lock = multiprocessing.RLock()
-
 
 def configure_logger(log_file):
     logger = logging.getLogger()
@@ -23,14 +21,6 @@ def configure_logger(log_file):
     formatter = logging.Formatter('%(message)s')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
-
-
-def upload_log_file(sample_s3_output_path, lock=threading.RLock()):
-    with lock:
-        logh = logging.getLogger().handlers[0]
-        logh.flush()
-        command.execute("aws s3 cp --quiet %s %s/;" % (logh.baseFilename,
-                                                       sample_s3_output_path))
 
 
 def write_to_log(message, warning=False, flush=True):

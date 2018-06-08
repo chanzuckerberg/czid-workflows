@@ -200,11 +200,11 @@ def retry(operation, randgen=random.Random().random):
 
 
 def execute(command,
-                    progress_file=None,
-                    timeout=None,
-                    grace_period=None,
-                    capture_stdout=False,
-                    merge_stderr=False):
+            progress_file=None,
+            timeout=None,
+            grace_period=None,
+            capture_stdout=False,
+            merge_stderr=False):
     """Primary way to start external commands in subprocesses and handle
     execution with logging.
     """
@@ -240,11 +240,11 @@ def execute(command,
                 return stdout
 
 
-def execute_command_with_output(command,
-                                progress_file=None,
-                                timeout=None,
-                                grace_period=None,
-                                merge_stderr=False):
+def execute_with_output(command,
+                        progress_file=None,
+                        timeout=None,
+                        grace_period=None,
+                         merge_stderr=False):
     return execute(
         command,
         progress_file,

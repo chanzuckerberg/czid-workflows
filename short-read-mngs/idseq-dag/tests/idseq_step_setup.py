@@ -4,6 +4,7 @@ import os
 import time
 
 from idseq_dag.engine.pipeline_flow import PipelineFlow
+import idseq_dag.util.command as command
 
 class IdseqStepSetup(object):
     @staticmethod
@@ -24,6 +25,7 @@ class IdseqStepSetup(object):
         # Download input data to local
         output_dir_s3 = os.path.join(dag["output_dir_s3"], "testrun_bowtie2_%d_%d" % (int(paired),int(time.time())))
         result_dir_local = "/mnt/idseq/results/bowtie2_%d/%d" % (int(paired), os.getpid())
+        command.execute("mkdir -p %s" % result_dir_local)
 
         input_files = []
         for node in step_info["in"]:

@@ -5,6 +5,15 @@ import threading
 import time
 import idseq_dag.util.command as command
 from abc import abstractmethod
+from enum import IntEnum
+
+import idseq_dag.util.s3
+
+class StepStatus(IntEnum):
+    INITIALIZED = 0
+    STARTED = 1 # step.start() called
+    FINISHED = 2 # step.run() finished
+    UPLOADED = 3 # all results uploaded to s3
 
 class PipelineStep(object):
     ''' Each Pipeline Run Step i.e. run_star, run_bowtie, etc '''
@@ -21,10 +30,9 @@ class PipelineStep(object):
         self.additional_files = additional_files
         self.additional_attributes = additional_attributes
 
-        self.started = False
-        self.finished = False # done running
-        self.all_done = False # done running and uploading
-        self.thread = None
+        self.status = StepStatus.INITIALIZED
+        self.exec_thread = None
+        self.upload_thread = None
         self.input_files_local = []
 
     @abstractmethod
@@ -35,11 +43,12 @@ class PipelineStep(object):
         ''' Get list of output files on local folder '''
         return [os.path.join(self.output_dir_local, f) for f in self.output_files]
 
-    def start_uploading_results(self):
+    def uploading_results(self):
         ''' Upload output files to s3 '''
         for f in self.output_files_local():
             # upload to S3 - TODO(Boris): parallelize the following with better calls
-            command.execute("aws s3 cp %s %s/" % (f, self.output_dir_s3))
+            idseq_dag.util.s3.upload(f, self.output_dir_s3 + '/', {})
+        self.status = StepStatus.UPLOADED
 
     @staticmethod
     def done_file(filename):
@@ -85,33 +94,32 @@ class PipelineStep(object):
             command.execute("date > %s" % done_file)
 
     def wait_until_finished(self):
-        # TODO(yf): use self.join
-        while True:
-            if self.finished:
-                return
-            time.sleep(5)
+        self.exec_thread.join()
+        if self.status < StepStatus.FINISHED:
+            raise RuntimeError("step %s run failed" % self.name)
 
     def wait_until_all_done(self):
-        while True:
-            if self.all_done:
-                return
-            time.sleep(5)
+        self.wait_until_finished()
+        # run finished
+        self.upload_thread.join()
+        if self.status < StepStatus.UPLOADED:
+            raise RuntimeError("step %s uploading failed" % self.name)
 
     def thread_run(self):
         ''' Actually running the step '''
         #Timer.start()
-        self.started = True
+        self.status = StepStatus.STARTED
         self.wait_for_input_files()
         self.run()
         self.validate()
-        self.finished = True
         self.save_progress()
         #Timer.finalize()
         # TODO(yf): move the uploading to a diffdrent thread
-        self.start_uploading_results()
-        self.all_done = True
+        self.upload_thread=threading.Thread(target=self.uploading_results)
+        self.upload_thread.start()
+        self.status = StepStatus.FINISHED
 
     def start(self):
         ''' function to be called after instanitation to start running the step '''
-        self.thread = threading.Thread(target=self.thread_run)
-        self.thread.start()
+        self.exec_thread = threading.Thread(target=self.thread_run)
+        self.exec_thread.start()

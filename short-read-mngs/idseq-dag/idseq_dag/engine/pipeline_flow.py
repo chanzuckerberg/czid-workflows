@@ -8,6 +8,7 @@ import traceback
 import idseq_dag
 import idseq_dag.util.s3
 import idseq_dag.util.command as command
+from idseq_dag.util.log import write_to_log
 from idseq_dag.engine.pipeline_step import PipelineStep
 
 DEFAULT_OUTPUT_DIR_LOCAL = '/mnt/idseq/results/%d' % os.getpid()
@@ -28,12 +29,17 @@ class PipelineFlow(object):
                                           self.parse_output_version(idseq_dag.__version__))
         self.output_dir_local = dag.get("output_dir_local", DEFAULT_OUTPUT_DIR_LOCAL).rstrip('/')
         self.ref_dir_local = dag.get("ref_dir_local", DEFAULT_REF_DIR_LOCAL)
+        self.large_file_list = []
+
         command.execute("mkdir -p %s %s" % (self.output_dir_local, self.ref_dir_local))
 
     @staticmethod
     def parse_output_version(version):
         return ".".join(version.split(".")[0:2])
 
+    def prefetch_large_files(self):
+        for f in self.large_file_list:
+            idseq_dag.util.s3.fetch_from_s3(f, self.ref_dir_local, allow_s3mi=True)
 
     @staticmethod
     def parse_and_validate_conf(dag_json):
@@ -131,15 +137,14 @@ class PipelineFlow(object):
             s3_file = os.path.join(input_dir_s3, f)
             local_file = os.path.join(result_dir_local, f)
             # copy the file over
-            command.execute("aws s3 cp %s %s/" % (s3_file, result_dir_local))
-
+            idseq_dag.util.s3.fetch_from_s3(s3_file, result_dir_local, allow_s3mi=True)
             # write the done_file
             done_file = PipelineStep.done_file(local_file)
             command.execute("date > %s" % done_file)
 
     def fetch_node_from_s3(self, node):
         ''' .done file should be written to the result dir when the download is complete '''
-        print("Downloading node %s" % node)
+        write_to_log("Downloading node %s" % node)
         if node in self.head_nodes:
             input_path_s3 = self.head_nodes[node]["s3_dir"]
         else:
@@ -152,7 +157,7 @@ class PipelineFlow(object):
 
     def start(self):
         # Come up with the plan
-        (step_list, large_file_download_list, covered_nodes) = self.plan()
+        (step_list, self.large_file_list, covered_nodes) = self.plan()
 
         for step in step_list: # download the files from s3 when necessary
             for node in step["in"]:
@@ -160,15 +165,15 @@ class PipelineFlow(object):
                 if node_info['s3_downloadable']:
                     threading.Thread(target=self.fetch_node_from_s3, args=(node,)).start()
 
-        # use fetch_from_s3 plus threading for the large_file_donwload for necessary steps
-        # TO BE IMPLEMENTED
-        #for f in large_file_download_list:
-        #    threading.Thread(target=fetch_from_s3, args=(f, self.output_dir_local,)).start()
+
+        # TODO(boris): check the following implementation
+        threading.Thread(target=self.prefetch_large_files)
+
 
         # Start initializing all the steps and start running them and wait until all of them are done
         step_instances = []
         for step in step_list:
-            print("Starting step %s" % step["out"])
+            write_to_log("Starting step %s" % step["out"])
             StepClass = getattr(importlib.import_module(step["module"]), step["class"])
             step_output = self.nodes[step["out"]]
             step_inputs = [self.nodes[inode] for inode in step["in"]]
@@ -178,3 +183,7 @@ class PipelineFlow(object):
             step_instance.start()
             step_instances.append(step_instance)
         # Collecting stats files
+        for step in step_instances:
+            step.wait_until_all_done()
+        write_to_log("all steps are done")
+
