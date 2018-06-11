@@ -25,7 +25,8 @@ class IdseqStepSetup(object):
         # Download input data to local
         output_dir_s3 = os.path.join(dag["output_dir_s3"], "testrun_bowtie2_%d_%d" % (int(paired),int(time.time())))
         result_dir_local = "/mnt/idseq/results/bowtie2_%d/%d" % (int(paired), os.getpid())
-        command.execute("mkdir -p %s" % result_dir_local)
+        ref_dir_local = '/mnt/idseq/ref'
+        command.execute("mkdir -p %s %s" % (result_dir_local, ref_dir_local))
 
         input_files = []
         for node in step_info["in"]:
@@ -44,7 +45,7 @@ class IdseqStepSetup(object):
             output_files=dag["nodes"][step_info["out"]],
             output_dir_local=result_dir_local,
             output_dir_s3=output_dir_s3,
-            ref_dir_local='/mnt/idseq/ref',
+            ref_dir_local=ref_dir_local,
             additional_files=step_info["additional_files"],
             additional_attributes=step_info["additional_attributes"]
         )
