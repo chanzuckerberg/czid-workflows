@@ -5,6 +5,7 @@ import json
 import sys
 import os
 import idseq_dag.util.s3
+import idseq_dag.util.log as log
 from idseq_dag.engine.pipeline_flow import PipelineFlow
 
 def main():
@@ -16,9 +17,9 @@ def main():
     try:
         flow = PipelineFlow(lazy_run=args.lazy_run,
                             dag_json=args.dag_json)
-        print("everything is awesome. idseq dag is valid~")
+        log.write("everything is awesome. idseq dag is valid~")
     except:
         parser.print_help()
         raise
-    print("start executing the dag")
+    log.write("start executing the dag")
     flow.start()

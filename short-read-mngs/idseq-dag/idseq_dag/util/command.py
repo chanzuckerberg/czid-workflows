@@ -63,14 +63,14 @@ class CommandTracker(Updater):
         """
         with log.print_lock:
             if self.proc is None or self.proc.poll() is None:
-                print("Command %d still running after %3.1f seconds." %
+                log.write("Command %d still running after %3.1f seconds." %
                       (self.id, t_elapsed))
             else:
                 # This should be uncommon, unless there is lengthy python
                 # processing following the command in the same CommandTracker
                 # "with" block. Note: Not to be confused with post-processing
                 # on the data.
-                print("Command %d still postprocessing after %3.1f seconds." %
+                log.write("Command %d still postprocessing after %3.1f seconds." %
                       (self.id, t_elapsed))
             sys.stdout.flush()
         self.enforce_timeout(t_elapsed)
@@ -89,7 +89,7 @@ class CommandTracker(Updater):
             with log.print_lock:
                 msg = "Command %d has exceeded timeout of %3.1f seconds. " \
                       "Sending SIGTERM." % (self.id, self.timeout)
-                print(msg)
+                log.write(msg)
                 sys.stdout.flush()
             self.t_sigterm_sent = time.time()
             self.proc.terminate()
@@ -99,7 +99,7 @@ class CommandTracker(Updater):
                 with log.print_lock:
                     msg = "Command %d still alive %3.1f seconds after " \
                           "SIGTERM. Sending SIGKILL." % (self.id, time.time() - self.t_sigterm_sent)
-                    print(msg)
+                    log.write(msg)
                     sys.stdout.flush()
                 self.t_sigkill_sent = time.time()
                 self.proc.kill()
@@ -107,7 +107,7 @@ class CommandTracker(Updater):
             with log.print_lock:
                 msg = "Command %d still alive %3.1f seconds after " \
                       "SIGKILL." % (self.id, time.time() - self.t_sigkill_sent)
-                print(msg)
+                log.write(msg)
                 sys.stdout.flush()
 
 
@@ -210,7 +210,7 @@ def execute(command,
     """
     with CommandTracker() as ct:
         with log.print_lock:
-            print("Command {}: {}".format(ct.id, command))
+            log.write("Command {}: {}".format(ct.id, command))
         with ProgressFile(progress_file):
             if timeout:
                 ct.timeout = timeout

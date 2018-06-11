@@ -8,7 +8,7 @@ import traceback
 import idseq_dag
 import idseq_dag.util.s3
 import idseq_dag.util.command as command
-from idseq_dag.util.log import write_to_log
+import idseq_dag.util.log as log
 from idseq_dag.engine.pipeline_step import PipelineStep
 
 DEFAULT_OUTPUT_DIR_LOCAL = '/mnt/idseq/results/%d' % os.getpid()
@@ -144,7 +144,7 @@ class PipelineFlow(object):
 
     def fetch_node_from_s3(self, node):
         ''' .done file should be written to the result dir when the download is complete '''
-        write_to_log("Downloading node %s" % node)
+        log.write("Downloading node %s" % node)
         if node in self.head_nodes:
             input_path_s3 = self.head_nodes[node]["s3_dir"]
         else:
@@ -173,7 +173,7 @@ class PipelineFlow(object):
         # Start initializing all the steps and start running them and wait until all of them are done
         step_instances = []
         for step in step_list:
-            write_to_log("Starting step %s" % step["out"])
+            log.write("Starting step %s" % step["out"])
             StepClass = getattr(importlib.import_module(step["module"]), step["class"])
             step_output = self.nodes[step["out"]]
             step_inputs = [self.nodes[inode] for inode in step["in"]]
@@ -185,5 +185,5 @@ class PipelineFlow(object):
         # Collecting stats files
         for step in step_instances:
             step.wait_until_all_done()
-        write_to_log("all steps are done")
+        log.write("all steps are done")
 

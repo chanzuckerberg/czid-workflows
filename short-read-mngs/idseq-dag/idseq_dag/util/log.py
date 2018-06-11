@@ -2,9 +2,9 @@ import logging
 import multiprocessing
 import os
 import sys
-import threading
 
 print_lock = multiprocessing.RLock()
+
 
 def configure_logger(log_file):
     logger = logging.getLogger()
@@ -23,7 +23,7 @@ def configure_logger(log_file):
     logger.addHandler(handler)
 
 
-def write_to_log(message, warning=False, flush=True):
+def write(message, warning=False, flush=True):
     logger = logging.getLogger()
     with print_lock:
         if warning:

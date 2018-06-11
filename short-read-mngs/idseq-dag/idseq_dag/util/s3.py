@@ -15,7 +15,7 @@ import random
 import logging
 
 import idseq_dag.util.command as command
-from idseq_dag.util.log import write_to_log
+import idseq_dag.util.log as log
 
 # Peak network and storage perf for a typical small instance is saturated by
 # just a few concurrent streams.
@@ -104,7 +104,7 @@ def fetch_from_s3(src,
             # It's okay if the parent directory already exists, but all other
             # errors are fatal.
             if e.errno != os.errno.EEXIST:
-                print("Error in creating destination directory.")
+                log.write("Error in creating destination directory.")
                 raise
 
         with IOSTREAM:
@@ -113,7 +113,7 @@ def fetch_from_s3(src,
                     try:
                         install_s3mi()
                     except:
-                        print("s3mi failed to install.")
+                        log.write("s3mi failed to install.")
                         allow_s3mi = False
 
                 command_params = ""
@@ -125,7 +125,7 @@ def fetch_from_s3(src,
                         pipe_filter = "| gzip -dc "
                     command_params = "{pipe_filter} > {destination}".format(
                         pipe_filter=pipe_filter, destination=dst)
-                write_to_log("command_params: %s" % dst)
+                log.write("command_params: %s" % command_params)
 
                 try:
                     assert allow_s3mi
@@ -133,7 +133,7 @@ def fetch_from_s3(src,
                         source=src, command_params=command_params)
                     command.execute(cmd)
                 except:
-                    print(
+                    log.write(
                         "Failed to download with s3mi. Trying with aws s3 cp..."
                     )
                     cmd = "aws s3 cp --quiet {source} - {command_params}".format(
@@ -142,7 +142,7 @@ def fetch_from_s3(src,
                 return dst
             except subprocess.CalledProcessError:
                 # Most likely the file doesn't exist in S3.
-                print(
+                log.write(
                     "Failed to fetch file from S3. Most likely does not exist."
                 )
                 return None
