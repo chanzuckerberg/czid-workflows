@@ -6,22 +6,22 @@ import sys
 print_lock = multiprocessing.RLock()
 
 
-def configure_logger(log_file):
+def configure_logger(log_file=None):
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
 
-    handler = logging.FileHandler(log_file)
-    formatter = logging.Formatter("%(asctime)s: %(message)s")
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
+    if log_file:
+        handler = logging.FileHandler(log_file)
+        formatter = logging.Formatter("%(asctime)s: %(message)s")
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
 
     # Echo to stdout so they get to CloudWatch
     handler = logging.StreamHandler(sys.stdout)
     handler.setLevel(logging.INFO)
-    formatter = logging.Formatter('%(message)s')
+    formatter = logging.Formatter("%(asctime)s: %(message)s")
     handler.setFormatter(formatter)
     logger.addHandler(handler)
-
 
 def write(message, warning=False, flush=True):
     logger = logging.getLogger()
