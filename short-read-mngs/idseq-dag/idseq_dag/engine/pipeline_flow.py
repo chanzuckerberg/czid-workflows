@@ -38,7 +38,9 @@ class PipelineFlow(object):
         return ".".join(version.split(".")[0:2])
 
     def prefetch_large_files(self):
+        log.write("downloading large files: %s" % ",".join(self.large_file_list))
         for f in self.large_file_list:
+            log.write("downloading %s" % f)
             idseq_dag.util.s3.fetch_from_s3(f, self.ref_dir_local, allow_s3mi=True)
 
     @staticmethod
@@ -167,7 +169,7 @@ class PipelineFlow(object):
 
 
         # TODO(boris): check the following implementation
-        threading.Thread(target=self.prefetch_large_files)
+        threading.Thread(target=self.prefetch_large_files).start()
 
 
         # Start initializing all the steps and start running them and wait until all of them are done
