@@ -22,9 +22,9 @@ class PipelineFlow(object):
         '''
         self.lazy_run = lazy_run
         dag = PipelineFlow.parse_and_validate_conf(dag_json)
-        self.nodes = dag["nodes"]
+        self.targets = dag["targets"]
         self.steps = dag["steps"]
-        self.head_nodes = dag["head_nodes"]
+        self.given_targets = dag["given_targets"]
         self.output_dir_s3 = os.path.join(dag["output_dir_s3"],
                                           self.parse_output_version(idseq_dag.__version__))
         self.output_dir_local = dag.get("output_dir_local", DEFAULT_OUTPUT_DIR_LOCAL).rstrip('/')
@@ -49,74 +49,74 @@ class PipelineFlow(object):
         Validate the json format. see examples/*.json.
         Required fields are:
           "output_dir_s3": base results folder. a pipeline version number will be appended for real output folder.
-          "nodes": lists of files that are given or would be generated
+          "targets": lists of files that are given or would be generated
           "steps": steps that species actions to generate input and output
-          "head_nodes": input files that are given
+          "given_targets": input files that are given
 
         '''
         dag = json.loads(open(dag_json).read())
         output_dir = dag["output_dir_s3"]
-        nodes = dag["nodes"]
+        targets = dag["targets"]
         steps = dag["steps"]
-        head_nodes = dag["head_nodes"]
-        covered_nodes = set()
+        given_targets = dag["given_targets"]
+        covered_targets = set()
         for s in steps:
-            # validate each step in/out are valid nodes
-            for inode in s["in"]:
-                if inode not in nodes:
-                    raise ValueError("input %s doesn't exit for step %s" % (inode, s["out"]))
-            if s["out"] not in nodes:
-                raise ValueError("%s node doesn't exit" % s["out"])
-            if s["out"] in covered_nodes:
+            # validate each step in/out are valid targets
+            for itarget in s["in"]:
+                if itarget not in targets:
+                    raise ValueError("input %s doesn't exit for step %s" % (itarget, s["out"]))
+            if s["out"] not in targets:
+                raise ValueError("%s target doesn't exit" % s["out"])
+            if s["out"] in covered_targets:
                 raise ValueError("%s hasn't been generated in other steps" % s["out"])
-            covered_nodes.add(s["out"])
-        for node_name, node_data in head_nodes.items():
-            # validate the head nodes exist in s3
-            s3_path = node_data["s3_dir"]
-            covered_nodes.add(node_name)
-            for file_name in nodes[node_name]:
+            covered_targets.add(s["out"])
+        for target_name, target_data in given_targets.items():
+            # validate the given targets exist in s3
+            s3_path = target_data["s3_dir"]
+            covered_targets.add(target_name)
+            for file_name in targets[target_name]:
                 s3_file = os.path.join(s3_path, file_name)
                 if not idseq_dag.util.s3.check_s3_presence(s3_file):
                     raise ValueError("%s file doesn't exist" % s3_file)
-        # Check that all nodes are covered
+        # Check that all targets are covered
         # ALL Inputs Outputs VALIDATED
-        for node_name in nodes.keys():
-            if node_name not in covered_nodes:
-                raise ValueError("%s couldn't be generated from the steps" % node_name)
+        for target_name in targets.keys():
+            if target_name not in covered_targets:
+                raise ValueError("%s couldn't be generated from the steps" % target_name)
 
         return dag
 
     def plan(self):
         '''
-            Traverse through the nodes and steps and calculate
+            Traverse through the targets and steps and calculate
             1. the large file download priority based on the how deep the step is
             2. if a step needs to be run based on the existence of output file and lazy run parameter
         '''
-        covered_nodes = {}
+        covered_targets = {}
         large_file_download_list = []
         step_list = []
-        for node_name in self.head_nodes.keys():
-            covered_nodes[node_name] = { 'depth': 0, 'lazy_run': self.lazy_run, 's3_downloadable': True }
+        for target_name in self.given_targets.keys():
+            covered_targets[target_name] = { 'depth': 0, 'lazy_run': self.lazy_run, 's3_downloadable': True }
         steps_complete = set()
         while len(steps_complete) < len(self.steps):
             # run until all the steps can be run
-            current_nodes = {}
+            current_targets = {}
             for step in self.steps:
                 if step["out"] not in steps_complete:
                     step_can_be_run = True
                     depth_max = 0
                     lazy_run = True
-                    for node in step["in"]:
-                        if node not in covered_nodes:
+                    for target in step["in"]:
+                        if target not in covered_targets:
                             step_can_be_run = False
                             break
                         else:
-                            depth_max = max(covered_nodes[node]['depth'], depth_max)
-                            if covered_nodes[node]['lazy_run'] == False:
+                            depth_max = max(covered_targets[target]['depth'], depth_max)
+                            if covered_targets[target]['lazy_run'] == False:
                                 lazy_run = False
                     if step_can_be_run: # All the input is satisfied
                         steps_complete.add(step["out"])
-                        file_list= self.nodes[step["out"]]
+                        file_list= self.targets[step["out"]]
                         if lazy_run and idseq_dag.util.s3.check_s3_presence_for_file_list(self.output_dir_s3, file_list):
                             # output can be lazily generated. touch the output
                             #idseq_dag.util.s3.touch_s3_file_list(self.output_dir_s3, file_list)
@@ -128,10 +128,10 @@ class PipelineFlow(object):
                             step_list.append(step)
                             # The following can be changed to append if we want to get the round information
                             large_file_download_list += step["additional_files"].values()
-                        # update nodes available for the next round
-                        current_nodes[step["out"]] = { 'depth': (depth_max + 1), 'lazy_run': lazy_run, 's3_downloadable': s3_downloadable}
-            covered_nodes.update(current_nodes)
-        return (step_list, large_file_download_list, covered_nodes)
+                        # update targets available for the next round
+                        current_targets[step["out"]] = { 'depth': (depth_max + 1), 'lazy_run': lazy_run, 's3_downloadable': s3_downloadable}
+            covered_targets.update(current_targets)
+        return (step_list, large_file_download_list, covered_targets)
 
     @staticmethod
     def fetch_input_files_from_s3(input_files, input_dir_s3, result_dir_local):
@@ -144,28 +144,28 @@ class PipelineFlow(object):
             done_file = PipelineStep.done_file(local_file)
             command.execute("date > %s" % done_file)
 
-    def fetch_node_from_s3(self, node):
+    def fetch_target_from_s3(self, target):
         ''' .done file should be written to the result dir when the download is complete '''
-        log.write("Downloading node %s" % node)
-        if node in self.head_nodes:
-            input_path_s3 = self.head_nodes[node]["s3_dir"]
+        log.write("Downloading target %s" % target)
+        if target in self.given_targets:
+            input_path_s3 = self.given_targets[target]["s3_dir"]
         else:
             input_path_s3 = self.output_dir_s3
 
-        PipelineFlow.fetch_input_files_from_s3(input_files=self.nodes[node],
+        PipelineFlow.fetch_input_files_from_s3(input_files=self.targets[target],
                                                input_dir_s3=input_path_s3,
                                                result_dir_local=self.output_dir_local)
 
 
     def start(self):
         # Come up with the plan
-        (step_list, self.large_file_list, covered_nodes) = self.plan()
+        (step_list, self.large_file_list, covered_targets) = self.plan()
 
         for step in step_list: # download the files from s3 when necessary
-            for node in step["in"]:
-                node_info = covered_nodes[node]
-                if node_info['s3_downloadable']:
-                    threading.Thread(target=self.fetch_node_from_s3, args=(node,)).start()
+            for target in step["in"]:
+                target_info = covered_targets[target]
+                if target_info['s3_downloadable']:
+                    threading.Thread(target=self.fetch_target_from_s3, args=(target,)).start()
 
 
         # TODO(boris): check the following implementation
@@ -177,8 +177,8 @@ class PipelineFlow(object):
         for step in step_list:
             log.write("Starting step %s" % step["out"])
             StepClass = getattr(importlib.import_module(step["module"]), step["class"])
-            step_output = self.nodes[step["out"]]
-            step_inputs = [self.nodes[inode] for inode in step["in"]]
+            step_output = self.targets[step["out"]]
+            step_inputs = [self.targets[itarget] for itarget in step["in"]]
             step_instance = StepClass(step["out"], step_inputs, step_output,
                                       self.output_dir_local, self.output_dir_s3, self.ref_dir_local,
                                       step["additional_files"], step["additional_attributes"])

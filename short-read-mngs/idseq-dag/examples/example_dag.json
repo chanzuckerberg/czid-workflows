@@ -1,6 +1,6 @@
 {
   "output_dir_s3": "s3://idseq-samples-prod/1/10/results",
-  "nodes": {
+  "targets": {
     "fastqs": ["fastq1.gz", "fastq2.gz"],
     "star_out": ["unmapped1.fq", "unmapped2.fq"],
     "priceseq_out": ["priceseq1.fq", "priceseq2.fq"],
@@ -61,5 +61,5 @@
       "additional_attributes": {}
     }
   ],
-  "head_nodes": {"fastqs": {"s3_dir":  "s3://idseq-samples-prod/samples/1/10/fastqs", "max_reads":75000000 } }
+  "given_targets": {"fastqs": {"s3_dir":  "s3://idseq-samples-prod/samples/1/10/fastqs", "max_reads":75000000 } }
 }

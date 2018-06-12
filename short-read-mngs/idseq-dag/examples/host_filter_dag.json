@@ -1,6 +1,6 @@
 {
   "output_dir_s3": "s3://idseq-samples-prod/samples/71/4542/results",
-  "nodes": {
+  "targets": {
     "fastqs": ["RR004_water_2_S23_R1_001.fastq.gz", "RR004_water_2_S23_R2_001.fastq.gz"],
     "star_out": ["unmapped1.fq", "unmapped2.fq"],
     "priceseq_out": ["priceseq1.fq", "priceseq2.fq"],
@@ -42,5 +42,5 @@
       "additional_attributes": {"truncate_reads_to": 10000000}
     }
   ],
-  "head_nodes": {"fastqs": {"s3_dir":  "s3://idseq-samples-prod/samples/71/4542/fastqs", "max_reads":75000000 } }
+  "given_targets": {"fastqs": {"s3_dir":  "s3://idseq-samples-prod/samples/71/4542/fastqs", "max_reads":75000000 } }
 }
