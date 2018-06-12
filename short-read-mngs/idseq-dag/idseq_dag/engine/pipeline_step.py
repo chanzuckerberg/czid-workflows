@@ -34,6 +34,7 @@ class PipelineStep(object):
         self.exec_thread = None
         self.upload_thread = None
         self.input_files_local = []
+        self.additional_files_to_upload = []
 
     @abstractmethod
     def run(self):
@@ -45,7 +46,8 @@ class PipelineStep(object):
 
     def uploading_results(self):
         ''' Upload output files to s3 '''
-        for f in self.output_files_local():
+        files_to_upload = self.output_files_local() + self.additional_files_to_upload
+        for f in files_to_upload:
             # upload to S3 - TODO(Boris): parallelize the following with better calls
             idseq_dag.util.s3.upload_with_retries(f, self.output_dir_s3 + '/')
         self.status = StepStatus.UPLOADED
