@@ -31,7 +31,7 @@ class IdseqStepSetup(object):
         input_files = []
         for target in step_info["in"]:
             if target in dag["given_targets"]:
-                input_dir_s3 = dag["given_targets"]["s3_dir"]
+                input_dir_s3 = dag["given_targets"][target]["s3_dir"]
             else:
                 input_dir_s3 = dag["output_dir_s3"]
             input_files.append(dag["targets"][target])
