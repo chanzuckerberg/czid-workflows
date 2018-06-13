@@ -41,7 +41,7 @@ class PipelineFlow(object):
         log.write("downloading large files: %s" % ",".join(self.large_file_list))
         for f in self.large_file_list:
             log.write("downloading %s" % f)
-            idseq_dag.util.s3.fetch_from_s3(f, self.ref_dir_local, allow_s3mi=True)
+            idseq_dag.util.s3.fetch_from_s3(f, self.ref_dir_local, auto_untar=True, allow_s3mi=True)
 
     @staticmethod
     def parse_and_validate_conf(dag_json):
@@ -166,7 +166,6 @@ class PipelineFlow(object):
                 target_info = covered_targets[target]
                 if target_info['s3_downloadable']:
                     threading.Thread(target=self.fetch_target_from_s3, args=(target,)).start()
-
 
         # TODO(boris): check the following implementation
         threading.Thread(target=self.prefetch_large_files).start()

@@ -23,6 +23,7 @@ def configure_logger(log_file=None):
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
+
 def write(message, warning=False, flush=True):
     logger = logging.getLogger()
     with print_lock:

@@ -74,7 +74,7 @@ class IdseqStepSetup(object):
     {
       "in" : ["fastqs"], "out": "star_out", "class": "PipelineStepRunStar", "module": "idseq_dag.steps.run_star",
       "additional_files": {"star_genome": "s3://idseq-database/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/STAR_genome.tar"},
-      "additional_attributes": {"truncate_reads_to": 75000000}
+      "additional_attributes": {"truncate_reads_to": 75000000, "output_gene_file": "reads_per_gene.tab"}
     },
     {
       "in" : ["star_out"], "out": "priceseq_out", "class": "PipelineStepRunPriceSeq", "module": "idseq_dag.steps.run_priceseq",

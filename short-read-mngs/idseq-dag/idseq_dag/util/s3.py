@@ -85,6 +85,8 @@ def fetch_from_s3(src,
         untar = auto_untar and dst.endswith(".tar")
         if unzip:
             dst = dst[:-3]  # Remove .gz
+        if untar:
+            dst = dst[:-4]  # Remove .tar
         abspath = os.path.abspath(dst)
         if abspath not in locks:
             locks[abspath] = threading.RLock()
@@ -116,7 +118,6 @@ def fetch_from_s3(src,
                         log.write("s3mi failed to install.")
                         allow_s3mi = False
 
-                command_params = ""
                 if untar:
                     command_params = " | tar xvf - -C {output_dir}".format(output_dir=destdir)
                 else:
