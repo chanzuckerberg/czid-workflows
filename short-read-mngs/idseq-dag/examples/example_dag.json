@@ -6,11 +6,11 @@
     "priceseq_out": ["priceseq1.fq", "priceseq2.fq"],
     "lzw_out": ["lzw1.fa", "lzw2.fa"],
     "cdhitdup_out": ["dedup1.fa", "dedup2.fa"],
-    "bowtie_out": ["bowtie1.fa", "bowtie2.fa"],
-    "gsnap_filter_out": ["gsnap_filtere1.fa", "gsnap_filtere2.fa"],
+    "bowtie2_out": ["bowtie2_1.fa", "bowtie2_2.fa"],
+    "gsnap_filter_out": ["gsnap_filter_1.fa", "gsnap_filter_2.fa"],
     "gsnap_out":  ["gsnap.m8"],
-    "rapsearch_out":  ["rapsearch.m8"],
-    "taxon_count_out": ["web_sample.json", "gsnap.filtered.m8", "rapsearch.filtered.m8"]
+    "rapsearch2_out":  ["rapsearch2.m8"],
+    "taxon_count_out": ["web_sample.json", "gsnap.filtered.m8", "rapsearch2.filtered.m8"]
   },
 
   "steps": [
@@ -35,12 +35,12 @@
       "additional_attributes": {}
     },
     {
-      "in" : ["cdhitdup_out"], "out": "bowtie_out", "class": "PipelineStepRunBowtie2",
-      "additional_files": {"bowtie_genome": "s3://idseq-database/bowtie_genome"},
+      "in" : ["cdhitdup_out"], "out": "bowtie2_out", "class": "PipelineStepRunBowtie2",
+      "additional_files": {"bowtie2_genome": "s3://idseq-database/bowtie2_genome"},
       "additional_attributes": {}
     },
     {
-      "in" : ["bowtie_out"], "out": "gsnap_filter_out", "class": "PipelineStepRunGsnapFilter",
+      "in" : ["bowtie2_out"], "out": "gsnap_filter_out", "class": "PipelineStepRunGsnapFilter",
       "additional_files": {"gsnap_genome": "s3://idseq-database/gsnap_genome"},
       "additional_attributes": {"sub_sample_to": 1000000}
     },
@@ -50,12 +50,12 @@
       "additional_attributes": {"chunk_size": 10000, "cluster": "prod"}
     },
     {
-      "in" : ["gsnap_filter_out"], "out": "rapsearch_out", "class": "PipelineStepRunRapsearch",
+      "in" : ["gsnap_filter_out"], "out": "rapsearch2_out", "class": "PipelineStepRunRapsearch2",
       "additional_files": {},
       "additional_attributes": {"chunk_size": 5000, "cluster": "prod"}
     },
     {
-      "in" : ["gsnap_out", "rapsearch_out"], "out": "taxon_count_out",
+      "in" : ["gsnap_out", "rapsearch2_out"], "out": "taxon_count_out",
       "class": "PipelineStepRunHitcalling",
       "additional_files": {},
       "additional_attributes": {}

@@ -41,7 +41,7 @@ class PipelineFlow(object):
         log.write("downloading large files: %s" % ",".join(self.large_file_list))
         for f in self.large_file_list:
             log.write("downloading %s" % f)
-            idseq_dag.util.s3.fetch_from_s3(f, self.ref_dir_local, auto_untar=True, allow_s3mi=True)
+            idseq_dag.util.s3.fetch_from_s3(f, self.ref_dir_local, allow_s3mi=True, auto_untar=True)
 
     @staticmethod
     def parse_and_validate_conf(dag_json):

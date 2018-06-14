@@ -17,7 +17,7 @@ class StepStatus(IntEnum):
     UPLOADED = 3 # all results uploaded to s3
 
 class PipelineStep(object):
-    ''' Each Pipeline Run Step i.e. run_star, run_bowtie, etc '''
+    ''' Each Pipeline Run Step i.e. run_star, run_bowtie2, etc '''
     def __init__(self, name, input_files, output_files,
                  output_dir_local, output_dir_s3, ref_dir_local,
                  additional_files, additional_attributes):

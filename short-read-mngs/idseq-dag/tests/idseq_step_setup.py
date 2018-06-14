@@ -62,7 +62,7 @@ class IdseqStepSetup(object):
     "priceseq_out": ["priceseqfilter.unmapped.star.1.fasta", "priceseqfilter.unmapped.star.2.fasta"],
     "cdhitdup_out": ["cdhitdup.priceseqfilter.unmapped.star.1.fasta", "cdhitdup.priceseqfilter.unmapped.star.2.fasta"],
     "lzw_out": ["lzw.cdhitdup.priceseqfilter.unmapped.star.1.fasta", "lzw.cdhitdup.priceseqfilter.unmapped.star.2.fasta"],
-    "bowtie_out": ["unmapped.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.1.fasta",
+    "bowtie2_out": ["unmapped.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.1.fasta",
                    "unmapped.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.2.fasta",
                    "unmapped.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.merged.fasta"],
     "gsnap_filter_out": ["unmapped.gsnap_filter.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.1.fasta",
@@ -92,14 +92,14 @@ class IdseqStepSetup(object):
       "additional_attributes": {"thresholds": [0.45, 0.42]}
     },
     {
-      "in" : ["lzw_out"], "out": "bowtie_out", "class": "PipelineStepRunBowtie2", "module": "idseq_dag.steps.run_bowtie2",
+      "in" : ["lzw_out"], "out": "bowtie2_out", "class": "PipelineStepRunBowtie2", "module": "idseq_dag.steps.run_bowtie2",
       "additional_files": {"bowtie2_genome": "s3://idseq-database/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/bowtie2_genome.tar"},
-      "additional_attributes": {}
+      "additional_attributes": {"output_sam_file": "bowtie2.sam"}
     },
     {
-      "in" : ["bowtie_out"], "out": "gsnap_filter_out", "class": "PipelineStepRunGsnapFilter", "module": "idseq_dag.steps.run_gsnap_filter",
+      "in" : ["bowtie2_out"], "out": "gsnap_filter_out", "class": "PipelineStepRunGsnapFilter", "module": "idseq_dag.steps.run_gsnap_filter",
       "additional_files": {"gsnap_genome": "s3://idseq-database/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/hg38_pantro5_k16.tar"},
-      "additional_attributes": {"truncate_reads_to": 10000000}
+      "additional_attributes": {"output_sam_file": "gsnap_filter.sam"}
     }
   ],
   "given_targets": {"fastqs": {"s3_dir":  "s3://idseq-samples-prod/test_samples/1/fastqs", "max_reads":75000000 } }
@@ -118,10 +118,8 @@ class IdseqStepSetup(object):
     "priceseq_out": ["priceseqfilter.unmapped.star.1.fasta"],
     "cdhitdup_out": ["cdhitdup.priceseqfilter.unmapped.star.1.fasta"],
     "lzw_out": ["lzw.cdhitdup.priceseqfilter.unmapped.star.1.fasta"],
-    "bowtie_out": ["unmapped.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.1.fasta",
-                   "unmapped.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.merged.fasta"],
-    "gsnap_filter_out": ["unmapped.gsnap_filter.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.1.fasta",
-                         "unmapped.gsnap_filter.bowtie2.lzw.cdhitdup.priceseqfilter.merged.star.1.fasta"]
+    "bowtie2_out": ["unmapped.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.1.fasta" ],
+    "gsnap_filter_out": ["unmapped.gsnap_filter.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.1.fasta"]
   },
 
   "steps": [
@@ -146,14 +144,14 @@ class IdseqStepSetup(object):
       "additional_attributes": {"thresholds": [0.45, 0.42]}
     },
     {
-      "in" : ["lzw_out"], "out": "bowtie_out", "class": "PipelineStepRunBowtie2", "module": "idseq_dag.steps.run_bowtie2",
+      "in" : ["lzw_out"], "out": "bowtie2_out", "class": "PipelineStepRunBowtie2", "module": "idseq_dag.steps.run_bowtie2",
       "additional_files": {"bowtie2_genome": "s3://idseq-database/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/bowtie2_genome.tar"},
-      "additional_attributes": {}
+      "additional_attributes": {"output_sam_file": "bowtie2.sam"}
     },
     {
-      "in" : ["bowtie_out"], "out": "gsnap_filter_out", "class": "PipelineStepRunGsnapFilter", "module": "idseq_dag.steps.run_gsnap_filter",
+      "in" : ["bowtie2_out"], "out": "gsnap_filter_out", "class": "PipelineStepRunGsnapFilter", "module": "idseq_dag.steps.run_gsnap_filter",
       "additional_files": {"gsnap_genome": "s3://idseq-database/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/hg38_pantro5_k16.tar"},
-      "additional_attributes": {"truncate_reads_to": 10000000}
+      "additional_attributes": {"output_sam_file": "gsnap_filter.sam"}
     }
   ],
   "given_targets": {"fastqs": {"s3_dir":  "s3://idseq-samples-prod/test_samples/1/fastqs", "max_reads":75000000 } }

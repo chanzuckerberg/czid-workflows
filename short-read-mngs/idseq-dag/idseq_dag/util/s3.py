@@ -86,7 +86,7 @@ def fetch_from_s3(src,
         if unzip:
             dst = dst[:-3]  # Remove .gz
         if untar:
-            dst = dst[:-4]  # Remove .tar
+            dst = dst[:-4] # Remove .tar
         abspath = os.path.abspath(dst)
         if abspath not in locks:
             locks[abspath] = threading.RLock()
