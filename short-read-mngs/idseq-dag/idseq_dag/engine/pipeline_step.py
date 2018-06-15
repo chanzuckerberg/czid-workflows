@@ -28,6 +28,8 @@ class PipelineStep(object):
         self.output_dir_local = output_dir_local
         self.output_dir_s3 = output_dir_s3.rstrip('/')
         self.ref_dir_local = ref_dir_local
+        self.create_local_dirs()
+
         self.additional_files = additional_files
         self.additional_attributes = additional_attributes
 
@@ -37,6 +39,7 @@ class PipelineStep(object):
         self.input_files_local = []
         self.additional_files_to_upload = []
 
+
     @abstractmethod
     def run(self):
         ''' implement what is actually being run in this step '''
@@ -45,12 +48,19 @@ class PipelineStep(object):
         ''' Get list of output files on local folder '''
         return [os.path.join(self.output_dir_local, f) for f in self.output_files]
 
+    def create_local_dirs(self):
+        ''' make sure proper local directories are created for files with subdirs '''
+        for f in self.output_files_local():
+            command.execute("mkdir -p %s" % os.path.dirname(f))
+
     def uploading_results(self):
         ''' Upload output files to s3 '''
         files_to_upload = self.output_files_local() + self.additional_files_to_upload
         for f in files_to_upload:
             # upload to S3 - TODO(Boris): parallelize the following with better calls
-            idseq_dag.util.s3.upload_with_retries(f, self.output_dir_s3 + '/')
+            relative_path = os.path.relpath(f, self.output_dir_local)
+            s3_path = os.path.join(self.output_dir_s3, relative_path)
+            idseq_dag.util.s3.upload_with_retries(f, s3_path)
         self.status = StepStatus.UPLOADED
 
     @staticmethod
