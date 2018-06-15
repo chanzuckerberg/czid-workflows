@@ -65,6 +65,7 @@ class IdseqStepSetup(object):
     "bowtie2_out": ["unmapped.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.1.fasta",
                    "unmapped.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.2.fasta",
                    "unmapped.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.merged.fasta"],
+    "subsampled_out": ["subsampled_1.fa", "subsampled_2.fa", "subsampled_merged.fa"],
     "gsnap_filter_out": ["unmapped.gsnap_filter.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.1.fasta",
                          "unmapped.gsnap_filter.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.2.fasta",
                          "unmapped.gsnap_filter.bowtie2.lzw.cdhitdup.priceseqfilter.merged.star.1.fasta"]
@@ -97,6 +98,11 @@ class IdseqStepSetup(object):
       "additional_attributes": {"output_sam_file": "bowtie2.sam"}
     },
     {
+      "in" : ["bowtie2_out"], "out": "subsampled_out", "class": "PipelineStepRunSubSample", "module": "idseq_dag.steps.run_subsample",
+      "additional_files": {},
+      "additional_attributes": {"max_reads": 1000000}
+    },
+    {
       "in" : ["bowtie2_out"], "out": "gsnap_filter_out", "class": "PipelineStepRunGsnapFilter", "module": "idseq_dag.steps.run_gsnap_filter",
       "additional_files": {"gsnap_genome": "s3://idseq-database/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/hg38_pantro5_k16.tar"},
       "additional_attributes": {"output_sam_file": "gsnap_filter.sam"}
@@ -119,6 +125,7 @@ class IdseqStepSetup(object):
     "cdhitdup_out": ["cdhitdup.priceseqfilter.unmapped.star.1.fasta"],
     "lzw_out": ["lzw.cdhitdup.priceseqfilter.unmapped.star.1.fasta"],
     "bowtie2_out": ["unmapped.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.1.fasta" ],
+    "subsampled_out": ["subsampled_1.fa"],
     "gsnap_filter_out": ["unmapped.gsnap_filter.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.1.fasta"]
   },
 
@@ -147,6 +154,11 @@ class IdseqStepSetup(object):
       "in" : ["lzw_out"], "out": "bowtie2_out", "class": "PipelineStepRunBowtie2", "module": "idseq_dag.steps.run_bowtie2",
       "additional_files": {"bowtie2_genome": "s3://idseq-database/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/bowtie2_genome.tar"},
       "additional_attributes": {"output_sam_file": "bowtie2.sam"}
+    },
+    {
+      "in" : ["bowtie2_out"], "out": "subsampled_out", "class": "PipelineStepRunSubSample", "module": "idseq_dag.steps.run_subsample",
+      "additional_files": {},
+      "additional_attributes": {"max_reads": 1000000}
     },
     {
       "in" : ["bowtie2_out"], "out": "gsnap_filter_out", "class": "PipelineStepRunGsnapFilter", "module": "idseq_dag.steps.run_gsnap_filter",
