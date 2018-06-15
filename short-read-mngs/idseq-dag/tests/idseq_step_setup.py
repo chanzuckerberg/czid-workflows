@@ -6,6 +6,7 @@ import time
 from idseq_dag.engine.pipeline_flow import PipelineFlow
 import idseq_dag.util.command as command
 
+
 class IdseqStepSetup(object):
     @staticmethod
     def get_step_object(step_class, step_name, paired=True):
@@ -14,7 +15,7 @@ class IdseqStepSetup(object):
             dag = IdseqStepSetup.paired_dag()
         else:
             dag = IdseqStepSetup.single_dag()
-        step_info =  {}
+        step_info = {}
         for step in dag["steps"]:
             if step["out"] == step_name:
                 step_info = step
@@ -171,3 +172,7 @@ class IdseqStepSetup(object):
   }
         ''')
 
+    # @staticmethod
+    # def postprocess_dag():
+    #     with open("examples/postprocess_dag.json") as f:
+    #         return json.load(f)

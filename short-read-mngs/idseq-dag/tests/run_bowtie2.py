@@ -23,6 +23,3 @@ class RunBowtie2Test(unittest.TestCase):
         runstep.wait_until_finished()
         # Check results
         # Clean up the folder
-
-
-
