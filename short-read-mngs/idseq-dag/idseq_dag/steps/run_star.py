@@ -13,7 +13,7 @@ class PipelineStepRunStar(PipelineStep):
         # Setup
         input_files = self.input_files_local[0][0:2]
         num_inputs = len(self.input_files[0])
-        scratch_dir = os.path.join(self.output_dir_local, "scratch")
+        scratch_dir = os.path.join(self.output_dir_local, "scratch_star")
 
         total_counts_from_star = {}
         output_files_local = self.output_files_local()

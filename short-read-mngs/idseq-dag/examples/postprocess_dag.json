@@ -7,7 +7,22 @@
       "summary.multihit.gsnapl.unmapped.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.tab",
       "summary.multihit.rapsearch2.filter.deuterostomes.taxids.gsnapl.unmapped.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.tab"
     ],
-    "taxid_fasta_out": ["taxid_annot.fasta"]
+    "taxid_fasta_out": ["taxid_annot.fasta"],
+    "taxid_locator_out": [
+      "taxid_annot_sorted_nt.fasta",
+      "taxid_locations_nt.json",
+      "taxid_annot_sorted_nr.fasta",
+      "taxid_locations_nr.json",
+      "taxid_annot_sorted_genus_nt.fasta",
+      "taxid_locations_genus_nt.json",
+      "taxid_annot_sorted_genus_nr.fasta",
+      "taxid_locations_genus_nr.json",
+      "taxid_annot_sorted_family_nt.fasta",
+      "taxid_locations_family_nt.json",
+      "taxid_annot_sorted_family_nr.fasta",
+      "taxid_locations_family_nr.json",
+      "taxid_locations_combined.json"
+    ]
   },
   "steps": [
     {
@@ -19,6 +34,14 @@
         "lineage_db":
           "s3://idseq-database/taxonomy/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/taxid-lineages.db"
       },
+      "additional_attributes": {}
+    },
+    {
+      "in": ["taxid_fasta_out"],
+      "out": "taxid_locator_out",
+      "class": "PipelineStepGenerateTaxidLocator",
+      "module": "idseq_dag.steps.generate_taxid_locator",
+      "additional_files": {},
       "additional_attributes": {}
     }
   ],
