@@ -111,13 +111,13 @@ class PipelineStep(object):
 
     def validate(self):
         ''' Make sure all the output files are generated. '''
-        self.count_reads()
         for f in self.output_files_local():
             if not os.path.exists(f):
                 raise RuntimeError("output file %s should be generated after run" % f)
             # Tag the done files
             done_file = self.done_file(f)
             command.execute("date > %s" % done_file)
+        self.count_reads()
 
     def wait_until_finished(self):
         self.exec_thread.join()
