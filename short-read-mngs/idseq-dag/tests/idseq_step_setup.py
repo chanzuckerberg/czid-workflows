@@ -69,7 +69,29 @@ class IdseqStepSetup(object):
     "subsampled_out": ["subsampled_1.fa", "subsampled_2.fa", "subsampled_merged.fa"],
     "gsnap_filter_out": ["unmapped.gsnap_filter.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.1.fasta",
                          "unmapped.gsnap_filter.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.2.fasta",
-                         "unmapped.gsnap_filter.bowtie2.lzw.cdhitdup.priceseqfilter.merged.star.1.fasta"]
+                         "unmapped.gsnap_filter.bowtie2.lzw.cdhitdup.priceseqfilter.merged.star.1.fasta"],
+    "taxid_fasta_in": [
+      "accessions.rapsearch2.gsnapl.fasta",
+      "dedup.multihit.gsnapl.unmapped.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.m8",
+      "summary.multihit.gsnapl.unmapped.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.tab",
+      "summary.multihit.rapsearch2.filter.deuterostomes.taxids.gsnapl.unmapped.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.tab"
+    ],
+    "taxid_fasta_out": ["taxid_annot.fasta"],
+    "taxid_locator_out": [
+      "taxid_annot_sorted_nt.fasta",
+      "taxid_locations_nt.json",
+      "taxid_annot_sorted_nr.fasta",
+      "taxid_locations_nr.json",
+      "taxid_annot_sorted_genus_nt.fasta",
+      "taxid_locations_genus_nt.json",
+      "taxid_annot_sorted_genus_nr.fasta",
+      "taxid_locations_genus_nr.json",
+      "taxid_annot_sorted_family_nt.fasta",
+      "taxid_locations_family_nt.json",
+      "taxid_annot_sorted_family_nr.fasta",
+      "taxid_locations_family_nr.json",
+      "taxid_locations_combined.json"
+    ]
   },
 
   "steps": [
@@ -107,6 +129,25 @@ class IdseqStepSetup(object):
       "in" : ["bowtie2_out"], "out": "gsnap_filter_out", "class": "PipelineStepRunGsnapFilter", "module": "idseq_dag.steps.run_gsnap_filter",
       "additional_files": {"gsnap_genome": "s3://idseq-database/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/hg38_pantro5_k16.tar"},
       "additional_attributes": {"output_sam_file": "gsnap_filter.sam"}
+    },
+    {
+      "in": ["taxid_fasta_in"],
+      "out": "taxid_fasta_out",
+      "class": "PipelineStepGenerateTaxidFasta",
+      "module": "idseq_dag.steps.generate_taxid_fasta",
+      "additional_files": {
+        "lineage_db":
+          "s3://idseq-database/taxonomy/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/taxid-lineages.db"
+      },
+      "additional_attributes": {}
+    },
+    {
+      "in": ["taxid_fasta_out"],
+      "out": "taxid_locator_out",
+      "class": "PipelineStepGenerateTaxidLocator",
+      "module": "idseq_dag.steps.generate_taxid_locator",
+      "additional_files": {},
+      "additional_attributes": {}
     }
   ],
   "given_targets": {"fastqs": {"s3_dir":  "s3://idseq-samples-prod/test_samples/1/fastqs", "max_reads":75000000 } }
@@ -127,7 +168,29 @@ class IdseqStepSetup(object):
     "lzw_out": ["lzw.cdhitdup.priceseqfilter.unmapped.star.1.fasta"],
     "bowtie2_out": ["unmapped.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.1.fasta" ],
     "subsampled_out": ["subsampled_1.fa"],
-    "gsnap_filter_out": ["unmapped.gsnap_filter.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.1.fasta"]
+    "gsnap_filter_out": ["unmapped.gsnap_filter.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.1.fasta"],
+    "taxid_fasta_in": [
+      "accessions.rapsearch2.gsnapl.fasta",
+      "dedup.multihit.gsnapl.unmapped.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.m8",
+      "summary.multihit.gsnapl.unmapped.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.tab",
+      "summary.multihit.rapsearch2.filter.deuterostomes.taxids.gsnapl.unmapped.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.tab"
+    ],
+    "taxid_fasta_out": ["taxid_annot.fasta"],
+    "taxid_locator_out": [
+      "taxid_annot_sorted_nt.fasta",
+      "taxid_locations_nt.json",
+      "taxid_annot_sorted_nr.fasta",
+      "taxid_locations_nr.json",
+      "taxid_annot_sorted_genus_nt.fasta",
+      "taxid_locations_genus_nt.json",
+      "taxid_annot_sorted_genus_nr.fasta",
+      "taxid_locations_genus_nr.json",
+      "taxid_annot_sorted_family_nt.fasta",
+      "taxid_locations_family_nt.json",
+      "taxid_annot_sorted_family_nr.fasta",
+      "taxid_locations_family_nr.json",
+      "taxid_locations_combined.json"
+    ]
   },
 
   "steps": [
@@ -165,6 +228,25 @@ class IdseqStepSetup(object):
       "in" : ["bowtie2_out"], "out": "gsnap_filter_out", "class": "PipelineStepRunGsnapFilter", "module": "idseq_dag.steps.run_gsnap_filter",
       "additional_files": {"gsnap_genome": "s3://idseq-database/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/hg38_pantro5_k16.tar"},
       "additional_attributes": {"output_sam_file": "gsnap_filter.sam"}
+    },
+    {
+      "in": ["taxid_fasta_in"],
+      "out": "taxid_fasta_out",
+      "class": "PipelineStepGenerateTaxidFasta",
+      "module": "idseq_dag.steps.generate_taxid_fasta",
+      "additional_files": {
+        "lineage_db":
+          "s3://idseq-database/taxonomy/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/taxid-lineages.db"
+      },
+      "additional_attributes": {}
+    },
+    {
+      "in": ["taxid_fasta_out"],
+      "out": "taxid_locator_out",
+      "class": "PipelineStepGenerateTaxidLocator",
+      "module": "idseq_dag.steps.generate_taxid_locator",
+      "additional_files": {},
+      "additional_attributes": {}
     }
   ],
   "given_targets": {"fastqs": {"s3_dir":  "s3://idseq-samples-prod/test_samples/1/fastqs", "max_reads":75000000 } }
