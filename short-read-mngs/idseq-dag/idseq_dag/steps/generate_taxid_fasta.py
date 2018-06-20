@@ -55,6 +55,9 @@ class PipelineStepGenerateTaxidFasta(PipelineStep):
         input_fa.close()
         output_fa.close()
 
+    def count_reads(self):
+        pass
+
     @staticmethod
     def parse_hits(hit_summary_files):
         """Return map of {NT, NR} => read_id => (hit_taxid_str, hit_level_str)"""

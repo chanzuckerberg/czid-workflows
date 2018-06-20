@@ -99,7 +99,7 @@ class IdseqStepSetup(object):
     {
       "in" : ["fastqs"], "out": "star_out", "class": "PipelineStepRunStar", "module": "idseq_dag.steps.run_star",
       "additional_files": {"star_genome": "s3://idseq-database/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/STAR_genome.tar"},
-      "additional_attributes": {"truncate_reads_to": 75000000, "output_gene_file": "reads_per_gene.tab"}
+      "additional_attributes": {"truncate_fragments_to": 75000000, "output_gene_file": "reads_per_gene.tab"}
     },
     {
       "in" : ["star_out"], "out": "priceseq_out", "class": "PipelineStepRunPriceSeq", "module": "idseq_dag.steps.run_priceseq",
@@ -124,7 +124,7 @@ class IdseqStepSetup(object):
     {
       "in" : ["bowtie2_out"], "out": "subsampled_out", "class": "PipelineStepRunSubSample", "module": "idseq_dag.steps.run_subsample",
       "additional_files": {},
-      "additional_attributes": {"max_reads": 1000000}
+      "additional_attributes": {"max_fragments": 1000000}
     },
     {
       "in" : ["bowtie2_out"], "out": "gsnap_filter_out", "class": "PipelineStepRunGsnapFilter", "module": "idseq_dag.steps.run_gsnap_filter",
@@ -159,7 +159,7 @@ class IdseqStepSetup(object):
       "additional_attributes": {}
     }
   ],
-  "given_targets": {"fastqs": {"s3_dir":  "s3://idseq-samples-prod/test_samples/1/fastqs", "max_reads":75000000 } }
+  "given_targets": {"fastqs": {"s3_dir":  "s3://idseq-samples-prod/test_samples/1/fastqs", "count_reads": 1, "max_fragments":75000000 } }
 }
         ''')
 
@@ -207,7 +207,7 @@ class IdseqStepSetup(object):
     {
       "in" : ["fastqs"], "out": "star_out", "class": "PipelineStepRunStar", "module": "idseq_dag.steps.run_star",
       "additional_files": {"star_genome": "s3://idseq-database/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/STAR_genome.tar"},
-      "additional_attributes": {"truncate_reads_to": 75000000}
+      "additional_attributes": {"truncate_fragments_to": 75000000}
     },
     {
       "in" : ["star_out"], "out": "priceseq_out", "class": "PipelineStepRunPriceSeq", "module": "idseq_dag.steps.run_priceseq",
@@ -232,7 +232,7 @@ class IdseqStepSetup(object):
     {
       "in" : ["bowtie2_out"], "out": "subsampled_out", "class": "PipelineStepRunSubSample", "module": "idseq_dag.steps.run_subsample",
       "additional_files": {},
-      "additional_attributes": {"max_reads": 1000000}
+      "additional_attributes": {"max_fragments": 1000000}
     },
     {
       "in" : ["bowtie2_out"], "out": "gsnap_filter_out", "class": "PipelineStepRunGsnapFilter", "module": "idseq_dag.steps.run_gsnap_filter",
@@ -267,7 +267,7 @@ class IdseqStepSetup(object):
       "additional_attributes": {}
     }
   ],
-  "given_targets": {"fastqs": {"s3_dir":  "s3://idseq-samples-prod/test_samples/1/fastqs", "max_reads":75000000 } }
+  "given_targets": {"fastqs": {"s3_dir":  "s3://idseq-samples-prod/test_samples/1/fastqs", "count_reads": 1, "max_fragments": 75000000 } }
 
   }
         ''')

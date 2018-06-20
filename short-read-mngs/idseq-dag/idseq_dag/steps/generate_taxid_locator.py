@@ -33,6 +33,9 @@ class PipelineStepGenerateTaxidLocator(PipelineStep):
         # Cleanup
         command.execute(f"rm -rf {tmp}")
 
+    def count_reads(self):
+        pass
+
     @staticmethod
     def generate_locator_work(input_fa, taxid_field, hit_type, output_fa,
                               output_json, tmp):

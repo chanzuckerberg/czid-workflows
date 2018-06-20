@@ -9,6 +9,7 @@ import idseq_dag
 import idseq_dag.util.s3
 import idseq_dag.util.command as command
 import idseq_dag.util.log as log
+import idseq_dag.util.count as count
 from idseq_dag.engine.pipeline_step import PipelineStep
 
 DEFAULT_OUTPUT_DIR_LOCAL = '/mnt/idseq/results/%d' % os.getpid()
@@ -146,6 +147,25 @@ class PipelineFlow(object):
             done_file = PipelineStep.done_file(local_file)
             command.execute("date > %s" % done_file)
 
+    @staticmethod
+    def count_input_reads(input_files, result_dir_local, result_dir_s3, target_name, max_fragments=None):
+        local_input_files = [os.path.join(result_dir_local, f) for f in input_files[0:2]]
+        count_file_basename = "%s.count" % target_name
+        local_count_file = "%s/%s" % (result_dir_local, count_file_basename)
+        s3_count_file = "%s/%s" % (result_dir_s3, count_file_basename)
+
+        read_count = count.reads_in_group(local_input_files, max_fragments=max_fragments)
+        counts_dict = { target_name: read_count }
+        if read_count == len(local_input_files) * max_fragments:
+            # If the number of reads is exactly equal to the maximum we specified, 
+            # it means that the input has been truncated.
+            counts_dict["truncated"] = 1
+
+        with open(local_count_file, 'w') as count_file:
+            json.dump(counts_dict, count_file)
+        idseq_dag.util.s3.upload_with_retries(local_count_file, s3_count_file)
+
+
     def fetch_target_from_s3(self, target):
         ''' .done file should be written to the result dir when the download is complete '''
         log.write("Downloading target %s" % target)
@@ -157,6 +177,12 @@ class PipelineFlow(object):
         PipelineFlow.fetch_input_files_from_s3(input_files=self.targets[target],
                                                input_dir_s3=input_path_s3,
                                                result_dir_local=self.output_dir_local)
+        if self.given_targets[target].get("count_reads"):
+            PipelineFlow.count_input_reads(input_files=self.targets[target],
+                                           result_dir_local=self.output_dir_local,
+                                           result_dir_s3=self.output_dir_s3,
+                                           target_name=target,
+                                           max_fragments=self.given_targets[target]["max_fragments"])
 
 
     def start(self):

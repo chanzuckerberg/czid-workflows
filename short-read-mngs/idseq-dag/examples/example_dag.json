@@ -3,7 +3,7 @@
   "targets": {
     "fastqs": ["fastq1.gz", "fastq2.gz"],
     "star_out": ["unmapped1.fq", "unmapped2.fq"],
-    "priceseq_out": ["priceseq1.fq", "priceseq2.fq"],
+    "priceseq_out": ["priceseq1.fa", "priceseq2.fa"],
     "lzw_out": ["lzw1.fa", "lzw2.fa"],
     "cdhitdup_out": ["dedup1.fa", "dedup2.fa"],
     "bowtie2_out": ["bowtie2_1.fa", "bowtie2_2.fa"],
@@ -17,7 +17,7 @@
     {
       "in" : ["fastqs"], "out": "star_out", "class": "PipelineStepRunStar",
       "additional_files": {"star_genome": "s3://idseq-database/star_genome"},
-      "additional_attributes": {"truncate_reads_to": 75000000}
+      "additional_attributes": {"truncate_fragments_to": 75000000}
     },
     {
       "in" : ["star_out"], "out": "priceseq_out", "class": "PipelineStepRunPriceSeq",
@@ -61,5 +61,5 @@
       "additional_attributes": {}
     }
   ],
-  "given_targets": {"fastqs": {"s3_dir":  "s3://idseq-samples-prod/samples/1/10/fastqs", "max_reads":75000000 } }
+  "given_targets": {"fastqs": {"s3_dir":  "s3://idseq-samples-prod/samples/1/10/fastqs", "count_reads": 1, "max_fragments": 75000000 } }
 }
