@@ -91,7 +91,8 @@ class IdseqStepSetup(object):
       "taxid_annot_sorted_family_nr.fasta",
       "taxid_locations_family_nr.json",
       "taxid_locations_combined.json"
-    ]
+    ],
+    "alignment_viz_out": ["align_viz.summary"]
   },
 
   "steps": [
@@ -148,6 +149,14 @@ class IdseqStepSetup(object):
       "module": "idseq_dag.steps.generate_taxid_locator",
       "additional_files": {},
       "additional_attributes": {}
+    },
+    {
+      "in": ["taxid_fasta_in", "taxid_locator_out"],
+      "out": "alignment_viz_out",
+      "class": "PipelineStepGenerateAlignmentViz",
+      "module": "idseq_dag.steps.generate_alignment_viz",
+      "additional_files": {"nt_db": "s3://idseq-database/20170824/blast_db/nt", "nt_loc_db": "s3://idseq-database/20170824/blast_db/nt_loc.db"},
+      "additional_attributes": {}
     }
   ],
   "given_targets": {"fastqs": {"s3_dir":  "s3://idseq-samples-prod/test_samples/1/fastqs", "max_reads":75000000 } }
@@ -190,7 +199,8 @@ class IdseqStepSetup(object):
       "taxid_annot_sorted_family_nr.fasta",
       "taxid_locations_family_nr.json",
       "taxid_locations_combined.json"
-    ]
+    ],
+    "alignment_viz_out": ["align_viz.summary"]
   },
 
   "steps": [
@@ -246,6 +256,14 @@ class IdseqStepSetup(object):
       "class": "PipelineStepGenerateTaxidLocator",
       "module": "idseq_dag.steps.generate_taxid_locator",
       "additional_files": {},
+      "additional_attributes": {}
+    },
+    {
+      "in": ["taxid_fasta_in", "taxid_locator_out"],
+      "out": "alignment_viz_out",
+      "class": "PipelineStepGenerateAlignmentViz",
+      "module": "idseq_dag.steps.generate_alignment_viz",
+      "additional_files": {"nt_db": "s3://idseq-database/20170824/blast_db/nt", "nt_loc_db": "s3://idseq-database/20170824/blast_db/nt_loc.db"},
       "additional_attributes": {}
     }
   ],

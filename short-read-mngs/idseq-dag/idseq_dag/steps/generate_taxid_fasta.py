@@ -19,7 +19,7 @@ class PipelineStepGenerateTaxidFasta(PipelineStep):
             self.additional_files["lineage_db"],
             self.ref_dir_local,
             allow_s3mi=True)
-        lineage_map = shelve.open(lineage_db.rstrip(".db"))
+        lineage_map = shelve.open(lineage_db.replace(".db", ""))
 
         # Get primary hit mappings
         valid_hits = PipelineStepGenerateTaxidFasta.parse_hits(
