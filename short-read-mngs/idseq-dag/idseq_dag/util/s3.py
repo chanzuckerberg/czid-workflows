@@ -1,17 +1,8 @@
 import time
-import datetime
 import threading
-import sys
 import subprocess
-import logging
-import json
-import gzip
 import os
-import traceback
-import re
 import multiprocessing
-from functools import wraps
-import random
 import logging
 
 import idseq_dag.util.command as command
@@ -25,8 +16,9 @@ IOSTREAM = multiprocessing.Semaphore(MAX_CONCURRENT_COPY_OPERATIONS)
 MAX_CONCURRENT_UPLOAD_OPERATIONS = 4
 IOSTREAM_UPLOADS = multiprocessing.Semaphore(MAX_CONCURRENT_UPLOAD_OPERATIONS)
 
+
 def check_s3_presence(s3_path):
-    ''' True if s3_path exists. False otherwise. '''
+    """True if s3_path exists. False otherwise."""
     try:
         o = command.execute_with_output("aws s3 ls %s" % s3_path)
         if o:
@@ -35,11 +27,13 @@ def check_s3_presence(s3_path):
         pass
     return False
 
+
 def check_s3_presence_for_file_list(s3_dir, file_list):
     for f in file_list:
         if not check_s3_presence(os.path.join(s3_dir, f)):
             return False
     return True
+
 
 def touch_s3_file(s3_file_path):
     try:
@@ -48,9 +42,11 @@ def touch_s3_file(s3_file_path):
     except:
         return False
 
+
 def touch_s3_file_list(s3_dir, file_list):
     for f in file_list:
         touch_s3_file(os.path.join(s3_dir, f))
+
 
 def install_s3mi(installed={}, mutex=threading.RLock()):  #pylint: disable=dangerous-default-value
     with mutex:
@@ -119,26 +115,23 @@ def fetch_from_s3(src,
                         allow_s3mi = False
 
                 if untar:
-                    command_params = " | tar xvf - -C {output_dir}".format(output_dir=destdir)
+                    command_params = f" | tar xvf - -C {destdir}"
                 else:
                     pipe_filter = ""
                     if unzip:
                         pipe_filter = "| gzip -dc "
-                    command_params = "{pipe_filter} > {destination}".format(
-                        pipe_filter=pipe_filter, destination=dst)
-                log.write("command_params: %s" % command_params)
+                    command_params = f"{pipe_filter} > {dst}"
+                log.write(f"command_params: {command_params}")
 
                 try:
                     assert allow_s3mi
-                    cmd = "s3mi cat {source} {command_params}".format(
-                        source=src, command_params=command_params)
+                    cmd = f"s3mi cat {src} {command_params}"
                     command.execute(cmd)
                 except:
                     log.write(
                         "Failed to download with s3mi. Trying with aws s3 cp..."
                     )
-                    cmd = "aws s3 cp --quiet {source} - {command_params}".format(
-                        source=src, command_params=command_params)
+                    cmd = f"aws s3 cp --quiet {src} - {command_params}"
                     command.execute(cmd)
                 return dst
             except subprocess.CalledProcessError:
@@ -146,12 +139,15 @@ def fetch_from_s3(src,
                 log.write(
                     "Failed to fetch file from S3. Most likely does not exist."
                 )
+                # Delete potential empty file remnant
+                if os.path.isfile(dst) and os.stat(dst).st_size == 0:
+                    os.remove(dst)
                 return None
+
 
 @command.retry
 def upload_with_retries(from_f, to_f):
-    command.execute("aws s3 cp --quiet {from_f} {to_f}".format(
-        from_f=from_f, to_f=to_f))
+    command.execute(f"aws s3 cp --quiet {from_f} {to_f}")
 
 
 def upload(from_f, to_f, status, status_lock=threading.RLock()):
@@ -165,6 +161,7 @@ def upload(from_f, to_f, status, status_lock=threading.RLock()):
         with status_lock:
             status[from_f] = "error"
         raise
+
 
 def upload_log_file(sample_s3_output_path, lock=threading.RLock()):
     with lock:
