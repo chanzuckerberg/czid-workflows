@@ -157,7 +157,7 @@ class PipelineFlow(object):
         read_count = count.reads_in_group(local_input_files, max_fragments=max_fragments)
         counts_dict = { target_name: read_count }
         if read_count == len(local_input_files) * max_fragments:
-            # If the number of reads is exactly equal to the maximum we specified, 
+            # If the number of reads is exactly equal to the maximum we specified,
             # it means that the input has been truncated.
             counts_dict["truncated"] = 1
 
@@ -177,7 +177,7 @@ class PipelineFlow(object):
         PipelineFlow.fetch_input_files_from_s3(input_files=self.targets[target],
                                                input_dir_s3=input_path_s3,
                                                result_dir_local=self.output_dir_local)
-        if self.given_targets[target].get("count_reads"):
+        if target in self.given_targets and self.given_targets[target].get("count_reads"):
             PipelineFlow.count_input_reads(input_files=self.targets[target],
                                            result_dir_local=self.output_dir_local,
                                            result_dir_s3=self.output_dir_s3,

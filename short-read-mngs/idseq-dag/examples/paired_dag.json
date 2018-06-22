@@ -31,8 +31,22 @@
     "gsnap_filter_out": [
       "unmapped.gsnap_filter.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.1.fasta",
       "unmapped.gsnap_filter.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.2.fasta",
-      "unmapped.gsnap_filter.bowtie2.lzw.cdhitdup.priceseqfilter.merged.star.1.fasta"
+      "unmapped.gsnap_filter.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.merged.fasta"
     ],
+    "gsnap_out": [
+      "subsample_1000000/multihit.gsnapl.unmapped.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.m8",
+      "subsample_1000000/dedup.multihit.gsnapl.unmapped.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.m8",
+      "subsample_1000000/summary.multihit.gsnapl.unmapped.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.tab",
+      "subsample_1000000/nt_multihit_idseq_web_sample.json"
+    ],
+    "rapsearch2_out": [
+      "subsample_1000000/multihit.rapsearch2.filter.deuterostomes.taxids.gsnapl.unmapped.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.m8",
+      "subsample_1000000/dedup.multihit.rapsearch2.filter.deuterostomes.taxids.gsnapl.unmapped.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.m8",
+      "subsample_1000000/summary.multihit.rapsearch2.filter.deuterostomes.taxids.gsnapl.unmapped.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.tab",
+      "subsample_1000000/nr_multihit_idseq_web_sample.json"
+    ],
+    "taxon_count_out": ["taxon_counts.json"],
+    "annotated_out": ["annotated_merged.fa","unidentified.fa"],
     "taxid_fasta_in": [
       "accessions.rapsearch2.gsnapl.fasta",
       "dedup.multihit.gsnapl.unmapped.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.m8",
@@ -155,6 +169,56 @@
         "nt_db": "s3://idseq-database/20170824/blast_db/nt",
         "nt_loc_db": "s3://idseq-database/20170824/blast_db/nt_loc.db"
       },
+      "additional_attributes": {}
+    },
+    {
+      "in": ["gsnap_filter_out"],
+      "out": "gsnap_out",
+      "class": "PipelineStepRunAlignmentRemotely",
+      "module": "idseq_dag.steps.run_alignment_remotely",
+      "additional_files": {
+        "lineage_db":
+          "s3://idseq-database/taxonomy/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/taxid-lineages.db",
+        "accession2taxid_db": "s3://idseq-database/alignment_data/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/accession2taxid.db",
+        "deuterostome_db":"s3://idseq-database/taxonomy/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/deuterostome_taxids.txt"
+      },
+      "additional_attributes": {
+        "service": "gsnap", "chunks_in_flight": 32,
+        "chunk_size": 15000, "max_concurrent": 3,
+        "environment": "prod"
+        }
+    },
+    {
+      "in": ["gsnap_filter_out"],
+      "out": "rapsearch2_out",
+      "class": "PipelineStepRunAlignmentRemotely",
+      "module": "idseq_dag.steps.run_alignment_remotely",
+      "additional_files": {
+        "lineage_db":
+          "s3://idseq-database/taxonomy/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/taxid-lineages.db",
+        "accession2taxid_db": "s3://idseq-database/alignment_data/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/accession2taxid.db",
+        "deuterostome_db":"s3://idseq-database/taxonomy/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/deuterostome_taxids.txt"
+      },
+      "additional_attributes": {
+        "service": "rapsearch2", "chunks_in_flight": 32,
+        "chunk_size": 10000, "max_concurrent": 6,
+        "environment": "prod"
+        }
+    },
+    {
+      "in": ["gsnap_out", "rapsearch2_out"],
+      "out": "taxon_count_out",
+      "class": "PipelineStepCombineTaxonCounts",
+      "module": "idseq_dag.steps.combine_taxon_counts",
+      "additional_files": {},
+      "additional_attributes": {}
+    },
+    {
+      "in": ["gsnap_filter_out", "gsnap_out", "rapsearch2_out"],
+      "out": "annotated_out",
+      "class": "PipelineStepGenerateAnnotatedFasta",
+      "module": "idseq_dag.steps.generate_annotated_fasta",
+      "additional_files": {},
       "additional_attributes": {}
     }
   ],

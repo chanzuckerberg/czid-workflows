@@ -32,7 +32,7 @@ class PipelineStepRunSubsample(PipelineStep):
         paired = len(input_fas) >= 2
         # count lines
         cmd = "wc -l %s | cut -f1 -d ' '" % input_fas[0]
-        total_records = int(command.execute_with_output(cmd).decode('utf-8')) // 2
+        total_records = int(command.execute_with_output(cmd)) // 2
         log.write("total reads: %d" % total_records)
         log.write("target reads: %d" % max_fragments)
         if total_records <= max_fragments:

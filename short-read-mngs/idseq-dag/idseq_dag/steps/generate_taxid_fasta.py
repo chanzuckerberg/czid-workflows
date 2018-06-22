@@ -1,5 +1,5 @@
 from idseq_dag.engine.pipeline_step import PipelineStep
-import idseq_dag.util.taxid_lineage as taxid_lineage
+import idseq_dag.util.lineage as lineage
 import idseq_dag.util.s3 as s3
 import shelve
 
@@ -87,6 +87,6 @@ class PipelineStepGenerateTaxidFasta(PipelineStep):
         hit_taxid_str, hit_level_str = valid_hits[count_type].get(
             read_id, ("-1", "-1"))
         hit_lineage = lineage_map.get(hit_taxid_str,
-                                      taxid_lineage.NULL_LINEAGE)
-        return taxid_lineage.validate_taxid_lineage(hit_lineage, hit_taxid_str,
+                                      lineage.NULL_LINEAGE)
+        return lineage.validate_taxid_lineage(hit_lineage, hit_taxid_str,
                                                     hit_level_str)

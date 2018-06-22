@@ -198,7 +198,6 @@ def retry(operation, randgen=random.Random().random):
 
     return wrapped_operation
 
-
 def execute(command,
             progress_file=None,
             timeout=None,
@@ -251,16 +250,7 @@ def execute_with_output(command,
         timeout,
         grace_period,
         capture_stdout=True,
-        merge_stderr=merge_stderr)
-
-
-def execute_remote(base_command, key_path, remote_username, instance_ip):
-    # ServerAliveInterval to fix issue with containers keeping open an SSH
-    # connection even after worker machines had finished running.
-    return 'ssh -o "StrictHostKeyChecking no" -o "ConnectTimeout 15" ' \
-           '-o "ServerAliveInterval 60" -i %s %s@%s "%s"' % (
-               key_path, remote_username, instance_ip, base_command)
-
+        merge_stderr=merge_stderr).decode('utf-8')
 
 def scp(key_path, remote_username, instance_ip, remote_path, local_path):
     assert " " not in key_path
@@ -276,3 +266,12 @@ def scp(key_path, remote_username, instance_ip, remote_path, local_path):
         ip=instance_ip,
         remote_path=remote_path,
         local_path=local_path)
+
+def remote(base_command, key_path, remote_username, instance_ip):
+    # ServerAliveInterval to fix issue with containers keeping open an SSH
+    # connection even after worker machines had finished running.
+    return 'ssh -o "StrictHostKeyChecking no" -o "ConnectTimeout 15" ' \
+           '-o "ServerAliveInterval 60" -i %s %s@%s "%s"' % (
+        key_path, remote_username, instance_ip, base_command)
+
+

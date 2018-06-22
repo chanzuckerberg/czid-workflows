@@ -14,8 +14,11 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('dag_json', help='pipeline dag in json file format')
     parser.add_argument('--no-lazy-run', dest='lazy_run', action='store_false')
+    parser.add_argument('--key-path-s3', dest='key_path_s3', help='ssh key')
     parser.set_defaults(lazy_run=True)
     args = parser.parse_args()
+    if args.key_path_s3:
+        os.environ["KEY_PATH_S3"] = args.key_path_s3
     try:
         flow = PipelineFlow(lazy_run=args.lazy_run,
                             dag_json=args.dag_json)

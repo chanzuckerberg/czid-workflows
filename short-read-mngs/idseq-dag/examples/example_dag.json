@@ -10,7 +10,7 @@
     "gsnap_filter_out": ["gsnap_filter_1.fa", "gsnap_filter_2.fa"],
     "gsnap_out":  ["gsnap.m8"],
     "rapsearch2_out":  ["rapsearch2.m8"],
-    "taxon_count_out": ["web_sample.json", "gsnap.filtered.m8", "rapsearch2.filtered.m8"]
+    "taxon_count_out": ["taxon_counts.json", "gsnap.filtered.m8", "rapsearch2.filtered.m8"]
   },
 
   "steps": [
