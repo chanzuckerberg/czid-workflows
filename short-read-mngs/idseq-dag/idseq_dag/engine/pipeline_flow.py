@@ -142,10 +142,13 @@ class PipelineFlow(object):
             local_dir = os.path.dirname(local_file)
             command.execute("mkdir -p %s" % local_dir)
             # copy the file over
-            idseq_dag.util.s3.fetch_from_s3(s3_file, local_dir, allow_s3mi=True)
-            # write the done_file
-            done_file = PipelineStep.done_file(local_file)
-            command.execute("date > %s" % done_file)
+            output_file = idseq_dag.util.s3.fetch_from_s3(s3_file, local_dir, allow_s3mi=True)
+            if output_file:
+                # write the done_file
+                done_file = PipelineStep.done_file(local_file)
+                command.execute("date > %s" % done_file)
+            else:
+                raise RuntimeError(f"{s3_file} likely doesn't exist");
 
     @staticmethod
     def count_input_reads(input_files, result_dir_local, result_dir_s3, target_name, max_fragments=None):
