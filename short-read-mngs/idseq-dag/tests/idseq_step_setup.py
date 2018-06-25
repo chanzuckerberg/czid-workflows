@@ -9,9 +9,14 @@ import idseq_dag.util.command as command
 
 class IdseqStepSetup(object):
     @staticmethod
-    def get_step_object(step_class, step_name, paired=True):
-        ''' return the PipelineStep with the default parameters ready for test. '''
-        if paired:
+    def get_step_object(step_class, step_name, paired=True, dag_file=None):
+        """Return the PipelineStep with the default parameters ready for
+        test.
+        """
+        if dag_file:
+            with open(dag_file) as f:
+                dag = json.load(f)
+        elif paired:
             dag = IdseqStepSetup.paired_dag()
         else:
             dag = IdseqStepSetup.single_dag()
@@ -21,13 +26,18 @@ class IdseqStepSetup(object):
                 step_info = step
                 break
         if not step_info:
-            raise ValueError("no steps correspond to %s" % step_name)
+            raise ValueError(f"no steps correspond to {step_name}")
 
         # Download input data to local
-        output_dir_s3 = os.path.join(dag["output_dir_s3"], "testrun_%s_%d_%d" % (step_name, int(paired),int(time.time())))
-        result_dir_local = "/mnt/idseq/results/%s_%d/%d" % (step_name, int(paired), os.getpid())
+        output_dir_s3 = os.path.join(dag["output_dir_s3"],
+                                     "testrun_%s_%d_%d" % (step_name,
+                                                           int(paired),
+                                                           int(time.time())))
+        result_dir_local = "/mnt/idseq/results/%s_%d/%d" % (step_name,
+                                                            int(paired),
+                                                            os.getpid())
         ref_dir_local = '/mnt/idseq/ref'
-        command.execute("mkdir -p %s %s" % (result_dir_local, ref_dir_local))
+        command.execute(f"mkdir -p {result_dir_local} {ref_dir_local}")
 
         input_files = []
         for target in step_info["in"]:
@@ -36,9 +46,8 @@ class IdseqStepSetup(object):
             else:
                 input_dir_s3 = dag["output_dir_s3"]
             input_files.append(dag["targets"][target])
-            PipelineFlow.fetch_input_files_from_s3(input_files[-1],
-                                                   input_dir_s3,
-                                                   result_dir_local)
+            PipelineFlow.fetch_input_files_from_s3(
+                input_files[-1], input_dir_s3, result_dir_local)
 
         return step_class(
             name=step_name,
@@ -48,8 +57,7 @@ class IdseqStepSetup(object):
             output_dir_s3=output_dir_s3,
             ref_dir_local=ref_dir_local,
             additional_files=step_info["additional_files"],
-            additional_attributes=step_info["additional_attributes"]
-        )
+            additional_attributes=step_info["additional_attributes"])
 
     @staticmethod
     def paired_dag():

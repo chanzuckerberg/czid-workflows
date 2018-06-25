@@ -205,7 +205,7 @@ class PipelineFlow(object):
         # Start initializing all the steps and start running them and wait until all of them are done
         step_instances = []
         for step in step_list:
-            log.write("Starting step %s" % step["out"])
+            log.write("Initializing step %s" % step["out"])
             StepClass = getattr(importlib.import_module(step["module"]), step["class"])
             step_output = self.targets[step["out"]]
             step_inputs = [self.targets[itarget] for itarget in step["in"]]
