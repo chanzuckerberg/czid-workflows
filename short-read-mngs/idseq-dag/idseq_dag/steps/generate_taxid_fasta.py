@@ -12,7 +12,7 @@ class PipelineStepGenerateTaxidFasta(PipelineStep):
     def run(self):
         # Setup
         input_files = self.input_files_local[0]
-        hit_summary_files = {'NT': input_files[2], 'NR': input_files[3]}
+        hit_summary_files = {'NT': input_files[1], 'NR': input_files[2]}
 
         # Open lineage db
         lineage_db = s3.fetch_from_s3(
