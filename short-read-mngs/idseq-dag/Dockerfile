@@ -63,10 +63,10 @@ RUN mv cd-hit-dup /usr/local/bin/
 
 WORKDIR /tmp
 # Compile and install Fastax tools
-RUN wget http://launchpadlibrarian.net/161878011/libgtextutils0_0.7-1_amd64.deb
-RUN wget http://launchpadlibrarian.net/162265652/fastx-toolkit_0.0.14-1_amd64.deb
-RUN gdebi --non-interactive libgtextutils0_0.7-1_amd64.deb
-RUN gdebi --non-interactive fastx-toolkit_0.0.14-1_amd64.deb
+#RUN wget http://launchpadlibrarian.net/161878011/libgtextutils0_0.7-1_amd64.deb
+#RUN wget http://launchpadlibrarian.net/162265652/fastx-toolkit_0.0.14-1_amd64.deb
+#RUN gdebi --non-interactive libgtextutils0_0.7-1_amd64.deb
+#RUN gdebi --non-interactive fastx-toolkit_0.0.14-1_amd64.deb
 
 # For aegea
 RUN apt-get install -y python3-pip

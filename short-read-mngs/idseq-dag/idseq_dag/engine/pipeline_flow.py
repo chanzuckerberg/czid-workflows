@@ -162,7 +162,7 @@ class PipelineFlow(object):
         if read_count == len(local_input_files) * max_fragments:
             # If the number of reads is exactly equal to the maximum we specified,
             # it means that the input has been truncated.
-            counts_dict["truncated"] = 1
+            counts_dict["truncated"] = read_count
 
         with open(local_count_file, 'w') as count_file:
             json.dump(counts_dict, count_file)
