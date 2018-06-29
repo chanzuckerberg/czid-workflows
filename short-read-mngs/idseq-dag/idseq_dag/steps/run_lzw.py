@@ -54,7 +54,7 @@ class PipelineStepRunLZW(PipelineStep):
         outfiles_list = [] # one item per cutoff
 
         for fasta_file in fasta_files:
-            read_streams.append(open(fasta_file, 'rb'))
+            read_streams.append(open(fasta_file, 'r', encoding='utf-8'))
         paired = len(fasta_files) == 2
 
         for cutoff in cutoff_fractions:
@@ -64,7 +64,7 @@ class PipelineStepRunLZW(PipelineStep):
             for f in output_files:
                 outfile_name = "%s-%f" % (f, cutoff)
                 outfiles.append(outfile_name)
-                outstream.append(open(outfile_name, 'wb'))
+                outstream.append(open(outfile_name, 'w'))
 
             outstream_list.append(outstream)
             outfiles_list.append(outfiles)
