@@ -216,6 +216,11 @@ class PipelineFlow(object):
             step_instances.append(step_instance)
         # Collecting stats files
         for step in step_instances:
-            step.wait_until_all_done()
+            try:
+                step.wait_until_all_done()
+            except:
+                # Some exception thrown by one of the steps
+                traceback.print_exc()
+                sys.exit(1)
         log.write("all steps are done")
 
