@@ -86,7 +86,7 @@ class PipelineStepRunLZW(PipelineStep):
                 fraction = min(fraction_1, fraction_2)
                 for i in range(len(cutoff_fractions)):
                     cutoff = cutoff_fractions[i]
-                    if fraction >= cutoff:
+                    if fraction > cutoff:
                         readcount_list[i] += 1
                         outstream = outstream_list[i]
                         outstream[0].write(line_r1_header)
