@@ -6,6 +6,7 @@ import threading
 import time
 import traceback
 from collections import defaultdict
+import subprocess
 
 from idseq_dag.engine.pipeline_step import PipelineStep
 from idseq_dag.util.lineage import INVALID_CALL_BASE_ID
@@ -353,25 +354,22 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
         num_retries = 3
         for attempt in range(num_retries):
             try:
-                pipe_file = f'pipe-{attempt}-accession-{accession_id}'
+                range_file = f'range-{attempt}-accession-{accession_id}'
                 range_end = range_start + name_length + seq_len - 1
                 get_range = f"aws s3api get-object " \
                             f"--range bytes={range_start}-{range_end} " \
                             f"--bucket {nt_bucket} " \
-                            f"--key {nt_key} {pipe_file}"
+                            f"--key {nt_key} {range_file}"
                 command.execute(get_range)
 
-                # TODO: Revert to using Unix commands for this for performance
-                # so that the Python thread is not tied up.
-                with open(pipe_file, 'r', encoding='utf-8') as pfile:
-                    raw_file = pfile.read()
-                    split_str = raw_file.split('\n', 1)  # Split on first newline
-                    seq_name = split_str[0].split(" ", 1)[1]
-                    sequence = split_str[-1].replace("\n", "")
-                    with open(accession_file, 'w') as f:
-                        f.write(sequence)
-                os.remove(pipe_file)
+                # (1) Take everything below the first two lines, remove the
+                # newlines chars, and put the sequence into accession_file
+                # (2) Send the first line to stdout
+                cmd = """cat {range_file} |tail -n+2 |tr -d '\\n' > {accession_file}; cat {range_file} |head -1""".format(range_file=range_file, accession_file=accession_file)
+                seq_name = subprocess.check_output(
+                    cmd, executable='/bin/bash', shell=True).decode("utf-8").split(" ", 1)[1]
 
+                # Get the sequence length based on the file size
                 seq_len = os.stat(accession_file).st_size
                 break
             except Exception as e:
@@ -382,7 +380,7 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
                     raise RuntimeError(msg)
             finally:
                 try:
-                    os.remove(pipe_file)
+                    os.remove(range_file)
                     pass
                 except:
                     pass
