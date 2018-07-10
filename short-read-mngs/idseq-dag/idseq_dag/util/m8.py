@@ -136,8 +136,8 @@ def call_hits_m8(input_m8, lineage_map_path, accession2taxid_dict_path,
         * http://www.metagenomics.wiki/tools/blast/blastn-output-format-6
         * http://www.metagenomics.wiki/tools/blast/evalue
     """
-    lineage_map = shelve.open(lineage_map_path.replace('.db', ''))
-    accession2taxid_dict = shelve.open(accession2taxid_dict_path.replace('.db', ''))
+    lineage_map = shelve.open(lineage_map_path.replace('.db', ''), 'r')
+    accession2taxid_dict = shelve.open(accession2taxid_dict_path.replace('.db', ''), 'r')
     # Helper functions
     # TODO: Represent taxids by numbers instead of strings to greatly reduce
     # memory footprint and increase speed.
@@ -278,7 +278,7 @@ def generate_taxon_count_json_from_m8(
     # Lines in m8_file and hit_level_file correspond (same read_id)
     hit_line = hit_f.readline()
     m8_line = m8_f.readline()
-    lineage_map = shelve.open(lineage_map_path.replace('.db', ''))
+    lineage_map = shelve.open(lineage_map_path.replace('.db', ''), 'r')
     num_ranks = len(lineage.NULL_LINEAGE)
     # See https://en.wikipedia.org/wiki/Double-precision_floating-point_format
     MIN_NORMAL_POSITIVE_DOUBLE = 2.0**-1022
