@@ -221,6 +221,8 @@ class PipelineFlow(object):
             except:
                 # Some exception thrown by one of the steps
                 traceback.print_exc()
-                sys.exit(1)
+                for s in step_instances:
+                    # notify the waiting step instances to self destruct
+                    s.stop_waiting()
         log.write("all steps are done")
 

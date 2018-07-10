@@ -39,6 +39,7 @@ class PipelineStep(object):
         self.input_files_local = []
         self.additional_files_to_upload = []
         self.counts_dict = {}
+        self.should_terminate = False
 
 
     @abstractmethod
@@ -48,6 +49,10 @@ class PipelineStep(object):
     @abstractmethod
     def count_reads(self):
         ''' count reads '''
+
+    def stop_waiting(self):
+        ''' stop waiting to run '''
+        self.should_terminate = True
 
     def save_counts(self):
         if self.counts_dict:
@@ -80,15 +85,6 @@ class PipelineStep(object):
         ''' get the done file for a particular local file '''
         return "%s.done" % filename
 
-    @staticmethod
-    def wait_for_file_existence(filename):
-        ''' wait until file exists '''
-        # TODO: (Yunfang) What if the file will never appear because something else failed?
-        # It is customary in those cases for an exception to be raised in this loop.
-        while True:
-            if os.path.exists(filename):
-                return
-            time.sleep(5) # wait for 5 seconds to check again
 
     def wait_for_input_files(self):
         ''' wait for all the input files to be avaiable and update input_files_local '''
@@ -96,9 +92,15 @@ class PipelineStep(object):
             flist = []
             for f in fl:
                 local_file = os.path.join(self.output_dir_local, f)
-                self.wait_for_file_existence(local_file)
-                self.wait_for_file_existence(self.done_file(local_file))
-                flist.append(local_file)
+                while True:
+                    if os.path.exists(local_file) and os.path.exists(self.done_file(local_file)):
+                        flist.append(local_file)
+                        break
+                    else:
+                        if self.should_terminate:
+                            # If the step is not supposed to be run any more.
+                            raise RuntimeError("Step %s being terminated" % self.name)
+                        time.sleep(5)
             self.input_files_local.append(flist)
 
 
