@@ -13,7 +13,7 @@ setup(name='idseq_dag',
       dependency_links=[],
       entry_points={
         'console_scripts': [
-          'idseq_dag = idseq_dag.main:main'
+          'idseq_dag = idseq_dag.__main__:main'
         ]
       },
       zip_safe=False)

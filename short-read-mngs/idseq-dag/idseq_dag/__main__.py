@@ -11,6 +11,7 @@ from idseq_dag import __version__
 
 log.configure_logger()
 
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--version', action='version',
@@ -31,3 +32,7 @@ def main():
         raise
     log.write("start executing the dag")
     flow.start()
+
+
+if __name__ == "__main__":
+    main()
