@@ -44,6 +44,7 @@ class PipelineStepRunLZW(PipelineStep):
         return float(len(results)) / len(sequence)
 
     @staticmethod
+    @command.run_in_subprocess
     def generate_lzw_filtered(fasta_files, output_files, cutoff_fractions):
         assert(len(fasta_files) == len(output_files))
         cutoff_fractions.sort(reverse=True) # Make sure cutoff is from high to low
