@@ -24,12 +24,12 @@ def get_server_ips_work(service_name, environment):
         command.execute_with_output(
             "aws ec2 describe-instances --filters 'Name=tag:%s,Values=%s' 'Name=instance-state-name,Values=running'"
             % (tag, value)))
-    server_ips = []
-    for reservation in describe_json["Reservations"]:
-        for instance in reservation["Instances"]:
-            server_ips += [
-                instance["NetworkInterfaces"][0]["Association"]["PublicIp"]
-            ]
+    server_ips = [
+        instance["NetworkInterfaces"][0]["PrivateIpAddress"]
+        for reservation in describe_json["Reservations"] 
+        for instance in reservation["Instances"]
+    ]
+    
     return server_ips
 
 
