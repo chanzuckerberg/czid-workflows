@@ -64,14 +64,15 @@ class CommandTracker(Updater):
         with log.print_lock:
             if self.proc is None or self.proc.poll() is None:
                 log.write("Command %d still running after %3.1f seconds." %
-                      (self.id, t_elapsed))
+                          (self.id, t_elapsed))
             else:
                 # This should be uncommon, unless there is lengthy python
                 # processing following the command in the same CommandTracker
                 # "with" block. Note: Not to be confused with post-processing
                 # on the data.
-                log.write("Command %d still postprocessing after %3.1f seconds." %
-                      (self.id, t_elapsed))
+                log.write(
+                    "Command %d still postprocessing after %3.1f seconds." %
+                    (self.id, t_elapsed))
             sys.stdout.flush()
         self.enforce_timeout(t_elapsed)
 
@@ -198,6 +199,16 @@ def retry(operation, randgen=random.Random().random):
 
     return wrapped_operation
 
+
+@retry
+def execute_with_retries(command,
+                         progress_file=None,
+                         timeout=None,
+                         grace_period=None,
+                         merge_stderr=False):
+    execute(command, progress_file, timeout, grace_period, merge_stderr)
+
+
 def execute(command,
             progress_file=None,
             timeout=None,
@@ -243,7 +254,7 @@ def execute_with_output(command,
                         progress_file=None,
                         timeout=None,
                         grace_period=None,
-                         merge_stderr=False):
+                        merge_stderr=False):
     return execute(
         command,
         progress_file,
@@ -251,6 +262,7 @@ def execute_with_output(command,
         grace_period,
         capture_stdout=True,
         merge_stderr=merge_stderr).decode('utf-8')
+
 
 def scp(key_path, remote_username, instance_ip, remote_path, local_path):
     assert " " not in key_path
@@ -267,11 +279,10 @@ def scp(key_path, remote_username, instance_ip, remote_path, local_path):
         remote_path=remote_path,
         local_path=local_path)
 
+
 def remote(base_command, key_path, remote_username, instance_ip):
     # ServerAliveInterval to fix issue with containers keeping open an SSH
     # connection even after worker machines had finished running.
     return 'ssh -o "StrictHostKeyChecking no" -o "ConnectTimeout 15" ' \
            '-o "ServerAliveInterval 60" -i %s %s@%s "%s"' % (
         key_path, remote_username, instance_ip, base_command)
-
-

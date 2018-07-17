@@ -159,8 +159,7 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
             # Split large file into smaller named pieces
             command.execute("split -a %d --numeric-suffixes -l %d %s %s" %
                             (ndigits, chunk_nlines, input_file, out_prefix))
-            command.execute("aws s3 cp --quiet %s/ %s/ --recursive --exclude '*' --include '%s*'" %
-                            (self.chunks_result_dir_local, self.chunks_result_dir_s3, out_prefix_base))
+            command.execute_with_retries(f"aws s3 sync --only-show-errors {self.chunks_result_dir_local}/ {self.chunks_result_dir_s3}/ --exclude '*' --include '{out_prefix_base}*'")
 
             # Get the partial file names
             partial_files = []
@@ -231,7 +230,7 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
         multihit_remote_outfile = os.path.join(remote_work_dir, multihit_basename)
         multihit_s3_outfile = os.path.join(self.chunks_result_dir_s3, multihit_basename)
 
-        base_str = "aws s3 cp --quiet {s3_path}/{input_fa} {remote_work_dir}/{input_fa} "
+        base_str = "aws s3 cp --only-show-errors {s3_path}/{input_fa} {remote_work_dir}/{input_fa} "
         download_input_from_s3 = " ; ".join(
             base_str.format(
                 s3_path=self.chunks_result_dir_s3,
@@ -316,7 +315,7 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
                 command.execute(
                     command.scp(key_path, remote_username, instance_ip,
                         multihit_remote_outfile, multihit_local_outfile))
-                command.execute("aws s3 cp --quiet %s %s/" %
+                command.execute("aws s3 cp --only-show-errors %s %s/" %
                                 (multihit_local_outfile,
                                  self.chunks_result_dir_s3))
             log.write("finished alignment for chunk %s on %s server %s" % (chunk_id, service, instance_ip))
