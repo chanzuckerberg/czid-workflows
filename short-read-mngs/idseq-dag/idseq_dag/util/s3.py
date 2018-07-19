@@ -58,7 +58,7 @@ def install_s3mi(installed={}, mutex=threading.RLock()):  #pylint: disable=dange
                 "which s3mi || pip install git+git://github.com/chanzuckerberg/s3mi.git"
             )
             command.execute(
-                "s3mi tweak-vm || echo s3mi tweak-vm is impossible under docker. Continuing..."
+                "s3mi tweak-vm || echo s3mi tweak-vm sometimes fails under docker. Continuing..."
             )
         finally:
             installed['time'] = time.time()

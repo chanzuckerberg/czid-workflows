@@ -368,6 +368,7 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
                 cmd = """cat {range_file} |tail -n+2 |tr -d '\\n' > {accession_file}; cat {range_file} |head -1""".format(range_file=range_file, accession_file=accession_file)
                 seq_name = subprocess.check_output(
                     cmd, executable='/bin/bash', shell=True).decode("utf-8").split(" ", 1)[1]
+                seq_name = seq_name.replace("\n", "")
 
                 # Get the sequence length based on the file size
                 seq_len = os.stat(accession_file).st_size

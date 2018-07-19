@@ -32,6 +32,7 @@ class PipelineStepRunStar(PipelineStep):
 
         # Run STAR on each partition and save the unmapped read info
         unmapped = input_files
+
         for part_idx in range(num_parts):
             tmp = f"{scratch_dir}/star-part-{part_idx}"
             genome_part = f"{genome_dir}/part-{part_idx}"
@@ -59,6 +60,7 @@ class PipelineStepRunStar(PipelineStep):
         command.execute("cd %s; rm -rf *" % scratch_dir)
 
     def count_reads(self):
+        self.should_count_reads = True
         self.counts_dict[self.name] = count.reads_in_group(self.output_files_local()[0:2])
 
     def run_star_part(self,

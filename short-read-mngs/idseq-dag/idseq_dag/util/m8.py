@@ -394,6 +394,3 @@ def generate_taxon_count_json_from_m8(
     }
     with open(output_json_file, 'w') as outf:
         json.dump(output_dict, outf)
-
-
-

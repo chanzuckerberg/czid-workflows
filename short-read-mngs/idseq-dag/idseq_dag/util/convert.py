@@ -73,3 +73,4 @@ def generate_unmapped_pairs_from_sam(sam_file, out_fas):
     out_fa_2.close()
     if out_fa_merged:
         out_fa_merged.close()
+    sam_f.close()

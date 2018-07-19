@@ -148,7 +148,7 @@ class PipelineFlow(object):
                 done_file = PipelineStep.done_file(local_file)
                 command.execute("date > %s" % done_file)
             else:
-                raise RuntimeError(f"{s3_file} likely doesn't exist");
+                raise RuntimeError(f"{s3_file} likely doesn't exist")
 
     @staticmethod
     def count_input_reads(input_files, result_dir_local, result_dir_s3, target_name, max_fragments=None):

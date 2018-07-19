@@ -12,6 +12,7 @@ class PipelineStepRunLZW(PipelineStep):
         PipelineStepRunLZW.generate_lzw_filtered(input_fas, output_fas, cutoff_fractions)
 
     def count_reads(self):
+        self.should_count_reads = True
         self.counts_dict[self.name] = count.reads_in_group(self.output_files_local()[0:2])
 
     @staticmethod

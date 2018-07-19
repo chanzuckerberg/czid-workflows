@@ -14,9 +14,9 @@ class PipelineStepCombineTaxonCounts(PipelineStep):
         output_file = self.output_files_local()[0]
         self.combine_counts(input_files, output_file)
 
-
     def count_reads(self):
         pass
+
     @staticmethod
     def combine_counts(input_json_files, output_json_path):
         taxon_counts = []

@@ -17,6 +17,7 @@ class PipelineStepRunSubsample(PipelineStep):
         PipelineStepRunSubsample.subsample_fastas(input_fas, output_fas, max_fragments)
 
     def count_reads(self):
+        self.should_count_reads = True
         files_to_count = self.output_files_local()[0:2]
         read_count = count.reads_in_group(files_to_count)
         self.counts_dict[self.name] = read_count
@@ -53,8 +54,6 @@ class PipelineStepRunSubsample(PipelineStep):
                     records_to_keep_merged += [2*r, 2*r+1]
                 PipelineStepRunSubsample.subset(input_fas[2], output_fas[2],
                                                 records_to_keep_merged)
-
-
 
     @staticmethod
     def subset(input_fa, output_fa, records_to_keep):

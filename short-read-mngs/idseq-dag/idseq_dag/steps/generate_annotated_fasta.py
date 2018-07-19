@@ -19,6 +19,7 @@ class PipelineStepGenerateAnnotatedFasta(PipelineStep):
 
     def count_reads(self):
         # count unidenfitied reads
+        self.should_count_reads = True
         self.counts_dict["unidentified_fasta"] = count.reads_in_group([self.output_files_local()[1]])
 
     @staticmethod

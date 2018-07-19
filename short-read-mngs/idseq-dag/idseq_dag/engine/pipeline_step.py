@@ -40,6 +40,7 @@ class PipelineStep(object):
         self.additional_files_to_upload = []
         self.counts_dict = {}
         self.should_terminate = False
+        self.should_count_reads = False
 
 
     @abstractmethod
