@@ -70,6 +70,7 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
         key_path = self.fetch_key(os.environ['KEY_PATH_S3'])
         sample_name = self.output_dir_s3.rstrip('/').replace('s3://', '').replace('/', '-')
         chunk_size = self.additional_attributes["chunk_size"]
+        index_dir_suffix = self.additional_attributes.get("index_dir_suffix")
         if service == "gsnap":
             remote_username = "ubuntu"
             remote_home_dir = "/home/%s" % remote_username
@@ -78,6 +79,9 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
             remote_username = "ec2-user"
             remote_home_dir = "/home/%s" % remote_username
             remote_index_dir = "%s/references/nr_rapsearch" % remote_home_dir
+
+        if index_dir_suffix:
+            remote_index_dir = os.path.join(remote_index_dir, index_dir_suffix)
 
         remote_work_dir = "%s/batch-pipeline-workdir/%s" % (remote_home_dir, sample_name)
 

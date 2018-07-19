@@ -163,7 +163,8 @@
       "additional_attributes": {
         "service": "gsnap", "chunks_in_flight": 32,
         "chunk_size": 15000, "max_concurrent": 3,
-        "environment": "prod"
+        "environment": "prod",
+        "index_dir_suffix": "2018-04-01"
         }
     },
     {
@@ -180,7 +181,8 @@
       "additional_attributes": {
         "service": "rapsearch2", "chunks_in_flight": 32,
         "chunk_size": 10000, "max_concurrent": 6,
-        "environment": "prod"
+        "environment": "prod",
+        "index_dir_suffix": "2018-04-01"
         }
     },
     {
