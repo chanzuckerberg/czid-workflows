@@ -35,7 +35,7 @@ class PipelineStepRunBowtie2(PipelineStep):
             '--very-sensitive-local', '-S', output_sam_file
         ]
 
-        seed = self.additional_attributes["random_seed"]
+        seed = self.additional_attributes.get("random_seed")
         if seed:
             bowtie2_params.extend(['--seed', str(seed)])
         else:
