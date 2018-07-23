@@ -1,9 +1,11 @@
+''' Run PriceSeq Filter '''
 from idseq_dag.engine.pipeline_step import PipelineStep
 import idseq_dag.util.command as command
 import idseq_dag.util.log as log
 import idseq_dag.util.count as count
 
 class PipelineStepRunPriceSeq(PipelineStep):
+    ''' PriceSeq PipelineStep implementation '''
     def run(self):
         """PriceSeqFilter is used to filter input data based on quality. Two FASTQ
         inputs means paired reads.
@@ -36,18 +38,24 @@ class PipelineStepRunPriceSeq(PipelineStep):
         command.execute(cmd)
 
         # Run FASTQ to FASTA if needed
-        if "fasta" not in file_type:
+        if file_type != 'fasta' and file_type != 'fa':
+            # Fastq
             self.fq2fa(price_out[0], output_files[0])
             if is_paired:
                 self.fq2fa(price_out[1], output_files[1])
+        else:
+            command.execute(f"mv {price_out[0]} {output_files[0]}")
+            if is_paired:
+                command.execute(f"mv {price_out[1]} {output_files[1]}")
 
     def count_reads(self):
+        ''' Count reads '''
         self.should_count_reads = True
         self.counts_dict[self.name] = count.reads_in_group(self.output_files_local()[0:2])
 
     @staticmethod
     def fq2fa(input_fastq, output_fasta):
-        # FASTQ to FASTA conversion
+        ''' FASTQ to FASTA conversion '''
         step = "FASTQ to FASTA conversion"
         log.write(f"Starting {step}...")
         cmd = f"sed -n '1~4s/^@/>/p;2~4p' <{input_fastq} >{output_fasta}"

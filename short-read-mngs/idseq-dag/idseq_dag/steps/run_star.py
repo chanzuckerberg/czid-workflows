@@ -176,7 +176,7 @@ class PipelineStepRunStar(PipelineStep):
         """
         Truncate to maximum lines. Fastq has 4 lines per read.
         Fasta has 2 lines per read, ASSUMING it is single-line fasta, not multiline fasta.
-        TODO: Add support for multiline fasta. We do not have control over the inputs uploaded 
+        TODO: Add support for multiline fasta. We do not have control over the inputs uploaded
         by the user, so our assumption of single-line fasta will probably be violated in the future.
         """
         res = self.additional_attributes["truncate_fragments_to"] * 2
@@ -186,16 +186,22 @@ class PipelineStepRunStar(PipelineStep):
 
     @staticmethod
     def get_read(f):
-        # The FASTQ format specifies that each read consists of 4 lines,
-        # the first of which begins with @ followed by read ID.
+        # The FASTQ/FASTA format specifies that each read consists of 4/2 lines,
+        # the first of which begins with @/> followed by read ID.
         read, rid = [], None
         line = f.readline()
         if line:
-            assert line[0] == 64  # Equivalent to '@'
-            rid = line.decode('utf-8').split('\t', 1)[0].strip()
-            read.append(line)
-            for i in range(3):
+            if line[0] == 64:  # Equivalent to '@', fastq format
+                rid = line.decode('utf-8').split('\t', 1)[0].strip()
+                read.append(line)
+                for i in range(3):
+                    read.append(f.readline())
+            elif line[0] == 62: # Equivalent to '>', fasta format
+                rid = line.decode('utf-8').split('\t', 1)[0].strip()
+                read.append(line)
                 read.append(f.readline())
+            else:
+                raise RuntimeError("sync pair failed. unknown ")
         return read, rid
 
     @staticmethod
