@@ -196,6 +196,18 @@ When merging a commit to master, you need to increase the version number in `ids
 
 ## Release notes
 
+- 2.7.1
+   - Reduce LZW runtime from 2h 35m to 24 min on the largest samples
+
+- 2.7
+   - ?
+
+- 2.6
+   - ?
+
+- 2.5
+   - ?
+
 - 2.4.0
    - New directed acyclic graph-based execution model for the pipeline. Changes integration with the web app as well.
 
@@ -271,7 +283,3 @@ Below is copied from https://github.com/chanzuckerberg/idseq-pipeline :
 - 1.2.0
     - Synchronize pair order after STAR to improve sensitivity in 10% of
       samples with paired-end reads.
-
-
-
-
