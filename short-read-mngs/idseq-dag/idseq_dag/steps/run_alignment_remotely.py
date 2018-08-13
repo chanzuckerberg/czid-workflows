@@ -243,7 +243,7 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
 
         base_str = "mkdir -p {remote_work_dir} ; {download_input_from_s3} ; "
         if service == "gsnap":
-            commands = base_str + "{remote_home_dir}/bin/gsnapl -A m8 --batch=0 --use-shared-memory=0 --gmap-mode=none --npaths=100 --ordered -t 32 --maxsearch=1000 --max-mismatches=40 -D {remote_index_dir} -d nt_k16 {remote_input_files} > {multihit_remote_outfile}"
+            commands = base_str + "{remote_home_dir}/bin/gsnapl -A m8 --batch=0 --use-shared-memory=0 --gmap-mode=none --npaths=100 --ordered -t 36 --maxsearch=1000 --max-mismatches=40 -D {remote_index_dir} -d nt_k16 {remote_input_files} > {multihit_remote_outfile}"
         else:
             commands = base_str + "/usr/local/bin/rapsearch -d {remote_index_dir}/nr_rapsearch -e -6 -l 10 -a T -b 0 -v 50 -z 24 -q {remote_input_files} -o {multihit_remote_outfile}"
 
@@ -324,4 +324,3 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
                                  self.chunks_result_dir_s3))
             log.write("finished alignment for chunk %s on %s server %s" % (chunk_id, service, instance_ip))
         return multihit_local_outfile
-

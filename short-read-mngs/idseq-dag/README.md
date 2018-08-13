@@ -196,8 +196,9 @@ When merging a commit to master, you need to increase the version number in `ids
 
 ## Release notes
 
-- 2.7.1
+- 2.7.1 ... 2.7.2
    - Reduce LZW runtime from 2h 35m to 24 min on the largest samples
+   - Increase GSNAP threads to 36 for i3.metal instances.
 
 - 2.7
    - ?
