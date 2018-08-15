@@ -307,9 +307,10 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
                                 mutex,
                                 seq_count=[0]):  #pylint: disable=dangerous-default-value
         try:
-            ref_seq_len, seq_name = PipelineStepGenerateAlignmentViz.get_sequence_by_accession_id_s3(
+            ref_seq_len, seq_name, accession_file = PipelineStepGenerateAlignmentViz.get_sequence_by_accession_id_s3(
                 accession_id, nt_loc_dict, nt_bucket, nt_key)
             with mutex:
+                accession_info['seq_file'] = accession_file
                 accession_info['ref_seq_len'] = ref_seq_len
                 accession_info['name'] = seq_name
                 seq_count[0] += 1
@@ -340,8 +341,7 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
         return ref_seq, seq_name
 
     @staticmethod
-    def get_sequence_by_accession_id_s3(accession_id, nt_loc_dict, nt_bucket,
-                                        nt_key):
+    def get_sequence_by_accession_id_s3(accession_id, nt_loc_dict, nt_bucket, nt_key):
         seq_len = 0
         seq_name = ''
         entry = nt_loc_dict.get(accession_id)
@@ -356,11 +356,7 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
             try:
                 range_file = f'range-{attempt}-accession-{accession_id}'
                 range_end = range_start + name_length + seq_len - 1
-                get_range = f"aws s3api get-object " \
-                            f"--range bytes={range_start}-{range_end} " \
-                            f"--bucket {nt_bucket} " \
-                            f"--key {nt_key} {range_file}"
-                command.execute(get_range)
+                s3.fetch_byterange(range_start, range_end, nt_bucket, nt_key, range_file)
 
                 # (1) Take everything below the first two lines, remove the
                 # newlines chars, and put the sequence into accession_file
@@ -385,7 +381,8 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
                     pass
                 except:
                     pass
-        return seq_len, seq_name
+        accession_file_full_path = f"{os.getcwd()}/{accession_file}"
+        return seq_len, seq_name, accession_file_full_path
 
     @staticmethod
     def compress_coverage(coverage):

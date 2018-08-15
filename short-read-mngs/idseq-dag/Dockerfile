@@ -84,7 +84,6 @@ WORKDIR /tmp/spades_build/spades/assembler
 RUN PREFIX=/usr/local ./spades_compile.sh
 RUN /usr/local/bin/spades.py --test
 
-
 WORKDIR /tmp
 # Compile and install gmap/gsnap
 RUN wget http://research-pub.gene.com/gmap/src/gmap-gsnap-2017-11-15.tar.gz
@@ -94,6 +93,19 @@ RUN ./configure --prefix=/usr/local
 RUN make -j 16 && make check && make install
 RUN rm -rf /tmp/gmap-gsnap /tmp/gmap-gsnap-2017-11-15.tar.gz
 RUN gsnapl --version
+
+# For adapter trimming (for phylogenetic trees)
+RUN apt install python-cutadapt
+
+# For phylogenetic trees
+WORKDIR /tmp
+RUN wget https://sourceforge.net/projects/ksnp/files/kSNP3.1_Linux_package.zip
+RUN unzip -o kSNP3.1_Linux_package.zip
+WORKDIR /tmp/kSNP3.1_Linux_package/kSNP3
+RUN cp -r * /usr/local/bin/
+RUN sed -i 's:set kSNP=/usr/local/kSNP3:set kSNP=/usr/local/bin:g' /usr/local/bin/kSNP3 # edit the kSNP3 executable so it looks for other executables in /usr/local/bin
+RUN apt install tcsh
+RUN kSNP3
 
 # Cleanup
 RUN rm -rf /tmp/*

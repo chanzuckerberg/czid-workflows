@@ -1,0 +1,34 @@
+{
+  "output_dir_s3": "s3://idseq-samples-development/phylo_trees/8/test/",
+  "targets": {
+    "phylo_tree_out": ["phylo_tree.newick"]
+  },
+  "steps": [
+    {
+      "in": [],
+      "out": "phylo_tree_out",
+      "class": "PipelineStepGeneratePhyloTree",
+      "module": "idseq_dag.steps.generate_phylo_tree",
+      "additional_files": {
+        "nt_loc_db": "s3://idseq-database/20170824/blast_db/nt_loc.db"
+      },
+      "additional_attributes": {
+        "taxid": 573,
+        "nt_db": "s3://idseq-database/20170824/blast_db/nt",
+        "align_viz_files": {
+          "1019": "s3://idseq-samples-development/samples/84/860/postprocess/2.4/align_viz/nt.species.573.align_viz.json",
+          "1020": "s3://idseq-samples-development/samples/84/857/postprocess/2.4/align_viz/nt.species.573.align_viz.json",
+          "1021": "s3://idseq-samples-development/samples/84/858/postprocess/2.4/align_viz/nt.species.573.align_viz.json",
+          "1029": "s3://idseq-samples-development/samples/84/872/postprocess/2.4/align_viz/nt.species.573.align_viz.json"
+        },
+        "taxon_byteranges": {
+          "1019": [431082985, 431233435, "s3://idseq-samples-development/samples/84/860/postprocess/2.4/taxid_annot_sorted_nt.fasta", "run1019__klebsiella.fasta"],
+          "1020": [28835, 89930, "s3://idseq-samples-development/samples/84/857/postprocess/2.4/taxid_annot_sorted_nt.fasta", "run1020__klebsiella.fasta"],
+          "1021": [178740111, 178757997, "s3://idseq-samples-development/samples/84/858/postprocess/2.4/taxid_annot_sorted_nt.fasta", "run1021__klebsiella.fasta"],
+          "1029": [28835, 89930, "s3://idseq-samples-development/samples/84/872/postprocess/2.4/taxid_annot_sorted_nt.fasta", "run1029__klebsiella.fasta"]
+        }
+      }
+    }
+  ],
+  "given_targets": {}
+}

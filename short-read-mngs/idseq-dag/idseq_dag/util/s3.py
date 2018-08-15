@@ -16,6 +16,8 @@ IOSTREAM = multiprocessing.Semaphore(MAX_CONCURRENT_COPY_OPERATIONS)
 MAX_CONCURRENT_UPLOAD_OPERATIONS = 4
 IOSTREAM_UPLOADS = multiprocessing.Semaphore(MAX_CONCURRENT_UPLOAD_OPERATIONS)
 
+def split_identifiers(s3_path):
+    return s3_path[5:].split("/", 1)
 
 def check_s3_presence(s3_path):
     """True if s3_path exists. False otherwise."""
@@ -144,6 +146,12 @@ def fetch_from_s3(src,
                     os.remove(dst)
                 return None
 
+def fetch_byterange(first_byte, last_byte, bucket, key, output_file):
+    get_range = f"aws s3api get-object " \
+                f"--range bytes={first_byte}-{last_byte} " \
+                f"--bucket {bucket} " \
+                f"--key {key} {output_file}"
+    command.execute(get_range)
 
 @command.retry
 def upload_with_retries(from_f, to_f):
