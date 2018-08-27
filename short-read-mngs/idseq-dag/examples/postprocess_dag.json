@@ -60,10 +60,10 @@
   "given_targets": {
     "taxid_fasta_in": {
       "s3_dir": "s3://idseq-samples-prod/samples/12/5815/results/2.4"
-
     },
     "gsnap_m8": {
       "s3_dir": "s3://idseq-samples-prod/samples/12/5815/results/2.4"
     }
   }
 }
+

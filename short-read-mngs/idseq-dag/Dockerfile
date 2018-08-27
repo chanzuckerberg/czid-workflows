@@ -94,6 +94,12 @@ RUN make -j 16 && make check && make install
 RUN rm -rf /tmp/gmap-gsnap /tmp/gmap-gsnap-2017-11-15.tar.gz
 RUN gsnapl --version
 
+# For srst2, install forked srst2 python 3 compatible repo 
+RUN pip install scipy 
+RUN pip install git+https://github.com/chanzuckerberg/srst2
+# TODO: Test both pip installations, consider keeping pip use consistent
+RUN pip3 install pandas
+
 # For adapter trimming (for phylogenetic trees)
 RUN apt install python-cutadapt
 
@@ -111,3 +117,4 @@ RUN kSNP3
 RUN rm -rf /tmp/*
 
 WORKDIR /
+
