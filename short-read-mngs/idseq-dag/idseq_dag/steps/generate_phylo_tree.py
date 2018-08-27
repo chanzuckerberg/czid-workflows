@@ -53,7 +53,9 @@ class PipelineStepGeneratePhyloTree(PipelineStep):
         # Retrieve Genbank references (full assembled genomes).
         # For now, we skip this using the option n=0 because
         # (a) sequences for the accession IDs actually matched by the sample are likely to be more relevant initially
-        # (b) the downloads are slow.
+        # (b) the downloads are slow
+        # (c) the function only supports species-level taxids. If the phylo_tree's taxid in idseq-web is genus-level or higher,
+        #     then we will need to decide on a list of species/strains to be included in the tree and pass those to the function.
         self.get_genbank_genomes(taxid, input_dir_for_ksnp3, 0)
 
         # Retrieve NCBI NT references for the accessions in the alignment viz files.
