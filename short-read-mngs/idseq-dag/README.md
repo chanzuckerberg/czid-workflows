@@ -193,6 +193,17 @@ When merging a commit to master, you need to increase the version number in `ids
   - if results are expected to change, increase the 2nd number
   - if results are not expected to change, increase the 3rd number.
 
+## Generating reference indices
+IDseq DAGs require the use of several indices prepared from files in NCBI. If you need to generate a new version of these indices, please refer to https://github.com/chanzuckerberg/idseq-pipeline, specifically the following commands:
+  - host_indexing
+  - gsnap_indexing
+  - rapsearch_indexing
+  - blacklist
+  - lineages
+  - curate_accession2taxid
+  - curate_accessionid2seq
+  - push_reference_update.
+TODO: Move this code over to the idseq-dag repo.
 
 ## Release notes
 
