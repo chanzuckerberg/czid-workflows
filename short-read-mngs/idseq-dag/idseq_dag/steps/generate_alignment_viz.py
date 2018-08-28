@@ -53,9 +53,11 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
             annotated_m8, read2seq)
 
         if nt_db.startswith("s3://"):
+            log.write("Getting sequences by accession list from S3...")
             PipelineStepGenerateAlignmentViz.get_sequences_by_accession_list_from_s3(
                 groups, nt_loc_dict, nt_db)
         else:
+            log.write("Getting sequences by accession list from file...")
             PipelineStepGenerateAlignmentViz.get_sequences_by_accession_list_from_file(
                 groups, nt_loc_dict, nt_db)
 
@@ -373,7 +375,7 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
                 if attempt + 1 < num_retries:  # Exponential backoff
                     time.sleep(1.0 * (4**attempt))
                 else:
-                    msg = f"All retries failed for getting sequence by accession ID: {e}"
+                    msg = f"All retries failed for getting sequence by accession ID {accession_id}: {e}"
                     raise RuntimeError(msg)
             finally:
                 try:

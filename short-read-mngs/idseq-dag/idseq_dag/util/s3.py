@@ -146,12 +146,15 @@ def fetch_from_s3(src,
                     os.remove(dst)
                 return None
 
+
 def fetch_byterange(first_byte, last_byte, bucket, key, output_file):
     get_range = f"aws s3api get-object " \
                 f"--range bytes={first_byte}-{last_byte} " \
                 f"--bucket {bucket} " \
                 f"--key {key} {output_file}"
-    command.execute(get_range)
+    get_range_proc = subprocess.Popen(get_range, shell=True, stdout=subprocess.DEVNULL)
+    get_range_proc.wait()
+
 
 @command.retry
 def upload_with_retries(from_f, to_f):
