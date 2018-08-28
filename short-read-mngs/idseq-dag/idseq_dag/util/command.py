@@ -168,8 +168,9 @@ def run_in_subprocess(target):
 
     @wraps(target)
     def wrapper(*args, **kwargs):
-        p = multiprocessing.Process(target=target, args=args, kwargs=kwargs)
-        p.start()
+        with log.print_lock:
+            p = multiprocessing.Process(target=target, args=args, kwargs=kwargs)
+            p.start()
         p.join()
         if p.exitcode != 0:
             raise RuntimeError("Failed {} on {}, {}".format(

@@ -196,10 +196,11 @@ When merging a commit to master, you need to increase the version number in `ids
 
 ## Release notes
 
-- 2.7.1 ... 2.7.3
+- 2.7.1 ... 2.7.4
    - Reduce LZW runtime from 2h 35m to 24 min on the largest samples
    - Increase GSNAP threads to 36 for i3.metal instances.
    - Addded Antimicrobial resistance step. Results for other steps won't change; only new results for AMR are expected.
+   - Acquire lock before fork in run_in_subprocess decorator
 
 - 2.7
    - ?
