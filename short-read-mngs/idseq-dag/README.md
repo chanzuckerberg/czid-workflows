@@ -206,6 +206,8 @@ IDseq DAGs require the use of several indices prepared from files in NCBI. If yo
 TODO: Move this code over to the idseq-dag repo.
 
 ## Release notes
+- 2.8.0
+   - Add taxon blacklist filtering at hit calling
 
 - 2.7.1 ... 2.7.4
    - Reduce LZW runtime from 2h 35m to 24 min on the largest samples

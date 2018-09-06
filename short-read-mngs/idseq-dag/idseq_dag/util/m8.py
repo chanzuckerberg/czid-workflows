@@ -73,10 +73,15 @@ def iterate_m8(m8_file, debug_caller=None, logging_interval=25000000):
             line_count, m8_file, debug_caller)
         log.write(msg)
 
+def read_file_into_set(file_name):
+    with open(file_name, 'r') as f:
+        S = set(x.rstrip() for x in f)
+        S.discard('')
+    return S
 
 @command.run_in_subprocess
 def call_hits_m8(input_m8, lineage_map_path, accession2taxid_dict_path,
-                 output_m8, output_summary):
+                 output_m8, output_summary, taxon_blacklist = None):
     """
     Determine the optimal taxon assignment for each read from the alignment
     results. When a read aligns to multiple distinct references, we need to
@@ -142,6 +147,9 @@ def call_hits_m8(input_m8, lineage_map_path, accession2taxid_dict_path,
     # TODO: Represent taxids by numbers instead of strings to greatly reduce
     # memory footprint and increase speed.
     lineage_cache = {}
+    blacklist_taxids = set()
+    if taxon_blacklist:
+        blacklist_taxids = read_file_into_set(taxon_blacklist)
 
     def get_lineage(accession_id):
         """Find the lineage of the accession ID and utilize a cache for
@@ -158,10 +166,15 @@ def call_hits_m8(input_m8, lineage_map_path, accession2taxid_dict_path,
 
     def accumulate(hits, accession_id):
         """Accumulate hits for summarizing hit information and specificity at
-        each taxonomy level
+        each taxonomy level.
+        Check if the taxid is blacklisted. If so, ignore the read
         """
+        blacklisted = False
         lineage_taxids = get_lineage(accession_id)
         for level, taxid_at_level in enumerate(lineage_taxids):
+            if taxid_at_level in blacklist_taxids:
+                blacklisted = True
+                break
             if int(taxid_at_level) < 0:
                 # Skip if we have a negative taxid. When an accession doesn't
                 # provide species level info, it doesn't contradict any info
@@ -169,12 +182,15 @@ def call_hits_m8(input_m8, lineage_map_path, accession2taxid_dict_path,
                 # handling it in this way seems to work well.
                 continue
             hits[level][taxid_at_level] = accession_id
+        return blacklisted
 
-    def call_hit_level(hits):
-        for level, hits_at_level in enumerate(hits):
-            if len(hits_at_level) == 1:
-                taxid, accession_id = hits_at_level.popitem()
-                return level + 1, taxid, accession_id
+    def call_hit_level(hits, blacklisted = False):
+        ''' Call hit if read not blacklisted and only one taxid at level '''
+        if not blacklisted:
+            for level, hits_at_level in enumerate(hits):
+                if len(hits_at_level) == 1:
+                    taxid, accession_id = hits_at_level.popitem()
+                    return level + 1, taxid, accession_id
         return -1, "-1", None
 
     # Read input_m8 and group hits by read id
@@ -198,10 +214,13 @@ def call_hits_m8(input_m8, lineage_map_path, accession2taxid_dict_path,
         # &PAGE_TYPE=BlastDocs&DOC_TYPE=FAQ
         my_best_evalue = min(acc[1] for acc in accessions)
         hits = [{}, {}, {}]
+        blacklisted = False
         for accession_id, e_value in accessions:
             if e_value == my_best_evalue:
-                accumulate(hits, accession_id)
-        summary[read_id] = my_best_evalue, call_hit_level(hits)
+                blacklisted = accumulate(hits, accession_id)
+                if blacklisted:
+                    break
+        summary[read_id] = my_best_evalue, call_hit_level(hits, blacklisted)
         count += 1
         if count % LOG_INCREMENT == 0:
             msg = "Summarized hits for {} read ids from {}, and counting.".format(
@@ -254,11 +273,6 @@ def generate_taxon_count_json_from_m8(
     # Parse through hit file and m8 input file and format a JSON file with
     # our desired attributes, including aggregated statistics.
 
-    def read_file_into_set(file_name):
-        with open(file_name, 'r') as f:
-            S = set(x.rstrip() for x in f)
-            S.discard('')
-        return S
 
     if deuterostome_path:
         taxids_to_remove = read_file_into_set(deuterostome_path)

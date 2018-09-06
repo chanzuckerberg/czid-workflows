@@ -19,6 +19,7 @@ import idseq_dag.util.m8 as m8
 from idseq_dag.util.s3 import fetch_from_s3
 
 MAX_CONCURRENT_CHUNK_UPLOADS = 4
+DEFAULT_BLACKLIST_S3 = 's3://idseq-database/taxonomy/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/taxon_blacklist.txt'
 
 class PipelineStepRunAlignmentRemotely(PipelineStep):
     '''
@@ -50,9 +51,10 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
         # get database
         lineage_db = fetch_from_s3(self.additional_files["lineage_db"], self.ref_dir_local, allow_s3mi=True)
         accession2taxid_db = fetch_from_s3(self.additional_files["accession2taxid_db"], self.ref_dir_local, allow_s3mi=True)
-
+        blacklist_s3_file = self.additional_attributes.get('taxon_blacklist', DEFAULT_BLACKLIST_S3)
+        taxon_blacklist = fetch_from_s3(blacklist_s3_file, self.ref_dir_local)
         m8.call_hits_m8(output_m8, lineage_db, accession2taxid_db,
-                        deduped_output_m8, output_hitsummary)
+                        deduped_output_m8, output_hitsummary, taxon_blacklist)
 
         # check deuterostome
         deuterostome_db = None
