@@ -61,7 +61,7 @@ class PipelineStepGeneratePhyloTree(PipelineStep):
         # Retrieve NCBI NT references for the accessions in the alignment viz files.
         # These are the accessions (not necessarily full genomes) that were actually matched
         # by the sample's reads during GSNAP alignment.
-        self.get_accession_sequences(input_dir_for_ksnp3, 10)
+        self.get_accession_sequences(input_dir_for_ksnp3, 0)
 
         # Run MakeKSNP3infile.
         command.execute(f"cd {input_dir_for_ksnp3}/..; MakeKSNP3infile {os.path.basename(input_dir_for_ksnp3)} {self.output_dir_local}/inputs.txt A")
