@@ -39,11 +39,25 @@
       "subsample_1000000/summary.multihit.gsnapl.unmapped.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.tab",
       "subsample_1000000/nt_multihit_idseq_web_sample.json"
     ],
+    "refined_gsnap_out": [
+      "gsnap.blast.m8",
+      "gsnap.reassigned.m8",
+      "gsnap.hitsummary2.tab",
+      "refined_gsnap_counts.json", 
+      "gsnap_genus_accession_list.tab"
+    ],
     "rapsearch2_out": [
       "subsample_1000000/multihit.rapsearch2.filter.deuterostomes.taxids.gsnapl.unmapped.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.m8",
       "subsample_1000000/dedup.multihit.rapsearch2.filter.deuterostomes.taxids.gsnapl.unmapped.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.m8",
       "subsample_1000000/summary.multihit.rapsearch2.filter.deuterostomes.taxids.gsnapl.unmapped.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.tab",
       "subsample_1000000/nr_multihit_idseq_web_sample.json"
+    ],
+    "refined_rapsearch2_out": [
+      "rapsearch2.blast.m8",
+      "rapsearch2.reassigned.m8",
+      "rapsearch2.hitsummary2.tab",
+      "refined_rapsearch2_counts.json",
+      "rapsearch2_genus_accession_list.tab"
     ],
     "taxon_count_out": ["taxon_counts.json"],
     "annotated_out": ["annotated_merged.fa","unidentified.fa"],
@@ -140,6 +154,34 @@
           "s3://idseq-database/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/hg38_pantro5_k16.tar"
       },
       "additional_attributes": { "output_sam_file": "gsnap_filter.sam" }
+    },
+    {
+      "in": ["gsnap_out"],
+      "out": "refined_gsnap_out",
+      "class": "PipelineStepReclassifyReads",
+      "module": "idseq_dag.steps.reclassify_reads", 
+      "additional_files": { 
+        "loc_db": "s3://idseq-database/alignment_data/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/nt_loc.db",
+        "lineage_db": "s3://idseq-database/taxonomy/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/taxid-lineages.db"
+      },
+      "additional_attributes": {
+        "db": "s3://idseq-database/alignment_data/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/nt",
+        "db_type": "nt"
+      }
+    },
+    {
+      "in": ["rapsearch2_out"],
+      "out": "refined_rapsearch2_out",
+      "class": "PipelineStepReclassifyReads",
+      "module": "idseq_dag.steps.reclassify_reads", 
+      "additional_files": { 
+        "loc_db": "s3://idseq-database/alignment_data/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/nr_loc.db",
+        "lineage_db": "s3://idseq-database/taxonomy/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/taxid-lineages.db"
+      },
+      "additional_attributes": {
+        "db": "s3://idseq-database/alignment_data/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/nr",
+        "db_type": "nr"
+      }
     },
     {
       "in": ["taxid_fasta_in"],
