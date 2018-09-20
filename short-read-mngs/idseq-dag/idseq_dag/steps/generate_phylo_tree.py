@@ -173,6 +173,35 @@ class PipelineStepGeneratePhyloTree(PipelineStep):
                 return genbank_fastas
         return {}
 
+    @staticmethod
+    def parse_tree(current_dict, results, key = None):
+        """
+        Produce a dictionary like:
+          { "accession 1": { "coverage_summary": ... },
+            "accession 2": { "coverage_summary": ... },
+            ...
+          }
+        from a dictionary like:
+          { "family taxid 1": {
+              "genus taxid 1": {
+                "species taxid 1": {
+                  "accession 1": { "coverage_summary": ... },
+                }
+              },
+              "genus taxid 2": {
+                "species taxid 2": {
+                  "accession 2": { "coverage_summary": ... },
+                }
+              }
+            }
+          }
+        """
+        if "coverage_summary" in current_dict:
+            results[key] = current_dict
+        else:
+            for key2, sub_dict in current_dict.items():
+                PipelineStepGeneratePhyloTree.parse_tree(sub_dict, results, key2)
+
     def get_accession_sequences(self, dest_dir, n=10):
         '''
         Retrieve NCBI NT references for the most-matched accession in each alignment viz file, up to a maximum of n references.
@@ -206,7 +235,9 @@ class PipelineStepGeneratePhyloTree(PipelineStep):
                     align_viz_dict = json.load(f)
                 most_matched_accession = None
                 max_num_reads = 0
-                for acc, info in align_viz_dict.items():
+                flat_align_viz_dict = {}
+                self.parse_tree(align_viz_dict, flat_align_viz_dict)
+                for acc, info in flat_align_viz_dict.items():
                     num_reads = info["coverage_summary"]["num_reads"]
                     if num_reads > max_num_reads:
                         max_num_reads = num_reads
