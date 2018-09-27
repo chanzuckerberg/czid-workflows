@@ -152,3 +152,9 @@ class PipelineStep(object):
         ''' function to be called after instanitation to start running the step '''
         self.exec_thread = threading.Thread(target=self.thread_run)
         self.exec_thread.start()
+
+    def s3_path(self, local_path):
+        relative_path = os.path.relpath(local_path, self.output_dir_local)
+        s3_path = os.path.join(self.output_dir_s3, relative_path)
+        return s3_path
+
