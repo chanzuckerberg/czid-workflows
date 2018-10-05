@@ -1,4 +1,4 @@
-# IDseq ![travis ci build status](https://travis-ci.org/chanzuckerberg/idseq-web.svg?branch=master)
+# IDseq
 #### Infectious Disease Sequencing Platform
 IDseq is an unbiased global software platform that helps scientists identify pathogens in metagenomic sequencing data.
 
