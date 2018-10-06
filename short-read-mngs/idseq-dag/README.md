@@ -219,6 +219,14 @@ IDseq DAGs require the use of several indices prepared from files in NCBI. If yo
 TODO: Move this code over to the idseq-dag repo.
 
 ## Release notes
+
+- 2.9.0
+   - Change how blacklist filter works so that if a read maps both to
+     blacklisted and non-blacklisted entries, it isn't dropped, and
+     only the non-blacklisted entries are used.  This improves recall
+     for organisms whose DNA is used in cloning vectors, such
+     as Chikunguya virus.
+
 - 2.8.0
    - Add taxon blacklist filtering at hit calling
 

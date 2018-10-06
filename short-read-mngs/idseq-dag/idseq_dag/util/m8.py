@@ -81,7 +81,7 @@ def read_file_into_set(file_name):
 
 @command.run_in_subprocess
 def call_hits_m8(input_m8, lineage_map_path, accession2taxid_dict_path,
-                 output_m8, output_summary, taxon_blacklist = None):
+                 output_m8, output_summary, taxon_blacklist=None):
     """
     Determine the optimal taxon assignment for each read from the alignment
     results. When a read aligns to multiple distinct references, we need to
@@ -166,15 +166,13 @@ def call_hits_m8(input_m8, lineage_map_path, accession2taxid_dict_path,
 
     def accumulate(hits, accession_id):
         """Accumulate hits for summarizing hit information and specificity at
-        each taxonomy level.
-        Check if the taxid is blacklisted. If so, ignore the read
+        each taxonomy level.  Ignore accessions from the blacklist.
         """
-        blacklisted = False
         lineage_taxids = get_lineage(accession_id)
+        for taxid in lineage_taxids:
+            if taxid in blacklist_taxids:
+                return
         for level, taxid_at_level in enumerate(lineage_taxids):
-            if taxid_at_level in blacklist_taxids:
-                blacklisted = True
-                break
             if int(taxid_at_level) < 0:
                 # Skip if we have a negative taxid. When an accession doesn't
                 # provide species level info, it doesn't contradict any info
@@ -182,15 +180,13 @@ def call_hits_m8(input_m8, lineage_map_path, accession2taxid_dict_path,
                 # handling it in this way seems to work well.
                 continue
             hits[level][taxid_at_level] = accession_id
-        return blacklisted
 
-    def call_hit_level(hits, blacklisted = False):
+    def call_hit_level(hits):
         ''' Call hit if read not blacklisted and only one taxid at level '''
-        if not blacklisted:
-            for level, hits_at_level in enumerate(hits):
-                if len(hits_at_level) == 1:
-                    taxid, accession_id = hits_at_level.popitem()
-                    return level + 1, taxid, accession_id
+        for level, hits_at_level in enumerate(hits):
+            if len(hits_at_level) == 1:
+                taxid, accession_id = hits_at_level.popitem()
+                return level + 1, taxid, accession_id
         return -1, "-1", None
 
     # Read input_m8 and group hits by read id
@@ -214,13 +210,12 @@ def call_hits_m8(input_m8, lineage_map_path, accession2taxid_dict_path,
         # &PAGE_TYPE=BlastDocs&DOC_TYPE=FAQ
         my_best_evalue = min(acc[1] for acc in accessions)
         hits = [{}, {}, {}]
-        blacklisted = False
         for accession_id, e_value in accessions:
             if e_value == my_best_evalue:
-                blacklisted = accumulate(hits, accession_id)
-                if blacklisted:
-                    break
-        summary[read_id] = my_best_evalue, call_hit_level(hits, blacklisted)
+                accumulate(hits, accession_id)
+        # If all accessions are to the blacklist, hits is empty,
+        # and the summary would be -1, "-1", None
+        summary[read_id] = my_best_evalue, call_hit_level(hits)
         count += 1
         if count % LOG_INCREMENT == 0:
             msg = "Summarized hits for {} read ids from {}, and counting.".format(
