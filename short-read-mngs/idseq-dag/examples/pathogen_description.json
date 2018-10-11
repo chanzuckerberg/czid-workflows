@@ -10,7 +10,9 @@
       "out": "taxid_info",
       "class": "PipelineStepFetchTaxInfo",
       "module": "idseq_dag.steps.fetch_tax_info",
-      "additional_files": {},
+      "additional_files": { 
+          "taxon2name": "s3://idseq-database/taxonomy/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/names.csv"
+      },
       "additional_attributes": {
         "batch_size": 100,
         "n_threads": 16,

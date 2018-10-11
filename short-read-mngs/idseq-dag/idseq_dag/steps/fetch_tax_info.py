@@ -27,6 +27,15 @@ class PipelineStepFetchTaxInfo(PipelineStep):
         Entrez.email = self.additional_attributes.get("entrez_email", "yunfang@chanzuckerberg.com")
         num_threads = self.additional_attributes.get("threads", 16)
         batch_size = self.additional_attributes.get("batch_size", 100)
+        namecsv = self.additional_files.get("taxon2name")
+        id2namedict = {}
+        if namecsv:
+            namecsvf = s3.fetch_from_s3(namecsv, "/mnt/idseq/ref")
+            with open(namecsvf, 'r') as namef:
+                for line in namef:
+                    fields = line.rstrip().split(",")
+                    id2namedict[fields[0]] = fields[1]
+
 
         if s3.check_s3_presence(self.s3_path(taxid2wiki)):
             # generated
@@ -37,33 +46,43 @@ class PipelineStepFetchTaxInfo(PipelineStep):
                     taxid2wikidict[key] = val
         else:
             self.fetch_ncbi_wiki_map(num_threads, batch_size, taxid_list, taxid2wikidict)
-            # output the data
-            with open(taxid2wiki, 'w') as taxidoutf:
-                for taxid, wikiurl in taxid2wikidict.items():
-                    taxidoutf.write(f"{taxid}\t{wikiurl}\n")
+
 
         # output dummay for actual wiki content for now
         taxid2wikicontent = {}
-        self.fetch_wiki_content(num_threads*4, taxid2wikidict, taxid2wikicontent)
+        self.fetch_wiki_content(num_threads*4, taxid2wikidict,
+                                taxid2wikicontent, id2namedict)
 
         with open(taxid2desc, 'w') as desc_outputf:
             json.dump(taxid2wikicontent, desc_outputf)
 
+        # output the taxid 2 wikiurl data
+        with open(taxid2wiki, 'w') as taxidoutf:
+            for taxid, wikiurl in taxid2wikidict.items():
+                if wikiurl == "":
+                    pageid = taxid2wikicontent.get(taxid, {}).get('pageid', None)
+                    if pageid:
+                        wikiurl = f"http://en.wikipedia.org/wiki/index.html?curid={pageid}"
+                taxidoutf.write(f"{taxid}\t{wikiurl}\n")
+
     @staticmethod
-    def fetch_wiki_content(num_threads, taxid2wikidict, taxid2wikicontent):
+    def fetch_wiki_content(num_threads, taxid2wikidict, taxid2wikicontent, id2namedict):
         ''' Fetch wikipedia content based on taxid2wikidict '''
         threads = []
         semaphore = threading.Semaphore(num_threads)
         mutex = threading.RLock()
         for taxid, url in taxid2wikidict.items():
             m = re.search("curid=(\d+)", url)
+            pageid = None
             if m:
                 pageid = m[1]
+            name = id2namedict.get(taxid)
+            if pageid or name:
                 semaphore.acquire()
                 t = threading.Thread(
                     target=PipelineStepFetchTaxInfo.
                     get_wiki_content_for_page,
-                    args=[taxid, pageid, taxid2wikicontent, mutex, semaphore]
+                    args=[taxid, pageid, name, taxid2wikicontent, mutex, semaphore]
                     )
                 t.start()
                 threads.append(t)
@@ -71,20 +90,36 @@ class PipelineStepFetchTaxInfo(PipelineStep):
             t.join()
 
     @staticmethod
-    def get_wiki_content_for_page(taxid, pageid, taxid2wikicontent, mutex, semaphore, max_attempt=3):
+    def get_wiki_content_for_page(taxid, pageid, taxname, taxid2wikicontent, mutex, semaphore, max_attempt=3):
         ''' Fetch wiki content for pageid '''
         for attempt in range(max_attempt):
             try:
-                log.write(f"fetching wiki {pageid} for {taxid}")
-                page = wikipedia.page(pageid=pageid)
-                output = {
-                    "pageid" : page.pageid,
-                    "description": page.content[:1000],
-                    "title": page.title,
-                    "summary": page.summary
-                }
-                with mutex:
-                    taxid2wikicontent[taxid] = output
+                page = None
+                if pageid:
+                    log.write(f"fetching wiki {pageid} for {taxid}")
+                    page = wikipedia.page(pageid=pageid)
+                elif taxname:
+                    search_results = wikipedia.search(taxname)
+                    if len(search_results) > 0:
+                        wikiname = str(search_results[0])
+                        if taxname.lower() == wikiname.lower():
+                            page = wikipedia.page(wikiname)
+                    if not page:
+                        # query the page directly
+                        try:
+                            page = wikipedia.page(taxname.replace(" ", "_"))
+                        except:
+                            page = None
+
+                if page:
+                    output = {
+                        "pageid" : page.pageid,
+                        "description": page.content[:1000],
+                        "title": page.title,
+                        "summary": page.summary
+                    }
+                    with mutex:
+                        taxid2wikicontent[taxid] = output
                 break
             except:
                 log.write(f"having trouble fetching {taxid} wiki {pageid} attempt {attempt}")
