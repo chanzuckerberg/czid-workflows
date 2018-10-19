@@ -38,6 +38,7 @@ class PipelineStep(object):
         self.upload_thread = None
         self.input_files_local = []
         self.additional_files_to_upload = []
+        self.optional_files_to_upload = []
         self.counts_dict = {}
         self.should_terminate = False
         self.should_count_reads = False
@@ -73,7 +74,7 @@ class PipelineStep(object):
 
     def uploading_results(self):
         ''' Upload output files to s3 '''
-        files_to_upload = self.output_files_local() + self.additional_files_to_upload
+        files_to_upload = self.output_files_local() + self.additional_files_to_upload + [f for f in self.optional_files_to_upload if os.path.isfile(f)]
         for f in files_to_upload:
             # upload to S3 - TODO(Boris): parallelize the following with better calls
             relative_path = os.path.relpath(f, self.output_dir_local)
@@ -157,4 +158,3 @@ class PipelineStep(object):
         relative_path = os.path.relpath(local_path, self.output_dir_local)
         s3_path = os.path.join(self.output_dir_s3, relative_path)
         return s3_path
-
