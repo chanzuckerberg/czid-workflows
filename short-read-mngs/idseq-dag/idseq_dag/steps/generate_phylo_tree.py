@@ -124,7 +124,9 @@ class PipelineStepGeneratePhyloTree(PipelineStep):
             self.additional_files_to_upload.append(target_vcf_file)
 
         # Upload all kSNP3 output files for potential future reference
-        supplementary_files = [f for f in glob.glob(f"{ksnp_output_dir}/*") if f not in self.additional_files_to_upload + self.optional_files_to_upload]
+        supplementary_files = [f for f in glob.glob(f"{ksnp_output_dir}/*")
+                               if os.path.isfile(f) and
+                               f not in self.additional_files_to_upload + self.optional_files_to_upload]
         self.additional_files_to_upload.extend(supplementary_files)
 
     def count_reads(self):
