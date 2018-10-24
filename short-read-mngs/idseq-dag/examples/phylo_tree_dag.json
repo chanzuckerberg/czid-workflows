@@ -1,11 +1,70 @@
 {
   "output_dir_s3": "s3://idseq-samples-development/phylo_trees/8/test/",
   "targets": {
+    "prepare_taxon_fasta_1019_out": ["1019.fasta"],
+    "prepare_taxon_fasta_1020_out": ["1020.fasta"],
+    "prepare_taxon_fasta_1021_out": ["1021.fasta"],
+    "prepare_taxon_fasta_1029_out": ["1029.fasta"],
     "phylo_tree_out": ["phylo_tree.newick", "ncbi_metadata.json"]
   },
   "steps": [
     {
       "in": [],
+      "out": "prepare_taxon_fasta_1019_out",
+      "class": "PipelineStepPrepareTaxonFasta",
+      "module": "idseq_dag.steps.prepare_taxon_fasta",
+      "additional_files": {},
+      "additional_attributes": {
+        "taxon_byteranges": {
+          "NT": [431082985, 431233435, "s3://idseq-samples-development/samples/84/860/postprocess/2.4/taxid_annot_sorted_nt.fasta"],
+          "NR": [385014390, 385959812, "s3://idseq-samples-development/samples/84/860/postprocess/2.4/taxid_annot_sorted_nr.fasta"]
+        }
+      }
+    },
+    { 
+      "in": [],
+      "out": "prepare_taxon_fasta_1020_out",
+      "class": "PipelineStepPrepareTaxonFasta",
+      "module": "idseq_dag.steps.prepare_taxon_fasta",
+      "additional_files": {},
+      "additional_attributes": {
+        "taxon_byteranges": {
+          "NT": [28835, 89930, "s3://idseq-samples-development/samples/84/857/postprocess/2.4/taxid_annot_sorted_nt.fasta"],
+          "NR": [71608, 91100, "s3://idseq-samples-development/samples/84/857/postprocess/2.4/taxid_annot_sorted_nr.fasta"]
+        }
+      }
+    },
+    { 
+      "in": [],
+      "out": "prepare_taxon_fasta_1021_out",
+      "class": "PipelineStepPrepareTaxonFasta",
+      "module": "idseq_dag.steps.prepare_taxon_fasta",
+      "additional_files": {},
+      "additional_attributes": {
+        "taxon_byteranges": {
+          "NT": [178740111, 178757997, "s3://idseq-samples-development/samples/84/858/postprocess/2.4/taxid_annot_sorted_nt.fasta"],
+          "NR": [189431932, 189449594, "s3://idseq-samples-development/samples/84/858/postprocess/2.4/taxid_annot_sorted_nr.fasta"]
+        }
+      }
+    },
+    { 
+      "in": [],
+      "out": "prepare_taxon_fasta_1029_out",
+      "class": "PipelineStepPrepareTaxonFasta",
+      "module": "idseq_dag.steps.prepare_taxon_fasta",
+      "additional_files": {},
+      "additional_attributes": {
+        "taxon_byteranges": {
+          "NT": [28835, 89930, "s3://idseq-samples-development/samples/84/872/postprocess/2.4/taxid_annot_sorted_nt.fasta"],
+          "NR": [71608, 91100, "s3://idseq-samples-development/samples/84/872/postprocess/2.4/taxid_annot_sorted_nr.fasta"]
+        }
+      }
+    },
+    {
+      "in": ["prepare_taxon_fasta_1019_out",
+             "prepare_taxon_fasta_1020_out",
+             "prepare_taxon_fasta_1021_out",
+             "prepare_taxon_fasta_1029_out"],
       "out": "phylo_tree_out",
       "class": "PipelineStepGeneratePhyloTree",
       "module": "idseq_dag.steps.generate_phylo_tree",
@@ -22,16 +81,6 @@
           "1020": "s3://idseq-samples-development/samples/84/857/postprocess/2.4/align_viz/nt.species.573.align_viz.json",
           "1021": "s3://idseq-samples-development/samples/84/858/postprocess/2.4/align_viz/nt.species.573.align_viz.json",
           "1029": "s3://idseq-samples-development/samples/84/872/postprocess/2.4/align_viz/nt.species.573.align_viz.json"
-        },
-        "taxon_byteranges": {
-          "1019": { "NT": [431082985, 431233435, "s3://idseq-samples-development/samples/84/860/postprocess/2.4/taxid_annot_sorted_nt.fasta"],
-                    "NR": [385014390, 385959812, "s3://idseq-samples-development/samples/84/860/postprocess/2.4/taxid_annot_sorted_nr.fasta"] },
-          "1020": { "NT": [28835, 89930, "s3://idseq-samples-development/samples/84/857/postprocess/2.4/taxid_annot_sorted_nt.fasta"],
-                    "NR": [71608, 91100, "s3://idseq-samples-development/samples/84/857/postprocess/2.4/taxid_annot_sorted_nr.fasta"] },
-          "1021": { "NT": [178740111, 178757997, "s3://idseq-samples-development/samples/84/858/postprocess/2.4/taxid_annot_sorted_nt.fasta"],
-                    "NR": [189431932, 189449594, "s3://idseq-samples-development/samples/84/858/postprocess/2.4/taxid_annot_sorted_nr.fasta"] },
-          "1029": { "NT": [28835, 89930, "s3://idseq-samples-development/samples/84/872/postprocess/2.4/taxid_annot_sorted_nt.fasta"],
-                    "NR": [71608, 91100, "s3://idseq-samples-development/samples/84/872/postprocess/2.4/taxid_annot_sorted_nr.fasta"] }
         }
       }
     }
