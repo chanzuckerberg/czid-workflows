@@ -100,8 +100,13 @@ RUN pip install git+https://github.com/chanzuckerberg/srst2
 # TODO: Test both pip installations, consider keeping pip use consistent
 RUN pip3 install pandas
 
-# For adapter trimming (for phylogenetic trees)
+# For adapter trimming
 RUN apt install python-cutadapt
+WORKDIR /tmp
+RUN wget http://www.usadellab.org/cms/uploads/supplementary/Trimmomatic/Trimmomatic-0.38.zip
+RUN unzip Trimmomatic-0.38.zip
+RUN mv Trimmomatic-0.38/trimmomatic-0.38.jar /usr/local/bin/
+RUN apt-get update && apt-get install -y default-jre
 
 # For phylogenetic trees
 WORKDIR /tmp

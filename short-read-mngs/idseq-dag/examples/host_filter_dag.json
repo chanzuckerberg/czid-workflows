@@ -5,6 +5,7 @@
 
       "fastqs": ["RR004_water_2_S23_R1_001.fastq.gz", "RR004_water_2_S23_R2_001.fastq.gz"],
       "star_out": ["unmapped1.fq", "unmapped2.fq"],
+      "trimmomatic_out": ["trimmomatic1.fq", "trimmomatic2.fq"],
       "priceseq_out": ["priceseq1.fa", "priceseq2.fa"],
       "cdhitdup_out": ["dedup1.fa", "dedup2.fa"],
       "lzw_out": ["lzw1.fa", "lzw2.fa"],
@@ -38,6 +39,16 @@
     },
     {
       "in": ["star_out"],
+      "out": "trimmomatic_out",
+      "class": "PipelineStepRunTrimmomatic",
+      "module": "idseq_dag.steps.run_trimmomatic",
+      "additional_files": {
+        "adapter_fasta": "s3://idseq-database/adapter_sequences/illumina_TruSeq3-PE-2_NexteraPE-PE.fasta"
+      },
+      "additional_attributes": {}
+    },
+    {
+      "in": ["trimmomatic_out"],
       "out": "priceseq_out",
       "class": "PipelineStepRunPriceSeq",
       "module": "idseq_dag.steps.run_priceseq",
