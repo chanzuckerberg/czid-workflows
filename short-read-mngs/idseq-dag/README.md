@@ -1,4 +1,7 @@
-# IDseq
+# [IDseq](https://idseq.net/) &middot; [![GitHub license](https://img.shields.io/badge/license-MIT-brightgreen.svg)](https://github.com/chanzuckerberg/idseq-web/blob/master/LICENSE) ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)
+
+![logo](https://assets.idseq.net/Logo_Black.png)
+
 #### Infectious Disease Sequencing Platform
 IDseq is an unbiased global software platform that helps scientists identify pathogens in metagenomic sequencing data.
 
@@ -8,8 +11,11 @@ IDseq is an unbiased global software platform that helps scientists identify pat
 
 A collaborative open project of [Chan Zuckerberg Initiative](https://www.chanzuckerberg.com/) and [Chan Zuckerberg Biohub](https://czbiohub.org).
 
-This repository contains the pipeline engine code. You can find the frontend portal at [chanzuckerberg/idseq-web](https://github.com/chanzuckerberg/idseq-web). Our command line interface is at [chanzuckerberg/idseq-cli](https://github.com/chanzuckerberg/idseq-cli).
-
+Check out our repositories:
+- [idseq-web](https://github.com/chanzuckerberg/idseq-web) - Frontend portal (here)
+- [idseq-dag](https://github.com/chanzuckerberg/idseq-dag) - Bioinformatics pipeline and workflow engine
+- [idseq-cli](https://github.com/chanzuckerberg/idseq-cli) - Command line upload interface
+- [idseq-bench](https://github.com/chanzuckerberg/idseq-bench) - Pipeline benchmarking tools 
 
 ## IDSEQ-DAG
 
