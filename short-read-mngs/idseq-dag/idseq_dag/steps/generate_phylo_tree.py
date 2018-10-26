@@ -12,6 +12,7 @@ import idseq_dag.util.command as command
 import idseq_dag.util.s3 as s3
 import idseq_dag.util.log as log
 import idseq_dag.util.count as count
+import idseq_dag.util.convert as convert
 
 class PipelineStepGeneratePhyloTree(PipelineStep):
     ''' 
@@ -98,7 +99,7 @@ class PipelineStepGeneratePhyloTree(PipelineStep):
         ksnp_vcf_file = glob.glob(f"{ksnp_output_dir}/*.vcf")
         if ksnp_vcf_file:
             target_vcf_file = f"{ksnp_output_dir}/variants_reference1.vcf"
-            command.execute(f"mv {ksnp_vcf_file[0]} {target_vcf_file}")
+            self.name_samples_vcf(ksnp_vcf_file[0], target_vcf_file)
             self.additional_files_to_upload.append(target_vcf_file)
 
         # Upload all kSNP3 output files for potential future reference
@@ -296,6 +297,18 @@ class PipelineStepGeneratePhyloTree(PipelineStep):
             metadata["accession"] = acc
             metadata_by_node[node] = metadata
         return metadata_by_node
+
+    def name_samples_vcf(self, input_file, output_file):
+        # The VCF has standard columns CHROM, POS, ID, REF, ALT, QUAL, FILTER, INFO, FORMAT,
+        # followed by 1 column for each of the pipeline_run_ids. This function replaces the pipeline_run)_ids
+        # by the corresponding sample names so that users can understand the file.
+        sample_names_by_run_ids = self.additional_attributes["sample_names_by_run_ids"]
+        vcf_columns = "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT"
+        column_description_line = command.execute_with_output(f"awk /'^{vcf_columns}'/ {input_file}")
+        run_ids_in_order = [id for id in column_description_line.split("FORMAT\t")[1].split("\t") if convert.can_convert_to_int(id)]
+        sample_names_in_order = [sample_names_by_run_ids.get(id, f"pipeline_run_{id}") for id in run_ids_in_order]
+        new_column_description = '\t'.join([vcf_columns] + sample_names_in_order)
+        command.execute(f"sed 's/^#CHROM.*/{new_column_description}/' {input_file} > {output_file}")
 
     @staticmethod
     def clean_name_for_ksnp3(name):
