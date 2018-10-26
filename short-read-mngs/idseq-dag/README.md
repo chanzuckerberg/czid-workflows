@@ -12,8 +12,8 @@ IDseq is an unbiased global software platform that helps scientists identify pat
 A collaborative open project of [Chan Zuckerberg Initiative](https://www.chanzuckerberg.com/) and [Chan Zuckerberg Biohub](https://czbiohub.org).
 
 Check out our repositories:
-- [idseq-web](https://github.com/chanzuckerberg/idseq-web) - Frontend portal (here)
-- [idseq-dag](https://github.com/chanzuckerberg/idseq-dag) - Bioinformatics pipeline and workflow engine
+- [idseq-web](https://github.com/chanzuckerberg/idseq-web) - Frontend portal
+- [idseq-dag](https://github.com/chanzuckerberg/idseq-dag) - Bioinformatics pipeline and workflow engine (here)
 - [idseq-cli](https://github.com/chanzuckerberg/idseq-cli) - Command line upload interface
 - [idseq-bench](https://github.com/chanzuckerberg/idseq-bench) - Pipeline benchmarking tools 
 
