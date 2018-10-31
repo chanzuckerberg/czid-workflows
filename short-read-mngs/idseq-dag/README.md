@@ -225,6 +225,8 @@ IDseq DAGs require the use of several indices prepared from files in NCBI. If yo
 TODO: Move this code over to the idseq-dag repo.
 
 ## Release notes
+- 2.10.0
+   - Relax LZW filter for reads longer than 150 bp, linearly with read length. 
 
 - 2.9.0
    - Change how blacklist filter works so that if a read maps both to
