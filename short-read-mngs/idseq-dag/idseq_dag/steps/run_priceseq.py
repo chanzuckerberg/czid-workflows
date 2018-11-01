@@ -44,9 +44,9 @@ class PipelineStepRunPriceSeq(PipelineStep):
             if is_paired:
                 self.fq2fa(price_out[1], output_files[1])
         else:
-            command.execute(f"mv {price_out[0]} {output_files[0]}")
+            self.multilinefa2singlelinefa(price_out[0], output_files[0])
             if is_paired:
-                command.execute(f"mv {price_out[1]} {output_files[1]}")
+                self.multilinefa2singlelinefa(price_out[1], output_files[1])
 
     def count_reads(self):
         ''' Count reads '''
@@ -59,5 +59,14 @@ class PipelineStepRunPriceSeq(PipelineStep):
         step = "FASTQ to FASTA conversion"
         log.write(f"Starting {step}...")
         cmd = f"sed -n '1~4s/^@/>/p;2~4p' <{input_fastq} >{output_fasta}"
+        command.execute(cmd)
+        log.write(f"Finished {step}.")
+
+    @staticmethod
+    def multilinefa2singlelinefa(input_fasta, output_fasta):
+        ''' Multi-line FASTA to Single-line FASTA conversion '''
+        step = "Multi-line FASTA to single-line FASTA conversion"
+        log.write(f"Starting {step}...")
+        cmd = f"awk 'NR==1 {{print $0}} NR>1 && /^>/ {{printf(\"\\n%s\\n\",$0);next; }} NR>1 {{ printf(\"%s\",$0);}}  END {{printf(\"\\n\");}}' <{input_fasta} > {output_fasta}"
         command.execute(cmd)
         log.write(f"Finished {step}.")
