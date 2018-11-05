@@ -29,14 +29,15 @@ class PipelineStepRunLZW(PipelineStep):
         input_fas = self.input_files_local[0]
         output_fas = self.output_files_local()
         cutoff_scores = self.additional_attributes["thresholds"]
-        PipelineStepRunLZW.generate_lzw_filtered(input_fas, output_fas, cutoff_scores)
+        threshold_readlength = self.additional_attributes.get("threshold_readlength", 150)
+        PipelineStepRunLZW.generate_lzw_filtered(input_fas, output_fas, cutoff_scores, threshold_readlength)
 
     def count_reads(self):
         self.should_count_reads = True
         self.counts_dict[self.name] = count.reads_in_group(self.output_files_local()[0:2])
 
     @staticmethod
-    def lzw_score(sequence):
+    def lzw_score(sequence, threshold_readlength):
         sequence = str(sequence)
         if sequence == "":
             return 0.0
@@ -65,16 +66,17 @@ class PipelineStepRunLZW(PipelineStep):
 
         seq_length = len(sequence)
         lzw_fraction = float(len(results)) / seq_length
-        if seq_length > 150:
+
+        if seq_length > threshold_readlength:
             # Make sure longer reads don't get excessively penalized
-            adjustment_heuristic = (1 + (seq_length - 150) / 1000) # TODO: revisit 
+            adjustment_heuristic = (1 + (seq_length - threshold_readlength) / 1000) # TODO: revisit 
             score = lzw_fraction * adjustment_heuristic
         else:
             score = lzw_fraction
         return score
 
     @staticmethod
-    def lzw_compute(input_files, slice_step=NUM_SLICES):
+    def lzw_compute(input_files, threshold_readlength, slice_step=NUM_SLICES):
         """Spawn subprocesses on NUM_SLICES of the input files, then coalesce the
         scores into a temp file, and return that file's name."""
 
@@ -90,7 +92,7 @@ class PipelineStepRunLZW(PipelineStep):
             with open(temp_file_names[slice_start], "a") as slice_output:
                 for i, reads in enumerate(fasta.synchronized_iterator(input_files)):
                     if i % slice_step == slice_start:
-                        lzw_min_score = min(lzw_score(r.sequence) for r in reads)
+                        lzw_min_score = min(lzw_score(r.sequence, threshold_readlength) for r in reads)
                         slice_output.write(str(lzw_min_score) + "\n")
 
         # slices run in parallel
@@ -105,11 +107,11 @@ class PipelineStepRunLZW(PipelineStep):
         return coalesced_score_file
 
     @staticmethod
-    def generate_lzw_filtered(fasta_files, output_files, cutoff_scores):
+    def generate_lzw_filtered(fasta_files, output_files, cutoff_scores, threshold_readlength):
         assert len(fasta_files) == len(output_files)
 
         # This is the bulk of the computation.  Everything else below is just binning by cutoff score.
-        coalesced_score_file = PipelineStepRunLZW.lzw_compute(fasta_files)
+        coalesced_score_file = PipelineStepRunLZW.lzw_compute(fasta_files, threshold_readlength)
 
         cutoff_scores.sort(reverse=True) # Make sure cutoff is from high to low
 
