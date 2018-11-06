@@ -8,11 +8,8 @@ class PipelineStepRunTrimmomatic(PipelineStep):
     ''' Trimmomatic PipelineStep implementation '''
     def run(self):
         """
-        Trim low-quality ends from the reads.
-        Illumina read quality tends to deteriorate towards the 3' end in both read-1 and read-2, particularly read-2.
-        So cut off the end after the quality starts to drop below a threshold.
+        Trim any residual Illumina adapters.
         Discard any reads that become too short.
-        Also trim any residual Illumina adapters.
 
         See: http://www.usadellab.org/cms/uploads/supplementary/Trimmomatic/TrimmomaticManual_V0.32.pdf
         """
@@ -44,11 +41,8 @@ class PipelineStepRunTrimmomatic(PipelineStep):
             # allowing maximally *2* mismatches. These seeds will be extended and clipped if in the case of paired end
             # reads a score of *30* is reached, or in the case of single ended reads a
             # score of *10*.
-            "LEADING:25 TRAILING:25 SLIDINGWINDOW:4:25 MINLEN:75"
-            # Remove leading low-quality bases or Ns (below quality *25*)
-            # Remove trailing low-quality bases or Ns (below quality *25*)
-            # Scan the read with a *4*-base wide sliding window, cutting when the average quality per base
-            # drops below *25*. Discard reads which are less than *75* bases long after these steps.
+            "MINLEN:75"
+            # Discard reads which are less than *75* bases long after these steps.
         ])
         command.execute(cmd)
 
