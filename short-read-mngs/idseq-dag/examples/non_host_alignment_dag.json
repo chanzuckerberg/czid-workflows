@@ -117,7 +117,7 @@
       "additional_attributes": {}
     },
     {
-      "in": ["host_filter_out", "refine_gsnap_out", "refined_rapsearch2_out"],
+      "in": ["host_filter_out", "refined_gsnap_out", "refined_rapsearch2_out"],
       "out": "annotated_out",
       "class": "PipelineStepGenerateAnnotatedFasta",
       "module": "idseq_dag.steps.generate_annotated_fasta",
@@ -127,7 +127,7 @@
   ],
   "given_targets": {
     "host_filter_out": {
-      "s3_dir": "s3://idseq-samples-prod/samples/12/5815/results_test/2.4"
+      "s3_dir": "s3://idseq-samples-prod/samples/12/5815/results/2.4"
     }
   }
 }
