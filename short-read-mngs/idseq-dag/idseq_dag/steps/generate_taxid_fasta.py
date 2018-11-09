@@ -11,8 +11,14 @@ class PipelineStepGenerateTaxidFasta(PipelineStep):
 
     def run(self):
         # Setup
-        input_files = self.input_files_local[0]
-        hit_summary_files = {'NT': input_files[1], 'NR': input_files[2]}
+        if len(self.input_files_local) > 1:
+            input_fa_name = self.input_files_local[0][0]
+            hit_summary_files  = {'NT': self.input_files_local[1][2], 'NR': self.input_files_local[2][2]}
+        else:
+            # TODO(yf): Old implementation. TO BE DEPRECATED once 3.1 is fully deployed
+            input_files = self.input_files_local[0]
+            input_fa_name = input_files[0]
+            hit_summary_files = {'NT': input_files[1], 'NR': input_files[2]}
 
         # Open lineage db
         lineage_db = s3.fetch_from_s3(
@@ -25,7 +31,7 @@ class PipelineStepGenerateTaxidFasta(PipelineStep):
         valid_hits = PipelineStepGenerateTaxidFasta.parse_hits(
             hit_summary_files)
 
-        input_fa = open(input_files[0], 'rb')
+        input_fa = open(input_fa_name, 'rb')
         output_fa = open(self.output_files_local()[0], 'wb')
         seq_name = input_fa.readline()
         seq_data = input_fa.readline()

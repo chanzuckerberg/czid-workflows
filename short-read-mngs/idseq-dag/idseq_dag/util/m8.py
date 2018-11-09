@@ -8,6 +8,7 @@ import threading
 import traceback
 import multiprocessing
 from collections import defaultdict
+from collections import Counter
 
 import idseq_dag.util.command as command
 import idseq_dag.util.log as log
@@ -18,6 +19,33 @@ def log_corrupt(m8_file, line):
     log.write(msg)
     return msg
 
+def summarize_hits(hit_summary_file, min_reads_per_genus = 0):
+    ''' Parse the hit summary file from alignment and get the relevant into'''
+    read_dict = {} # read_id => line
+    accession_dict = {} # accession => (species, genus)
+    genus_read_counts = defaultdict(int) # genus => read_counts
+    genus_species = defaultdict(set) # genus => list of species
+    genus_accessions = defaultdict(set) # genus => list of accessions
+    total_reads = 0
+    with open(hit_summary_file, 'r') as hsf:
+        for line in hsf:
+            read = line.rstrip().split("\t")
+            accession_id, species_taxid, genus_taxid, family_taxid = read[3:7]
+            read_dict[read[0]] = read
+            total_reads += 1
+            if accession_id == 'None' or accession_id == "":
+                continue
+            accession_dict[accession_id] = (species_taxid, genus_taxid, family_taxid)
+            if int(genus_taxid) > 0:
+                genus_read_counts[genus_taxid] += 1
+                genus_species[genus_taxid].add(species_taxid)
+                genus_accessions[genus_taxid].add(accession_id)
+    selected_genera = {} # genus => accession_list
+    for genus_taxid, reads in genus_read_counts.items():
+        if reads >= min_reads_per_genus and len(genus_species[genus_taxid]) > 1:
+            selected_genera[genus_taxid] = list(genus_accessions[genus_taxid])
+
+    return (read_dict, accession_dict, selected_genera)
 
 def iterate_m8(m8_file, debug_caller=None, logging_interval=25000000):
     """Generate an iterator over the m8 file and return (read_id,
@@ -42,6 +70,7 @@ def iterate_m8(m8_file, debug_caller=None, logging_interval=25000000):
             percent_id = float(parts[2])
             alignment_length = int(parts[3])
             e_value = float(parts[10])
+            bitscore = float(parts[11])
 
             # GSNAP outputs bogus alignments (non-positive length /
             # impossible percent identity / NaN e-value) sometimes,
@@ -61,7 +90,7 @@ def iterate_m8(m8_file, debug_caller=None, logging_interval=25000000):
                     line_count, m8_file, debug_caller)
                 log.write(msg)
             yield (read_id, accession_id, percent_id, alignment_length,
-                   e_value, line)
+                   e_value, bitscore, line)
 
     # Warn about any invalid hits outputted by GSNAP
     if invalid_hits:
@@ -179,19 +208,45 @@ def call_hits_m8(input_m8, lineage_map_path, accession2taxid_dict_path,
                 # provided by other accessions. This occurs a lot and
                 # handling it in this way seems to work well.
                 continue
-            hits[level][taxid_at_level] = accession_id
+            accession_list = hits[level].get(taxid_at_level, []) + [accession_id]
+            hits[level][taxid_at_level] = accession_list
+
+    def most_frequent_accession(accession_list):
+        counts = Counter(accession_list)
+        return counts.most_common(1)[0][0]
 
     def call_hit_level(hits):
-        ''' Call hit if read not blacklisted and only one taxid at level '''
         for level, hits_at_level in enumerate(hits):
             if len(hits_at_level) == 1:
-                taxid, accession_id = hits_at_level.popitem()
+                taxid, accession_list = hits_at_level.popitem()
+                accession_id = most_frequent_accession(accession_list)
                 return level + 1, taxid, accession_id
+        return -1, "-1", None
+
+
+    def call_hit_level_v2(hits):
+        ''' Always call hit at the species level with the taxid with most matches '''
+        species_level_hits = hits[0]
+        max_match = 0
+        taxid_candidates = []
+        for taxid, accession_list in species_level_hits.items():
+            accession_len = len(accession_list)
+            if accession_len > max_match:
+                taxid_candidates = [taxid]
+                max_match = accession_len
+            elif accession_len == max_match:
+                taxid_candidates.append(taxid)
+        if max_match > 0:
+            selected_taxid = taxid_candidates[0]
+            if len(taxid_candidates) > 1:
+                selected_taxid = random.sample(taxid_candidates, 1)[0]
+            accession_id = most_frequent_accession(species_level_hits[selected_taxid])
+            return 1, selected_taxid, accession_id
         return -1, "-1", None
 
     # Read input_m8 and group hits by read id
     m8 = defaultdict(list)
-    for read_id, accession_id, _percent_id, _alignment_length, e_value, _line in iterate_m8(
+    for read_id, accession_id, _percent_id, _alignment_length, e_value, _bitscore, _line in iterate_m8(
             input_m8, "call_hits_m8_initial_scan"):
         m8[read_id].append((accession_id, e_value))
 
@@ -213,9 +268,7 @@ def call_hits_m8(input_m8, lineage_map_path, accession2taxid_dict_path,
         for accession_id, e_value in accessions:
             if e_value == my_best_evalue:
                 accumulate(hits, accession_id)
-        # If all accessions are to the blacklist, hits is empty,
-        # and the summary would be -1, "-1", None
-        summary[read_id] = my_best_evalue, call_hit_level(hits)
+        summary[read_id] = my_best_evalue, call_hit_level_v2(hits)
         count += 1
         if count % LOG_INCREMENT == 0:
             msg = "Summarized hits for {} read ids from {}, and counting.".format(
@@ -243,7 +296,7 @@ def call_hits_m8(input_m8, lineage_map_path, accession2taxid_dict_path,
             # TODO: Consider all hits within a fixed margin of the best e-value.
             # This change may need to be accompanied by a change to
             # GSNAP/RAPSearch parameters.
-            for read_id, accession_id, _percent_id, _alignment_length, e_value, line in iterate_m8(
+            for read_id, accession_id, _percent_id, _alignment_length, e_value, bitscore, line in iterate_m8(
                     input_m8, "call_hits_m8_emit_deduped_and_summarized_hits"):
                 if read_id in emitted:
                     continue
@@ -257,8 +310,14 @@ def call_hits_m8(input_m8, lineage_map_path, accession2taxid_dict_path,
                     # most specific taxonomy information.
                     emitted.add(read_id)
                     outf.write(line)
-                    msg = "{read_id}\t{hit_level}\t{taxid}\n".format(
-                        read_id=read_id, hit_level=hit_level, taxid=taxid)
+                    species_taxid = -1
+                    genus_taxid = -1
+                    family_taxid = -1
+                    if best_accession_id != None:
+                        (species_taxid, genus_taxid, family_taxid) = get_lineage(best_accession_id)
+
+                    msg = f"{read_id}\t{hit_level}\t{taxid}\t{best_accession_id}"
+                    msg += f"\t{species_taxid}\t{genus_taxid}\t{family_taxid}\n"
                     outf_sum.write(msg)
 
 @command.run_in_subprocess
@@ -330,8 +389,9 @@ def generate_taxon_count_json_from_m8(
         assert -0.25 < percent_identity < 100.25
         assert e_value == e_value
         if e_value_type != 'log10':
-            # Subtle, but this excludes positive subnormal numbers.
-            assert MIN_NORMAL_POSITIVE_DOUBLE <= e_value
+            # e_value could be 0 when large contigs are mapped
+            if e_value <= MIN_NORMAL_POSITIVE_DOUBLE:
+                e_value = MIN_NORMAL_POSITIVE_DOUBLE
             e_value = math.log10(e_value)
 
         # Retrieve the taxon lineage and mark meaningless calls with fake

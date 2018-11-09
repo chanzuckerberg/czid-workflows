@@ -84,7 +84,9 @@ WORKDIR /tmp/spades_build/spades/assembler
 RUN PREFIX=/usr/local ./spades_compile.sh
 RUN /usr/local/bin/spades.py --test
 
+
 WORKDIR /tmp
+
 # Compile and install gmap/gsnap
 RUN wget http://research-pub.gene.com/gmap/src/gmap-gsnap-2017-11-15.tar.gz
 RUN mkdir gmap-gsnap && tar xf gmap-gsnap-2017-11-15.tar.gz -C gmap-gsnap --strip-components 1
