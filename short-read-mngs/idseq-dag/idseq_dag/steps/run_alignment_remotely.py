@@ -295,10 +295,10 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
                 with server.ASGInstance(service, key_path,
                                         remote_username, environment,
                                         max_concurrent, chunk_id,
-                                        self.additional_attributes["max_interval_between_describe_instances"],
-                                        self.additional_attributes["job_tag_prefix"],
-                                        self.additional_attributes["job_tag_refresh_seconds"],
-                                        self.additional_attributes["draining_tag"]) as instance_ip:
+                                        self.additional_attributes.get("max_interval_between_describe_instances") or 900,
+                                        self.additional_attributes.get("job_tag_prefix") or "RunningIDseqBatchJob_",
+                                        self.additional_attributes.get("job_tag_refresh_seconds") or 600,
+                                        self.additional_attributes.get("draining_tag") or "draining") as instance_ip:
                     command.execute(command.remote(commands, key_path, remote_username, instance_ip))
 
                     if service == "gsnap":

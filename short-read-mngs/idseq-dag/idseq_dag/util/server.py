@@ -212,10 +212,10 @@ def delete_tag_with_retries(instance_iD, tag_key):
 
 @contextmanager
 def ASGInstance(service, key_path, remote_username, environment, max_concurrent, chunk_id,
-                max_interval_between_describe_instances=900,
-                job_tag_prefix="RunningIDseqBatchJob_",
-                job_tag_refresh_seconds=600,
-                draining_tag="draining"):
+                max_interval_between_describe_instances,
+                job_tag_prefix,
+                job_tag_refresh_seconds,
+                draining_tag):
     instance_ip, instance_iD = wait_for_server_ip(service, key_path, remote_username, environment, max_concurrent, chunk_id,
         max_interval_between_describe_instances, draining_tag)
     log.write(f"starting alignment for chunk {chunk_id} on {service} server {instance_ip}")
