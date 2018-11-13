@@ -1,5 +1,5 @@
 {
-  "output_dir_s3": "s3://idseq-samples-prod/samples/12/5815/results_test",
+  "output_dir_s3": "s3://idseq-samples-staging/samples/114/1118/results_test",
   "targets": {
     "host_filter_out": [
 
@@ -64,7 +64,12 @@
         "chunks_in_flight": 32,
         "chunk_size": 15000,
         "max_concurrent": 3,
-        "environment": "prod"
+        "environment": "staging",
+        "max_interval_between_describe_instances": 900,
+        "job_tag_prefix": "RunningIDseqBatchJob_",
+        "job_tag_refresh_seconds": 600,
+        "draining_tag": "draining",
+        "index_dir_suffix": "2018-04-01"
       }
     },
     {
@@ -84,7 +89,12 @@
         "chunks_in_flight": 32,
         "chunk_size": 10000,
         "max_concurrent": 6,
-        "environment": "prod"
+        "environment": "staging",
+        "max_interval_between_describe_instances": 900,
+        "job_tag_prefix": "RunningIDseqBatchJob_",
+        "job_tag_refresh_seconds": 600,
+        "draining_tag": "draining",
+        "index_dir_suffix": "2018-04-01"
       }
     },
     {
@@ -134,7 +144,7 @@
   ],
   "given_targets": {
     "host_filter_out": {
-      "s3_dir": "s3://idseq-samples-prod/samples/12/5815/results/2.4"
+      "s3_dir": "s3://idseq-samples-staging/samples/114/1118/results/2.11"
     }
   }
 }
