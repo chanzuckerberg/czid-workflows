@@ -3,6 +3,8 @@ from idseq_dag.engine.pipeline_step import PipelineStep
 import idseq_dag.util.command as command
 import idseq_dag.util.count as count
 import idseq_dag.util.s3 as s3
+import idseq_dag.util.fasta as fasta
+
 
 class PipelineStepRunTrimmomatic(PipelineStep):
     ''' Trimmomatic PipelineStep implementation '''
@@ -19,6 +21,12 @@ class PipelineStepRunTrimmomatic(PipelineStep):
         adapter_fasta = s3.fetch_from_s3(
             self.additional_files["adapter_fasta"],
             self.ref_dir_local)
+
+        if fasta.input_file_type(input_files[0]) != 'fastq':
+            # Not fastq
+            for in_file, out_file in zip(input_files, output_files):
+                command.execute(f"cp {in_file} {out_file}")
+            return
 
         if is_paired:
             paired_arg = "PE"

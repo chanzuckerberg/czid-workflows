@@ -32,6 +32,17 @@ def synchronized_iterator(fasta_files: List[str]) -> Iterator[Tuple[Read, ...]]:
 def count_reads(fasta_files: List[str]) -> int:
     return sum(1 for _ in synchronized_iterator(fasta_files))
 
+def input_file_type(input_file):
+    ''' Check input file type based on first line of file. file needs to be uncompressed '''
+    with open(input_file, 'r') as f:
+        first_line = f.readline()
+    if first_line[0] == '@':
+        return 'fastq'
+    elif first_line[0] == '>':
+        return 'fasta'
+    return
+
+
 if __name__ == "__main__":
     # Count reads.  Run with fasta filenames as args.  Just for testing.
     print(count_reads(sys.argv[1:]))
