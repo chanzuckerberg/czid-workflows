@@ -15,13 +15,21 @@ class PipelineStepRunAssembly(PipelineStep):
            Run Assembly
         """
         input_fasta = self.input_files_local[0][-1]
+        bowtie_fasta = self.input_files_local[0][-1]
+        input_fasta2 = None
+        if len(self.input_files_local[0]) >= 2:
+            input_fasta = self.input_files_local[0][0]
+            input_fasta2 = self.input_files_local[0][1]
+
         assembled_contig, assembled_scaffold, bowtie_sam, contig_stats = self.output_files_local()
         read2contig = {}
         memory = self.additional_attributes.get('memory', 100)
-        self.assemble(input_fasta, assembled_contig, assembled_scaffold,
+        self.assemble(input_fasta, input_fasta2, bowtie_fasta, assembled_contig, assembled_scaffold,
                       bowtie_sam, contig_stats, read2contig, int(memory))
     @staticmethod
     def assemble(input_fasta,
+                 input_fasta2,
+                 bowtie_fasta, # fasta file for running bowtie against contigs
                  assembled_contig,
                  assembled_scaffold,
                  bowtie_sam,
@@ -35,12 +43,15 @@ class PipelineStepRunAssembly(PipelineStep):
         assembled_scaffold_tmp = os.path.join(assembled_dir, 'scaffolds.fasta')
 
         try:
-            command.execute(f"spades.py -s {input_fasta} -o {assembled_dir} -m {memory} -t 32 --only-assembler")
+            if input_fasta2:
+                command.execute(f"spades.py -1 {input_fasta} -2 {input_fasta2} -o {assembled_dir} -m {memory} -t 32 --only-assembler")
+            else:
+                command.execute(f"spades.py -s {input_fasta} -o {assembled_dir} -m {memory} -t 32 --only-assembler")
             command.execute(f"mv {assembled_contig_tmp} {assembled_contig}")
             command.execute(f"mv {assembled_scaffold_tmp} {assembled_scaffold}")
 
             # build the bowtie index based on the contigs
-            PipelineStepRunAssembly.generate_read_to_contig_mapping(assembled_contig, input_fasta,
+            PipelineStepRunAssembly.generate_read_to_contig_mapping(assembled_contig, bowtie_fasta,
                                                                     read2contig, bowtie_sam, contig_stats)
         except:
             # Assembly failed. create dummy output files

@@ -1,5 +1,5 @@
 {
-  "output_dir_s3": "s3://idseq-samples-development/yunfang/sample_1793/assembly_only/",
+  "output_dir_s3": "s3://idseq-samples-development/yunfang/sample_11285/assembly/",
   "targets": {
     "host_filter_out": [
       "gsnap_filter_1.fa",
@@ -11,6 +11,10 @@
       "scaffolds.fasta",
       "read-contig.sam",
       "contig_stats.json"
+    ],
+    "coverage_out": [
+      "contig_coverage.json",
+      "contig_coverage_summary.csv"
     ]
   },
   "steps": [
@@ -20,13 +24,20 @@
       "class": "PipelineStepRunAssembly",
       "module": "idseq_dag.steps.run_assembly",
       "additional_files": {},
-      "additional_attributes": {"memory": 200}
+      "additional_attributes": {"memory": 100}
+    },
+    {
+      "in": ["assembly_out"],
+      "out": "coverage_out",
+      "class": "PipelineStepGenerateCoverageStats",
+      "module": "idseq_dag.steps.generate_coverage_stats",
+      "additional_files": {},
+      "additional_attributes": {}
     }
   ],
   "given_targets": {
     "host_filter_out": {
-      "s3_dir":  "s3://idseq-samples-prod/samples/27/1793/results/3.0", "count_reads": 0  
+      "s3_dir":  "s3://idseq-samples-prod/samples/63/11285/results/3.1", "count_reads": 0
     }
   }
 }
-

@@ -225,6 +225,9 @@ IDseq DAGs require the use of several indices prepared from files in NCBI. If yo
 TODO: Move this code over to the idseq-dag repo.
 
 ## Release notes
+- 3.2.0
+   - Assembly with paired ends if available
+   - Coverage Stats Step
 - 3.1.0
    - Assembly based pipeline. Add assembly and blast the contigs to the aligned accessions
 
