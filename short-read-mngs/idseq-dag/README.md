@@ -15,7 +15,7 @@ Check out our repositories:
 - [idseq-web](https://github.com/chanzuckerberg/idseq-web) - Frontend portal
 - [idseq-dag](https://github.com/chanzuckerberg/idseq-dag) - Bioinformatics pipeline and workflow engine (here)
 - [idseq-cli](https://github.com/chanzuckerberg/idseq-cli) - Command line upload interface
-- [idseq-bench](https://github.com/chanzuckerberg/idseq-bench) - Pipeline benchmarking tools 
+- [idseq-bench](https://github.com/chanzuckerberg/idseq-bench) - Pipeline benchmarking tools
 
 ## IDSEQ-DAG
 
@@ -225,6 +225,9 @@ IDseq DAGs require the use of several indices prepared from files in NCBI. If yo
 TODO: Move this code over to the idseq-dag repo.
 
 ## Release notes
+- 3.2.1
+   - [staging only, not production] GSNAP Pre-release 2018-10-20 by TWU.
+
 - 3.2.0
    - Assembly with paired ends if available
    - Coverage Stats Step
@@ -235,7 +238,7 @@ TODO: Move this code over to the idseq-dag repo.
    - Add adapter trimming step.
 
 - 2.10.0
-   - Relax LZW filter for reads longer than 150 bp, linearly with read length. 
+   - Relax LZW filter for reads longer than 150 bp, linearly with read length.
 
 - 2.9.0
    - Change how blacklist filter works so that if a read maps both to
