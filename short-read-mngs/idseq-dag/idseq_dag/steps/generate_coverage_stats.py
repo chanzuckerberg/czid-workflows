@@ -1,11 +1,13 @@
 ''' Generate Coverage Statistics '''
 import json
+import os
 import pysam
 
 from idseq_dag.engine.pipeline_step import PipelineStep
 import idseq_dag.util.command as command
 import idseq_dag.util.log as log
 import idseq_dag.util.count as count
+MIN_CONTIG_FILE_SIZE = 50
 
 class PipelineStepGenerateCoverageStats(PipelineStep):
     ''' Generate Coverage Statistics from Assembly Output '''
@@ -14,16 +16,21 @@ class PipelineStepGenerateCoverageStats(PipelineStep):
           1. extract contigs.fasta and read-contig.sam
           2. run pile up
         """
-        _contigs, _scaffolds, read_contig_sam, _stats = self.input_files_local[0]
+        contigs, _scaffolds, read_contig_sam, _stats = self.input_files_local[0]
         coverage_json, coverage_summary_csv = self.output_files_local()
 
+        if os.path.getsize(contigs) < MIN_CONTIG_FILE_SIZE:
+            command.execute("echo '{}' > " +  coverage_json)
+            command.execute("echo 'No Contigs' > " +  coverage_summary_csv)
+            return
+
+        contig2coverage = {}
         # generate bam files
         bam_file = read_contig_sam.replace(".sam", ".bam")
         command.execute(f"samtools view -S -b  {read_contig_sam} | samtools sort - -o {bam_file}")
         command.execute(f"samtools index {bam_file}")
 
         # run coverage info
-        contig2coverage = {}
         with pysam.AlignmentFile(bam_file, "rb") as f:
             contig_names = f.references
             for c in contig_names:
