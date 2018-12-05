@@ -225,6 +225,10 @@ IDseq DAGs require the use of several indices prepared from files in NCBI. If yo
 TODO: Move this code over to the idseq-dag repo.
 
 ## Release notes
+
+- 3.2.2
+   - Revert staging-only change 3.2.1.
+
 - 3.2.1
    - [staging only, not production] GSNAP Pre-release 2018-10-20 by TWU.
 
