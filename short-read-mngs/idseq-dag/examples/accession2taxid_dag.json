@@ -1,0 +1,68 @@
+{
+  "output_dir_s3": "s3://idseq-samples-development/yunfang/accesion2taxid/2018-12-01",
+  "targets": {
+    "accession2taxid_input": [
+      "nucl_wgs.accession2taxid.gz",
+      "nucl_est.accession2taxid.gz",
+      "nucl_gb.accession2taxid.gz",
+      "nucl_gss.accession2taxid.gz",
+      "pdb.accession2taxid.gz",
+      "prot.accession2taxid.gz"
+    ],
+    "nt_input": [ 
+       "nt"
+    ],
+    "nr_input": [
+       "nr"
+    ],
+    "accession2taxid_out": [
+      "accession2taxid.gz",
+      "accession2taxid_wgs.gz",
+      "accession2taxid.db",
+      "taxid2wgs_accession.db"
+    ],
+    "nt_loc_out": [
+      "nt_loc.db"
+    ],
+    "nr_loc_out": [
+      "nr_loc.db"
+    ]
+  },
+  "steps": [
+    {
+      "in": ["accession2taxid_input", "nt_input", "nr_input"],
+      "out": "accession2taxid_out",
+      "class": "PipelineStepGenerateAccession2Taxid",
+      "module": "idseq_dag.steps.generate_accession2taxid",
+      "additional_files": {},
+      "additional_attributes": {}
+    },
+    {
+      "in": ["nt_input"],
+      "out": "nt_loc_out",
+      "class": "PipelineStepGenerateLocDB",
+      "module": "idseq_dag.steps.generate_loc_db",
+      "additional_files": {},
+      "additional_attributes": {}
+    },
+    {
+      "in": ["nr_input"],
+      "out": "nr_loc_out",
+      "class": "PipelineStepGenerateLocDB",
+      "module": "idseq_dag.steps.generate_loc_db",
+      "additional_files": {},
+      "additional_attributes": {}
+    }
+  ],
+  "given_targets": {
+    "accession2taxid_input": {
+      "s3_dir":  "s3://idseq-database/alignment_data/2018-12-01/accession2taxid", "count_reads": 0
+    },
+    "nt_input": {
+      "s3_dir":  "s3://idseq-database/alignment_data/2018-12-01", "count_reads": 0
+    },
+    "nr_input": {
+      "s3_dir":  "s3://idseq-database/alignment_data/2018-12-01", "count_reads": 0
+    }
+  }
+}
