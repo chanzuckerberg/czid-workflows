@@ -16,7 +16,7 @@ DEFAULT_OUTPUT_DIR_LOCAL = '/mnt/idseq/results/%d' % os.getpid()
 DEFAULT_REF_DIR_LOCAL = '/mnt/idseq/ref'
 
 class PipelineFlow(object):
-    def __init__(self, lazy_run, dag_json):
+    def __init__(self, lazy_run, dag_json, versioned_output):
         '''
             See examples/example_dag.json and
                 idseq_dag.main.validate_dag_json for more details.
@@ -26,8 +26,10 @@ class PipelineFlow(object):
         self.targets = dag["targets"]
         self.steps = dag["steps"]
         self.given_targets = dag["given_targets"]
-        self.output_dir_s3 = os.path.join(dag["output_dir_s3"],
-                                          self.parse_output_version(idseq_dag.__version__))
+        self.output_dir_s3 = dag["output_dir_s3"]
+        if versioned_output:
+            self.output_dir_s3 = os.path.join(self.output_dir_s3, self.parse_output_version(idseq_dag.__version__))
+
         self.output_dir_local = dag.get("output_dir_local", DEFAULT_OUTPUT_DIR_LOCAL).rstrip('/')
         self.ref_dir_local = dag.get("ref_dir_local", DEFAULT_REF_DIR_LOCAL)
         self.large_file_list = []

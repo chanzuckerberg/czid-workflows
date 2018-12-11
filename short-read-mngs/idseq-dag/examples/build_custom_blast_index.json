@@ -1,0 +1,43 @@
+{
+  "output_dir_s3": "s3://idseq-samples-development/yunfang/rvdb/2018-12-01",
+  "targets": {
+    "dummy_input": [
+      "dummy.txt"
+    ],
+    "rvdb_nucl_out": [
+      "rvdb_nucl.tar"
+    ],
+    "rvdb_prot_out": [
+      "rvdb_prot.tar"
+    ]
+  },
+  "steps": [
+    {
+      "in": ["dummy_input"],
+      "out": "rvdb_nucl_out",
+      "class": "PipelineStepBuildCustomBlastIndex",
+      "module": "idseq_dag.steps.build_custom_blast_index",
+      "additional_files": {},
+      "additional_attributes": {
+          "data_source": "https://hive.biochemistry.gwu.edu/prd/rvdb//content/U-RVDBv14.0.fasta", 
+          "db_type": "nucl"
+      }
+    },
+    {
+      "in": ["dummy_input"],
+      "out": "rvdb_prot_out",
+      "class": "PipelineStepBuildCustomBlastIndex",
+      "module": "idseq_dag.steps.build_custom_blast_index",
+      "additional_files": {},
+      "additional_attributes": {
+          "data_source": "https://rvdb-prot.pasteur.fr/files/U-RVDBv14.0-prot.fasta.bz2", 
+          "db_type": "prot"
+      }
+    }
+  ],
+  "given_targets": {
+    "dummy_input": {
+      "s3_dir":  "s3://idseq-samples-development/yunfang", "count_reads": 0
+    }
+  }
+}
