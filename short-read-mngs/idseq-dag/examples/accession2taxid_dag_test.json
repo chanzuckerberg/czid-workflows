@@ -1,19 +1,14 @@
 {
-  "output_dir_s3": "s3://idseq-database/alignment_data/<NCBI_DATE>",
+  "output_dir_s3": "s3://idseq-samples-development/yunfang/accession_test/2018-12-01",
   "targets": {
     "accession2taxid_input": [
-      "nucl_wgs.accession2taxid.gz",
-      "nucl_est.accession2taxid.gz",
-      "nucl_gb.accession2taxid.gz",
-      "nucl_gss.accession2taxid.gz",
-      "pdb.accession2taxid.gz",
-      "prot.accession2taxid.gz"
+      "pdb.accession2taxid.gz"
     ],
     "nt_input": [ 
-       "nt"
+       "nt.test"
     ],
     "nr_input": [
-       "nr"
+       "nr.test"
     ],
     "accession2taxid_out": [
       "accession2taxid.gz",
@@ -56,13 +51,13 @@
   ],
   "given_targets": {
     "accession2taxid_input": {
-      "s3_dir":  "s3://idseq-database/alignment_data/<NCBI_DATE>/accession2taxid", "count_reads": 0
+      "s3_dir":  "s3://idseq-database/alignment_data/2018-12-01/accession2taxid", "count_reads": 0
     },
     "nt_input": {
-      "s3_dir":  "s3://idseq-database/alignment_data/<NCBI_DATE>", "count_reads": 0
+      "s3_dir":  "s3://idseq-database/alignment_data/2018-12-01", "count_reads": 0
     },
     "nr_input": {
-      "s3_dir":  "s3://idseq-database/alignment_data/<NCBI_DATE>", "count_reads": 0
+      "s3_dir":  "s3://idseq-database/alignment_data/2018-12-01", "count_reads": 0
     }
   }
 }

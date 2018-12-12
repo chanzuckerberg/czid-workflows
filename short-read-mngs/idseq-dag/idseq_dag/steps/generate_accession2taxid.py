@@ -17,6 +17,8 @@ class PipelineStepGenerateAccession2Taxid(PipelineStep):
         1. Download NT/NR
         2. Extract accessions
         3. Subsetting accessions to the ones appearing in NT/NR
+        Example command:
+        aegea batch submit --command="pip install --upgrade git+git://github.com/chanzuckerberg/s3mi.git; cd /mnt; git clone https://github.com/chanzuckerberg/idseq-dag.git; cd idseq-dag;  pip3 install -e .; sed 's/<NCBI_DATE>/2018-12-01/g' examples/accession2taxid_dag.json > examples/accession2taxid_dag.json.now  idseq_dag --no-versioned-output examples/accession2taxid_dag.json.now"  --storage /mnt=1000 --volume-type gp2 --ecr-image idseq_dag --memory 240000 --queue idseq-prod-himem --vcpus 32 --job-role idseq-pipeline
 
         """
         accession_mapping_files = self.input_files_local[0]
@@ -68,7 +70,7 @@ class PipelineStepGenerateAccession2Taxid(PipelineStep):
             t.join()
         # generate the accession2taxid db and file
         accessions = [] # reset accessions to release memory
-        accession_dict = shelve.open(accession2taxid_db)
+        accession_dict = shelve.open(accession2taxid_db.replace(".db", ""))
         with gzip.open(output_gz, "wt") as gzf:
             for partition_list in mapping_files:
                 for partition in partition_list:
@@ -82,7 +84,7 @@ class PipelineStepGenerateAccession2Taxid(PipelineStep):
 
         # generate taxid2 accession
         wgs_thread.join()
-        with shelve.open(taxid2wgs_accession_db) as taxid2accession_dict:
+        with shelve.open(taxid2wgs_accession_db.replace(".db", "")) as taxid2accession_dict:
             with gzip.open(output_wgs_gz, "wt") as gzf:
                 with open(wgs_accessions, 'r', encoding="utf-8") as wgsf:
                     for line in wgsf:
