@@ -226,7 +226,8 @@ TODO: Move this code over to the idseq-dag repo.
 
 ## Release notes
 
-- 3.2.3-3.2.1 only on staging environment
+- 3.2.4-3.2.1 only affect staging environment
+   - 3.2.4 Revert 3.2.3.
    - 3.2.3 GSNAP Pre-release 2018-10-26.
    - 3.2.2 Revert 3.2.1.
    - 3.2.1 GSNAP Pre-release 2018-10-20.
