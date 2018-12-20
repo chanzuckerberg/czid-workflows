@@ -235,7 +235,7 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
         base_str = "mkdir -p {remote_work_dir} ; {download_input_from_s3} ; "
         environment = self.additional_attributes["environment"]
         if service == "gsnap":
-            if False: # environment == "staging":   (Leave this for testing the next gsnap.)
+            if environment == "staging":   # Pre-release testing of gsnap 2018-10-26.
                 commands = base_str + "{remote_home_dir}/bin/gsnapl -A m8 --batch=0 --use-shared-memory=0 --gmap-mode=none --npaths=100 --ordered -t 36 --max-mismatches=40 -D {remote_index_dir} -d nt_k16 {remote_input_files} > {multihit_remote_outfile}"
             else:
                 # max_search argument is still required in prod, until we upgrade to 2018-10-20 gsnap
