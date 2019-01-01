@@ -226,6 +226,13 @@ TODO: Move this code over to the idseq-dag repo.
 
 ## Release notes
 
+- 3.3.0
+   - Upgrade GSNAP executable to version 2018-10-26.  Index remains unchanged at 2018-12-01.
+     In comprehensive testing on a diverse set of samples, this has shown just a few minor
+     effects on overall results, mostly for reads that align at the limit of detection.
+     The benefit of the change is 3x-8x faster performance.  A/B test data is archived
+     in slack channel #idseq-benchmarking.
+
 - 3.2.5-3.2.1 only affect staging environment
    - 3.2.5 GSNAP Pre-release 2018-10-26, this time for real.
    - 3.2.4 Revert 3.2.3.
