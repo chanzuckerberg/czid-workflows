@@ -85,6 +85,11 @@ WORKDIR /tmp/spades_build/spades/assembler
 RUN PREFIX=/usr/local ./spades_compile.sh
 RUN /usr/local/bin/spades.py --test
 
+# For nonhost fastq filtering
+WORKDIR /tmp/seqtk_build
+RUN git clone https://github.com/lh3/seqtk.git
+WORKDIR /tmp/seqtk_build/seqtk
+RUN make && make install
 
 WORKDIR /tmp
 
@@ -97,8 +102,8 @@ RUN make -j 16 && make check && make install
 RUN rm -rf /tmp/gmap-gsnap /tmp/gmap-gsnap-2017-11-15.tar.gz
 RUN gsnapl --version
 
-# For srst2, install forked srst2 python 3 compatible repo 
-RUN pip install scipy 
+# For srst2, install forked srst2 python 3 compatible repo
+RUN pip install scipy
 RUN pip install git+https://github.com/chanzuckerberg/srst2
 # TODO: Test both pip installations, consider keeping pip use consistent
 RUN pip3 install pandas

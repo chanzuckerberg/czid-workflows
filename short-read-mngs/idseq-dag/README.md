@@ -225,6 +225,8 @@ IDseq DAGs require the use of several indices prepared from files in NCBI. If yo
 TODO: Move this code over to the idseq-dag repo.
 
 ## Release notes
+- 3.3.1
+   - Add step to generate nonhost fastq files by filtering the original fastq files for nonhost reads.
 
 - 3.3.0
    - Upgrade GSNAP executable to version 2018-10-26.  Index remains unchanged at 2018-12-01.

@@ -4,6 +4,7 @@ import subprocess
 import os
 import multiprocessing
 import logging
+import errno
 
 import idseq_dag.util.command as command
 import idseq_dag.util.log as log
@@ -103,7 +104,7 @@ def fetch_from_s3(src,
         except OSError as e:
             # It's okay if the parent directory already exists, but all other
             # errors are fatal.
-            if e.errno != os.errno.EEXIST:
+            if e.errno != errno.EEXIST:
                 log.write("Error in creating destination directory.")
                 raise
 
