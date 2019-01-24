@@ -1,4 +1,5 @@
 ''' Generate loc db  '''
+import dbm
 import shelve
 import re
 from idseq_dag.engine.pipeline_step import PipelineStep
@@ -19,7 +20,7 @@ class PipelineStepGenerateLocDB(PipelineStep):
 
     @run_in_subprocess
     def generate_loc_db(self, db_file, loc_db_file):
-        loc_dict = shelve.open(loc_db_file.replace(".db", ""))
+        loc_dict = shelve.Shelf(dbm.ndbm.open(loc_db_file.replace(".db", ""), 'c'))
         with open(db_file) as dbf:
             seq_offset = 0
             seq_len = 0
