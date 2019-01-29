@@ -5,6 +5,7 @@ import idseq_dag.util.command as command
 import idseq_dag.util.log as log
 import idseq_dag.util.count as count
 import idseq_dag.util.validate_constants as vc
+import idseq_dag.util.s3 as s3
 
 class PipelineStepRunValidateInput(PipelineStep):
     def run(self):
@@ -39,17 +40,25 @@ class PipelineStepRunValidateInput(PipelineStep):
                 self.quick_check_file(input_files[0], file_ext == 'fastq') and \
                 (num_inputs == 1 or self.quick_check_file(input_files[1], file_ext == 'fastq'))
 
+            all_fragments = []
+
             for infile, outfile in zip(input_files, output_files):
                 if quick_check_passed:
-                    self.truncate_file(infile, outfile, file_ext == 'fastq', max_fragments)
+                    num_fragments = self.truncate_file(infile, outfile, file_ext == 'fastq', max_fragments)
                 else:
-                    self.full_check_and_truncate_file(file, outfile, file_ext == 'fastq', max_fragments)
+                    num_fragments = self.full_check_and_truncate_file(infile, outfile, file_ext == 'fastq', max_fragments)
+                all_fragments.append(num_fragments)
+
+            if len(all_fragments) == 2 and abs(all_fragments[1]-all_fragments[0]) > 1000:
+                raise RuntimeError(f"Paired input files need to contain the same number of reads")
 
             with open(summary_file, 'w') as summary_f:
                 json.dump(self.summary_dict, summary_f)
         except Exception as e:
             with open(summary_file, 'w') as summary_f:
                 json.dump({'Validation error': str(e)}, summary_f)
+            s3_path = self.s3_path(summary_file)
+            s3.upload_with_retries(summary_file, s3_path)
             raise e
 
         return
@@ -117,8 +126,9 @@ class PipelineStepRunValidateInput(PipelineStep):
         else:
             num_lines = max_fragments * 2
         command.execute(f"head -n {num_lines} {infile} > {outfile}")
-        self.summary_dict[vc.BUCKET_NORMAL] = count.reads_in_group(self.output_files_local()[0:2])
-        return
+        num_fragments = count.reads(outfile)
+        self.summary_dict[vc.BUCKET_NORMAL] += num_fragments
+        return num_fragments
 
     # full_check_and_truncate_file does an exhaustive check of the input file, up to
     # max_fragments, and reformats the output to conform to what the rest of the
@@ -207,7 +217,7 @@ class PipelineStepRunValidateInput(PipelineStep):
                 if is_fastq:
                     output_f.write(identifier2_l + quality_l + "\n")
 
-        return
+        return num_fragments
 
     def count_reads(self):
         self.should_count_reads = True
