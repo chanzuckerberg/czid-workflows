@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from typing import Iterator, List, Tuple, NamedTuple
 import sys
+import idseq_dag.util.command as command
 
 class Read(NamedTuple):
     header: str
@@ -42,6 +43,15 @@ def input_file_type(input_file):
         return 'fasta'
     return
 
+def fq2fa(input_fastq, output_fasta):
+    ''' FASTQ to FASTA conversion '''
+    cmd = f"sed -n '1~4s/^@/>/p;2~4p' <{input_fastq} >{output_fasta}"
+    command.execute(cmd)
+
+def multilinefa2singlelinefa(input_fasta, output_fasta):
+    ''' Multi-line FASTA to Single-line FASTA conversion '''
+    cmd = f"awk 'NR==1 {{print $0}} NR>1 && /^>/ {{printf(\"\\n%s\\n\",$0);next; }} NR>1 {{ printf(\"%s\",$0);}}  END {{printf(\"\\n\");}}' <{input_fasta} > {output_fasta}"
+    command.execute(cmd)
 
 if __name__ == "__main__":
     # Count reads.  Run with fasta filenames as args.  Just for testing.

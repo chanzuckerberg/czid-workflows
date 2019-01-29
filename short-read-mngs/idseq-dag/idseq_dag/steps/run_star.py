@@ -1,17 +1,20 @@
 import multiprocessing
 import os
+import json
 
 from idseq_dag.engine.pipeline_step import PipelineStep
 import idseq_dag.util.command as command
 import idseq_dag.util.log as log
 import idseq_dag.util.s3 as s3
 import idseq_dag.util.count as count
+import idseq_dag.util.validate_constants as vc
 
 class PipelineStepRunStar(PipelineStep):
     def run(self):
         """Run STAR to filter out host reads."""
         # Setup
-        input_files = self.input_files_local[0][0:2]
+        validated_input_counts_file = self.input_files_local[0][0]
+        input_files = self.input_files_local[0][1:3]
         num_inputs = len(input_files)
         scratch_dir = os.path.join(self.output_dir_local, "scratch_star")
 
@@ -33,11 +36,17 @@ class PipelineStepRunStar(PipelineStep):
         # Run STAR on each partition and save the unmapped read info
         unmapped = input_files
 
+        with open(validated_input_counts_file) as validated_input_counts_f:
+            validated_input_counts = json.load(validated_input_counts_f)
+
+        use_starlong = validated_input_counts[vc.BUCKET_LONG] > 1 or \
+                       validated_input_counts[vc.BUCKET_TOO_LONG] > 1
+
         for part_idx in range(num_parts):
             tmp = f"{scratch_dir}/star-part-{part_idx}"
             genome_part = f"{genome_dir}/part-{part_idx}"
             count_genes = part_idx == 0
-            self.run_star_part(tmp, genome_part, unmapped, count_genes)
+            self.run_star_part(tmp, genome_part, unmapped, count_genes, use_starlong)
 
             unmapped = PipelineStepRunStar.sync_pairs(
                 PipelineStepRunStar.unmapped_files_in(tmp, num_inputs))
@@ -67,27 +76,30 @@ class PipelineStepRunStar(PipelineStep):
                       output_dir,
                       genome_dir,
                       input_files,
-                      count_genes=False):
+                      count_genes,
+                      use_starlong):
         command.execute("mkdir -p %s" % output_dir)
         cpus = str(multiprocessing.cpu_count())
         params = [
-            'cd', output_dir, ';', 'STAR', '--outFilterMultimapNmax', '99999',
+            'cd', output_dir, ';', 'STARlong' if use_starlong else 'STAR',
+            '--outFilterMultimapNmax', '99999',
             '--outFilterScoreMinOverLread', '0.5',
-            '--outFilterMatchNminOverLread', '0.5', '--outReadsUnmapped',
-            'Fastx', '--outFilterMismatchNmax', '999', '--outSAMmode', 'None',
-            '--clip3pNbases', '0', '--runThreadN', cpus, '--genomeDir',
-            genome_dir, '--readFilesIn', " ".join(input_files)
+            '--outFilterMatchNminOverLread', '0.5',
+            '--outReadsUnmapped', 'Fastx',
+            '--outFilterMismatchNmax', '999',
+            '--outSAMmode', 'None',
+            '--clip3pNbases', '0',
+            '--runThreadN', cpus,
+            '--genomeDir', genome_dir,
+            '--readFilesIn', " ".join(input_files)
         ]
-        if input_files[0][-3:] == '.gz':
-            # Create a custom decompressor which does "zcat $input_file | head -
-            # ${max_lines}"
-            cmd = "echo 'zcat ${2} | head -${1}' > %s/gzhead; " % genome_dir
-            command.execute(cmd)
-            max_lines = self.max_input_lines(input_files[0])
-            params += [
-                '--readFilesCommand',
-                '"sh %s/gzhead %d"' % (genome_dir, max_lines)
-            ]
+        if use_starlong:
+            params+= [
+                '--seedSearchStartLmax', '20',
+                '--seedPerReadNmax', '100000',
+                '--seedPerWindowNmax', '1000',
+                '--alignTranscriptsPerReadNmax', '100000',
+                '--alignTranscriptsPerWindowNmax', '10000']
         count_file = f"{genome_dir}/sjdbList.fromGTF.out.tab"
 
         if count_genes and os.path.isfile(count_file):
@@ -171,18 +183,6 @@ class PipelineStepRunStar(PipelineStep):
             log.write(msg)
             assert discrepancies_count <= max_discrepancies, msg
         return output_fnames
-
-    def max_input_lines(self, input_file):
-        """
-        Truncate to maximum lines. Fastq has 4 lines per read.
-        Fasta has 2 lines per read, ASSUMING it is single-line fasta, not multiline fasta.
-        TODO: Add support for multiline fasta. We do not have control over the inputs uploaded
-        by the user, so our assumption of single-line fasta will probably be violated in the future.
-        """
-        res = self.additional_attributes["truncate_fragments_to"] * 2
-        if "fasta" not in input_file:  # Assume it's FASTQ
-            res *= 2
-        return res
 
     @staticmethod
     def get_read(f):

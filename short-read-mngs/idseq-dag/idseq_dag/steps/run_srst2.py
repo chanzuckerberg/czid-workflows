@@ -18,7 +18,7 @@ class PipelineStepRunSRST2(PipelineStep):
         OUTPUT_GENES = 'output__genes__ARGannot_r2__results.txt'
         OUTPUT_FULL_GENES = 'output__fullgenes__ARGannot_r2__results.txt'
         isPaired = (len(self.input_files_local[0]) == 2)
-        isFasta = (self.additional_attributes['file_type'] == 'fasta')
+        isFasta = (self.additional_attributes['file_ext'] == 'fasta')
         isZipped = (self.input_files_local[0][0][-3:] == '.gz')
         self.execute_srst2(isPaired, isFasta, isZipped)
         log = os.path.join(self.output_dir_local, OUTPUT_LOG)
