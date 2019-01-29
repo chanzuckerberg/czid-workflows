@@ -1,5 +1,5 @@
 {
-  "output_dir_s3": "s3://idseq-database/alignment_data/<NCBI_DATE>_asgtest",
+  "output_dir_s3": "s3://idseq-database/alignment_data/<NCBI_DATE>",
   "targets": {
     "accession2taxid_input": [
       "nucl_wgs.accession2taxid.gz",
