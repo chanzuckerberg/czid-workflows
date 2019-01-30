@@ -11,8 +11,8 @@ class PipelineStepRunValidateInput(PipelineStep):
     def run(self):
         # Setup
         input_files = self.input_files_local[0][0:2]
-        num_inputs = len(input_files)
-        assert num_inputs == 1 or num_inputs == 2, 'Invalid number of input files'
+        self.num_inputs = len(input_files)
+        assert self.num_inputs == 1 or self.num_inputs == 2, 'Invalid number of input files'
         output_files = self.output_files_local()[1:3]
         summary_file = self.output_files_local()[0]
         max_fragments = self.additional_attributes["truncate_fragments_to"]
@@ -20,7 +20,7 @@ class PipelineStepRunValidateInput(PipelineStep):
         file_ext = self.additional_attributes.get("file_ext")
         assert file_ext == 'fastq' or file_ext == 'fasta', 'Invalid file extension'
 
-        for i in range(num_inputs):
+        for i in range(self.num_inputs):
             file = input_files[i]
 
             # unzip if .gz file
@@ -38,7 +38,7 @@ class PipelineStepRunValidateInput(PipelineStep):
         try:
             quick_check_passed = \
                 self.quick_check_file(input_files[0], file_ext == 'fastq') and \
-                (num_inputs == 1 or self.quick_check_file(input_files[1], file_ext == 'fastq'))
+                (self.num_inputs == 1 or self.quick_check_file(input_files[1], file_ext == 'fastq'))
 
             all_fragments = []
 
@@ -202,7 +202,8 @@ class PipelineStepRunValidateInput(PipelineStep):
 
                 if read_len < vc.READ_LEN_CUTOFF_LOW:
                     self.summary_dict[vc.BUCKET_TOO_SHORT] += 1
-                    continue
+                    if self.num_inputs == 1:
+                        continue
                 elif read_len < vc.READ_LEN_CUTOFF_MID:
                     self.summary_dict[vc.BUCKET_NORMAL] += 1
                 elif read_len < vc.READ_LEN_CUTOFF_HIGH:
