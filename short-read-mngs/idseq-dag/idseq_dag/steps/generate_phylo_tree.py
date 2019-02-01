@@ -305,6 +305,7 @@ class PipelineStepGeneratePhyloTree(PipelineStep):
         sample_names_by_run_ids = self.additional_attributes["sample_names_by_run_ids"]
         vcf_columns = "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT"
         column_description_line = command.execute_with_output(f"awk /'^{vcf_columns}'/ {input_file}")
+        column_description_line = column_description_line.strip()
         run_ids_in_order = [id for id in column_description_line.split("FORMAT\t")[1].split("\t") if convert.can_convert_to_int(id)]
         sample_names_in_order = [sample_names_by_run_ids.get(id, f"pipeline_run_{id}") for id in run_ids_in_order]
         new_column_description = '\t'.join([vcf_columns] + sample_names_in_order)
