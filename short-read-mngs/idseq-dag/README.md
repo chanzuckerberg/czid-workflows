@@ -225,6 +225,10 @@ IDseq DAGs require the use of several indices prepared from files in NCBI. If yo
 TODO: Move this code over to the idseq-dag repo.
 
 ## Release notes
+- 3.4.0
+   - switch from shelve to sqlite3 for all the lookup tables
+   - add lineage generation step
+
 - 3.3.1
    - Add step to generate nonhost fastq files by filtering the original fastq files for nonhost reads.
 

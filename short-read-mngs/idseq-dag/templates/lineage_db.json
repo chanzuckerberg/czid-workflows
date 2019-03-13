@@ -1,0 +1,26 @@
+{
+  "output_dir_s3": "s3://idseq-database/taxonomy/<NCBI_DATE>",
+  "targets": {
+    "lineage_csv_input": [
+      "taxid-lineages.csv.gz"
+    ],
+    "lineage_db_out": [ 
+       "taxid-lineages.sqlite3"
+    ]
+  },
+  "steps": [
+    {
+      "in": ["lineage_csv_input"],
+      "out": "lineage_db_out",
+      "class": "PipelineStepGenerateLineageDB",
+      "module": "idseq_dag.steps.generate_lineage_db",
+      "additional_files": {},
+      "additional_attributes": {}
+    }
+  ],
+  "given_targets": {
+    "lineage_csv_input": {
+      "s3_dir":  "s3://idseq-database/taxonomy/<NCBI_DATE>", "count_reads": 0
+    }
+  }
+}

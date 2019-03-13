@@ -1,7 +1,8 @@
 from idseq_dag.engine.pipeline_step import PipelineStep
 import idseq_dag.util.lineage as lineage
 import idseq_dag.util.s3 as s3
-import shelve
+
+from idseq_dag.util.dict import IdSeqDict, IdSeqDictValue, open_file_db_by_extension
 
 
 class PipelineStepGenerateTaxidFasta(PipelineStep):
@@ -25,7 +26,7 @@ class PipelineStepGenerateTaxidFasta(PipelineStep):
             self.additional_files["lineage_db"],
             self.ref_dir_local,
             allow_s3mi=True)
-        lineage_map = shelve.open(lineage_db.replace(".db", ""))
+        lineage_map = open_file_db_by_extension(lineage_db, IdSeqDictValue.VALUE_TYPE_ARRAY)
 
         # Get primary hit mappings
         valid_hits = PipelineStepGenerateTaxidFasta.parse_hits(

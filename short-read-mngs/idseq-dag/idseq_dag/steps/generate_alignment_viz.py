@@ -1,7 +1,6 @@
 import json
 import os
 import re
-import shelve
 import threading
 import time
 import traceback
@@ -14,6 +13,7 @@ import idseq_dag.util.log as log
 import idseq_dag.util.command as command
 import idseq_dag.util.s3 as s3
 
+from idseq_dag.util.dict import IdSeqDict, IdSeqDictValue, open_file_db_by_extension
 
 class PipelineStepGenerateAlignmentViz(PipelineStep):
     """Pipeline step to generate JSON file for read alignment visualizations to
@@ -47,8 +47,7 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
             annotated_fasta, db_type)
         log.write(f"Read to Seq dictionary size: {len(read2seq)}")
 
-        db_path = nt_loc_db.replace(".db", "")
-        nt_loc_dict = shelve.open(db_path)
+        nt_loc_dict = open_file_db_by_extension(nt_loc_db, IdSeqDictValue.VALUE_TYPE_ARRAY)
         groups, line_count = self.process_reads_from_m8_file(
             annotated_m8, read2seq)
 
@@ -334,8 +333,8 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
         seq_name = ''
         entry = nt_loc_dict.get(accession_id)
         if entry:
-            range_start = entry[0]
-            seq_len = entry[1] + entry[2]
+            range_start = int(entry[0])
+            seq_len = int(entry[1]) + int(entry[2])
             ntf.seek(range_start, 0)
             seq_name, ref_seq = ntf.read(seq_len).split("\n", 1)
             ref_seq = ref_seq.replace("\n", "")
@@ -350,7 +349,7 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
         if not entry:
             return seq_len, seq_name
 
-        range_start, name_length, seq_len = entry
+        range_start, name_length, seq_len = [int(e) for e in entry]
 
         accession_file = f'accession-{accession_id}'
         num_retries = 3

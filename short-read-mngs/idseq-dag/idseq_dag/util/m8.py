@@ -3,7 +3,6 @@ import json
 import math
 import time
 import random
-import shelve
 import threading
 import traceback
 import multiprocessing
@@ -13,6 +12,8 @@ from collections import Counter
 import idseq_dag.util.command as command
 import idseq_dag.util.log as log
 import idseq_dag.util.lineage as lineage
+
+from idseq_dag.util.dict import IdSeqDict, IdSeqDictValue, open_file_db_by_extension
 
 def log_corrupt(m8_file, line):
     msg = m8_file + " is corrupt at line:\n" + line + "\n----> delete it and its corrupt ancestors before restarting run"
@@ -170,8 +171,8 @@ def call_hits_m8(input_m8, lineage_map_path, accession2taxid_dict_path,
         * http://www.metagenomics.wiki/tools/blast/blastn-output-format-6
         * http://www.metagenomics.wiki/tools/blast/evalue
     """
-    lineage_map = shelve.open(lineage_map_path.replace('.db', ''), 'r')
-    accession2taxid_dict = shelve.open(accession2taxid_dict_path.replace('.db', ''), 'r')
+    lineage_map = open_file_db_by_extension(lineage_map_path, IdSeqDictValue.VALUE_TYPE_ARRAY)
+    accession2taxid_dict = open_file_db_by_extension(accession2taxid_dict_path)
     # Helper functions
     # TODO: Represent taxids by numbers instead of strings to greatly reduce
     # memory footprint and increase speed.
@@ -346,7 +347,7 @@ def generate_taxon_count_json_from_m8(
     # Lines in m8_file and hit_level_file correspond (same read_id)
     hit_line = hit_f.readline()
     m8_line = m8_f.readline()
-    lineage_map = shelve.open(lineage_map_path.replace('.db', ''), 'r')
+    lineage_map = open_file_db_by_extension(lineage_map_path, IdSeqDictValue.VALUE_TYPE_ARRAY)
     num_ranks = len(lineage.NULL_LINEAGE)
     # See https://en.wikipedia.org/wiki/Double-precision_floating-point_format
     MIN_NORMAL_POSITIVE_DOUBLE = 2.0**-1022

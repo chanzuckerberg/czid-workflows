@@ -1,6 +1,5 @@
 import json
 import os
-import shelve
 import threading
 import time
 import traceback

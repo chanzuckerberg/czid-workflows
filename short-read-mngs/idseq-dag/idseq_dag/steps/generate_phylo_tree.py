@@ -2,7 +2,6 @@
 import os
 import glob
 import json
-import shelve
 import traceback
 import xml.etree.ElementTree as ET
 
@@ -14,8 +13,10 @@ import idseq_dag.util.log as log
 import idseq_dag.util.count as count
 import idseq_dag.util.convert as convert
 
+from idseq_dag.util.dict import IdSeqDict, IdSeqDictValue, open_file_db_by_extension
+
 class PipelineStepGeneratePhyloTree(PipelineStep):
-    ''' 
+    '''
     Generate a phylogenetic tree from the input fasta files using kSNP3:
     http://gensoft.pasteur.fr/docs/kSNP3/01/kSNP3.01%20User%20Guide%20.pdf
     Augment the inputs with
@@ -129,7 +130,7 @@ class PipelineStepGeneratePhyloTree(PipelineStep):
             None: ["bacteria", "viral", "fungi", "protozoa"]
         }
         # additional options in genbank that we probably don't need right now:
-        # ["archaea", "plant", 
+        # ["archaea", "plant",
         # "vertebrate_mammalian", "vertebrate_other", "invertebrate",
         # "other", "metagenomes"]
         categories = genbank_categories_by_superkingdom[superkingdom_name]
@@ -240,7 +241,7 @@ class PipelineStepGeneratePhyloTree(PipelineStep):
 
         # Make map of accession to sequence file
         accession2info = dict((acc, {}) for acc in accessions)
-        nt_loc_dict = shelve.open(nt_loc_db.replace(".db", ""))
+        nt_loc_dict = open_file_db_by_extension(nt_loc_db, IdSeqDictValue.VALUE_TYPE_ARRAY)
         PipelineStepGenerateAlignmentViz.get_sequences_by_accession_list_from_s3(
             accession2info, nt_loc_dict, nt_db)
 
