@@ -51,6 +51,12 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
         groups, line_count = self.process_reads_from_m8_file(
             annotated_m8, read2seq)
 
+        # check if nt_db is already downloaded
+        if nt_db.startswith("s3://"):
+            potential_nt_db = os.path.join(self.ref_dir_local, os.path.basename(nt_db))
+            if os.path.isfile(potential_nt_db):
+                nt_db = potential_nt_db
+
         if nt_db.startswith("s3://"):
             log.write("Getting sequences by accession list from S3...")
             PipelineStepGenerateAlignmentViz.get_sequences_by_accession_list_from_s3(
