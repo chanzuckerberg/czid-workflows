@@ -10,11 +10,28 @@ import idseq_dag.util.count as count
 import idseq_dag.util.validate_constants as vc
 
 class PipelineStepRunStar(PipelineStep):
+    """ Implements the step for running STAR.
+    The attributes 'validated_input_counts_file' and 'sequence_input_files' should be
+    initialized in the run() method of any children that are not for execution directly
+    on the output of the 'run_validate_input' step.
+    Note that these attributes cannot be set in the __init__ method because required
+    file path information only becomes available once the wait_for_input_files() has run.
+    """
+    def __init__(self, *args):
+        super().__init__(*args)
+        self.sequence_input_files = None
+        self.validated_input_counts_file = None
+
     def run(self):
         """Run STAR to filter out host reads."""
         # Setup
-        validated_input_counts_file = self.input_files_local[0][0]
-        input_files = self.input_files_local[0][1:3]
+        if self.sequence_input_files is not None and self.validated_input_counts_file is not None:
+            validated_input_counts_file = self.validated_input_counts_file
+            input_files = self.sequence_input_files
+        else:
+            validated_input_counts_file = self.input_files_local[0][0]
+            input_files = self.input_files_local[0][1:3]
+
         num_inputs = len(input_files)
         scratch_dir = os.path.join(self.output_dir_local, "scratch_star")
 

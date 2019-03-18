@@ -225,9 +225,16 @@ IDseq DAGs require the use of several indices prepared from files in NCBI. If yo
 TODO: Move this code over to the idseq-dag repo.
 
 ## Release notes
+- 3.5.0
+   - Add ability to run STAR further downstream from input validation. This can be used to filter human reads
+     after the host has been filtered out (if host is non-human).
+
 - 3.4.0
    - switch from shelve to sqlite3 for all the lookup tables
    - add lineage generation step
+   
+- 3.3.2
+   - Add input validation step.
 
 - 3.3.1
    - Add step to generate nonhost fastq files by filtering the original fastq files for nonhost reads.
