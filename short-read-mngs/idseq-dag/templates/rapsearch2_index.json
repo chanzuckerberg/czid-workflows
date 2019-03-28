@@ -1,0 +1,26 @@
+{
+  "output_dir_s3": "s3://idseq-database/alignment_indexes/<NCBI_DATE>",
+  "targets": {
+    "nr_db": [
+      "nr"
+    ],
+    "nr_index": [ 
+       "nr_rapsearch"
+    ]
+  },
+  "steps": [
+    {
+      "in": ["nr_db"],
+      "out": "nr_index",
+      "class": "PipelineStepGenerateRapsearch2Index",
+      "module": "idseq_dag.steps.generate_rapsearch2_index",
+      "additional_files": {},
+      "additional_attributes": {}
+    }
+  ],
+  "given_targets": {
+    "nr_db": {
+      "s3_dir":  "s3://idseq-database/ncbi-sources/<NCBI_DATE>", "count_reads": 0
+    }
+  }
+}
