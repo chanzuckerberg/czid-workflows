@@ -113,7 +113,7 @@ class PipelineStepRunValidateInput(PipelineStep):
                          # non-standard fragment lengths require more detailed examination
                         return False
 
-                if fragment_length != len(read_l) or fragment_length != len(quality_l):
+                if fragment_length != len(read_l) or (is_fastq and fragment_length != len(quality_l)):
                      # file does not meet "quick check" requirements since fragments/quality
                      # scores are not all of same length
                     return False
