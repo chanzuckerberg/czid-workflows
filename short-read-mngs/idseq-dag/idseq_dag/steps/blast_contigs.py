@@ -211,7 +211,8 @@ class PipelineStepBlastContigs(PipelineStep):
                 elif bitscore > top_bitscore:
                     top_bitscore = bitscore
                     top_line = line
-            top_m8f.write(top_line)
+            if top_line is not None:
+                top_m8f.write(top_line)
 
 
 

@@ -225,6 +225,9 @@ IDseq DAGs require the use of several indices prepared from files in NCBI. If yo
 TODO: Move this code over to the idseq-dag repo.
 
 ## Release notes
+- 3.5.1
+   - Handle absence of m8 hits in PipelineStepBlastContigs.
+
 - 3.5.0
    - Add ability to run STAR further downstream from input validation. This can be used to filter human reads
      after the host has been filtered out (if host is non-human).
