@@ -225,6 +225,11 @@ IDseq DAGs require the use of several indices prepared from files in NCBI. If yo
 TODO: Move this code over to the idseq-dag repo.
 
 ## Release notes
+- 3.5.2
+   - Choose most-represented accessions of assembly/gsnap.hitsummary2.tab add assembly/rapsearch2.hitsummary2.tab
+     as the NCBI references to include on phylogenetic trees, as opposed to making the choice based on pre-assembly
+     align_viz files.
+
 - 3.5.1
    - Handle absence of m8 hits in PipelineStepBlastContigs.
 

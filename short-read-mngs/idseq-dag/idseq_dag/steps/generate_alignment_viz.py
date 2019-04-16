@@ -353,7 +353,7 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
         seq_name = ''
         entry = nt_loc_dict.get(accession_id)
         if not entry:
-            return seq_len, seq_name
+            return seq_len, seq_name, None
 
         range_start, name_length, seq_len = [int(e) for e in entry]
 

@@ -5,6 +5,8 @@ import json
 import traceback
 import xml.etree.ElementTree as ET
 
+from collections import defaultdict
+
 from idseq_dag.engine.pipeline_step import PipelineStep
 from idseq_dag.steps.generate_alignment_viz import PipelineStepGenerateAlignmentViz
 import idseq_dag.util.command as command
@@ -20,7 +22,7 @@ class PipelineStepGeneratePhyloTree(PipelineStep):
     Generate a phylogenetic tree from the input fasta files using kSNP3:
     http://gensoft.pasteur.fr/docs/kSNP3/01/kSNP3.01%20User%20Guide%20.pdf
     Augment the inputs with
-      (a) NCBI sequences for the accession IDs specified in align_viz_json
+      (a) NCBI sequences for the top accession IDs found in hitsummary2_files
     and/or
       (b) Genbank full reference genomes from the same taxid.
     '''
@@ -48,7 +50,7 @@ class PipelineStepGeneratePhyloTree(PipelineStep):
         # Retrieve NCBI NT references for the accessions in the alignment viz files.
         # These are the accessions (not necessarily full genomes) that were actually matched
         # by the sample's reads during GSNAP alignment.
-        accession_fastas = self.get_accession_sequences(input_dir_for_ksnp3, 10)
+        accession_fastas = self.get_accession_sequences(input_dir_for_ksnp3, taxid, 10)
 
         # Retrieve NCBI metadata for the accessions
         metadata_by_node = self.get_metadata_by_tree_node({**accession_fastas, **genbank_fastas})
@@ -190,9 +192,9 @@ class PipelineStepGeneratePhyloTree(PipelineStep):
             for key2, sub_dict in current_dict.items():
                 PipelineStepGeneratePhyloTree.parse_tree(sub_dict, results, key2)
 
-    def get_accession_sequences(self, dest_dir, n=10):
+    def get_accession_sequences(self, dest_dir, taxid, n=10):
         '''
-        Retrieve NCBI NT references for the most-matched accession in each alignment viz file, up to a maximum of n references.
+        Retrieve NCBI NT references for the most-matched accession in each hitsummary2 file, up to a maximum of n references.
         Write each reference to a separate fasta file.
         '''
         if n == 0:
@@ -204,40 +206,30 @@ class PipelineStepGeneratePhyloTree(PipelineStep):
             self.additional_files["nt_loc_db"],
             self.ref_dir_local,
             allow_s3mi=True)
-        s3_align_viz_files = self.additional_attributes["align_viz_files"].values()
-        local_align_viz_files = []
-        for s3_file in s3_align_viz_files:
-            local_basename = s3_file.replace("/", "-").replace(":", "-") # needs to be unique locally
-            local_file = s3.fetch_from_s3(
-                s3_file,
-                os.path.join(self.ref_dir_local, local_basename))
-            if local_file != None:
-                local_align_viz_files.append(local_file)
 
         # Choose accessions to process.
-        # align_viz files are a bit brittle, so we just log exceptions rather than failing the job.
-        accessions = set()
-        for local_file in local_align_viz_files:
-            try:
-                with open(local_file, 'rb') as f:
-                    align_viz_dict = json.load(f)
-                most_matched_accession = None
-                max_num_reads = 0
-                flat_align_viz_dict = {}
-                self.parse_tree(align_viz_dict, flat_align_viz_dict)
-                for acc, info in flat_align_viz_dict.items():
-                    num_reads = info["coverage_summary"]["num_reads"]
-                    if num_reads > max_num_reads:
-                        max_num_reads = num_reads
-                        most_matched_accession = acc
-                accessions.add(most_matched_accession)
-                if len(accessions) >= n:
-                    break
-            except:
-                log.write(f"Warning: couldn't get accession from {local_file}!")
-                traceback.print_exc()
+        s3_hitsummary2_files = self.additional_attributes["hitsummary2_files"].values()
+        accessions = defaultdict(lambda: 0)
+        for file_list in s3_hitsummary2_files:
+            tally = defaultdict(lambda: 0)
+            for s3_file in file_list:
+                local_basename = s3_file.replace("/", "-").replace(":", "-")
+                local_file = s3.fetch_from_s3(
+                    s3_file,
+                    os.path.join(self.ref_dir_local, local_basename))
+                if local_file is None:
+                    continue
+                with open(local_file, 'r') as f:
+                    for line in f:
+                        acc, species_taxid, genus_taxid, family_taxid = line.rstrip().split("\t")[3:7]
+                        if any(int(hit_taxid) == taxid for hit_taxid in [species_taxid, genus_taxid, family_taxid]):
+                            tally[acc] += 1
+            if tally:
+                best_acc, max_count = max(tally.items(), key=lambda x: x[1])
+                accessions[best_acc] += max_count
         if len(accessions) > n:
-            accessions = set(list(accessions)[0:n])
+            accessions = dict(sorted(accessions.items(), key=lambda x: x[1], reverse=True)[:n])
+        accessions = set(accessions.keys())
 
         # Make map of accession to sequence file
         accession2info = dict((acc, {}) for acc in accessions)
@@ -248,6 +240,9 @@ class PipelineStepGeneratePhyloTree(PipelineStep):
         # Put 1 fasta file per accession into the destination directory
         accession_fastas = {}
         for acc, info in accession2info.items():
+            if info['seq_file'] is None:
+                log.write(f"WARNING: No sequence retrieved for {acc}")
+                continue
             clean_accession = self.clean_name_for_ksnp3(acc)
             local_fasta = f"{dest_dir}/NCBI_NT_accession_{clean_accession}.fasta"
             command.execute(f"ln -s {info['seq_file']} {local_fasta}")
