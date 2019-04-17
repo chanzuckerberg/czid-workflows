@@ -43,10 +43,18 @@ class IdSeqDict(object):
             val = user_tuple[1]
             if self.value_type == IdSeqDictValue.VALUE_TYPE_ARRAY:
                 val = DICT_DELIMITER.join([str(v) for v in val])
-            return f"('{user_tuple[0]}', '{val}')"
-        value_str = ",".join(map(tuple_to_sql_str, tuples))
+            return (user_tuple[0], val)
+
+        # Use a parameterized SQL string, so that special characters such as quotes are automatically escaped.
+        value_arr = []
+        for pair in tuples:
+            values = tuple_to_sql_str(pair)
+            value_arr += values
+
+        parameter_str = ",".join(["(?,?)"] * len(tuples))
+
         cursor = self.db_conn.cursor()
-        cursor.execute(f"INSERT OR REPLACE INTO {SQLITE_TABLE_NAME} VALUES {value_str}")
+        cursor.execute(f"INSERT OR REPLACE INTO {SQLITE_TABLE_NAME} VALUES {parameter_str}", value_arr)
         self.db_conn.commit()
 
     def get(self, key, default_value=None):

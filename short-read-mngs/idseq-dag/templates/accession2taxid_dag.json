@@ -9,7 +9,7 @@
       "pdb.accession2taxid.gz",
       "prot.accession2taxid.gz"
     ],
-    "nt_input": [ 
+    "nt_input": [
        "nt"
     ],
     "nr_input": [
@@ -22,10 +22,12 @@
       "taxid2wgs_accession.sqlite3"
     ],
     "nt_loc_out": [
-      "nt_loc.sqlite3"
+      "nt_loc.sqlite3",
+      "nt_info.sqlite3"
     ],
     "nr_loc_out": [
-      "nr_loc.sqlite3"
+      "nr_loc.sqlite3",
+      "nr_info.sqlite3"
     ]
   },
   "steps": [
