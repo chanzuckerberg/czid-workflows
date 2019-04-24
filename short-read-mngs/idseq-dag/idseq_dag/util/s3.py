@@ -161,6 +161,9 @@ def fetch_byterange(first_byte, last_byte, bucket, key, output_file):
 def upload_with_retries(from_f, to_f):
     command.execute(f"aws s3 cp --only-show-errors {from_f} {to_f}")
 
+@command.retry
+def upload_folder_with_retries(from_f, to_f):
+    command.execute(f"aws s3 cp --only-show-errors --recursive {from_f.rstrip('/')}/ {to_f.rstrip('/')}/")
 
 def upload(from_f, to_f, status, status_lock=threading.RLock()):
     try:
