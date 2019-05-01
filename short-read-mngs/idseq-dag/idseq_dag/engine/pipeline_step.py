@@ -146,13 +146,18 @@ class PipelineStep(object):
     def thread_run(self):
         ''' Actually running the step '''
         self.status = StepStatus.STARTED
-        self.wait_for_input_files()
-        log.write("START STEP %s" % self.name)
-        self.run()
-        self.validate()
-        self.save_progress()
-        self.save_counts()
-        log.write("FINISH STEP %s" % self.name)
+        v = {"step": self.name}
+        with log.log_context("dag_step", v):
+            with log.log_context("substep_wait_for_input_files", v):
+                self.wait_for_input_files()
+            with log.log_context("substep_run", v):
+                self.run()
+            with log.log_context("substep_validate", v):
+                self.validate()
+            with log.log_context("substep_save_progress", v):
+                self.save_progress()
+            with log.log_context("substep_save_counts", v):
+                self.save_counts()
         self.upload_thread = threading.Thread(target=self.uploading_results)
         self.upload_thread.start()
         self.status = StepStatus.FINISHED

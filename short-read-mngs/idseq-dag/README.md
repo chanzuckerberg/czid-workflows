@@ -225,6 +225,10 @@ IDseq DAGs require the use of several indices prepared from files in NCBI. If yo
 TODO: Move this code over to the idseq-dag repo.
 
 ## Release notes
+
+- 3.5.4
+   - New log methods to write log events. Added and replaced a few log entries.
+
 - 3.5.0 ... 3.5.3
    - Add ability to run STAR further downstream from input validation. This can be used to filter human reads
      after the host has been filtered out (if host is non-human).

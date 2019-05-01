@@ -1,6 +1,5 @@
 import importlib
 import json
-import sys
 import os
 import threading
 import traceback
@@ -41,10 +40,10 @@ class PipelineFlow(object):
         return ".".join(version.split(".")[0:2])
 
     def prefetch_large_files(self):
-        log.write("downloading large files: %s" % ",".join(self.large_file_list))
-        for f in self.large_file_list:
-            log.write("downloading %s" % f)
-            idseq_dag.util.s3.fetch_from_s3(f, self.ref_dir_local, allow_s3mi=True, auto_untar=True)
+        with log.log_context("prefetch_large_files", values={"file_list": self.large_file_list}):
+            for f in self.large_file_list:
+                with log.log_context("fetch_from_s3", values={"file": f}):
+                    idseq_dag.util.s3.fetch_from_s3(f, self.ref_dir_local, allow_s3mi=True, auto_untar=True)
 
     @staticmethod
     def parse_and_validate_conf(dag_json):
@@ -179,16 +178,18 @@ class PipelineFlow(object):
         else:
             input_path_s3 = self.output_dir_s3
 
-        PipelineFlow.fetch_input_files_from_s3(input_files=self.targets[target],
-                                               input_dir_s3=input_path_s3,
-                                               result_dir_local=self.output_dir_local)
-        if target in self.given_targets and self.given_targets[target].get("count_reads"):
-            PipelineFlow.count_input_reads(input_files=self.targets[target],
-                                           result_dir_local=self.output_dir_local,
-                                           result_dir_s3=self.output_dir_s3,
-                                           target_name=target,
-                                           max_fragments=self.given_targets[target]["max_fragments"])
+        with log.log_context("fetch_input_files_from_s3", {"target": target}):
+            PipelineFlow.fetch_input_files_from_s3(input_files=self.targets[target],
+                                                   input_dir_s3=input_path_s3,
+                                                   result_dir_local=self.output_dir_local)
 
+        if target in self.given_targets and self.given_targets[target].get("count_reads"):
+            with log.log_context("count_input_reads", {"target": target}):
+                PipelineFlow.count_input_reads(input_files=self.targets[target],
+                                               result_dir_local=self.output_dir_local,
+                                               result_dir_s3=self.output_dir_s3,
+                                               target_name=target,
+                                               max_fragments=self.given_targets[target]["max_fragments"])
 
     def start(self):
         # Come up with the plan
