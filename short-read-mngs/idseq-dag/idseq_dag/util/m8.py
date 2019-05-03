@@ -48,10 +48,11 @@ def summarize_hits(hit_summary_file, min_reads_per_genus = 0):
 
     return (read_dict, accession_dict, selected_genera)
 
-def iterate_m8(m8_file, debug_caller=None, logging_interval=25000000):
-    """Generate an iterator over the m8 file and return (read_id,
-    accession_id, percent_id, alignment_length, e_value, line) for each line.
+def iterate_m8(m8_file, debug_caller=None, logging_interval=25000000, full_line=False):
+    """Generate an iterator over the m8 file and return values for each line.
     Work around and warn about any invalid hits detected.
+    Return a subset of values (read_id, accession_id, percent_id, alignment_length,
+    e_value, line) by default.
     """
     invalid_hits = 0
     last_invalid_line = None
@@ -70,6 +71,12 @@ def iterate_m8(m8_file, debug_caller=None, logging_interval=25000000):
             accession_id = parts[1]
             percent_id = float(parts[2])
             alignment_length = int(parts[3])
+            num_mismatches = int(parts[4])
+            num_gaps = int(parts[5])
+            query_start = int(parts[6])
+            query_end = int(parts[7])
+            subject_start = int(parts[8])
+            subject_end = int(parts[9])
             e_value = float(parts[10])
             bitscore = float(parts[11])
 
@@ -90,8 +97,12 @@ def iterate_m8(m8_file, debug_caller=None, logging_interval=25000000):
                 msg = "Scanned {} m8 lines from {} for {}, and going.".format(
                     line_count, m8_file, debug_caller)
                 log.write(msg)
-            yield (read_id, accession_id, percent_id, alignment_length,
-                   e_value, bitscore, line)
+            if full_line:
+                yield (read_id, accession_id, percent_id, alignment_length, num_mismatches, num_gaps,
+                    query_start, query_end, subject_start, subject_end, e_value, bitscore, line)
+            else:
+                yield (read_id, accession_id, percent_id, alignment_length,
+                    e_value, bitscore, line)
 
     # Warn about any invalid hits outputted by GSNAP
     if invalid_hits:

@@ -1,0 +1,42 @@
+{
+  "output_dir_s3": "s3://idseq-samples-development/markazhang/samples_12452/generate_coverage_viz_test",
+  "targets": {
+    "refined_gsnap_in": [
+      "gsnap.reassigned.m8",
+      "gsnap.hitsummary2.tab",
+      "gsnap.blast.top.m8"
+    ],
+    "contig_in": [
+      "contig_coverage.json",
+      "contig_stats.json",
+      "contigs.fasta"
+    ],
+    "gsnap_m8": [
+      "gsnap.deduped.m8"
+    ],
+    "coverage_viz_out": ["coverage_viz_summary.json"]
+  },
+  "steps": [
+    {
+      "in": ["refined_gsnap_in", "contig_in", "gsnap_m8"],
+      "out": "coverage_viz_out",
+      "class": "PipelineStepGenerateCoverageViz",
+      "module": "idseq_dag.steps.generate_coverage_viz",
+      "additional_files": {
+        "info_db": "s3://idseq-database/alignment_data/2018-12-01/nt_info.sqlite3"
+      },
+      "additional_attributes": {}
+    }
+  ],
+  "given_targets": {
+    "refined_gsnap_in": {
+      "s3_dir": "s3://idseq-samples-development/samples/234/12452/postprocess/3.5/assembly"
+    },
+    "contig_in": {
+      "s3_dir": "s3://idseq-samples-development/samples/234/12452/postprocess/3.5/assembly"
+    },
+    "gsnap_m8": {
+      "s3_dir": "s3://idseq-samples-development/samples/234/12452/results/3.5"
+    }
+  }
+}

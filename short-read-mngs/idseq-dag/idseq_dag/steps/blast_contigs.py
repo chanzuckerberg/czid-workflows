@@ -30,12 +30,14 @@ class PipelineStepBlastContigs(PipelineStep):
         assembled_contig, _assembled_scaffold, bowtie_sam, _contig_stats = self.input_files_local[1]
         reference_fasta = self.input_files_local[2][0]
 
-        (blast_m8, refined_m8, refined_hit_summary, refined_counts, contig_summary_json) = self.output_files_local()
+        (blast_m8, refined_m8, refined_hit_summary, refined_counts, contig_summary_json, blast_top_m8) = self.output_files_local()
         db_type = self.additional_attributes["db_type"]
         if os.path.getsize(assembled_contig) < MIN_ASEEMBLED_CONTIG_SIZE or \
             os.path.getsize(reference_fasta) < MIN_REF_FASTA_SIZE:
-                # No assembled results or refseq fasta available
+                # No assembled results or refseq fasta available.
+                # Create empty output files.
                 command.execute(f"echo ' ' > {blast_m8}")
+                command.execute(f"echo ' ' > {blast_top_m8}")
                 command.execute(f"cp {deduped_m8} {refined_m8}")
                 command.execute(f"cp {hit_summary} {refined_hit_summary}")
                 command.execute(f"cp {orig_counts} {refined_counts}")
@@ -43,15 +45,14 @@ class PipelineStepBlastContigs(PipelineStep):
                 return
 
         (read_dict, accession_dict, _selected_genera) = m8.summarize_hits(hit_summary)
-        top_entry_m8 = blast_m8.replace(".m8", ".top.m8")
         PipelineStepBlastContigs.run_blast(assembled_contig, reference_fasta,
-                                           db_type, blast_m8, top_entry_m8)
+                                           db_type, blast_m8, blast_top_m8)
         read2contig = {}
         contig_stats = defaultdict(int)
         PipelineStepRunAssembly.generate_info_from_sam(bowtie_sam, read2contig, contig_stats)
 
         (updated_read_dict, read2blastm8, contig2lineage, added_reads) = self.update_read_dict(
-                read2contig, top_entry_m8, read_dict, accession_dict)
+                read2contig, blast_top_m8, read_dict, accession_dict)
         self.generate_m8_and_hit_summary(updated_read_dict, added_reads, read2blastm8,
                                          hit_summary, deduped_m8,
                                          refined_hit_summary, refined_m8)
@@ -79,7 +80,6 @@ class PipelineStepBlastContigs(PipelineStep):
         with open(contig2lineage_json, 'w') as c2lf:
             json.dump(contig2lineage, c2lf)
 
-        self.additional_files_to_upload.append(top_entry_m8)
         self.additional_files_to_upload.append(contig2lineage_json)
 
     @staticmethod
@@ -180,7 +180,7 @@ class PipelineStepBlastContigs(PipelineStep):
         return (consolidated_dict, read2blastm8, contig2lineage, added_reads)
 
     @staticmethod
-    def run_blast(assembled_contig, reference_fasta, db_type, blast_m8, top_entry_m8):
+    def run_blast(assembled_contig, reference_fasta, db_type, blast_m8, blast_top_m8):
         blast_index_path = os.path.join(os.path.dirname(blast_m8), f"{db_type}_blastindex")
         blast_type = 'nucl'
         blast_command = 'blastn'
@@ -190,12 +190,12 @@ class PipelineStepBlastContigs(PipelineStep):
         command.execute(f"makeblastdb -in {reference_fasta} -dbtype {blast_type} -out {blast_index_path}")
         command.execute(f"{blast_command} -query {assembled_contig} -db {blast_index_path} -out {blast_m8} -outfmt 6 -num_alignments 5 -num_threads 16")
         # further processing of getting the top m8 entry for each contig.
-        PipelineStepBlastContigs.get_top_m8(blast_m8, top_entry_m8)
+        PipelineStepBlastContigs.get_top_m8(blast_m8, blast_top_m8)
 
     @staticmethod
-    def get_top_m8(orig_m8, top_entry_m8):
-        ''' Get top m8 file entry for each read from orig_m8 and output to top_entry_m8 '''
-        with open(top_entry_m8, 'w') as top_m8f:
+    def get_top_m8(orig_m8, blast_top_m8):
+        ''' Get top m8 file entry for each read from orig_m8 and output to blast_top_m8 '''
+        with open(blast_top_m8, 'w') as top_m8f:
             top_line = None
             top_bitscore = 0
             current_read_id = None
