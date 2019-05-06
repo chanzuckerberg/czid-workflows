@@ -12,6 +12,7 @@ import idseq_dag.util.server as server
 import idseq_dag.util.log as log
 import idseq_dag.util.m8 as m8
 from idseq_dag.util.s3 import fetch_from_s3
+from idseq_dag.util.trace_lock import TraceLock
 
 MAX_CONCURRENT_CHUNK_UPLOADS = 4
 DEFAULT_BLACKLIST_S3 = 's3://idseq-database/taxonomy/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/taxon_blacklist.txt'
@@ -86,7 +87,7 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
         # Process chunks
         chunk_output_files = [None] * len(input_chunks)
         chunk_threads = []
-        mutex = threading.RLock()
+        mutex = TraceLock("run_remotely", threading.RLock())
         # Randomize execution order for performance
         randomized = list(enumerate(input_chunks))
         random.shuffle(randomized)

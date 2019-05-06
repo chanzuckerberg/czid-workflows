@@ -6,6 +6,7 @@ import threading
 import time
 from functools import wraps
 import idseq_dag.util.log as log
+from idseq_dag.util.trace_lock import TraceLock
 
 
 class Updater(object):
@@ -25,6 +26,7 @@ class Updater(object):
             t_elapsed = time.time() - self.t_start
             self.update_function(t_elapsed)
         self.timer_thread = threading.Timer(self.update_period, self.relaunch)
+        self.timer_thread.name = "TimerThread"
         self.timer_thread.start()
 
     def __enter__(self):
@@ -40,7 +42,7 @@ class CommandTracker(Updater):
     """CommandTracker is for running external and remote commands and
     monitoring their progress with log updates and timeouts.
     """
-    lock = multiprocessing.RLock()
+    lock = TraceLock("CommandTracker", multiprocessing.RLock())
     count = multiprocessing.Value('i', 0)
 
     def __init__(self, update_period=15):
@@ -220,8 +222,7 @@ def execute(command,
     execution with logging.
     """
     with CommandTracker() as ct:
-        with log.print_lock:
-            log.write("Command {}: {}".format(ct.id, command))
+        log.write("Command {}: {}".format(ct.id, command))
         with ProgressFile(progress_file):
             if timeout:
                 ct.timeout = timeout
@@ -243,6 +244,8 @@ def execute(command,
                 ct.proc = subprocess.Popen(command, shell=True)
                 ct.proc.wait()
                 stdout = None
+
+            log.write("Command {} completed. Return code {}".format(ct.id, ct.proc.returncode))
 
             if ct.proc.returncode:
                 raise subprocess.CalledProcessError(ct.proc.returncode,

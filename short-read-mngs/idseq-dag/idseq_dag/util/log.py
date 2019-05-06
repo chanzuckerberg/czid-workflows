@@ -5,6 +5,7 @@ import sys
 import json
 import datetime
 import math
+import functools
 
 from contextlib import contextmanager
 
@@ -68,6 +69,44 @@ def log_event(event_name, values=None, start_time=None, warning=False, flush=Tru
         fmt_message = "%s (%.1f seconds)" % (json.dumps(log_line), duration)
     write(fmt_message, warning, flush)
     return datetime.datetime.now()
+
+def log_execution(values=None):
+    '''
+    Decorates a function and write to logs fn_start and fn_end events.
+
+    Parameters:
+    values(dict): Optional. Values associated to that event. Will be logged in json format.
+
+    Example:
+
+    from log import log_execution
+    @log_execution()
+    def my_function
+        # ...
+
+    The code above will generate two log entries:
+    Event fn_start {"n": "my_function"}
+    Event fn_end {"n": "my_function"} (0.3 sec)
+    '''
+    def decorator_fn(func):
+        @functools.wraps(func)
+        def wrapper_fn(*args, **kwargs):
+            if values is None:
+                val = {"name": func.__qualname__}
+            else:
+                val = {"name": func.__qualname__, "v": values}
+            start = log_event("fn_start", val)
+            try:
+                result = func(*args, **kwargs)
+                log_event("fn_end", val, start_time=start)
+                return result
+            except Exception as e:
+                val["error_type"] = type(e).__name__
+                val["error_args"] = e.args
+                log_event("fn_error", val, start_time=start)
+                raise e
+        return wrapper_fn
+    return decorator_fn
 
 @contextmanager
 def log_context(context_name, values=None, log_caller_info=True):

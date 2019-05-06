@@ -5,6 +5,7 @@ import os
 import multiprocessing
 import logging
 import errno
+from idseq_dag.util.trace_lock import TraceLock
 
 import idseq_dag.util.command as command
 import idseq_dag.util.log as log
@@ -51,7 +52,7 @@ def touch_s3_file_list(s3_dir, file_list):
         touch_s3_file(os.path.join(s3_dir, f))
 
 
-def install_s3mi(installed={}, mutex=threading.RLock()):  #pylint: disable=dangerous-default-value
+def install_s3mi(installed={}, mutex=TraceLock("install_s3mi", threading.RLock())):  #pylint: disable=dangerous-default-value
     with mutex:
         if installed:  # Mutable default value persists
             return
@@ -72,7 +73,7 @@ def fetch_from_s3(src,
                   auto_unzip=False,
                   auto_untar=False,
                   allow_s3mi=False,
-                  mutex=threading.RLock(),
+                  mutex=TraceLock("fetch_from_s3", threading.RLock()),
                   locks={}):  #pylint: disable=dangerous-default-value
     """Fetch a file from S3 if needed using either s3mi or aws cp."""
     with mutex:
@@ -88,7 +89,7 @@ def fetch_from_s3(src,
             dst = dst[:-4] # Remove .tar
         abspath = os.path.abspath(dst)
         if abspath not in locks:
-            locks[abspath] = threading.RLock()
+            locks[abspath] = TraceLock(f"fetch_from_s3: {abspath}", threading.RLock())
         destination_lock = locks[abspath]
 
     with destination_lock:
@@ -165,7 +166,7 @@ def upload_with_retries(from_f, to_f):
 def upload_folder_with_retries(from_f, to_f):
     command.execute(f"aws s3 cp --only-show-errors --recursive {from_f.rstrip('/')}/ {to_f.rstrip('/')}/")
 
-def upload(from_f, to_f, status, status_lock=threading.RLock()):
+def upload(from_f, to_f, status, status_lock=TraceLock("upload", threading.RLock())):
     try:
         with IOSTREAM_UPLOADS:  # Limit concurrent uploads so as not to stall the pipeline.
             with IOSTREAM:  # Still counts toward the general semaphore.
@@ -178,7 +179,7 @@ def upload(from_f, to_f, status, status_lock=threading.RLock()):
         raise
 
 
-def upload_log_file(sample_s3_output_path, lock=threading.RLock()):
+def upload_log_file(sample_s3_output_path, lock=TraceLock("upload_log_file", threading.RLock())):
     with lock:
         logh = logging.getLogger().handlers[0]
         logh.flush()

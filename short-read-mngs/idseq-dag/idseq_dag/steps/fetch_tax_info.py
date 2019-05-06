@@ -8,6 +8,7 @@ import idseq_dag.util.command as command
 import idseq_dag.util.log as log
 import idseq_dag.util.s3 as s3
 from idseq_dag.engine.pipeline_step import PipelineStep
+from idseq_dag.util.trace_lock import TraceLock
 
 
 class PipelineStepFetchTaxInfo(PipelineStep):
@@ -70,7 +71,7 @@ class PipelineStepFetchTaxInfo(PipelineStep):
         ''' Fetch wikipedia content based on taxid2wikidict '''
         threads = []
         semaphore = threading.Semaphore(num_threads)
-        mutex = threading.RLock()
+        mutex = TraceLock("fetch_wiki_content", threading.RLock())
         for taxid, url in taxid2wikidict.items():
             m = re.search("curid=(\d+)", url)
             pageid = None
@@ -130,7 +131,7 @@ class PipelineStepFetchTaxInfo(PipelineStep):
         ''' Use Entrez API to fetch taxonid -> wikipedia page mapping '''
         threads = []
         semaphore = threading.Semaphore(num_threads)
-        mutex = threading.RLock()
+        mutex = TraceLock("fetch_ncbi_wiki_map", threading.RLock())
         batch = []
         with open(taxid_list, 'r') as taxf:
             for line in taxf:

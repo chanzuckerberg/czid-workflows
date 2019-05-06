@@ -10,6 +10,7 @@ import subprocess
 from idseq_dag.engine.pipeline_step import PipelineStep
 from idseq_dag.util.lineage import INVALID_CALL_BASE_ID
 import idseq_dag.util.log as log
+from idseq_dag.util.trace_lock import TraceLock
 import idseq_dag.util.command as command
 import idseq_dag.util.s3 as s3
 
@@ -300,7 +301,7 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
         threads = []
         error_flags = {}
         semaphore = threading.Semaphore(64)
-        mutex = threading.RLock()
+        mutex = TraceLock("get_sequences_by_accession_list_from_s3", threading.RLock())
         nt_bucket, nt_key = nt_s3_path[5:].split("/", 1)
         for accession_id, accession_info in accession_id_groups.items():
             semaphore.acquire()

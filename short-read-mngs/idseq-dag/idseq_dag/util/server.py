@@ -6,6 +6,7 @@ import threading
 import traceback
 import multiprocessing
 
+from idseq_dag.util.trace_lock import TraceLock
 from contextlib import contextmanager
 
 from idseq_dag.util.periodic_thread import PeriodicThread
@@ -43,7 +44,7 @@ def get_server_ips(service_name,
                    draining_tag,
                    aggressive=False,
                    cache={},
-                   mutex=threading.RLock()):  #pylint: disable=dangerous-default-value
+                   mutex=TraceLock("get_server_ips", threading.RLock())):  #pylint: disable=dangerous-default-value
     try:
         with mutex:
             if aggressive:
@@ -85,7 +86,7 @@ def wait_for_server_ip_work(service_name,
                                      min(MAX_INSTANCES_TO_POLL,
                                          len(instance_ip_id_dict)))
         ip_nproc_dict = {}
-        dict_mutex = threading.RLock()
+        dict_mutex = TraceLock("wait_for_server_ip_work", threading.RLock())
         dict_writable = True
 
         def poll_server(ip):
@@ -157,7 +158,7 @@ def wait_for_server_ip(service_name,
                        chunk_id,
                        max_interval_between_describe_instances,
                        draining_tag,
-                       mutex=threading.RLock(),
+                       mutex=TraceLock("wait_for_server_ip", threading.RLock()),
                        mutexes={},
                        last_checks={}):  #pylint: disable=dangerous-default-value
     # We rate limit these to ensure fairness across jobs regardless of job size
@@ -166,7 +167,7 @@ def wait_for_server_ip(service_name,
         service_name = 'rapsearch'
     with mutex:
         if service_name not in mutexes:
-            mutexes[service_name] = threading.RLock()
+            mutexes[service_name] = TraceLock(f"wait_for_server_ip: {service_name}", threading.RLock())
             last_checks[service_name] = [None]
         lc = last_checks[service_name]
         mx = mutexes[service_name]

@@ -1,16 +1,14 @@
-import json
 import os
 import threading
 import time
 import traceback
-from collections import defaultdict
 from idseq_dag.engine.pipeline_step import PipelineStep
 import idseq_dag.util.command as command
-import idseq_dag.util.count as count
 import idseq_dag.util.s3 as s3
 import idseq_dag.util.m8 as m8
 
-from idseq_dag.util.dict import IdSeqDict, IdSeqDictValue, open_file_db_by_extension
+from idseq_dag.util.dict import IdSeqDictValue, open_file_db_by_extension
+from idseq_dag.util.trace_lock import TraceLock
 
 MIN_ACCESSIONS_WHOLE_DB_DOWNLOAD = 5000
 MAX_ACCESSION_SEQUENCE_LEN = 100000000
@@ -58,7 +56,7 @@ class PipelineStepDownloadAccessions(PipelineStep):
         threads = []
         error_flags = {}
         semaphore = threading.Semaphore(64)
-        mutex = threading.RLock()
+        mutex = TraceLock("download_ref_sequences_from_s3", threading.RLock())
 
         bucket, key = db_s3_path[5:].split("/", 1)
         loc_dict = open_file_db_by_extension(loc_db, IdSeqDictValue.VALUE_TYPE_ARRAY)
