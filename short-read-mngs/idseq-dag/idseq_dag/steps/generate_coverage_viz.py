@@ -494,7 +494,7 @@ class PipelineStepGenerateCoverageViz(PipelineStep):
             # Otherwise, put the hit into a bin based on its midpoint
             else:
                 hit_midpoint = (accession_end + accession_start) / 2
-                hit_bin_index = _float_floor(hit_midpoint / bin_size)
+                hit_bin_index = _floor_with_min(hit_midpoint / bin_size, 0)
 
                 if hit_type == "read":
                     read_bins[hit_bin_index].append(hit_name)
@@ -566,7 +566,7 @@ class PipelineStepGenerateCoverageViz(PipelineStep):
         # If the bounds of the hit group is too narrow,
         # the front-end will display the bounds of the bin instead.
         hit_group_midpoint = ((hit_group_start - 1) + hit_group_end) / 2
-        hit_group_bin_index = _float_floor(hit_group_midpoint / bin_size)
+        hit_group_bin_index = _floor_with_min(hit_group_midpoint / bin_size, 0)
 
         # Use an array of numbers instead of a dict with field names to save space in the JSON file.
         # There will be many of these hit group arrays.
@@ -631,7 +631,7 @@ class PipelineStepGenerateCoverageViz(PipelineStep):
             # Find all bins that this contig overlaps, and calculate average coverage for each bin separately.
             (bin_start, bin_end) = _align_interval((subject_start / bin_size, subject_end / bin_size))
 
-            for i in range(_float_floor(bin_start), _float_ceil(bin_end)):
+            for i in range(_floor_with_min(bin_start, 0), _ceil_with_max(bin_end, num_bins)):
                 # Our goal is to figure out which part of the contig coverage array corresponds to this bin.
                 # Get the section of the accession that corresponds to the current bin and overlaps with the contig.
                 accession_interval = [bin_size * max(bin_start, i), bin_size * min(bin_end, i + 1)]
@@ -649,7 +649,7 @@ class PipelineStepGenerateCoverageViz(PipelineStep):
 
                 # Convert back to integer indices.
                 # This is the range of values in the contig coverage array that corresponds to the section of the contig that overlaps with this bin.
-                (coverage_arr_start, coverage_arr_end) = (_float_floor(coverage_interval[0]), _float_ceil(coverage_interval[1]))
+                (coverage_arr_start, coverage_arr_end) = (_floor_with_min(coverage_interval[0], 0), _ceil_with_max(coverage_interval[1], len(contig_obj["coverage"])))
 
                 # Get the average coverage for the section of the contig that overlaps with this bin.
                 avg_coverage_for_coverage_interval = sum(contig_obj["coverage"][coverage_arr_start: coverage_arr_end]) / (coverage_arr_end - coverage_arr_start)
@@ -678,7 +678,7 @@ class PipelineStepGenerateCoverageViz(PipelineStep):
             # Find all bins that this read overlaps, and calculate average coverage for each bin separately.
             (bin_start, bin_end) = _align_interval((subject_start / bin_size, subject_end / bin_size))
 
-            for i in range(_float_floor(bin_start), _float_ceil(bin_end)):
+            for i in range(_floor_with_min(bin_start, 0), _ceil_with_max(bin_end, num_bins)):
                 # Get the section of the accession that corresponds to the current bin and overlaps with the read.
                 accession_range = [bin_size * max(bin_start, i), bin_size * min(bin_end, i + 1)]
 
@@ -870,16 +870,16 @@ def _round_if_within_epsilon(num, epsilon=0.001):
     else:
         return num
 
-def _float_floor(num):
+def _floor_with_min(num, min_value):
     """
-    Floor function for floats that takes care of rounding errors.
-    Rounding errors are an issue when we are indexing into an array.
+    Floor function that also takes a min value, to deal with possible rounding errors.
+    Rounding errors in floats can cause out of index errors when we index into an array.
     """
-    return math.floor(_round_if_within_epsilon(num))
+    return max(math.floor(num), min_value)
 
-def _float_ceil(num):
+def _ceil_with_max(num, max_value):
     """
-    Ceil function for floats that takes care of rounding errors.
-    Rounding errors are an issue when we are indexing into an array.
+    Ceil function that also takes a max value, to deal with possible rounding errors.
+    Rounding errors in floats can cause out of index errors when we index into an array.
     """
-    return math.ceil(_round_if_within_epsilon(num))
+    return min(math.ceil(num), max_value)

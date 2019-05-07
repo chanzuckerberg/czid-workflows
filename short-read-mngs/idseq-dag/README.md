@@ -226,6 +226,10 @@ TODO: Move this code over to the idseq-dag repo.
 
 ## Release notes
 
+<<<<<<< HEAD
+- 3.6.2
+   - Address array index rounding error in coverage viz.
+
 - 3.6.1
    - Extra logs to help detecting potential deadlocks in the pipeline (#144).
 
