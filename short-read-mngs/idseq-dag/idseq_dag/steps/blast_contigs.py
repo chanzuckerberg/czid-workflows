@@ -9,6 +9,7 @@ import idseq_dag.util.command as command
 import idseq_dag.util.count as count
 import idseq_dag.util.s3 as s3
 import idseq_dag.util.m8 as m8
+import idseq_dag.util.log as log
 
 from idseq_dag.steps.run_assembly import PipelineStepRunAssembly
 
@@ -67,18 +68,24 @@ class PipelineStepBlastContigs(PipelineStep):
         if self.additional_files.get("deuterostome_db"):
             deuterostome_db = s3.fetch_from_s3(self.additional_files["deuterostome_db"],
                                                self.ref_dir_local, allow_s3mi=True)
-        m8.generate_taxon_count_json_from_m8(refined_m8, refined_hit_summary,
-                                             evalue_type, db_type.upper(),
-                                             lineage_db, deuterostome_db, refined_counts)
+        with log.log_context("PipelineStepBlastContigs", {"substep": "generate_taxon_count_json_from_m8", "db_type": db_type, "refined_counts": refined_counts}):
+            m8.generate_taxon_count_json_from_m8(refined_m8, refined_hit_summary,
+                                                evalue_type, db_type.upper(),
+                                                lineage_db, deuterostome_db, refined_counts)
+
         # generate contig stats at genus/species level
-        contig_taxon_summary = self.generate_taxon_summary(read2contig, contig2lineage, updated_read_dict, added_reads, db_type)
-        with open(contig_summary_json, 'w') as contig_outf:
-            json.dump(contig_taxon_summary, contig_outf)
+        with log.log_context("PipelineStepBlastContigs", {"substep": "generate_taxon_summary"}):
+            contig_taxon_summary = self.generate_taxon_summary(read2contig, contig2lineage, updated_read_dict, added_reads, db_type)
+
+        with log.log_context("PipelineStepBlastContigs", {"substep": "generate_taxon_summary_json", "contig_summary_json": contig_summary_json}):
+            with open(contig_summary_json, 'w') as contig_outf:
+                json.dump(contig_taxon_summary, contig_outf)
 
         # Upload additional file
         contig2lineage_json = os.path.join(os.path.dirname(contig_summary_json), f"contig2lineage.{db_type}.json")
-        with open(contig2lineage_json, 'w') as c2lf:
-            json.dump(contig2lineage, c2lf)
+        with log.log_context("PipelineStepBlastContigs", {"substep": "contig2lineage_json", "contig2lineage_json": contig2lineage_json}):
+            with open(contig2lineage_json, 'w') as c2lf:
+                json.dump(contig2lineage, c2lf)
 
         self.additional_files_to_upload.append(contig2lineage_json)
 

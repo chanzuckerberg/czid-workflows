@@ -2,6 +2,7 @@ import multiprocessing
 import random
 import subprocess
 import sys
+import os
 import threading
 import time
 from functools import wraps
@@ -63,19 +64,17 @@ class CommandTracker(Updater):
         """Log an update after every polling period to indicate the command is
         still active.
         """
-        with log.print_lock:
-            if self.proc is None or self.proc.poll() is None:
-                log.write("Command %d still running after %3.1f seconds." %
-                          (self.id, t_elapsed))
-            else:
-                # This should be uncommon, unless there is lengthy python
-                # processing following the command in the same CommandTracker
-                # "with" block. Note: Not to be confused with post-processing
-                # on the data.
-                log.write(
-                    "Command %d still postprocessing after %3.1f seconds." %
-                    (self.id, t_elapsed))
-            sys.stdout.flush()
+        if self.proc is None or self.proc.poll() is None:
+            log.write("Command %d still running after %3.1f seconds." %
+                        (self.id, t_elapsed))
+        else:
+            # This should be uncommon, unless there is lengthy python
+            # processing following the command in the same CommandTracker
+            # "with" block. Note: Not to be confused with post-processing
+            # on the data.
+            log.write(
+                "Command %d still postprocessing after %3.1f seconds." %
+                (self.id, t_elapsed))
         self.enforce_timeout(t_elapsed)
 
     def enforce_timeout(self, t_elapsed):
@@ -89,29 +88,23 @@ class CommandTracker(Updater):
             pass
         elif not self.t_sigterm_sent:
             # Send SIGTERM first.
-            with log.print_lock:
-                msg = "Command %d has exceeded timeout of %3.1f seconds. " \
-                      "Sending SIGTERM." % (self.id, self.timeout)
-                log.write(msg)
-                sys.stdout.flush()
+            msg = "Command %d has exceeded timeout of %3.1f seconds. " \
+                    "Sending SIGTERM." % (self.id, self.timeout)
+            log.write(msg)
             self.t_sigterm_sent = time.time()
             self.proc.terminate()
         elif not self.t_sigkill_sent:
             # Grace_period after SIGTERM, send SIGKILL.
             if time.time() > self.t_sigterm_sent + self.grace_period:
-                with log.print_lock:
-                    msg = "Command %d still alive %3.1f seconds after " \
-                          "SIGTERM. Sending SIGKILL." % (self.id, time.time() - self.t_sigterm_sent)
-                    log.write(msg)
-                    sys.stdout.flush()
+                msg = "Command %d still alive %3.1f seconds after " \
+                        "SIGTERM. Sending SIGKILL." % (self.id, time.time() - self.t_sigterm_sent)
+                log.write(msg)
                 self.t_sigkill_sent = time.time()
                 self.proc.kill()
         else:
-            with log.print_lock:
-                msg = "Command %d still alive %3.1f seconds after " \
-                      "SIGKILL." % (self.id, time.time() - self.t_sigkill_sent)
-                log.write(msg)
-                sys.stdout.flush()
+            msg = "Command %d still alive %3.1f seconds after " \
+                    "SIGKILL." % (self.id, time.time() - self.t_sigkill_sent)
+            log.write(msg)
 
 
 class ProgressFile(object):
@@ -170,9 +163,14 @@ def run_in_subprocess(target):
 
     @wraps(target)
     def wrapper(*args, **kwargs):
-        with log.print_lock:
-            p = multiprocessing.Process(target=target, args=args, kwargs=kwargs)
-            p.start()
+        frame = sys._getframe(2)
+        f_code = frame.f_code
+        original_caller = {"filename": os.path.basename(f_code.co_filename), "method": f_code.co_name, "f_lineno": frame.f_lineno}
+        def subprocess_scope(*args, **kwargs):
+            with log.log_context("subprocess_scope", {"target": target.__qualname__, "original_caller": original_caller}):
+                target(*args, **kwargs)
+        p = multiprocessing.Process(target=subprocess_scope, args=args, kwargs=kwargs)
+        p.start()
         p.join()
         if p.exitcode != 0:
             raise RuntimeError("Failed {} on {}, {}".format(

@@ -9,8 +9,7 @@ import functools
 
 from contextlib import contextmanager
 
-print_lock = multiprocessing.RLock()
-
+__print_lock = multiprocessing.RLock()
 
 def configure_logger(log_file=None):
     logger = logging.getLogger()
@@ -31,8 +30,8 @@ def configure_logger(log_file=None):
 
 
 def write(message, warning=False, flush=True):
-    logger = logging.getLogger()
-    with print_lock:
+    with __print_lock:
+        logger = logging.getLogger()
         if warning:
             logger.warning(message)
         else:
@@ -133,8 +132,9 @@ def log_context(context_name, values=None, log_caller_info=True):
     '''
     extra_fields = {"context_name": context_name}
     if log_caller_info:
-        f_code = sys._getframe(2).f_code
-        extra_fields["caller"] = {"filename": os.path.basename(f_code.co_filename), "method": f_code.co_name}
+        frame = sys._getframe(2)
+        f_code = frame.f_code
+        extra_fields["caller"] = {"filename": os.path.basename(f_code.co_filename), "method": f_code.co_name, "f_lineno": frame.f_lineno}
     start = log_event("ctx_start", values, extra_fields=extra_fields)
     try:
         yield

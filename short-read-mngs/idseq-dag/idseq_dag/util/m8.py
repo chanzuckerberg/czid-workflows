@@ -341,7 +341,8 @@ def generate_taxon_count_json_from_m8(
 
 
     if deuterostome_path:
-        taxids_to_remove = read_file_into_set(deuterostome_path)
+        with log.log_context("generate_taxon_count_json_from_m8", {"substep": "read_file_into_set"}):
+            taxids_to_remove = read_file_into_set(deuterostome_path)
 
     def any_hits_to_remove(hits):
         if not deuterostome_path:
@@ -353,125 +354,131 @@ def generate_taxon_count_json_from_m8(
 
     # Setup
     aggregation = {}
-    hit_f = open(hit_level_file, 'r', encoding='utf-8')
-    m8_f = open(m8_file, 'r', encoding='utf-8')
-    # Lines in m8_file and hit_level_file correspond (same read_id)
-    hit_line = hit_f.readline()
-    m8_line = m8_f.readline()
-    lineage_map = open_file_db_by_extension(lineage_map_path, IdSeqDictValue.VALUE_TYPE_ARRAY)
-    num_ranks = len(lineage.NULL_LINEAGE)
-    # See https://en.wikipedia.org/wiki/Double-precision_floating-point_format
-    MIN_NORMAL_POSITIVE_DOUBLE = 2.0**-1022
-
-    while hit_line and m8_line:
-        # Retrieve data values from files
-        hit_line_columns = hit_line.rstrip("\n").split("\t")
-        _read_id = hit_line_columns[0]
-        hit_level = hit_line_columns[1]
-        hit_taxid = hit_line_columns[2]
-        if int(hit_level) < 0:  # Skip negative levels and continue
+    with open(hit_level_file, 'r', encoding='utf-8') as hit_f:
+        with open(m8_file, 'r', encoding='utf-8') as m8_f:
+            # Lines in m8_file and hit_level_file correspond (same read_id)
             hit_line = hit_f.readline()
             m8_line = m8_f.readline()
-            continue
+            with log.log_context("generate_taxon_count_json_from_m8", {"substep": "open_file_db_by_extension"}):
+                lineage_map = open_file_db_by_extension(lineage_map_path, IdSeqDictValue.VALUE_TYPE_ARRAY)
+            num_ranks = len(lineage.NULL_LINEAGE)
+            # See https://en.wikipedia.org/wiki/Double-precision_floating-point_format
+            MIN_NORMAL_POSITIVE_DOUBLE = 2.0**-1022
 
-        # m8 files correspond to BLAST tabular output format 6:
-        # Columns: read_id | _ref_id | percent_identity | alignment_length...
-        #
-        # * read_id = query (e.g., gene) sequence id
-        # * _ref_id = subject (e.g., reference genome) sequence id
-        # * percent_identity = percentage of identical matches
-        # * alignment_length = length of the alignments
-        # * e_value = the expect value
-        #
-        # See:
-        # * http://www.metagenomics.wiki/tools/blast/blastn-output-format-6
-        # * http://www.metagenomics.wiki/tools/blast/evalue
+            with log.log_context("generate_taxon_count_json_from_m8", {"substep": "loop_1"}):
+                while hit_line and m8_line:
+                    # Retrieve data values from files
+                    hit_line_columns = hit_line.rstrip("\n").split("\t")
+                    _read_id = hit_line_columns[0]
+                    hit_level = hit_line_columns[1]
+                    hit_taxid = hit_line_columns[2]
+                    if int(hit_level) < 0:  # Skip negative levels and continue
+                        hit_line = hit_f.readline()
+                        m8_line = m8_f.readline()
+                        continue
 
-        m8_line_columns = m8_line.split("\t")
-        msg = "read_ids in %s and %s do not match: %s vs. %s" % (
-            os.path.basename(m8_file), os.path.basename(hit_level_file),
-            m8_line_columns[0], hit_line_columns[0])
-        assert m8_line_columns[0] == hit_line_columns[0], msg
-        percent_identity = float(m8_line_columns[2])
-        alignment_length = float(m8_line_columns[3])
-        e_value = float(m8_line_columns[10])
+                    # m8 files correspond to BLAST tabular output format 6:
+                    # Columns: read_id | _ref_id | percent_identity | alignment_length...
+                    #
+                    # * read_id = query (e.g., gene) sequence id
+                    # * _ref_id = subject (e.g., reference genome) sequence id
+                    # * percent_identity = percentage of identical matches
+                    # * alignment_length = length of the alignments
+                    # * e_value = the expect value
+                    #
+                    # See:
+                    # * http://www.metagenomics.wiki/tools/blast/blastn-output-format-6
+                    # * http://www.metagenomics.wiki/tools/blast/evalue
 
-        # These have been filtered out before the creation of m8_f and hit_f
-        assert alignment_length > 0
-        assert -0.25 < percent_identity < 100.25
-        assert e_value == e_value
-        if e_value_type != 'log10':
-            # e_value could be 0 when large contigs are mapped
-            if e_value <= MIN_NORMAL_POSITIVE_DOUBLE:
-                e_value = MIN_NORMAL_POSITIVE_DOUBLE
-            e_value = math.log10(e_value)
+                    m8_line_columns = m8_line.split("\t")
+                    msg = "read_ids in %s and %s do not match: %s vs. %s" % (
+                        os.path.basename(m8_file), os.path.basename(hit_level_file),
+                        m8_line_columns[0], hit_line_columns[0])
+                    assert m8_line_columns[0] == hit_line_columns[0], msg
+                    percent_identity = float(m8_line_columns[2])
+                    alignment_length = float(m8_line_columns[3])
+                    e_value = float(m8_line_columns[10])
 
-        # Retrieve the taxon lineage and mark meaningless calls with fake
-        # taxids.
-        hit_taxids_all_levels = lineage_map.get(hit_taxid, lineage.NULL_LINEAGE)
-        cleaned_hit_taxids_all_levels = lineage.validate_taxid_lineage(
-            hit_taxids_all_levels, hit_taxid, hit_level)
-        assert num_ranks == len(cleaned_hit_taxids_all_levels)
+                    # These have been filtered out before the creation of m8_f and hit_f
+                    assert alignment_length > 0
+                    assert -0.25 < percent_identity < 100.25
+                    assert e_value == e_value
+                    if e_value_type != 'log10':
+                        # e_value could be 0 when large contigs are mapped
+                        if e_value <= MIN_NORMAL_POSITIVE_DOUBLE:
+                            e_value = MIN_NORMAL_POSITIVE_DOUBLE
+                        e_value = math.log10(e_value)
 
-        if not any_hits_to_remove(cleaned_hit_taxids_all_levels):
-            # Aggregate each level and collect statistics
-            agg_key = tuple(cleaned_hit_taxids_all_levels)
-            while agg_key:
-                agg_bucket = aggregation.get(agg_key)
-                if not agg_bucket:
-                    agg_bucket = {
-                        'count': 0,
-                        'sum_percent_identity': 0.0,
-                        'sum_alignment_length': 0.0,
-                        'sum_e_value': 0.0
-                    }
-                    aggregation[agg_key] = agg_bucket
-                agg_bucket['count'] += 1
-                agg_bucket['sum_percent_identity'] += percent_identity
-                agg_bucket['sum_alignment_length'] += alignment_length
-                agg_bucket['sum_e_value'] += e_value
-                # Chomp off the lowest rank as we aggregate up the tree
-                agg_key = agg_key[1:]
+                    # Retrieve the taxon lineage and mark meaningless calls with fake
+                    # taxids.
+                    hit_taxids_all_levels = lineage_map.get(hit_taxid, lineage.NULL_LINEAGE)
+                    cleaned_hit_taxids_all_levels = lineage.validate_taxid_lineage(
+                        hit_taxids_all_levels, hit_taxid, hit_level)
+                    assert num_ranks == len(cleaned_hit_taxids_all_levels)
 
-        hit_line = hit_f.readline()
-        m8_line = m8_f.readline()
+                    if not any_hits_to_remove(cleaned_hit_taxids_all_levels):
+                        # Aggregate each level and collect statistics
+                        agg_key = tuple(cleaned_hit_taxids_all_levels)
+                        while agg_key:
+                            agg_bucket = aggregation.get(agg_key)
+                            if not agg_bucket:
+                                agg_bucket = {
+                                    'count': 0,
+                                    'sum_percent_identity': 0.0,
+                                    'sum_alignment_length': 0.0,
+                                    'sum_e_value': 0.0
+                                }
+                                aggregation[agg_key] = agg_bucket
+                            agg_bucket['count'] += 1
+                            agg_bucket['sum_percent_identity'] += percent_identity
+                            agg_bucket['sum_alignment_length'] += alignment_length
+                            agg_bucket['sum_e_value'] += e_value
+                            # Chomp off the lowest rank as we aggregate up the tree
+                            agg_key = agg_key[1:]
+
+                    hit_line = hit_f.readline()
+                    m8_line = m8_f.readline()
 
     # Produce the final output
     taxon_counts_attributes = []
-    for agg_key, agg_bucket in aggregation.items():
-        count = agg_bucket['count']
-        tax_level = num_ranks - len(agg_key) + 1
-        # TODO: Extend taxonomic ranks as indicated on the commented out lines.
-        taxon_counts_attributes.append({
-            "tax_id":
-            agg_key[0],
-            "tax_level":
-            tax_level,
-            # 'species_taxid' : agg_key[tax_level - 1] if tax_level == 1 else "-100",
-            'genus_taxid':
-            agg_key[2 - tax_level] if tax_level <= 2 else "-200",
-            'family_taxid':
-            agg_key[3 - tax_level] if tax_level <= 3 else "-300",
-            # 'order_taxid' : agg_key[4 - tax_level] if tax_level <= 4 else "-400",
-            # 'class_taxid' : agg_key[5 - tax_level] if tax_level <= 5 else "-500",
-            # 'phyllum_taxid' : agg_key[6 - tax_level] if tax_level <= 6 else "-600",
-            # 'kingdom_taxid' : agg_key[7 - tax_level] if tax_level <= 7 else "-700",
-            # 'domain_taxid' : agg_key[8 - tax_level] if tax_level <= 8 else "-800",
-            "count":
-            count,
-            "percent_identity":
-            agg_bucket['sum_percent_identity'] / count,
-            "alignment_length":
-            agg_bucket['sum_alignment_length'] / count,
-            "e_value":
-            agg_bucket['sum_e_value'] / count,
-            "count_type":
-            count_type
-        })
-    output_dict = {
-        "pipeline_output": {
-            "taxon_counts_attributes": taxon_counts_attributes
+    with log.log_context("generate_taxon_count_json_from_m8", {"substep": "loop_2"}):
+        for agg_key, agg_bucket in aggregation.items():
+            count = agg_bucket['count']
+            tax_level = num_ranks - len(agg_key) + 1
+            # TODO: Extend taxonomic ranks as indicated on the commented out lines.
+            taxon_counts_attributes.append({
+                "tax_id":
+                agg_key[0],
+                "tax_level":
+                tax_level,
+                # 'species_taxid' : agg_key[tax_level - 1] if tax_level == 1 else "-100",
+                'genus_taxid':
+                agg_key[2 - tax_level] if tax_level <= 2 else "-200",
+                'family_taxid':
+                agg_key[3 - tax_level] if tax_level <= 3 else "-300",
+                # 'order_taxid' : agg_key[4 - tax_level] if tax_level <= 4 else "-400",
+                # 'class_taxid' : agg_key[5 - tax_level] if tax_level <= 5 else "-500",
+                # 'phyllum_taxid' : agg_key[6 - tax_level] if tax_level <= 6 else "-600",
+                # 'kingdom_taxid' : agg_key[7 - tax_level] if tax_level <= 7 else "-700",
+                # 'domain_taxid' : agg_key[8 - tax_level] if tax_level <= 8 else "-800",
+                "count":
+                count,
+                "percent_identity":
+                agg_bucket['sum_percent_identity'] / count,
+                "alignment_length":
+                agg_bucket['sum_alignment_length'] / count,
+                "e_value":
+                agg_bucket['sum_e_value'] / count,
+                "count_type":
+                count_type
+            })
+        output_dict = {
+            "pipeline_output": {
+                "taxon_counts_attributes": taxon_counts_attributes
+            }
         }
-    }
-    with open(output_json_file, 'w') as outf:
-        json.dump(output_dict, outf)
+
+    with log.log_context("generate_taxon_count_json_from_m8", {"substep": "json_dump", "output_json_file": output_json_file}):
+        with open(output_json_file, 'w') as outf:
+            json.dump(output_dict, outf)
+            outf.flush()
