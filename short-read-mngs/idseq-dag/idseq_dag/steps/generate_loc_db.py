@@ -23,8 +23,8 @@ class PipelineStepGenerateLocDB(PipelineStep):
 
     @run_in_subprocess
     def generate_loc_db(self, db_file, loc_db_file, info_db_file):
-        loc_db = IdSeqDict(loc_db_file, IdSeqDictValue.VALUE_TYPE_ARRAY)
-        info_db = IdSeqDict(info_db_file, IdSeqDictValue.VALUE_TYPE_ARRAY)
+        loc_db = IdSeqDict(loc_db_file, IdSeqDictValue.VALUE_TYPE_ARRAY, read_only=False)
+        info_db = IdSeqDict(info_db_file, IdSeqDictValue.VALUE_TYPE_ARRAY, read_only=False)
         loc_batch_list = []
         info_batch_list = []
         with open(db_file) as dbf:

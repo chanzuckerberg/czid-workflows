@@ -15,7 +15,7 @@ import idseq_dag.util.log as log
 import idseq_dag.util.count as count
 import idseq_dag.util.convert as convert
 
-from idseq_dag.util.dict import IdSeqDict, IdSeqDictValue, open_file_db_by_extension
+from idseq_dag.util.dict import IdSeqDictValue, open_file_db_by_extension
 
 class PipelineStepGeneratePhyloTree(PipelineStep):
     '''

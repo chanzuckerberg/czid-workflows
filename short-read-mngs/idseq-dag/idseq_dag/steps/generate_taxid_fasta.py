@@ -2,7 +2,7 @@ from idseq_dag.engine.pipeline_step import PipelineStep
 import idseq_dag.util.lineage as lineage
 import idseq_dag.util.s3 as s3
 
-from idseq_dag.util.dict import IdSeqDict, IdSeqDictValue, open_file_db_by_extension
+from idseq_dag.util.dict import IdSeqDictValue, open_file_db_by_extension
 
 
 class PipelineStepGenerateTaxidFasta(PipelineStep):

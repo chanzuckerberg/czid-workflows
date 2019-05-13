@@ -14,7 +14,7 @@ from idseq_dag.util.trace_lock import TraceLock
 import idseq_dag.util.command as command
 import idseq_dag.util.s3 as s3
 
-from idseq_dag.util.dict import IdSeqDict, IdSeqDictValue, open_file_db_by_extension
+from idseq_dag.util.dict import IdSeqDictValue, open_file_db_by_extension
 
 MIN_ACCESSIONS_WHOLE_DB_DOWNLOAD = 5000
 

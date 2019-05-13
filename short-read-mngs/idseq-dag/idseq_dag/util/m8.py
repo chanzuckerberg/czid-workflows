@@ -13,7 +13,7 @@ import idseq_dag.util.command as command
 import idseq_dag.util.log as log
 import idseq_dag.util.lineage as lineage
 
-from idseq_dag.util.dict import IdSeqDict, IdSeqDictValue, open_file_db_by_extension
+from idseq_dag.util.dict import IdSeqDictValue, open_file_db_by_extension
 
 def log_corrupt(m8_file, line):
     msg = m8_file + " is corrupt at line:\n" + line + "\n----> delete it and its corrupt ancestors before restarting run"
@@ -438,6 +438,8 @@ def generate_taxon_count_json_from_m8(
 
                     hit_line = hit_f.readline()
                     m8_line = m8_f.readline()
+
+            lineage_map.close()
 
     # Produce the final output
     taxon_counts_attributes = []

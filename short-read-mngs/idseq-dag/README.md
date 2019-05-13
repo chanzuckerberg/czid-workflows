@@ -227,12 +227,12 @@ TODO: Move this code over to the idseq-dag repo.
 ## Release notes
 
 <<<<<<< HEAD
-- 3.6.3
-   - Extra logs to help detecting potential deadlocks in the pipeline
+- 3.6.4
+   - A possible fix to some hanging issues in the pipeline which seem to be related to sqlite3 concurrency.
 
-- 3.6.0 .. 3.6.2
+- 3.6.0 .. 3.6.3
    - Address array index rounding error in coverage viz.
-   - Extra logs to help detecting potential deadlocks in the pipeline (#144).
+   - Extra logs to help detecting potential deadlocks in the pipeline
    - Add pipeline step to generate data for coverage visualization for IDseq report page. Data includes an index
      file that maps taxons to accessions with available coverage data, as well as data files for each accession
      that list various metrics including the coverage of the accession.
