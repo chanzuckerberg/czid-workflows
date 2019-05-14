@@ -58,15 +58,16 @@ def log_event(event_name, values=None, start_time=None, warning=False, flush=Tru
     log_event("downloaded_completed", {"file":"abc"}, start_time=start)
     '''
     log_line = {"event": event_name, **extra_fields}
+    default = lambda o: f"<<non-serializable: {type(o).__qualname__}>>"
     if values is not None:
         log_line["values"] = values
     if start_time is None:
-        fmt_message = json.dumps(log_line)
+        fmt_message = json.dumps(log_line, default=default)
     else:
         duration = (datetime.datetime.now()-start_time).total_seconds()
         log_line["duration_ms"] = math.floor(duration * 1000)
-        fmt_message = "%s (%.1f seconds)" % (json.dumps(log_line), duration)
-    write(fmt_message, warning, flush)
+        fmt_message = "%s (%.1f seconds)" % (json.dumps(log_line, default=default), duration)
+    write(fmt_message, warning=warning, flush=flush)
     return datetime.datetime.now()
 
 def log_execution(values=None):
