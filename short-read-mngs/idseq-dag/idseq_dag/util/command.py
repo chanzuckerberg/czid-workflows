@@ -5,6 +5,7 @@ import sys
 import os
 import threading
 import time
+import sqlite3
 from functools import wraps
 import idseq_dag.util.log as log
 from idseq_dag.util.trace_lock import TraceLock
@@ -166,6 +167,8 @@ def run_in_subprocess(target):
         frame = sys._getframe(2)
         f_code = frame.f_code
         original_caller = {"filename": os.path.basename(f_code.co_filename), "method": f_code.co_name, "f_lineno": frame.f_lineno}
+        with log.log_context("db_hack", {"target": target.__qualname__, "original_caller": original_caller}):
+            sqlite3.connect(':memory:').close() # sqlite3 multiprocess bug workaround: https://bugs.python.org/issue27126
         def subprocess_scope(*args, **kwargs):
             with log.log_context("subprocess_scope", {"target": target.__qualname__, "original_caller": original_caller}):
                 target(*args, **kwargs)

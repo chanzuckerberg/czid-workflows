@@ -228,10 +228,11 @@ TODO: Move this code over to the idseq-dag repo.
 
 <<<<<<< HEAD
 
-- 3.6.5
-   - Fix an issue with the log event function when trying to log non json serializable fields.
+- 3.6.6
+   - Another fix related to sqlite3 concurrency
 
-- 3.6.0 .. 3.6.4
+- 3.6.0 .. 3.6.5
+   - Fix an issue with the log event function when trying to log non json serializable fields.
    - A possible fix to some hanging issues in the pipeline that seem to be related to sqlite3 concurrency.
    - Address array index rounding error in coverage viz.
    - Extra logs to help detecting potential deadlocks in the pipeline
