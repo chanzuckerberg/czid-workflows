@@ -651,16 +651,23 @@ class PipelineStepGenerateCoverageViz(PipelineStep):
                 # This is the range of values in the contig coverage array that corresponds to the section of the contig that overlaps with this bin.
                 (coverage_arr_start, coverage_arr_end) = (_floor_with_min(coverage_interval[0], 0), _ceil_with_max(coverage_interval[1], len(contig_obj["coverage"])))
 
-                # Get the average coverage for the section of the contig that overlaps with this bin.
-                avg_coverage_for_coverage_interval = sum(contig_obj["coverage"][coverage_arr_start: coverage_arr_end]) / (coverage_arr_end - coverage_arr_start)
+                # Guard against a division-by-zero bug caused a rounding error.
+                # There are circumstances where a contig might have (bin_start, bin_end) = (200, 477.06) but with rounding errors this becomes (199.9999997, 477.06).
+                # This causes us to attempt to process bin 199 for the interval (199.99999997, 200). This interval is so small that
+                # the coverage interval for the contig ends up being (coverage_arr_start, coverage_arr_end) = (322.0, 322.0) and having length 0.
+                # In normal cases, this interval should have at least length 1 because of the floor and ceil.
+                # We should just disregard this edge case, because the contig doesn't really overlap this bin (it's a rounding error)
+                if coverage_arr_end - coverage_arr_start > 0:
+                    # Get the average coverage for the section of the contig that overlaps with this bin.
+                    avg_coverage_for_coverage_interval = sum(contig_obj["coverage"][coverage_arr_start: coverage_arr_end]) / (coverage_arr_end - coverage_arr_start)
 
-                # Multiply by the proportion of the bin that the contig covers.
-                avg_coverage_for_bin = avg_coverage_for_coverage_interval * (abs(accession_interval[1] - accession_interval[0]) / bin_size)
+                    # Multiply by the proportion of the bin that the contig covers.
+                    avg_coverage_for_bin = avg_coverage_for_coverage_interval * (abs(accession_interval[1] - accession_interval[0]) / bin_size)
 
-                coverage[i]["depth"] += avg_coverage_for_bin
-                coverage[i]["endpoints"].append([max(i * bin_size, accession_interval[0]), 1])
-                coverage[i]["endpoints"].append([min((i + 1) * bin_size, accession_interval[1]), -1])
-                coverage[i]["num_contigs"] += 1
+                    coverage[i]["depth"] += avg_coverage_for_bin
+                    coverage[i]["endpoints"].append([max(i * bin_size, accession_interval[0]), 1])
+                    coverage[i]["endpoints"].append([min((i + 1) * bin_size, accession_interval[1]), -1])
+                    coverage[i]["num_contigs"] += 1
 
         # The logic for processing reads is very similar to contigs above, but the avg coverage on the read is simply 1.
         for read_name in accession_data["reads"]:

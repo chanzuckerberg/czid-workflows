@@ -607,6 +607,42 @@ class GenerateCoverageViz(unittest.TestCase):
         self.assertEqual(bin_size, 2)
 
 
+    # This test was created in response to a division by zero bug.
+    # This bug is caused by a rounding error when calculating the bins in the accession that a contig overlaps.
+    # This test verifies that this bug is no longer occurring.
+    def test_calculate_accession_coverage_rounding_error(self):
+        accession_data = {
+            "total_length": 545,
+            "contigs": ["CONTIG_1"],
+            "reads": [],
+        }
+
+        contig_data = {
+            "CONTIG_1": {
+                "total_length": 400,
+                "accession": "ACCESSION_1",
+                "query_start": 320,
+                "query_end": 322,
+                "subject_start": 221,
+                "subject_end": 219,
+                "coverage": [1] * 400
+            }
+        }
+
+        read_data = {}
+
+        (coverage, bin_size) = PipelineStepGenerateCoverageViz.calculate_accession_coverage(
+            "ACCESSION_1", accession_data, contig_data, read_data, 500
+        )
+
+        self.assertEqual(coverage, [
+            [200, 1.0, 1.0, 1, 0],
+            [201, 1.0, 1.0, 1, 0],
+            [202, 0.75, 0.752, 1, 0]
+        ])
+        self.assertEqual(bin_size, 1.09)
+
+
     # Tests for calculate_accession_stats.
     def test_calculate_accession_stats_basic(self):
         accession_data = {
