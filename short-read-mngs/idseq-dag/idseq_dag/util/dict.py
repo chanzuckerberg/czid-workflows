@@ -25,10 +25,10 @@ class IdSeqDict(object):
         self.uri_db_path = pathlib.Path(self.db_path).as_uri()
         if self.read_only:
             self.uri_db_path += "?mode=ro&immutable=1&nolock=1&cache=private"
-        with log.log_context(f"open db", {"db_path": self.db_path, "read_only": self.read_only, "uri_db_path": self.uri_db_path}):
+        with log.log_context(f"db_open", {"db_path": self.db_path, "read_only": self.read_only, "uri_db_path": self.uri_db_path}):
             self.db_conn = sqlite3.connect(self.uri_db_path, check_same_thread=False, uri=True) # make it thread safe
         self._open = True
-        with log.log_context(f"assert_db_table", {"db_path": self.db_path, "read_only": self.read_only}):
+        with log.log_context(f"db_assert_table", {"db_path": self.db_path, "read_only": self.read_only}):
             cursor = self.db_conn.cursor()
             if not self.read_only:
                 res = cursor.execute(f"SELECT count(*) FROM sqlite_master WHERE type='table' AND name='{SQLITE_TABLE_NAME}';")

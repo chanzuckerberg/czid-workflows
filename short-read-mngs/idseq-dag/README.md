@@ -226,10 +226,11 @@ TODO: Move this code over to the idseq-dag repo.
 
 ## Release notes
 
-- 3.7.1
-   - Fix division by zero error in coverage viz step.
+- 3.7.2
+  - Remove db_hack. Standardize db_open/db_assert_table/db_close log entries.
 
-- 3.7.0
+- 3.7.0 .. 3.7.1
+   - Fix division by zero error in coverage viz step.
    - Modify trimmomatic command to reduce MINLEN parameter to 35 and allow reads from fragments with small
      insert sizes (where R1 and R2 are reverse complements of each other) through the QC steps.
 
