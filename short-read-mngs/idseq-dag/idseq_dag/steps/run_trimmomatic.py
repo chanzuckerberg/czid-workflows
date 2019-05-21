@@ -44,12 +44,14 @@ class PipelineStepRunTrimmomatic(PipelineStep):
             "-phred33",
             *input_files,
             *output_args,
-            f"ILLUMINACLIP:{adapter_fasta}:2:30:10",
+            f"ILLUMINACLIP:{adapter_fasta}:2:30:10:8:true",
             # Remove Illumina adapters provided in the fasta file. Initially, look for seed matches
             # allowing maximally *2* mismatches. These seeds will be extended and clipped if in the case of paired end
             # reads a score of *30* is reached, or in the case of single ended reads a
             # score of *10*.
-            "MINLEN:75"
+            # additional parameters: minAdapterLength = 8, keepBothReads = true; these are set to require pairs to be 
+            #    kept even when an adapter read-through occurs and R2 is a direct reverse complement of R1.
+            "MINLEN:35"
             # Discard reads which are less than *75* bases long after these steps.
         ])
         command.execute(cmd)
