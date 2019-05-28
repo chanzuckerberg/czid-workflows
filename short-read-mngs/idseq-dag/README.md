@@ -226,6 +226,9 @@ TODO: Move this code over to the idseq-dag repo.
 
 ## Release notes
 
+- 3.7.3
+  - Upgrade to python 3.7.3
+
 - 3.7.2
   - Remove db_hack. Standardize db_open/db_assert_table/db_close log entries.
 

@@ -3,22 +3,21 @@ FROM ubuntu:16.04
 ENV DEBIAN_FRONTEND noninteractive
 
 # File Author / Maintainer
-MAINTAINER Yun-Fang Juan yunfang@chanzuckerberg.com
+MAINTAINER IDseq Team idseq-tech@chanzuckerberg.com
 
 # Add packages, update image, and clear cache
 RUN apt-get update && apt-get install -y build-essential curl wget python-pip python-dev python-scipy python-redis gdebi-core zip unzip g++ zlib1g-dev gcc pkg-config apt-utils make perl cmake libbz2-dev
 
 RUN pip install --upgrade pip
-RUN pip install htseq==0.6.1p1
-RUN pip install awscli --upgrade
 RUN pip install redis biopython pysam
+RUN pip install htseq==0.6.1p1
 
 RUN apt-get install -y software-properties-common
-RUN add-apt-repository ppa:jonathonf/python-3.6
-RUN apt-get update && apt-get install -y python3.6
+RUN add-apt-repository ppa:deadsnakes/ppa
+RUN apt-get update && apt-get install -y python3.7
 
 RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.5 1
-RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.6 2
+RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.7 2
 
 WORKDIR /tmp
 # install STAR
@@ -74,6 +73,9 @@ RUN pip3 install awscli-cwlogs==1.4.0 keymaker==0.2.1 boto3==1.4.3 awscli==1.11.
 RUN pip3 install pysam biopython
 #RUN echo iptables-persistent iptables-persistent/autosave_v4 boolean true | debconf-set-selections
 RUN apt-get update && apt-get install -y iptables-persistent debian-goodies bridge-utils pixz cryptsetup-bin mdadm btrfs-tools libffi-dev libssl-dev libxml2-dev libxslt1-dev libyaml-dev libcurl4-openssl-dev libjemalloc-dev libzip-dev libsnappy-dev liblz4-dev libgmp-dev libmpfr-dev libhts-dev libsqlite3-dev libncurses5-dev htop pydf jq httpie python-dev python-cffi python-pip python-setuptools python-wheel python-virtualenv python-requests python-yaml python3-dev python3-cffi python3-pip python3-setuptools python3-wheel python3-requests python3-yaml nfs-common unzip build-essential cmake libtool autoconf ruby sysstat dstat numactl gdebi-core sqlite3 stunnel moreutils curl wget git aria2 sift
+# Strange that we have to do this, but if we don't, aegea tries to do it, and it fails then with some urllib3 bug.
+RUN apt-get -y install awscli
+
 RUN apt-get install -y bsdtar alien
 
 # For de-novo assembly
@@ -135,4 +137,3 @@ RUN kSNP3
 RUN rm -rf /tmp/*
 
 WORKDIR /
-
