@@ -21,8 +21,8 @@ class TestTraceLock(unittest.TestCase):
             pass
 
         mock_log_event.assert_has_calls([
-            call('trace_lock', values={'state': 'acquired', 'lock_name': 'lock1', 'thread_name': 'MainThread'}),
-            call('trace_lock', values={'state': 'released', 'lock_name': 'lock1', 'thread_name': 'MainThread'})
+            call('trace_lock', values={'state': 'acquired', 'lock_name': 'lock1', 'thread_name': 'MainThread'}, debug=True),
+            call('trace_lock', values={'state': 'released', 'lock_name': 'lock1', 'thread_name': 'MainThread'}, debug=True)
         ])
 
     @staticmethod
@@ -45,9 +45,9 @@ class TestTraceLock(unittest.TestCase):
             pass
 
         mock_log_event.assert_has_calls([
-            call('trace_lock', values={'lock_name': 'lock2', 'thread_name': 'Thread-1', 'state': 'acquired'}),
-            call('trace_lock', values={'lock_name': 'lock2', 'thread_name': 'MainThread', 'state': 'waiting'}),
-            call('trace_lock', values={'lock_name': 'lock2', 'thread_name': 'Thread-1', 'state': 'released'}),
-            call('trace_lock', values={'lock_name': 'lock2', 'thread_name': 'MainThread', 'state': 'acquired_after_wait'}),
-            call('trace_lock', values={'lock_name': 'lock2', 'thread_name': 'MainThread', 'state': 'released'})
+            call('trace_lock', values={'lock_name': 'lock2', 'thread_name': 'Thread-1', 'state': 'acquired'}, debug=True),
+            call('trace_lock', values={'lock_name': 'lock2', 'thread_name': 'MainThread', 'state': 'waiting'}, debug=True),
+            call('trace_lock', values={'lock_name': 'lock2', 'thread_name': 'Thread-1', 'state': 'released'}, debug=True),
+            call('trace_lock', values={'lock_name': 'lock2', 'thread_name': 'MainThread', 'state': 'acquired_after_wait'}, debug=True),
+            call('trace_lock', values={'lock_name': 'lock2', 'thread_name': 'MainThread', 'state': 'released'}, debug=True)
         ])

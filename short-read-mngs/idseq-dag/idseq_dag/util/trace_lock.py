@@ -3,7 +3,7 @@ import threading
 import idseq_dag.util.log as log
 
 class TraceLock():
-    """
+    r"""
     This class is a wrapper to RLocks that can log states of the lock for each thread.
 
     TraceLock can be used in a `with` block, like a regular RLock:
@@ -50,18 +50,19 @@ class TraceLock():
               +--------------+
     ```
     """
-    def __init__(self, lock_name, lock=multiprocessing.RLock()):
+    def __init__(self, lock_name, lock=multiprocessing.RLock(), debug=True):
         self._lock = lock
         self._lock_name = lock_name
+        self.debug = debug
 
     def acquire(self):
         v = {"lock_name": self._lock_name, "thread_name": threading.current_thread().name}
         if self._lock.acquire(False):
-            log.log_event("trace_lock", values={**v, "state": "acquired"})
+            log.log_event("trace_lock", values={**v, "state": "acquired"}, debug=self.debug)
         else:
-            log.log_event("trace_lock", values={**v, "state": "waiting"})
+            log.log_event("trace_lock", values={**v, "state": "waiting"}, debug=self.debug)
             self._lock.acquire(True)
-            log.log_event("trace_lock", values={**v, "state": "acquired_after_wait"})
+            log.log_event("trace_lock", values={**v, "state": "acquired_after_wait"}, debug=self.debug)
 
     def __enter__(self):
         self.acquire()
@@ -69,7 +70,7 @@ class TraceLock():
     def release(self):
         log.log_event("trace_lock", values={"lock_name": self._lock_name,
                                             "thread_name": threading.current_thread().name,
-                                            "state": "released"})
+                                            "state": "released"}, debug=self.debug)
         self._lock.release()
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
