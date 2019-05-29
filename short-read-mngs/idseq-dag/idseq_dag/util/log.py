@@ -184,7 +184,7 @@ class JsonFormatter(logging.Formatter):
         return f"<<non-serializable: {type(obj).__qualname__}>>"
 
     def format(self, record):
-        obj = {"timestamp": self.formatTime(record)}
+        obj = {"time": self.formatTime(record)}
         if record.msg is not None:
             obj['msg'] = super().format(record)
         if record.obj_data is not None:

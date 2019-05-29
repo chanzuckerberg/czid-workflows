@@ -86,8 +86,8 @@ class TestLog(unittest.TestCase):
 
         out_str = output.getvalue().rstrip()
 
-        LOG_OUTPUT_REGEX = r'^{"timestamp": "\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}", "msg": "test message", "data": {"abc": 1, "f2": "<<non-serializable: bytes>>"}, "thread": "[^"]+", "pid": \d, "level": "INFO"}'
+        LOG_OUTPUT_REGEX = r'^{"time": "\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}", "msg": "test message", "data": {"abc": 1, "f2": "<<non-serializable: bytes>>"}, "thread": "[^"]+", "pid": \d, "level": "INFO"}'
         # sample expected message
-        self.assertRegex('{"timestamp": "2019-05-28T21:06:46.728", "msg": "test message", "data": {"abc": 1, "f2": "<<non-serializable: bytes>>"}, "thread": "MainThread", "pid": 6, "level": "INFO"}', LOG_OUTPUT_REGEX)
+        self.assertRegex('{"time": "2019-05-28T21:06:46.728", "msg": "test message", "data": {"abc": 1, "f2": "<<non-serializable: bytes>>"}, "thread": "MainThread", "pid": 6, "level": "INFO"}', LOG_OUTPUT_REGEX)
         # actual message
         self.assertRegex(out_str, LOG_OUTPUT_REGEX)
