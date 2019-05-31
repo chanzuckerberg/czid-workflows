@@ -1,5 +1,5 @@
 import os
-from idseq_dag.engine.pipeline_step import PipelineStep
+from idseq_dag.engine.pipeline_step import PipelineStep, InputFileErrors
 import idseq_dag.util.command as command
 import idseq_dag.util.convert as convert
 import idseq_dag.util.log as log
@@ -16,6 +16,11 @@ class PipelineStepRunGsnapFilter(PipelineStep):
 
     http://research-pub.gene.com/gmap/
     """
+
+    def validate_input_files(self):
+        if not count.files_have_min_reads(self.input_files_local[0][0:2], 1):
+            self.input_file_error = InputFileErrors.INSUFFICIENT_READS
+
     def run(self):
         input_fas = self.input_files_local[0][0:2]
         output_fas = self.output_files_local()

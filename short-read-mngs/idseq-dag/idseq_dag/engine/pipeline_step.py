@@ -6,8 +6,9 @@ import time
 import idseq_dag.util.command as command
 import idseq_dag.util.log as log
 from abc import abstractmethod
-from enum import IntEnum
+from enum import Enum, IntEnum
 
+import idseq_dag.util.count as count
 import idseq_dag.util.s3
 
 class StepStatus(IntEnum):
@@ -15,6 +16,15 @@ class StepStatus(IntEnum):
     STARTED = 1 # step.start() called
     FINISHED = 2 # step.run() finished
     UPLOADED = 3 # all results uploaded to s3
+    INVALID_INPUT = 4 # an error occurred when validating the input file
+
+class InputFileErrors(Enum):
+    ''' This error will be used by the front-end to display a user-friendly error message '''
+    INSUFFICIENT_READS = "INSUFFICIENT_READS"
+
+class InvalidInputFileError(Exception):
+    def __init__(self, json):
+        self.json = json
 
 class PipelineStep(object):
     ''' Each Pipeline Run Step i.e. run_star, run_bowtie2, etc '''
@@ -44,6 +54,7 @@ class PipelineStep(object):
         self.should_terminate = False
         self.should_count_reads = False
 
+        self.input_file_error = None
 
     @abstractmethod
     def run(self):
@@ -89,15 +100,13 @@ class PipelineStep(object):
         s3_path = os.path.join(self.output_dir_s3, relative_path)
         return s3_path
 
-
     @staticmethod
     def done_file(filename):
         ''' get the done file for a particular local file '''
         return "%s.done" % filename
 
-
     def wait_for_input_files(self):
-        ''' wait for all the input files to be avaiable and update input_files_local '''
+        ''' wait for all the input files to be available and update input_files_local '''
         for fl in self.input_files:
             flist = []
             for f in fl:
@@ -113,6 +122,11 @@ class PipelineStep(object):
                         time.sleep(5)
             self.input_files_local.append(flist)
 
+    def validate_input_files(self):
+        ''' Validate input files before running the step.
+        Should assign any error encountered to self.input_file_error
+        '''
+        pass
 
     def save_progress(self):
         ''' save progress after step run '''
@@ -133,6 +147,12 @@ class PipelineStep(object):
 
     def wait_until_finished(self):
         self.exec_thread.join()
+        if self.status == StepStatus.INVALID_INPUT:
+            raise InvalidInputFileError({
+                "error": self.input_file_error.name,
+                "step": self.name
+            })
+
         if self.status < StepStatus.FINISHED:
             raise RuntimeError("step %s run failed" % self.name)
 
@@ -150,6 +170,15 @@ class PipelineStep(object):
         with log.log_context("dag_step", v):
             with log.log_context("substep_wait_for_input_files", v):
                 self.wait_for_input_files()
+            with log.log_context("substep_validate_input_files", v):
+                self.validate_input_files()
+
+            # If an input file error was detected, stop execution.
+            if self.input_file_error:
+                log.write("Invalid input detected for step %s" % self.name)
+                self.status = StepStatus.INVALID_INPUT
+                return
+
             with log.log_context("substep_run", v):
                 self.run()
             with log.log_context("substep_validate", v):
@@ -163,7 +192,7 @@ class PipelineStep(object):
         self.status = StepStatus.FINISHED
 
     def start(self):
-        ''' function to be called after instanitation to start running the step '''
+        ''' function to be called after instantiation to start running the step '''
         self.exec_thread = threading.Thread(target=self.thread_run)
         self.exec_thread.start()
 

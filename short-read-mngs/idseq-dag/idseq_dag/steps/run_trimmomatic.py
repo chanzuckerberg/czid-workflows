@@ -1,5 +1,5 @@
 ''' Run Trimmomatic '''
-from idseq_dag.engine.pipeline_step import PipelineStep
+from idseq_dag.engine.pipeline_step import PipelineStep, InputFileErrors
 import idseq_dag.util.command as command
 import idseq_dag.util.count as count
 import idseq_dag.util.s3 as s3
@@ -8,6 +8,10 @@ import idseq_dag.util.fasta as fasta
 
 class PipelineStepRunTrimmomatic(PipelineStep):
     ''' Trimmomatic PipelineStep implementation '''
+    def validate_input_files(self):
+        if not count.files_have_min_reads(self.input_files_local[0][0:2], 1):
+            self.input_file_error = InputFileErrors.INSUFFICIENT_READS
+
     def run(self):
         """
         Trim any residual Illumina adapters.
@@ -49,7 +53,7 @@ class PipelineStepRunTrimmomatic(PipelineStep):
             # allowing maximally *2* mismatches. These seeds will be extended and clipped if in the case of paired end
             # reads a score of *30* is reached, or in the case of single ended reads a
             # score of *10*.
-            # additional parameters: minAdapterLength = 8, keepBothReads = true; these are set to require pairs to be 
+            # additional parameters: minAdapterLength = 8, keepBothReads = true; these are set to require pairs to be
             #    kept even when an adapter read-through occurs and R2 is a direct reverse complement of R1.
             "MINLEN:35"
             # Discard reads which are less than *75* bases long after these steps.

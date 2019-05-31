@@ -1,7 +1,7 @@
 from multiprocessing import cpu_count
 from typing import Iterator
 import os
-from idseq_dag.engine.pipeline_step import PipelineStep
+from idseq_dag.engine.pipeline_step import PipelineStep, InputFileErrors
 import idseq_dag.util.command as command
 from idseq_dag.util.command import run_in_subprocess
 import idseq_dag.util.log as log
@@ -24,6 +24,10 @@ class PipelineStepRunLZW(PipelineStep):
     REAL_CORES = (cpu_count() + 1) // 2
 
     NUM_SLICES = min(MAX_SUBPROCS, REAL_CORES)
+
+    def validate_input_files(self):
+        if not count.files_have_min_reads(self.input_files_local[0], 1):
+            self.input_file_error = InputFileErrors.INSUFFICIENT_READS
 
     def run(self):
         input_fas = self.input_files_local[0]
@@ -69,7 +73,7 @@ class PipelineStepRunLZW(PipelineStep):
 
         if seq_length > threshold_readlength:
             # Make sure longer reads don't get excessively penalized
-            adjustment_heuristic = (1 + (seq_length - threshold_readlength) / 1000) # TODO: revisit 
+            adjustment_heuristic = (1 + (seq_length - threshold_readlength) / 1000) # TODO: revisit
             score = lzw_fraction * adjustment_heuristic
         else:
             score = lzw_fraction

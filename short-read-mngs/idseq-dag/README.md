@@ -226,12 +226,14 @@ TODO: Move this code over to the idseq-dag repo.
 
 ## Release notes
 
-- 3.7.4
-  - Log output in JSON format. Change TraceLock log level to DEBUG.
+- 3.7.5
+   - Validate whether input files to a pipeline step contain a sufficient number of reads.
+     Output invalid_step_input.json file if validation fails.
 
-- 3.7.0 .. 3.7.3
-  - Upgrade to python 3.7.3
-  - Remove db_hack. Standardize db_open/db_assert_table/db_close log entries.
+- 3.7.0 .. 3.7.4
+   - Log output in JSON format. Change TraceLock log level to DEBUG.
+   - Upgrade to python 3.7.3
+   - Remove db_hack. Standardize db_open/db_assert_table/db_close log entries.
    - Fix division by zero error in coverage viz step.
    - Modify trimmomatic command to reduce MINLEN parameter to 35 and allow reads from fragments with small
      insert sizes (where R1 and R2 are reverse complements of each other) through the QC steps.

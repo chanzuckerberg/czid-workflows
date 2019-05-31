@@ -9,7 +9,7 @@ import idseq_dag.util.s3
 import idseq_dag.util.command as command
 import idseq_dag.util.log as log
 import idseq_dag.util.count as count
-from idseq_dag.engine.pipeline_step import PipelineStep
+from idseq_dag.engine.pipeline_step import PipelineStep, InvalidInputFileError
 
 DEFAULT_OUTPUT_DIR_LOCAL = '/mnt/idseq/results/%d' % os.getpid()
 DEFAULT_REF_DIR_LOCAL = '/mnt/idseq/ref'
@@ -191,6 +191,16 @@ class PipelineFlow(object):
                                                target_name=target,
                                                max_fragments=self.given_targets[target]["max_fragments"])
 
+    def write_invalid_input_json(self, error_json):
+        ''' Upload an invalid_step_input.json file for this step, which can be detected by other services like idseq-web. '''
+        log.write("Writing invalid_step_input.json")
+        local_input_errors_file = f"{self.output_dir_local}/invalid_step_input.json"
+
+        with open(local_input_errors_file, 'w') as input_errors_file:
+            json.dump(error_json, input_errors_file)
+
+        idseq_dag.util.s3.upload_with_retries(local_input_errors_file, self.output_dir_s3 + "/")
+
     def start(self):
         # Come up with the plan
         (step_list, self.large_file_list, covered_targets) = self.plan()
@@ -223,6 +233,8 @@ class PipelineFlow(object):
                 step.wait_until_all_done()
             except Exception as e:
                 # Some exception thrown by one of the steps
+                if isinstance(e, InvalidInputFileError):
+                    self.write_invalid_input_json(e.json)
                 traceback.print_exc()
                 for s in step_instances:
                     # notify the waiting step instances to self destruct

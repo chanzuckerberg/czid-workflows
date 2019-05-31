@@ -67,3 +67,14 @@ def reads2lines(read_count, file_format):
         # Assumes the format is single-line fasta rather than multiline fasta
         line_count = 2 * read_count
     return line_count
+
+def files_have_min_reads(input_files, min_reads):
+    """ Checks whether fa/fasta/fq/fastq have the minimum number of reads.
+    Pipeline steps can use this method for input validation.
+    """
+    for input_file in input_files:
+        num_reads = reads(input_file, max_reads=min_reads)
+        if num_reads < min_reads:
+            return False
+    return True
+

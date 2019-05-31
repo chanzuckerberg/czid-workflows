@@ -1,4 +1,4 @@
-from idseq_dag.engine.pipeline_step import PipelineStep
+from idseq_dag.engine.pipeline_step import PipelineStep, InputFileErrors
 import idseq_dag.util.command as command
 import idseq_dag.util.count as count
 
@@ -8,6 +8,10 @@ class PipelineStepRunCDHitDup(PipelineStep):
     Two FASTA inputs means paired reads.
     See: http://weizhongli-lab.org/cd-hit/
     '''
+    def validate_input_files(self):
+        if not count.files_have_min_reads(self.input_files_local[0], 2):
+            self.input_file_error = InputFileErrors.INSUFFICIENT_READS
+
     def run(self):
         ''' Invoking cd-hit-dup '''
         input_fas = self.input_files_local[0]
