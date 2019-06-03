@@ -128,6 +128,16 @@ def log_execution(values: dict = None):
     return decorator_fn
 
 
+def get_caller_info(frame_depth):
+    frame = sys._getframe(frame_depth)
+    f_code = frame.f_code
+    return {"filename": os.path.basename(f_code.co_filename), "method": f_code.co_name, "f_lineno": frame.f_lineno}
+
+
+def parse_exception(e):
+    return {"error_type": type(e).__name__, "error_args": e.args}
+
+
 @contextmanager
 def log_context(context_name: str, values: dict = None, log_caller_info: bool = False):
     '''
@@ -153,16 +163,13 @@ def log_context(context_name: str, values: dict = None, log_caller_info: bool = 
     '''
     extra_fields = {"context_name": context_name, "uid": secrets.token_hex(6)}
     if log_caller_info:
-        frame = sys._getframe(2)
-        f_code = frame.f_code
-        extra_fields["caller"] = {"filename": os.path.basename(f_code.co_filename), "method": f_code.co_name, "f_lineno": frame.f_lineno}
+        extra_fields["caller"] = get_caller_info(3)
     start = log_event("ctx_start", values, extra_fields=extra_fields)
     try:
         yield
         log_event("ctx_end", values, start_time=start, extra_fields=extra_fields)
     except Exception as e:
-        extra_fields["error_type"] = type(e).__name__
-        extra_fields["error_args"] = e.args
+        extra_fields.update(parse_exception(e))
         log_event("ctx_error", values, start_time=start, extra_fields=extra_fields)
         raise e
 
@@ -187,7 +194,7 @@ class JsonFormatter(logging.Formatter):
         obj = {"time": self.formatTime(record)}
         if record.msg is not None:
             obj['msg'] = super().format(record)
-        if record.obj_data is not None:
+        if hasattr(record, 'obj_data') and (record.obj_data is not None):
             obj['data'] = record.obj_data
         obj.update({"thread": record.threadName, "pid": record.process, "level": record.levelname})
         return json.dumps(obj, default=JsonFormatter._default_json_serializer)

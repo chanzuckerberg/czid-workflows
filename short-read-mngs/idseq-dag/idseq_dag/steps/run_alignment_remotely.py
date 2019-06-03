@@ -4,6 +4,7 @@ import shutil
 import random
 import traceback
 import multiprocessing
+import time
 
 from idseq_dag.engine.pipeline_step import PipelineStep, InputFileErrors
 
@@ -17,6 +18,11 @@ from idseq_dag.util.trace_lock import TraceLock
 
 MAX_CONCURRENT_CHUNK_UPLOADS = 4
 DEFAULT_BLACKLIST_S3 = 's3://idseq-database/taxonomy/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/taxon_blacklist.txt'
+CORRECT_NUMBER_OF_OUTPUT_COLUMNS = 12
+CHUNK_MAX_TRIES = 2
+CHUNK_DONT_RETRY_AFTER_SECONDS = 60 * 30 # 30 minutes
+EXPONENTIAL_BACKOFF_MINIMUM_SECONDS = 3
+EXPONENTIAL_BACKOFF_JITTER_SECONDS = 4
 
 class PipelineStepRunAlignmentRemotely(PipelineStep):
     '''
@@ -218,6 +224,22 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
                 chunk_output_files[n] = result
             chunks_in_flight.release()
 
+    
+    @staticmethod
+    def __interpret_min_column_number_string(min_column_number_string,
+                                             correct_number_of_output_columns,
+                                             try_number):
+        if min_column_number_string:
+            min_column_number = float(min_column_number_string)
+            log.write(
+                "Try no. %d: Smallest number of columns observed in any line was %d"
+                % (try_number, min_column_number))
+        else:
+            log.write("Try no. %d: No hits" % try_number)
+            min_column_number = correct_number_of_output_columns
+        return min_column_number
+
+
     def run_chunk(self, part_suffix, remote_home_dir, remote_index_dir, remote_work_dir,
                   remote_username, input_files, key_path, service, lazy_run):
         """Dispatch a chunk to worker machines for distributed GSNAP or RAPSearch
@@ -259,68 +281,81 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
 
         if not lazy_run or not fetch_from_s3(multihit_s3_outfile,
                                              multihit_local_outfile):
-            correct_number_of_output_columns = 12
+            correct_number_of_output_columns = CORRECT_NUMBER_OF_OUTPUT_COLUMNS
             min_column_number = 0
-            max_tries = 2
+            max_tries = CHUNK_MAX_TRIES
             try_number = 1
             instance_ip = ""
-
-
-            def interpret_min_column_number_string(min_column_number_string,
-                                                   correct_number_of_output_columns,
-                                                   try_number):
-                if min_column_number_string:
-                    min_column_number = float(min_column_number_string)
-                    log.write(
-                        "Try no. %d: Smallest number of columns observed in any line was %d"
-                        % (try_number, min_column_number))
-                else:
-                    log.write("Try no. %d: No hits" % try_number)
-                    min_column_number = correct_number_of_output_columns
-                return min_column_number
+            timer = self._start_timer()
 
             # Check if every row has correct number of columns (12) in the output
             # file on the remote machine
             while min_column_number != correct_number_of_output_columns \
                     and try_number <= max_tries:
-                log.write("waiting for {} server for chunk {}".format(
-                    service, chunk_id))
+                log.write("waiting for {} server for chunk {}. Try #{}".format(
+                    service, chunk_id, try_number))
                 max_concurrent = self.additional_attributes["max_concurrent"]
 
-                with server.ASGInstance(service, key_path,
-                                        remote_username, environment,
-                                        max_concurrent, chunk_id,
-                                        self.additional_attributes.get("max_interval_between_describe_instances") or 900,
-                                        self.additional_attributes.get("job_tag_prefix") or "RunningIDseqBatchJob_",
-                                        self.additional_attributes.get("job_tag_refresh_seconds") or 600,
-                                        self.additional_attributes.get("draining_tag") or "draining") as instance_ip:
-                    command.execute(command.remote(commands, key_path, remote_username, instance_ip))
+                try:
+                    with server.ASGInstance(service, key_path,
+                                            remote_username, environment,
+                                            max_concurrent, chunk_id,
+                                            self.additional_attributes.get("max_interval_between_describe_instances") or 900,
+                                            self.additional_attributes.get("job_tag_prefix") or "RunningIDseqBatchJob_",
+                                            self.additional_attributes.get("job_tag_refresh_seconds") or 600,
+                                            self.additional_attributes.get("draining_tag") or "draining") as instance_ip:
+                        command.execute(command.remote(commands, key_path, remote_username, instance_ip))
 
-                    if service == "gsnap":
-                        verification_command = "cat %s" % multihit_remote_outfile
-                    else:
-                        # For rapsearch, first remove header lines starting with '#'
-                        verification_command = "grep -v '^#' %s" % multihit_remote_outfile
-                    verification_command += " | awk '{print NF}' | sort -nu | head -n 1"
-                    min_column_number_string = command.execute_with_output(
-                        command.remote(verification_command, key_path, remote_username, instance_ip))
-                    min_column_number = interpret_min_column_number_string(
-                        min_column_number_string, correct_number_of_output_columns,
-                        try_number)
+                        if service == "gsnap":
+                            verification_command = "cat %s" % multihit_remote_outfile
+                        else:
+                            # For rapsearch, first remove header lines starting with '#'
+                            verification_command = "grep -v '^#' %s" % multihit_remote_outfile
+                        verification_command += " | awk '{print NF}' | sort -nu | head -n 1"
+                        min_column_number_string = command.execute_with_output(
+                            command.remote(verification_command, key_path, remote_username, instance_ip))
+                        min_column_number = self.__interpret_min_column_number_string(
+                            min_column_number_string, correct_number_of_output_columns,
+                            try_number)
 
-                try_number += 1
+                        msg = "Chunk %s output corrupt; not copying to S3. min_column_number = %d -> expected = %d. Re-start pipeline to try again." \
+                                % (chunk_id, min_column_number, correct_number_of_output_columns)
+                        assert min_column_number == correct_number_of_output_columns, msg
+
+                        command.execute(
+                            command.scp(key_path, remote_username, instance_ip,
+                                        multihit_remote_outfile, multihit_local_outfile))
+                except Exception as e:
+                    elapsed = self._elapsed_seconds(timer)
+                    log.log_event('alignment_remote_error', values={"chunk": chunk_id,
+                                                                    "try_number": try_number,
+                                                                    "elapsed": elapsed,
+                                                                    "exception": log.parse_exception(e)})
+                    if try_number >= max_tries or elapsed > CHUNK_DONT_RETRY_AFTER_SECONDS:
+                        raise e
+                    self._exponential_backoff(try_number)
+                    try_number += 1
+                    min_column_number = 0 # reset to force a retry
 
             # Move output from remote machine to local machine
-            msg = "Chunk %s output corrupt; not copying to S3. Re-start pipeline " \
-                  "to try again." % chunk_id
-            assert min_column_number == correct_number_of_output_columns, msg
-
             with self.iostream_upload:  # Limit concurrent uploads so as not to stall the pipeline.
-                command.execute(
-                    command.scp(key_path, remote_username, instance_ip,
-                                multihit_remote_outfile, multihit_local_outfile))
                 command.execute("aws s3 cp --only-show-errors %s %s/" %
                                 (multihit_local_outfile,
                                  self.chunks_result_dir_s3))
             log.write("finished alignment for chunk %s on %s server %s" % (chunk_id, service, instance_ip))
         return multihit_local_outfile
+
+
+    @staticmethod
+    def _exponential_backoff(_try_number):
+        time.sleep(EXPONENTIAL_BACKOFF_MINIMUM_SECONDS + random.randint(0, EXPONENTIAL_BACKOFF_JITTER_SECONDS))
+
+
+    @staticmethod
+    def _elapsed_seconds(start_time):
+        return time.monotonic()-start_time
+
+
+    @staticmethod
+    def _start_timer():
+        return time.monotonic()

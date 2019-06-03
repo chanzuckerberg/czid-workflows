@@ -164,9 +164,7 @@ def run_in_subprocess(target):
 
     @wraps(target)
     def wrapper(*args, **kwargs):
-        frame = sys._getframe(2)
-        f_code = frame.f_code
-        original_caller = {"filename": os.path.basename(f_code.co_filename), "method": f_code.co_name, "f_lineno": frame.f_lineno}
+        original_caller = log.get_caller_info(3)
         def subprocess_scope(*args, **kwargs):
             with log.log_context("subprocess_scope", {"target": target.__qualname__, "original_caller": original_caller}):
                 target(*args, **kwargs)
