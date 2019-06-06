@@ -26,7 +26,10 @@ class PipelineStepRunValidateInput(PipelineStep):
             # unzip if .gz file
             if file[-3:] == '.gz':
                 cmd = f"gunzip {file}"
-                command.execute(cmd)
+                try:
+                    command.execute(cmd)
+                except:
+                    raise RuntimeError(f"Invalid gzip file")
                 input_files[i] = file = file[:-3]
 
         # keep a dictionary of the distribution of read lengths in the files
