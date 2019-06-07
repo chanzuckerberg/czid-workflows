@@ -185,11 +185,16 @@ class PipelineFlow(object):
 
         if target in self.given_targets and self.given_targets[target].get("count_reads"):
             with log.log_context("count_input_reads", {"target": target}):
-                PipelineFlow.count_input_reads(input_files=self.targets[target],
-                                               result_dir_local=self.output_dir_local,
-                                               result_dir_s3=self.output_dir_s3,
-                                               target_name=target,
-                                               max_fragments=self.given_targets[target]["max_fragments"])
+                try:
+                    PipelineFlow.count_input_reads(input_files=self.targets[target],
+                                                   result_dir_local=self.output_dir_local,
+                                                   result_dir_s3=self.output_dir_s3,
+                                                   target_name=target,
+                                                   max_fragments=self.given_targets[target]["max_fragments"])
+                except AssertionError as e:
+                    # The counting methods may raise assertion errors if assumptions
+                    # about input format are not satisfied.
+                    self.write_invalid_input_json({ "error": str(e), "step": None })
 
     def write_invalid_input_json(self, error_json):
         ''' Upload an invalid_step_input.json file for this step, which can be detected by other services like idseq-web. '''
