@@ -20,25 +20,25 @@ class PipelineStepRunValidateInput(PipelineStep):
         file_ext = self.additional_attributes.get("file_ext")
         assert file_ext == 'fastq' or file_ext == 'fasta', 'Invalid file extension'
 
-        for i in range(self.num_inputs):
-            file = input_files[i]
-
-            # unzip if .gz file
-            if file[-3:] == '.gz':
-                cmd = f"gunzip {file}"
-                try:
-                    command.execute(cmd)
-                except:
-                    raise RuntimeError(f"Invalid gzip file")
-                input_files[i] = file = file[:-3]
-
-        # keep a dictionary of the distribution of read lengths in the files
-        self.summary_dict = {vc.BUCKET_TOO_SHORT:0,
-                             vc.BUCKET_NORMAL: 0,
-                             vc.BUCKET_LONG: 0,
-                             vc.BUCKET_TOO_LONG: 0}
-
         try:
+            for i in range(self.num_inputs):
+                file = input_files[i]
+
+                # unzip if .gz file
+                if file[-3:] == '.gz':
+                    cmd = f"gunzip {file}"
+                    try:
+                        command.execute(cmd)
+                    except:
+                        raise RuntimeError(f"Invalid gzip file")
+                    input_files[i] = file = file[:-3]
+
+            # keep a dictionary of the distribution of read lengths in the files
+            self.summary_dict = {vc.BUCKET_TOO_SHORT:0,
+                                 vc.BUCKET_NORMAL: 0,
+                                 vc.BUCKET_LONG: 0,
+                                 vc.BUCKET_TOO_LONG: 0}
+
             quick_check_passed = \
                 self.quick_check_file(input_files[0], file_ext == 'fastq') and \
                 (self.num_inputs == 1 or self.quick_check_file(input_files[1], file_ext == 'fastq'))
@@ -57,6 +57,7 @@ class PipelineStepRunValidateInput(PipelineStep):
 
             with open(summary_file, 'w') as summary_f:
                 json.dump(self.summary_dict, summary_f)
+
         except Exception as e:
             with open(summary_file, 'w') as summary_f:
                 json.dump({'Validation error': str(e)}, summary_f)
