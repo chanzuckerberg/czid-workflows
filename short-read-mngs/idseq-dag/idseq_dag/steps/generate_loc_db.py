@@ -4,10 +4,8 @@ import shelve
 import re
 from idseq_dag.engine.pipeline_step import PipelineStep
 from idseq_dag.util.command import run_in_subprocess
-import idseq_dag.util.command as command
 import idseq_dag.util.log as log
-import idseq_dag.util.count as count
-from idseq_dag.util.dict import IdSeqDict, IdSeqDictValue
+from idseq_dag.util.dict import IdSeqDictForUpdate, IdSeqDictValue
 BATCH_INSERT_SIZE = 300
 
 class PipelineStepGenerateLocDB(PipelineStep):
@@ -21,10 +19,8 @@ class PipelineStepGenerateLocDB(PipelineStep):
         info_db_file = self.output_files_local()[1]
         self.generate_loc_db(db_file, loc_db_file, info_db_file)
 
-    @run_in_subprocess
-    def generate_loc_db(self, db_file, loc_db_file, info_db_file):
-        loc_db = IdSeqDict(loc_db_file, IdSeqDictValue.VALUE_TYPE_ARRAY, read_only=False)
-        info_db = IdSeqDict(info_db_file, IdSeqDictValue.VALUE_TYPE_ARRAY, read_only=False)
+    @staticmethod
+    def generate_loc_db_work(db_file, loc_db, info_db):
         loc_batch_list = []
         info_batch_list = []
         with open(db_file) as dbf:
@@ -74,6 +70,12 @@ class PipelineStepGenerateLocDB(PipelineStep):
             info_db.batch_inserts(info_batch_list)
 
     @run_in_subprocess
+    def generate_loc_db(self, db_file, loc_db_file, info_db_file):
+        with IdSeqDictForUpdate(loc_db_file, IdSeqDictValue.VALUE_TYPE_ARRAY) as loc_db, \
+             IdSeqDictForUpdate(info_db_file, IdSeqDictValue.VALUE_TYPE_ARRAY) as info_db:
+            PipelineStepGenerateLocDB.generate_loc_db_work(db_file, loc_db, info_db)
+
+    @run_in_subprocess
     def generate_loc_db_old(self, db_file, loc_db_file):
         # TODO: To be deprecated. Using shelve
         loc_dict = shelve.Shelf(dbm.ndbm.open(loc_db_file.replace(".db", ""), 'c'))
@@ -105,4 +107,3 @@ class PipelineStepGenerateLocDB(PipelineStep):
     def count_reads(self):
         ''' Count reads '''
         pass
-

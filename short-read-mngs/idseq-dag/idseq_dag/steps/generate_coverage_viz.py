@@ -40,12 +40,11 @@ class PipelineStepGenerateCoverageViz(PipelineStep):
             self.additional_files["info_db"],
             self.ref_dir_local,
             allow_s3mi=True)
-        info_dict = open_file_db_by_extension(info_db, IdSeqDictValue.VALUE_TYPE_ARRAY)
-
-        # Extract data from input files.
-        (taxon_data, accession_data, contig_data, read_data) = self.prepare_data(
-            self.input_files_local, info_dict, min_contig_size, num_accessions_per_taxon
-        )
+        with open_file_db_by_extension(info_db, IdSeqDictValue.VALUE_TYPE_ARRAY) as info_dict:
+            # Extract data from input files.
+            (taxon_data, accession_data, contig_data, read_data) = self.prepare_data(
+                self.input_files_local, info_dict, min_contig_size, num_accessions_per_taxon
+            )
 
         # Generate the coverage viz data for each accession.
         coverage_viz_data = self.generate_coverage_viz_data(accession_data, contig_data, read_data, max_num_bins_coverage)
@@ -78,7 +77,7 @@ class PipelineStepGenerateCoverageViz(PipelineStep):
         Remove taxons with no contigs in any accession.
         Select the best accessions for each taxon.
         """
-        (reassigned_m8, hit_summary, blast_top_m8) = input_files_local[0]
+        (_reassigned_m8, hit_summary, blast_top_m8) = input_files_local[0]
         (contig_coverage_json, contig_stats_json, contigs_fasta) = input_files_local[1]
         (gsnap_deduped_m8, ) = input_files_local[2]
 
@@ -207,9 +206,9 @@ class PipelineStepGenerateCoverageViz(PipelineStep):
         Also generate a dict that maps taxons to accessions.
         """
         # Use a set for contigs, since multiple lines in the hitsummary can map to the same contig.
-        accession_data = defaultdict(lambda: {'reads': [], 'contigs': set() })
+        accession_data = defaultdict(lambda: {'reads': [], 'contigs': set()})
         # Use a set for accessions, since multiple lines in the hitsummary can map to the same accession.
-        taxon_data = defaultdict(lambda: { 'accessions': set(), 'num_total_accessions': 0 })
+        taxon_data = defaultdict(lambda: {'accessions': set(), 'num_total_accessions': 0})
 
         line_count = 0
         with open(hit_summary, 'r') as hs:
@@ -308,7 +307,7 @@ class PipelineStepGenerateCoverageViz(PipelineStep):
 
         # iterate_m8 automatically removes invalid hits.
         for (hit_id, accession_id, percent_id, alignment_length, num_mismatches, num_gaps,
-            query_start, query_end, subject_start, subject_end, _e_value, _bitscore, line) in m8.iterate_m8(m8_file, full_line=True):
+             query_start, query_end, subject_start, subject_end, _e_value, _bitscore, _line) in m8.iterate_m8(m8_file, full_line=True):
 
             if hit_id in valid_hits:
                 # Map the hit_id to a dict of hit data.
@@ -394,7 +393,7 @@ class PipelineStepGenerateCoverageViz(PipelineStep):
                 contig_data[contig_name]["byterange"] = [seq_offset, seq_len]
 
     @staticmethod
-    def select_best_accessions_per_taxon(taxon_data, accession_data, contig_data, read_data, num_accessions_per_taxon):
+    def select_best_accessions_per_taxon(taxon_data, accession_data, contig_data, _read_data, num_accessions_per_taxon):
         """
         Select the accessions that we will generate coverage viz data for.
         We select all accessions that have a contig.
@@ -843,7 +842,7 @@ def _align_interval(interval):
     return (min(bound_one, bound_two), max(bound_one, bound_two))
 
 def _transform_interval(
-    interval, first_domain_start, first_domain_end, second_domain_start, second_domain_end
+        interval, first_domain_start, first_domain_end, second_domain_start, second_domain_end
 ):
     """
     Transform an interval from one domain to another.

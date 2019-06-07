@@ -50,7 +50,6 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
             annotated_fasta, db_type)
         log.write(f"Read to Seq dictionary size: {len(read2seq)}")
 
-        nt_loc_dict = open_file_db_by_extension(nt_loc_db, IdSeqDictValue.VALUE_TYPE_ARRAY)
         groups, line_count = self.process_reads_from_m8_file(
             annotated_m8, read2seq)
 
@@ -68,16 +67,17 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
             nt_db = s3.fetch_from_s3(nt_db, self.ref_dir_local, allow_s3mi=True)
             is_nt_local = True
 
-        if is_nt_local:
-            log.write("Getting sequences by accession list from file...")
-            PipelineStepGenerateAlignmentViz.get_sequences_by_accession_list_from_file(
-                groups, nt_loc_dict, nt_db)
-        else:
-            log.write("Getting sequences by accession list from S3...")
-            PipelineStepGenerateAlignmentViz.get_sequences_by_accession_list_from_s3(
-                groups, nt_loc_dict, nt_db)
+        with open_file_db_by_extension(nt_loc_db, IdSeqDictValue.VALUE_TYPE_ARRAY) as nt_loc_dict:
+            if is_nt_local:
+                log.write("Getting sequences by accession list from file...")
+                PipelineStepGenerateAlignmentViz.get_sequences_by_accession_list_from_file(
+                    groups, nt_loc_dict, nt_db)
+            else:
+                log.write("Getting sequences by accession list from S3...")
+                PipelineStepGenerateAlignmentViz.get_sequences_by_accession_list_from_s3(
+                    groups, nt_loc_dict, nt_db)
 
-        for accession_id, ad in groups.items():
+        for _accession_id, ad in groups.items():
             ad['coverage_summary'] = PipelineStepGenerateAlignmentViz.calculate_alignment_coverage(
                 ad)
 
@@ -304,12 +304,13 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
         mutex = TraceLock("get_sequences_by_accession_list_from_s3", threading.RLock())
         nt_bucket, nt_key = nt_s3_path[5:].split("/", 1)
         for accession_id, accession_info in accession_id_groups.items():
+            entry = nt_loc_dict.get(accession_id)
             semaphore.acquire()
             t = threading.Thread(
                 target=PipelineStepGenerateAlignmentViz.
                 get_sequence_for_thread,
                 args=[
-                    error_flags, accession_info, accession_id, nt_loc_dict,
+                    error_flags, accession_info, accession_id, entry,
                     nt_bucket, nt_key, semaphore, mutex
                 ])
             t.start()
@@ -320,18 +321,18 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
             raise RuntimeError("Error in getting sequences by accession list.")
 
     @staticmethod
-    def get_sequence_for_thread(error_flags,
+    def get_sequence_for_thread(error_flags,  #pylint: disable=dangerous-default-value
                                 accession_info,
                                 accession_id,
-                                nt_loc_dict,
+                                entry,
                                 nt_bucket,
                                 nt_key,
                                 semaphore,
                                 mutex,
-                                seq_count=[0]):  #pylint: disable=dangerous-default-value
+                                seq_count=[0]):
         try:
             ref_seq_len, seq_name, accession_file = PipelineStepGenerateAlignmentViz.get_sequence_by_accession_id_s3(
-                accession_id, nt_loc_dict, nt_bucket, nt_key)
+                accession_id, entry, nt_bucket, nt_key)
             with mutex:
                 accession_info['seq_file'] = accession_file
                 accession_info['ref_seq_len'] = ref_seq_len
@@ -364,10 +365,9 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
         return ref_seq, seq_name
 
     @staticmethod
-    def get_sequence_by_accession_id_s3(accession_id, nt_loc_dict, nt_bucket, nt_key):
+    def get_sequence_by_accession_id_s3(accession_id, entry, nt_bucket, nt_key):
         seq_len = 0
         seq_name = ''
-        entry = nt_loc_dict.get(accession_id)
         if not entry:
             return seq_len, seq_name, None
 
@@ -401,7 +401,6 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
             finally:
                 try:
                     os.remove(range_file)
-                    pass
                 except:
                     pass
         accession_file_full_path = f"{os.getcwd()}/{accession_file}"

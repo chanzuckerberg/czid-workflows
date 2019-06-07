@@ -2,7 +2,6 @@
 import os
 import glob
 import json
-import traceback
 import xml.etree.ElementTree as ET
 
 from collections import defaultdict
@@ -12,7 +11,6 @@ from idseq_dag.steps.generate_alignment_viz import PipelineStepGenerateAlignment
 import idseq_dag.util.command as command
 import idseq_dag.util.s3 as s3
 import idseq_dag.util.log as log
-import idseq_dag.util.count as count
 import idseq_dag.util.convert as convert
 
 from idseq_dag.util.dict import IdSeqDictValue, open_file_db_by_extension
@@ -151,7 +149,7 @@ class PipelineStepGeneratePhyloTree(PipelineStep):
             if genomes:
                 genbank_fastas = {}
                 for line in genomes:
-                    assembly_accession, taxid, species_taxid, organism_name, ftp_path = line.split("\t")
+                    assembly_accession, taxid, _species_taxid, _organism_name, ftp_path = line.split("\t")
                     ftp_fasta_gz = f"{ftp_path}/{os.path.basename(ftp_path)}_genomic.fna.gz"
                     tree_node_name = f"genbank_{self.clean_name_for_ksnp3(assembly_accession)}"
                     local_fasta = f"{destination_dir}/{tree_node_name}.fasta"
@@ -164,7 +162,7 @@ class PipelineStepGeneratePhyloTree(PipelineStep):
         return {}
 
     @staticmethod
-    def parse_tree(current_dict, results, key = None):
+    def parse_tree(current_dict, results, key=None):
         """
         Produce a dictionary like:
           { "accession 1": { "coverage_summary": ... },
@@ -233,9 +231,9 @@ class PipelineStepGeneratePhyloTree(PipelineStep):
 
         # Make map of accession to sequence file
         accession2info = dict((acc, {}) for acc in accessions)
-        nt_loc_dict = open_file_db_by_extension(nt_loc_db, IdSeqDictValue.VALUE_TYPE_ARRAY)
-        PipelineStepGenerateAlignmentViz.get_sequences_by_accession_list_from_s3(
-            accession2info, nt_loc_dict, nt_db)
+        with open_file_db_by_extension(nt_loc_db, IdSeqDictValue.VALUE_TYPE_ARRAY) as nt_loc_dict:
+            PipelineStepGenerateAlignmentViz.get_sequences_by_accession_list_from_s3(
+                accession2info, nt_loc_dict, nt_db)
 
         # Put 1 fasta file per accession into the destination directory
         accession_fastas = {}

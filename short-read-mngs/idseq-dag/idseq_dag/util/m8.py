@@ -1,11 +1,7 @@
 import os
 import json
 import math
-import time
 import random
-import threading
-import traceback
-import multiprocessing
 from collections import defaultdict
 from collections import Counter
 
@@ -20,7 +16,7 @@ def log_corrupt(m8_file, line):
     log.write(msg)
     return msg
 
-def summarize_hits(hit_summary_file, min_reads_per_genus = 0):
+def summarize_hits(hit_summary_file, min_reads_per_genus=0):
     ''' Parse the hit summary file from alignment and get the relevant into'''
     read_dict = {} # read_id => line
     accession_dict = {} # accession => (species, genus)
@@ -99,10 +95,10 @@ def iterate_m8(m8_file, debug_caller=None, logging_interval=25000000, full_line=
                 log.write(msg)
             if full_line:
                 yield (read_id, accession_id, percent_id, alignment_length, num_mismatches, num_gaps,
-                    query_start, query_end, subject_start, subject_end, e_value, bitscore, line)
+                       query_start, query_end, subject_start, subject_end, e_value, bitscore, line)
             else:
                 yield (read_id, accession_id, percent_id, alignment_length,
-                    e_value, bitscore, line)
+                       e_value, bitscore, line)
 
     # Warn about any invalid hits outputted by GSNAP
     if invalid_hits:
@@ -182,10 +178,15 @@ def call_hits_m8(input_m8, lineage_map_path, accession2taxid_dict_path,
         * http://www.metagenomics.wiki/tools/blast/blastn-output-format-6
         * http://www.metagenomics.wiki/tools/blast/evalue
     """
-    lineage_map = open_file_db_by_extension(lineage_map_path, IdSeqDictValue.VALUE_TYPE_ARRAY)
-    accession2taxid_dict = open_file_db_by_extension(accession2taxid_dict_path)
+    with open_file_db_by_extension(lineage_map_path, IdSeqDictValue.VALUE_TYPE_ARRAY) as lineage_map, \
+         open_file_db_by_extension(accession2taxid_dict_path) as accession2taxid_dict:
+        _call_hits_m8_work(input_m8, lineage_map, accession2taxid_dict,
+                           output_m8, output_summary, taxon_blacklist)
+
+def _call_hits_m8_work(input_m8, lineage_map, accession2taxid_dict,
+                       output_m8, output_summary, taxon_blacklist):
     # Helper functions
-    # TODO: Represent taxids by numbers instead of strings to greatly reduce
+    # TODO: Represent taxids by numbers instead of strings to reduce
     # memory footprint and increase speed.
     lineage_cache = {}
     blacklist_taxids = set()
@@ -227,7 +228,7 @@ def call_hits_m8(input_m8, lineage_map_path, accession2taxid_dict_path,
         counts = Counter(accession_list)
         return counts.most_common(1)[0][0]
 
-    def call_hit_level(hits):
+    def _call_hit_level(hits):  # TODO: Remove unused function
         for level, hits_at_level in enumerate(hits):
             if len(hits_at_level) == 1:
                 taxid, accession_list = hits_at_level.popitem()
@@ -308,7 +309,7 @@ def call_hits_m8(input_m8, lineage_map_path, accession2taxid_dict_path,
             # TODO: Consider all hits within a fixed margin of the best e-value.
             # This change may need to be accompanied by a change to
             # GSNAP/RAPSearch parameters.
-            for read_id, accession_id, _percent_id, _alignment_length, e_value, bitscore, line in iterate_m8(
+            for read_id, accession_id, _percent_id, _alignment_length, e_value, _bitscore, line in iterate_m8(
                     input_m8, "call_hits_m8_emit_deduped_and_summarized_hits"):
                 if read_id in emitted:
                     continue
@@ -354,92 +355,90 @@ def generate_taxon_count_json_from_m8(
 
     # Setup
     aggregation = {}
-    with open(hit_level_file, 'r', encoding='utf-8') as hit_f:
-        with open(m8_file, 'r', encoding='utf-8') as m8_f:
-            # Lines in m8_file and hit_level_file correspond (same read_id)
-            hit_line = hit_f.readline()
-            m8_line = m8_f.readline()
-            with log.log_context("generate_taxon_count_json_from_m8", {"substep": "open_file_db_by_extension"}):
-                lineage_map = open_file_db_by_extension(lineage_map_path, IdSeqDictValue.VALUE_TYPE_ARRAY)
-            num_ranks = len(lineage.NULL_LINEAGE)
-            # See https://en.wikipedia.org/wiki/Double-precision_floating-point_format
-            MIN_NORMAL_POSITIVE_DOUBLE = 2.0**-1022
+    with open(hit_level_file, 'r', encoding='utf-8') as hit_f, \
+         open(m8_file, 'r', encoding='utf-8') as m8_f, \
+         open_file_db_by_extension(lineage_map_path, IdSeqDictValue.VALUE_TYPE_ARRAY) as lineage_map:
+        # Lines in m8_file and hit_level_file correspond (same read_id)
+        hit_line = hit_f.readline()
+        m8_line = m8_f.readline()
+        num_ranks = len(lineage.NULL_LINEAGE)
+        # See https://en.wikipedia.org/wiki/Double-precision_floating-point_format
+        MIN_NORMAL_POSITIVE_DOUBLE = 2.0**-1022
 
-            with log.log_context("generate_taxon_count_json_from_m8", {"substep": "loop_1"}):
-                while hit_line and m8_line:
-                    # Retrieve data values from files
-                    hit_line_columns = hit_line.rstrip("\n").split("\t")
-                    _read_id = hit_line_columns[0]
-                    hit_level = hit_line_columns[1]
-                    hit_taxid = hit_line_columns[2]
-                    if int(hit_level) < 0:  # Skip negative levels and continue
-                        hit_line = hit_f.readline()
-                        m8_line = m8_f.readline()
-                        continue
-
-                    # m8 files correspond to BLAST tabular output format 6:
-                    # Columns: read_id | _ref_id | percent_identity | alignment_length...
-                    #
-                    # * read_id = query (e.g., gene) sequence id
-                    # * _ref_id = subject (e.g., reference genome) sequence id
-                    # * percent_identity = percentage of identical matches
-                    # * alignment_length = length of the alignments
-                    # * e_value = the expect value
-                    #
-                    # See:
-                    # * http://www.metagenomics.wiki/tools/blast/blastn-output-format-6
-                    # * http://www.metagenomics.wiki/tools/blast/evalue
-
-                    m8_line_columns = m8_line.split("\t")
-                    msg = "read_ids in %s and %s do not match: %s vs. %s" % (
-                        os.path.basename(m8_file), os.path.basename(hit_level_file),
-                        m8_line_columns[0], hit_line_columns[0])
-                    assert m8_line_columns[0] == hit_line_columns[0], msg
-                    percent_identity = float(m8_line_columns[2])
-                    alignment_length = float(m8_line_columns[3])
-                    e_value = float(m8_line_columns[10])
-
-                    # These have been filtered out before the creation of m8_f and hit_f
-                    assert alignment_length > 0
-                    assert -0.25 < percent_identity < 100.25
-                    assert e_value == e_value
-                    if e_value_type != 'log10':
-                        # e_value could be 0 when large contigs are mapped
-                        if e_value <= MIN_NORMAL_POSITIVE_DOUBLE:
-                            e_value = MIN_NORMAL_POSITIVE_DOUBLE
-                        e_value = math.log10(e_value)
-
-                    # Retrieve the taxon lineage and mark meaningless calls with fake
-                    # taxids.
-                    hit_taxids_all_levels = lineage_map.get(hit_taxid, lineage.NULL_LINEAGE)
-                    cleaned_hit_taxids_all_levels = lineage.validate_taxid_lineage(
-                        hit_taxids_all_levels, hit_taxid, hit_level)
-                    assert num_ranks == len(cleaned_hit_taxids_all_levels)
-
-                    if not any_hits_to_remove(cleaned_hit_taxids_all_levels):
-                        # Aggregate each level and collect statistics
-                        agg_key = tuple(cleaned_hit_taxids_all_levels)
-                        while agg_key:
-                            agg_bucket = aggregation.get(agg_key)
-                            if not agg_bucket:
-                                agg_bucket = {
-                                    'count': 0,
-                                    'sum_percent_identity': 0.0,
-                                    'sum_alignment_length': 0.0,
-                                    'sum_e_value': 0.0
-                                }
-                                aggregation[agg_key] = agg_bucket
-                            agg_bucket['count'] += 1
-                            agg_bucket['sum_percent_identity'] += percent_identity
-                            agg_bucket['sum_alignment_length'] += alignment_length
-                            agg_bucket['sum_e_value'] += e_value
-                            # Chomp off the lowest rank as we aggregate up the tree
-                            agg_key = agg_key[1:]
-
+        with log.log_context("generate_taxon_count_json_from_m8", {"substep": "loop_1"}):
+            while hit_line and m8_line:
+                # Retrieve data values from files
+                hit_line_columns = hit_line.rstrip("\n").split("\t")
+                _read_id = hit_line_columns[0]
+                hit_level = hit_line_columns[1]
+                hit_taxid = hit_line_columns[2]
+                if int(hit_level) < 0:  # Skip negative levels and continue
                     hit_line = hit_f.readline()
                     m8_line = m8_f.readline()
+                    continue
 
-            lineage_map.close()
+                # m8 files correspond to BLAST tabular output format 6:
+                # Columns: read_id | _ref_id | percent_identity | alignment_length...
+                #
+                # * read_id = query (e.g., gene) sequence id
+                # * _ref_id = subject (e.g., reference genome) sequence id
+                # * percent_identity = percentage of identical matches
+                # * alignment_length = length of the alignments
+                # * e_value = the expect value
+                #
+                # See:
+                # * http://www.metagenomics.wiki/tools/blast/blastn-output-format-6
+                # * http://www.metagenomics.wiki/tools/blast/evalue
+
+                m8_line_columns = m8_line.split("\t")
+                msg = "read_ids in %s and %s do not match: %s vs. %s" % (
+                    os.path.basename(m8_file), os.path.basename(hit_level_file),
+                    m8_line_columns[0], hit_line_columns[0])
+                assert m8_line_columns[0] == hit_line_columns[0], msg
+                percent_identity = float(m8_line_columns[2])
+                alignment_length = float(m8_line_columns[3])
+                e_value = float(m8_line_columns[10])
+
+                # These have been filtered out before the creation of m8_f and hit_f
+                assert alignment_length > 0
+                assert -0.25 < percent_identity < 100.25
+                assert e_value == e_value
+                if e_value_type != 'log10':
+                    # e_value could be 0 when large contigs are mapped
+                    if e_value <= MIN_NORMAL_POSITIVE_DOUBLE:
+                        e_value = MIN_NORMAL_POSITIVE_DOUBLE
+                    e_value = math.log10(e_value)
+
+                # Retrieve the taxon lineage and mark meaningless calls with fake
+                # taxids.
+                hit_taxids_all_levels = lineage_map.get(hit_taxid, lineage.NULL_LINEAGE)
+                cleaned_hit_taxids_all_levels = lineage.validate_taxid_lineage(
+                    hit_taxids_all_levels, hit_taxid, hit_level)
+                assert num_ranks == len(cleaned_hit_taxids_all_levels)
+
+                if not any_hits_to_remove(cleaned_hit_taxids_all_levels):
+                    # Aggregate each level and collect statistics
+                    agg_key = tuple(cleaned_hit_taxids_all_levels)
+                    while agg_key:
+                        agg_bucket = aggregation.get(agg_key)
+                        if not agg_bucket:
+                            agg_bucket = {
+                                'count': 0,
+                                'sum_percent_identity': 0.0,
+                                'sum_alignment_length': 0.0,
+                                'sum_e_value': 0.0
+                            }
+                            aggregation[agg_key] = agg_bucket
+                        agg_bucket['count'] += 1
+                        agg_bucket['sum_percent_identity'] += percent_identity
+                        agg_bucket['sum_alignment_length'] += alignment_length
+                        agg_bucket['sum_e_value'] += e_value
+                        # Chomp off the lowest rank as we aggregate up the tree
+                        agg_key = agg_key[1:]
+
+                hit_line = hit_f.readline()
+                m8_line = m8_f.readline()
+
 
     # Produce the final output
     taxon_counts_attributes = []

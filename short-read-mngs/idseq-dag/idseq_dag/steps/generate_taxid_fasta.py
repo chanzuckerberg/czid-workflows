@@ -14,7 +14,7 @@ class PipelineStepGenerateTaxidFasta(PipelineStep):
         # Setup
         if len(self.input_files_local) > 1:
             input_fa_name = self.input_files_local[0][0]
-            hit_summary_files  = {'NT': self.input_files_local[1][2], 'NR': self.input_files_local[2][2]}
+            hit_summary_files = {'NT': self.input_files_local[1][2], 'NR': self.input_files_local[2][2]}
         else:
             # TODO(yf): Old implementation. TO BE DEPRECATED once 3.1 is fully deployed
             input_files = self.input_files_local[0]
@@ -26,41 +26,39 @@ class PipelineStepGenerateTaxidFasta(PipelineStep):
             self.additional_files["lineage_db"],
             self.ref_dir_local,
             allow_s3mi=True)
-        lineage_map = open_file_db_by_extension(lineage_db, IdSeqDictValue.VALUE_TYPE_ARRAY)
 
         # Get primary hit mappings
         valid_hits = PipelineStepGenerateTaxidFasta.parse_hits(
             hit_summary_files)
 
-        input_fa = open(input_fa_name, 'rb')
-        output_fa = open(self.output_files_local()[0], 'wb')
-        seq_name = input_fa.readline()
-        seq_data = input_fa.readline()
-        while len(seq_name) > 0 and len(seq_data) > 0:
-            # Example read_id: "NR::NT:CP010376.2:NB501961:14:HM7TLBGX2:1:23109
-            # :12720:8743/2"
-            # Translate the read information into our custom format with fake
-            # taxids at non-specific hit levels.
-            annotated_read_id = seq_name.decode("utf-8").rstrip().lstrip('>')
-            read_id = annotated_read_id.split(":", 4)[-1]
-
-            nr_taxid_species, nr_taxid_genus, nr_taxid_family = PipelineStepGenerateTaxidFasta.get_valid_lineage(
-                valid_hits, lineage_map, read_id, 'NR')
-            nt_taxid_species, nt_taxid_genus, nt_taxid_family = PipelineStepGenerateTaxidFasta.get_valid_lineage(
-                valid_hits, lineage_map, read_id, 'NT')
-
-            fields = ["family_nr", nr_taxid_family, "family_nt", nt_taxid_family]
-            fields += ["genus_nr", nr_taxid_genus, "genus_nt", nt_taxid_genus]
-            fields += ["species_nr", nr_taxid_species, "species_nt", nt_taxid_species]
-            fields += [annotated_read_id]
-            new_read_name = ('>' + ':'.join(fields) + '\n').encode()
-
-            output_fa.write(new_read_name)
-            output_fa.write(seq_data)
+        with open(input_fa_name, 'rb') as input_fa, \
+             open(self.output_files_local()[0], 'wb') as output_fa, \
+             open_file_db_by_extension(lineage_db, IdSeqDictValue.VALUE_TYPE_ARRAY) as lineage_map:
             seq_name = input_fa.readline()
             seq_data = input_fa.readline()
-        input_fa.close()
-        output_fa.close()
+            while len(seq_name) > 0 and len(seq_data) > 0:
+                # Example read_id: "NR::NT:CP010376.2:NB501961:14:HM7TLBGX2:1:23109
+                # :12720:8743/2"
+                # Translate the read information into our custom format with fake
+                # taxids at non-specific hit levels.
+                annotated_read_id = seq_name.decode("utf-8").rstrip().lstrip('>')
+                read_id = annotated_read_id.split(":", 4)[-1]
+
+                nr_taxid_species, nr_taxid_genus, nr_taxid_family = PipelineStepGenerateTaxidFasta.get_valid_lineage(
+                    valid_hits, lineage_map, read_id, 'NR')
+                nt_taxid_species, nt_taxid_genus, nt_taxid_family = PipelineStepGenerateTaxidFasta.get_valid_lineage(
+                    valid_hits, lineage_map, read_id, 'NT')
+
+                fields = ["family_nr", nr_taxid_family, "family_nt", nt_taxid_family]
+                fields += ["genus_nr", nr_taxid_genus, "genus_nt", nt_taxid_genus]
+                fields += ["species_nr", nr_taxid_species, "species_nt", nt_taxid_species]
+                fields += [annotated_read_id]
+                new_read_name = ('>' + ':'.join(fields) + '\n').encode()
+
+                output_fa.write(new_read_name)
+                output_fa.write(seq_data)
+                seq_name = input_fa.readline()
+                seq_data = input_fa.readline()
 
     def count_reads(self):
         pass
@@ -95,5 +93,4 @@ class PipelineStepGenerateTaxidFasta(PipelineStep):
             read_id, ("-1", "-1"))
         hit_lineage = lineage_map.get(hit_taxid_str,
                                       lineage.NULL_LINEAGE)
-        return lineage.validate_taxid_lineage(hit_lineage, hit_taxid_str,
-                                                    hit_level_str)
+        return lineage.validate_taxid_lineage(hit_lineage, hit_taxid_str, hit_level_str)

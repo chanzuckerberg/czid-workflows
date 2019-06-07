@@ -7,8 +7,7 @@ from idseq_dag.engine.pipeline_step import PipelineStep
 from idseq_dag.util.command import run_in_subprocess
 import idseq_dag.util.command as command
 import idseq_dag.util.log as log
-import idseq_dag.util.count as count
-from idseq_dag.util.dict import IdSeqDict, IdSeqDictValue
+from idseq_dag.util.dict import IdSeqDictForUpdate, IdSeqDictValue
 
 BATCH_INSERT_SIZE = 300
 NUM_PARTITIONS = 8
@@ -78,26 +77,27 @@ class PipelineStepGenerateAccession2Taxid(PipelineStep):
                                 accession2taxid_db, taxid2wgs_accession_db,
                                 output_gz, output_wgs_gz)
 
+
     def output_dicts_to_db(self, mapping_files, wgs_accessions,
                            accession2taxid_db, taxid2wgs_accession_db,
                            output_gz, output_wgs_gz):
         # generate the accession2taxid db and file
-        accession_dict = IdSeqDict(accession2taxid_db, IdSeqDictValue.VALUE_TYPE_SCALAR)
-        batch_list = {}
-        with gzip.open(output_gz, "wt") as gzf:
-            for partition_list in mapping_files:
-                for partition in partition_list:
-                    with open(partition, 'r', encoding="utf-8") as pf:
-                        for line in pf:
-                            if len(line) <= 1:
-                                break
-                            fields = line.rstrip().split("\t")
-                            gzf.write(line)
-                            batch_list[fields[0]] = fields[2]
-                            if len(batch_list) >= BATCH_INSERT_SIZE:
-                                accession_dict.batch_inserts(batch_list.items())
-                                batch_list = {}
-            accession_dict.batch_inserts(batch_list.items())
+        with IdSeqDictForUpdate(accession2taxid_db, IdSeqDictValue.VALUE_TYPE_SCALAR) as accession_dict:
+            batch_list = {}
+            with gzip.open(output_gz, "wt") as gzf:
+                for partition_list in mapping_files:
+                    for partition in partition_list:
+                        with open(partition, 'r', encoding="utf-8") as pf:
+                            for line in pf:
+                                if len(line) <= 1:
+                                    break
+                                fields = line.rstrip().split("\t")
+                                gzf.write(line)
+                                batch_list[fields[0]] = fields[2]
+                                if len(batch_list) >= BATCH_INSERT_SIZE:
+                                    accession_dict.batch_inserts(batch_list.items())
+                                    batch_list = {}
+                accession_dict.batch_inserts(batch_list.items())
 
         # generate taxid2 accession
         taxid2accession_dict = {}
@@ -111,8 +111,8 @@ class PipelineStepGenerateAccession2Taxid(PipelineStep):
                         taxid2accession_dict[taxid] = f"{current_match},{accession}"
                         gzf.write(line)
 
-        taxid2wgs_accession_dict = IdSeqDict(taxid2wgs_accession_db, IdSeqDictValue.VALUE_TYPE_SCALAR)
-        taxid2wgs_accession_dict.batch_inserts(taxid2accession_dict.items())
+        with IdSeqDictForUpdate(taxid2wgs_accession_db, IdSeqDictValue.VALUE_TYPE_SCALAR) as taxid2wgs_accession_dict:
+            taxid2wgs_accession_dict.batch_inserts(taxid2accession_dict.items())
 
 
     def output_dicts_to_db_old(self, mapping_files, wgs_accessions,
@@ -172,4 +172,3 @@ class PipelineStepGenerateAccession2Taxid(PipelineStep):
     def count_reads(self):
         ''' Count reads '''
         pass
-
