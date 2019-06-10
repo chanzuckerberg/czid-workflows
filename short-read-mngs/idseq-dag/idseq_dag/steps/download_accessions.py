@@ -12,6 +12,7 @@ from idseq_dag.util.trace_lock import TraceLock
 
 MIN_ACCESSIONS_WHOLE_DB_DOWNLOAD = 5000
 MAX_ACCESSION_SEQUENCE_LEN = 100000000
+ALLOW_S3MI = False # Allow s3mi only if running on an instance with enough RAM to fit NT and NR together...
 
 class PipelineStepDownloadAccessions(PipelineStep):
     '''
@@ -20,10 +21,11 @@ class PipelineStepDownloadAccessions(PipelineStep):
     def run(self):
         (_align_m8, _deduped_m8, hit_summary, _orig_counts) = self.input_files_local[0]
         output_reference_fasta = self.output_files_local()[0]
-        loc_db = s3.fetch_from_s3(
+        loc_db = s3.fetch_reference(
             self.additional_files["loc_db"],
             self.ref_dir_local,
-            allow_s3mi=True)
+            auto_unzip=True,  # This is default for references, but let's be explicit.
+            allow_s3mi=ALLOW_S3MI)
         db_s3_path = self.additional_attributes["db"]
         db_type = self.additional_attributes["db_type"]
         (_read_dict, accession_dict, _selected_genera) = m8.summarize_hits(hit_summary)
@@ -33,7 +35,12 @@ class PipelineStepDownloadAccessions(PipelineStep):
                                                     loc_dict, db_s3_path)
             else:
                 # download the whole alignment db
-                db_path = s3.fetch_from_s3(db_s3_path, self.ref_dir_local, allow_s3mi=True)
+                #
+                db_path = s3.fetch_reference(
+                    db_s3_path,
+                    self.ref_dir_local,
+                    auto_unzip=True,   # This is default for references, but let's be explicit
+                    allow_s3mi=ALLOW_S3MI)
                 self.download_ref_sequences_from_file(accession_dict, loc_dict, db_path, output_reference_fasta)
 
     def download_ref_sequences_from_file(self, accession_dict, loc_dict, db_path,

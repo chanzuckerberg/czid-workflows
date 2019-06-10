@@ -36,7 +36,7 @@ class PipelineStepGenerateCoverageViz(PipelineStep):
         min_contig_size = self.additional_attributes.get("min_contig_size", MIN_CONTIG_SIZE)
 
         # Info DB contains the name and sequence length of each accession.
-        info_db = s3.fetch_from_s3(
+        info_db = s3.fetch_reference(
             self.additional_files["info_db"],
             self.ref_dir_local,
             allow_s3mi=True)

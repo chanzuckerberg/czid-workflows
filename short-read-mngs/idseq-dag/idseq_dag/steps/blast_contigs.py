@@ -62,12 +62,12 @@ class PipelineStepBlastContigs(PipelineStep):
         lineage_db = s3.fetch_from_s3(
             self.additional_files["lineage_db"],
             self.ref_dir_local,
-            allow_s3mi=True)
+            allow_s3mi=False) # Too small to waste s3mi
         deuterostome_db = None
         evalue_type = 'raw'
         if self.additional_files.get("deuterostome_db"):
             deuterostome_db = s3.fetch_from_s3(self.additional_files["deuterostome_db"],
-                                               self.ref_dir_local, allow_s3mi=True)
+                                               self.ref_dir_local, allow_s3mi=False) # Too small for s3mi
         with log.log_context("PipelineStepBlastContigs", {"substep": "generate_taxon_count_json_from_m8", "db_type": db_type, "refined_counts": refined_counts}):
             m8.generate_taxon_count_json_from_m8(refined_m8, refined_hit_summary,
                                                 evalue_type, db_type.upper(),
@@ -220,12 +220,3 @@ class PipelineStepBlastContigs(PipelineStep):
                     top_line = line
             if top_line is not None:
                 top_m8f.write(top_line)
-
-
-
-
-
-
-
-
-

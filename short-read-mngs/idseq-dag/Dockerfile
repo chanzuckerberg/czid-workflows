@@ -133,6 +133,9 @@ RUN sed -i 's:set kSNP=/usr/local/kSNP3:set kSNP=/usr/local/bin:g' /usr/local/bi
 RUN apt install tcsh
 RUN kSNP3
 
+RUN apt-get -y install liblz4-tool
+RUN apt-get -y install lbzip2
+
 # Cleanup
 RUN rm -rf /tmp/*
 

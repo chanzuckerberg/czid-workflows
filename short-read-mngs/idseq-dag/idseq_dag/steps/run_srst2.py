@@ -26,8 +26,8 @@ class PipelineStepRunSRST2(PipelineStep):
         results = os.path.join(self.output_dir_local, OUTPUT_GENES)
         results_dest = self.output_files_local()[1]
         shutil.move(log, log_dest)
-        shutil.move(results, results_dest) 
-        if not os.path.exists(os.path.join(self.output_dir_local, OUTPUT_FULL_GENES)): 
+        shutil.move(results, results_dest)
+        if not os.path.exists(os.path.join(self.output_dir_local, OUTPUT_FULL_GENES)):
             for f in self.output_files_local()[2:5]:
                 PipelineStepRunSRST2.fill_file_path(f)
         else:
@@ -43,15 +43,15 @@ class PipelineStepRunSRST2(PipelineStep):
 
     def execute_srst2(self, isPaired, isFasta, isZipped):
         """Executes srst2 with appropriate parameters based on whether input files are zipped,
-           paired reads and on file type."""        
+           paired reads and on file type."""
         srst2_params = ['srst2']
         srst2_params.extend(self.get_common_params())
-        if isFasta: 
+        if isFasta:
             file_ext = '.fasta.gz' if isZipped else '.fasta'
             srst2_params.extend(['--read_type', 'f'])
-        else: 
+        else:
             file_ext = '.fastq.gz' if isZipped else '.fastq'
-        if isPaired: srst2_params.extend(['--input_pe']) 
+        if isPaired: srst2_params.extend(['--input_pe'])
         else: srst2_params.extend(['--input_se'])
         for i, rd in enumerate(self.input_files_local[0]):
             command.execute(f"ln -sf {rd} _R{i+1}_001"+file_ext)
@@ -62,7 +62,7 @@ class PipelineStepRunSRST2(PipelineStep):
 
     def get_common_params(self):
         """Helper that gets srst2 parameters common to both paired and single rds."""
-        db_file_path = fetch_from_s3(self.additional_files["resist_gene_db"], self.output_dir_local)
+        db_file_path = fetch_from_s3(self.additional_files["resist_gene_db"], self.output_dir_local, allow_s3mi=False) # too small for s3mi
         min_cov = str(self.additional_attributes['min_cov'])
         # srst2 expects this to be a string, in dag could be passed in as a number
         n_threads = str(self.additional_attributes['n_threads'])
@@ -86,7 +86,7 @@ class PipelineStepRunSRST2(PipelineStep):
         fd = os.open(file_path, os.O_RDWR|os.O_CREAT)
         os.write(fd, b"\n")
         os.close(fd)
-             
+
     @staticmethod
     def _get_pre_proc_amr_results(amr_raw_path):
         """ Reads in raw amr results file outputted by srst2, and does initial processing of marking gene family."""
@@ -122,5 +122,3 @@ class PipelineStepRunSRST2(PipelineStep):
             mode='w',
             index=False,
             encoding='utf-8')
-
-

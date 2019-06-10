@@ -13,7 +13,7 @@ import idseq_dag.util.count as count
 import idseq_dag.util.server as server
 import idseq_dag.util.log as log
 import idseq_dag.util.m8 as m8
-from idseq_dag.util.s3 import fetch_from_s3
+from idseq_dag.util.s3 import fetch_from_s3, fetch_reference
 from idseq_dag.util.trace_lock import TraceLock
 
 MAX_CONCURRENT_CHUNK_UPLOADS = 4
@@ -56,8 +56,8 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
         self.run_remotely(input_fas, output_m8, service)
 
         # get database
-        lineage_db = fetch_from_s3(self.additional_files["lineage_db"], self.ref_dir_local, allow_s3mi=True)
-        accession2taxid_db = fetch_from_s3(self.additional_files["accession2taxid_db"], self.ref_dir_local, allow_s3mi=True)
+        lineage_db = fetch_from_s3(self.additional_files["lineage_db"], self.ref_dir_local)
+        accession2taxid_db = fetch_reference(self.additional_files["accession2taxid_db"], self.ref_dir_local, allow_s3mi=True)
         blacklist_s3_file = self.additional_attributes.get('taxon_blacklist', DEFAULT_BLACKLIST_S3)
         taxon_blacklist = fetch_from_s3(blacklist_s3_file, self.ref_dir_local)
         m8.call_hits_m8(output_m8, lineage_db, accession2taxid_db,
@@ -224,7 +224,7 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
                 chunk_output_files[n] = result
             chunks_in_flight.release()
 
-    
+
     @staticmethod
     def __interpret_min_column_number_string(min_column_number_string,
                                              correct_number_of_output_columns,

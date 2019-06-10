@@ -119,7 +119,7 @@ class ProgressFile(object):
         if self.progress_file:
             self.tail_subproc = subprocess.Popen(
                 "touch {pf} ; tail -f {pf}".format(pf=self.progress_file),
-                shell=True)
+                shell=True, executable="/bin/bash")
         return self
 
     def __exit__(self, *args):
@@ -231,6 +231,7 @@ def execute(command,
                 ct.proc = subprocess.Popen(
                     command,
                     shell=True,
+                    executable="/bin/bash",
                     stdin=sys.stdin.fileno(),
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT
@@ -238,7 +239,7 @@ def execute(command,
                 stdout, _ = ct.proc.communicate()
             else:
                 # Capture nothing. Child inherits parent stdin/out/err.
-                ct.proc = subprocess.Popen(command, shell=True)
+                ct.proc = subprocess.Popen(command, shell=True, executable="/bin/bash")
                 ct.proc.wait()
                 stdout = None
 

@@ -200,7 +200,7 @@ class PipelineStepGeneratePhyloTree(PipelineStep):
 
         # Retrieve files
         nt_db = self.additional_attributes["nt_db"]
-        nt_loc_db = s3.fetch_from_s3(
+        nt_loc_db = s3.fetch_reference(
             self.additional_files["nt_loc_db"],
             self.ref_dir_local,
             allow_s3mi=True)

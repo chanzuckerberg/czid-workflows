@@ -42,8 +42,8 @@ class PipelineFlow(object):
     def prefetch_large_files(self):
         with log.log_context("prefetch_large_files", values={"file_list": self.large_file_list}):
             for f in self.large_file_list:
-                with log.log_context("fetch_from_s3", values={"file": f}):
-                    idseq_dag.util.s3.fetch_from_s3(f, self.ref_dir_local, allow_s3mi=True, auto_untar=True)
+                with log.log_context("fetch_reference", values={"file": f}):
+                    idseq_dag.util.s3.fetch_reference(f, self.ref_dir_local, auto_unzip=True, auto_untar=True, allow_s3mi=True)
 
     @staticmethod
     def parse_and_validate_conf(dag_json):

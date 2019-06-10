@@ -34,9 +34,10 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
         nt_db = self.additional_attributes["nt_db"]
         if nt_db.startswith("s3://") and not s3.check_s3_presence(nt_db):
             raise RuntimeError(f"nt_db at {nt_db} not found.")
-        nt_loc_db = s3.fetch_from_s3(
+        nt_loc_db = s3.fetch_reference(
             self.additional_files["nt_loc_db"],
             self.ref_dir_local,
+            auto_unzip=True,  # This is default for reference download, just being explicit.
             allow_s3mi=True)
         db_type = "nt"  # Only NT supported for now
         # TODO: Design a way to map in/out files more robustly, e.g. by name/type
@@ -64,7 +65,13 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
         # If nt_db is not yet downloaded, but there are too many accessions to be fetched,
         # then do download nt_db here
         if not is_nt_local and len(groups) >= MIN_ACCESSIONS_WHOLE_DB_DOWNLOAD:
-            nt_db = s3.fetch_from_s3(nt_db, self.ref_dir_local, allow_s3mi=True)
+            # TODO: Handle this better.  We might be poorly provisioned to allow s3mi speed
+            # for this step, on the instance where it is running.
+            nt_db = s3.fetch_reference(
+                nt_db,
+                self.ref_dir_local,
+                auto_unzip=True,   # this is default for reference uploads, just being explicit
+                allow_s3mi=True)   # s3mi probably okay here because we tend to download only NT and little else in this stage
             is_nt_local = True
 
         with open_file_db_by_extension(nt_loc_db, IdSeqDictValue.VALUE_TYPE_ARRAY) as nt_loc_dict:
