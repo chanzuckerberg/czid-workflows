@@ -1,10 +1,9 @@
 import json
 import os
-import threading
-import time
-import traceback
+import multiprocessing
 from collections import defaultdict
 from idseq_dag.engine.pipeline_step import PipelineStep
+from idseq_dag.util.trace_lock import TraceLock
 import idseq_dag.util.command as command
 import idseq_dag.util.count as count
 import idseq_dag.util.s3 as s3
@@ -20,6 +19,12 @@ class PipelineStepBlastContigs(PipelineStep):
     '''
         BLAST the assembled results to the candidate accessions
     '''
+
+    # Opening lineage sqlite in parallel for NT and NR sometimes hangs.
+    # In fact it's generally not helpful to run NT and NR in parallel in this step,
+    # so we may broaden the scope of this mutex.
+    cya_lock = multiprocessing.RLock()
+
     def run(self):
         '''
             1. summarize hits
@@ -68,10 +73,11 @@ class PipelineStepBlastContigs(PipelineStep):
         if self.additional_files.get("deuterostome_db"):
             deuterostome_db = s3.fetch_from_s3(self.additional_files["deuterostome_db"],
                                                self.ref_dir_local, allow_s3mi=False) # Too small for s3mi
-        with log.log_context("PipelineStepBlastContigs", {"substep": "generate_taxon_count_json_from_m8", "db_type": db_type, "refined_counts": refined_counts}):
-            m8.generate_taxon_count_json_from_m8(refined_m8, refined_hit_summary,
-                                                evalue_type, db_type.upper(),
-                                                lineage_db, deuterostome_db, refined_counts)
+        with TraceLock("PipelineStepBlastContigs-CYA", PipelineStepBlastContigs.cya_lock, debug=False):
+            with log.log_context("PipelineStepBlastContigs", {"substep": "generate_taxon_count_json_from_m8", "db_type": db_type, "refined_counts": refined_counts}):
+                m8.generate_taxon_count_json_from_m8(refined_m8, refined_hit_summary,
+                                                    evalue_type, db_type.upper(),
+                                                    lineage_db, deuterostome_db, refined_counts)
 
         # generate contig stats at genus/species level
         with log.log_context("PipelineStepBlastContigs", {"substep": "generate_taxon_summary"}):
