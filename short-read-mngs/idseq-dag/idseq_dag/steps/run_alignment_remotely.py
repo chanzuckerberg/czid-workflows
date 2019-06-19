@@ -10,7 +10,7 @@ from idseq_dag.engine.pipeline_step import PipelineStep, InputFileErrors
 
 import idseq_dag.util.command as command
 import idseq_dag.util.count as count
-import idseq_dag.util.server as server
+from idseq_dag.util.server import ASGInstance, ChunkStatus, chunk_status_tracker
 import idseq_dag.util.log as log
 import idseq_dag.util.m8 as m8
 from idseq_dag.util.s3 import fetch_from_s3, fetch_reference
@@ -19,10 +19,11 @@ from idseq_dag.util.trace_lock import TraceLock
 MAX_CONCURRENT_CHUNK_UPLOADS = 4
 DEFAULT_BLACKLIST_S3 = 's3://idseq-database/taxonomy/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/taxon_blacklist.txt'
 CORRECT_NUMBER_OF_OUTPUT_COLUMNS = 12
-CHUNK_MAX_TRIES = 2
-CHUNK_DONT_RETRY_AFTER_SECONDS = 60 * 30 # 30 minutes
-EXPONENTIAL_BACKOFF_MINIMUM_SECONDS = 3
-EXPONENTIAL_BACKOFF_JITTER_SECONDS = 4
+CHUNK_MAX_TRIES = 3
+
+# Please override this with gsnap_chunk_timeout or rapsearch_chunk_timeout in DAG json.
+# Default 60 minutes is several sigmas beyond the pale and indicates the data has to be QC-ed better.
+DEFAULT_CHUNK_TIMEOUT = 60*60
 
 class PipelineStepRunAlignmentRemotely(PipelineStep):
     '''
@@ -52,7 +53,6 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
         service = self.additional_attributes["service"]
         assert service in ("gsnap", "rapsearch2")
 
-        # TODO: run the alignment remotely and make lazy_chunk=True, revisit this later
         self.run_remotely(input_fas, output_m8, service)
 
         # get database
@@ -78,19 +78,19 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
     def run_remotely(self, input_fas, output_m8, service):
         key_path = self.fetch_key(os.environ['KEY_PATH_S3'])
         sample_name = self.output_dir_s3.rstrip('/').replace('s3://', '').replace('/', '-')
-        chunk_size = self.additional_attributes["chunk_size"]
+        chunk_size = int(self.additional_attributes["chunk_size"])
         index_dir_suffix = self.additional_attributes.get("index_dir_suffix")
         remote_username = "ec2-user"
-        remote_home_dir = "/home/%s" % remote_username
+        remote_home_dir = f"/home/{remote_username}"
         if service == "gsnap":
-            remote_index_dir = "%s/share" % remote_home_dir
+            remote_index_dir = f"{remote_home_dir}/share"
         elif service == "rapsearch2":
-            remote_index_dir = "%s/references/nr_rapsearch" % remote_home_dir
+            remote_index_dir = f"{remote_home_dir}/references/nr_rapsearch"
 
         if index_dir_suffix:
             remote_index_dir = os.path.join(remote_index_dir, index_dir_suffix)
 
-        remote_work_dir = "%s/batch-pipeline-workdir/%s" % (remote_home_dir, sample_name)
+        remote_work_dir = f"{remote_home_dir}/batch-pipeline-workdir/{sample_name}"
 
         # Split files into chunks for performance
         part_suffix, input_chunks = self.chunk_input(input_fas, chunk_size)
@@ -103,26 +103,35 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
         randomized = list(enumerate(input_chunks))
         random.shuffle(randomized)
 
-        for n, chunk_input_files in randomized:
-            self.chunks_in_flight.acquire()
-            self.check_for_errors(mutex, chunk_output_files, input_chunks, service)
-            t = threading.Thread(
-                target=PipelineStepRunAlignmentRemotely.run_chunk_wrapper,
-                args=[
-                    self.chunks_in_flight, chunk_output_files, n, mutex, self.run_chunk,
-                    [
-                        part_suffix, remote_home_dir, remote_index_dir,
-                        remote_work_dir, remote_username, chunk_input_files,
-                        key_path, service, True
-                    ]
-                ])
-            t.start()
-            chunk_threads.append(t)
+        try:
+            for n, chunk_input_files in randomized:
+                self.chunks_in_flight.acquire()
+                self.check_for_errors(mutex, chunk_output_files, input_chunks, service)
+                t = threading.Thread(
+                    target=PipelineStepRunAlignmentRemotely.run_chunk_wrapper,
+                    args=[
+                        self.chunks_in_flight, chunk_output_files, n, mutex, self.run_chunk,
+                        [
+                            part_suffix, remote_home_dir, remote_index_dir,
+                            remote_work_dir, remote_username, chunk_input_files,
+                            key_path, service, True
+                        ]
+                    ])
+                t.start()
+                chunk_threads.append(t)
 
-        # Check chunk completion
-        for ct in chunk_threads:
-            ct.join()
-            self.check_for_errors(mutex, chunk_output_files, input_chunks, service)
+        finally:
+            # Check chunk completion
+            for ct in chunk_threads:
+                ct.join()
+            try:
+                chunk_status_tracker(service).log_stats(len(input_chunks))
+            except:
+                log.write(f"Problem dumping status report for {service}")
+                log.write(traceback.format_exc())
+
+        self.check_for_errors(mutex, chunk_output_files, input_chunks, service)
+
         assert None not in chunk_output_files
         # Concatenate the pieces and upload results
         self.concatenate_files(chunk_output_files, output_m8)
@@ -218,7 +227,7 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
             result = target(*args)
         except:
             with mutex:
-                traceback.print_exc()
+                log.write(traceback.format_exc())
         finally:
             with mutex:
                 chunk_output_files[n] = result
@@ -240,6 +249,38 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
         return min_column_number
 
 
+    @command.retry
+    def __check_if_output_is_corrupt(self, service, key_path, remote_username, instance_ip, # self unused
+                                     multihit_remote_outfile, chunk_id, try_number):
+        # Check if every row has correct number of columns (12) in the output
+        # file on the remote machine
+        if service == "gsnap":
+            verification_command = "cat %s" % multihit_remote_outfile
+        else:
+            # For rapsearch, first remove header lines starting with '#'
+            verification_command = "grep -v '^#' %s" % multihit_remote_outfile
+        verification_command += " | awk '{print NF}' | sort -nu | head -n 1"
+        min_column_number_string = command.execute_with_output(
+            command.remote(verification_command, key_path, remote_username, instance_ip))
+        min_column_number = PipelineStepRunAlignmentRemotely.__interpret_min_column_number_string(
+            min_column_number_string, CORRECT_NUMBER_OF_OUTPUT_COLUMNS,
+            try_number)
+        error = None
+        if min_column_number != CORRECT_NUMBER_OF_OUTPUT_COLUMNS:
+            msg = "Chunk %s output corrupt; not copying to S3. min_column_number = %d -> expected = %d."
+            msg += " Re-start pipeline to try again."
+            error = msg % (chunk_id, min_column_number, CORRECT_NUMBER_OF_OUTPUT_COLUMNS)
+        return error
+
+    @command.retry
+    def __copy_multihit_remote_outfile(self, key_path, remote_username, instance_ip,  # self unused
+                                       multihit_remote_outfile, multihit_local_outfile):
+        # Copy output from remote machine to local machine.  This needs to happen while we are
+        # holding the machine reservation, i.e., inside the "with ASGInstnace" context.
+        command.execute(
+            command.scp(key_path, remote_username, instance_ip,
+                        multihit_remote_outfile, multihit_local_outfile))
+
     def run_chunk(self, part_suffix, remote_home_dir, remote_index_dir, remote_work_dir,
                   remote_username, input_files, key_path, service, lazy_run):
         """Dispatch a chunk to worker machines for distributed GSNAP or RAPSearch
@@ -247,7 +288,7 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
         """
         assert service in ("gsnap", "rapsearch2")
 
-        chunk_id = input_files[0].split(part_suffix)[-1]
+        chunk_id = int(input_files[0].split(part_suffix)[-1])
         multihit_basename = f"multihit-{service}-out{part_suffix}{chunk_id}.m8"
         multihit_local_outfile = os.path.join(self.chunks_result_dir_local, multihit_basename)
         multihit_remote_outfile = os.path.join(remote_work_dir, multihit_basename)
@@ -279,83 +320,91 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
             # Strip the .m8 for RAPSearch as it adds that
         )
 
-        if not lazy_run or not fetch_from_s3(multihit_s3_outfile,
-                                             multihit_local_outfile):
-            correct_number_of_output_columns = CORRECT_NUMBER_OF_OUTPUT_COLUMNS
-            min_column_number = 0
-            max_tries = CHUNK_MAX_TRIES
-            try_number = 1
-            instance_ip = ""
-            timer = self._start_timer()
+        if lazy_run and fetch_from_s3(multihit_s3_outfile, multihit_local_outfile):
+            log.write(f"finished alignment for chunk {chunk_id} with {service} by lazily fetching last result")
+        else:
+            chunk_timeout = int(self.additional_attributes.get(f"{service.lower()}_chunk_timeout",
+                                                               DEFAULT_CHUNK_TIMEOUT))
+            for try_number in range(1, CHUNK_MAX_TRIES + 1):
+                log.write(f"waiting for {service} server for chunk {chunk_id}. Try #{try_number}")
+                with ASGInstance(service, key_path, remote_username, environment, chunk_id, try_number,
+                                 self.additional_attributes) as instance_ip:
+                    # Try/Except block needs to be inside the ASGInstance context.
+                    # A failure to acquire an ASGInstnace is and should be unrecoverable.
+                    chunk_status = None
+                    elapsed = 0.0
+                    try:
+                        t_start = time.time()
+                        try:
+                            command.execute(command.remote(commands, key_path, remote_username, instance_ip),
+                                            timeout=chunk_timeout)
+                        except:
+                            chunk_status = ChunkStatus.CRASH
+                            raise
+                        finally:
+                            elapsed = time.time() - t_start
+                            if chunk_status == ChunkStatus.CRASH and elapsed >= chunk_timeout:
+                                chunk_status = ChunkStatus.TIMEOUT
 
-            # Check if every row has correct number of columns (12) in the output
-            # file on the remote machine
-            while min_column_number != correct_number_of_output_columns \
-                    and try_number <= max_tries:
-                log.write("waiting for {} server for chunk {}. Try #{}".format(
-                    service, chunk_id, try_number))
-                max_concurrent = self.additional_attributes["max_concurrent"]
+                        output_corrupt = self.__check_if_output_is_corrupt(
+                            service, key_path, remote_username, instance_ip, multihit_remote_outfile,
+                            chunk_id, try_number)
 
-                try:
-                    with server.ASGInstance(service, key_path,
-                                            remote_username, environment,
-                                            max_concurrent, chunk_id,
-                                            self.additional_attributes.get("max_interval_between_describe_instances") or 900,
-                                            self.additional_attributes.get("job_tag_prefix") or "RunningIDseqBatchJob_",
-                                            self.additional_attributes.get("job_tag_refresh_seconds") or 600,
-                                            self.additional_attributes.get("draining_tag") or "draining") as instance_ip:
-                        command.execute(command.remote(commands, key_path, remote_username, instance_ip))
+                        if output_corrupt:
+                            chunk_status = ChunkStatus.CORRUPT_OUTPUT
+                            assert not output_corrupt, output_corrupt
 
-                        if service == "gsnap":
-                            verification_command = "cat %s" % multihit_remote_outfile
+                        # Yay, chunk succeeded.  Copy from server and break out of retry loop.
+                        try:
+                            self.__copy_multihit_remote_outfile(
+                                key_path, remote_username, instance_ip,
+                                multihit_remote_outfile, multihit_local_outfile)
+                            chunk_status = ChunkStatus.SUCCESS
+                            break
+                        except:
+                            # If we failed to copy from the server, it's as bad as a crash in alignment.
+                            chunk_status = ChunkStatus.CRASH
+                            raise
+
+                    except Exception as e:
+
+                        # 1. No backoff needed here before retrying.  We rate limit chunk dispatch (the ASGInstance
+                        # acquisition above is blocking).  ASGInstance acquisition also tries to ensure that every
+                        # chunk flight gets its first try before any retry is dispatched.
+
+                        # 2. If the reason we failed is timeout on the server, we don't retry.  The operator must decide
+                        # whether to QC the data more, or use smaller chunk size.  In fact, we only retry for CRASH and
+                        # CORRUPT_OUTPUT.
+
+                        # 3. If this is the last attempt, we gotta re-raise the exception.
+
+                        # 4. Elapsed time is only the time spent in alignment.  It excludes the time spent waiting to
+                        # acquire ASGinstance.
+
+                        log.log_event('alignment_remote_error', values={"chunk": chunk_id,
+                                                                        "try_number": try_number,
+                                                                        "CHUNK_MAX_TRIES": CHUNK_MAX_TRIES,
+                                                                        "chunk_status": chunk_status,
+                                                                        "elapsed": elapsed,
+                                                                        "chunk_timeout": chunk_timeout,
+                                                                        "exception": log.parse_exception(e)})
+                        retrying_might_help = chunk_status in (ChunkStatus.CORRUPT_OUTPUT, ChunkStatus.CRASH)
+                        if try_number < CHUNK_MAX_TRIES and retrying_might_help:
+                            # Retry!
+                            continue
                         else:
-                            # For rapsearch, first remove header lines starting with '#'
-                            verification_command = "grep -v '^#' %s" % multihit_remote_outfile
-                        verification_command += " | awk '{print NF}' | sort -nu | head -n 1"
-                        min_column_number_string = command.execute_with_output(
-                            command.remote(verification_command, key_path, remote_username, instance_ip))
-                        min_column_number = self.__interpret_min_column_number_string(
-                            min_column_number_string, correct_number_of_output_columns,
-                            try_number)
+                            # End of the road.
+                            raise
+                    finally:
+                        # None chunk_status indicates code bug above.  An exception has been raised already
+                        # for it, and it says nothing about whether the alignment succeeded or not.
+                        if chunk_status != None:
+                            chunk_status_tracker(service).note_outcome(instance_ip, chunk_id, elapsed, chunk_status, try_number)
 
-                        msg = "Chunk %s output corrupt; not copying to S3. min_column_number = %d -> expected = %d. Re-start pipeline to try again." \
-                                % (chunk_id, min_column_number, correct_number_of_output_columns)
-                        assert min_column_number == correct_number_of_output_columns, msg
-
-                        command.execute(
-                            command.scp(key_path, remote_username, instance_ip,
-                                        multihit_remote_outfile, multihit_local_outfile))
-                except Exception as e:
-                    elapsed = self._elapsed_seconds(timer)
-                    log.log_event('alignment_remote_error', values={"chunk": chunk_id,
-                                                                    "try_number": try_number,
-                                                                    "elapsed": elapsed,
-                                                                    "exception": log.parse_exception(e)})
-                    if try_number >= max_tries or elapsed > CHUNK_DONT_RETRY_AFTER_SECONDS:
-                        raise e
-                    self._exponential_backoff(try_number)
-                    try_number += 1
-                    min_column_number = 0 # reset to force a retry
-
-            # Move output from remote machine to local machine
+            # Upload to s3
             with self.iostream_upload:  # Limit concurrent uploads so as not to stall the pipeline.
-                command.execute("aws s3 cp --only-show-errors %s %s/" %
-                                (multihit_local_outfile,
-                                 self.chunks_result_dir_s3))
-            log.write("finished alignment for chunk %s on %s server %s" % (chunk_id, service, instance_ip))
+                command.execute(f"aws s3 cp --only-show-errors {multihit_local_outfile} {self.chunks_result_dir_s3}/")
+            log.write(f"finished alignment for chunk {chunk_id} on {service} server {instance_ip}")
+
+        # Whether lazy or not lazy, we've now got the chunk result locally here.
         return multihit_local_outfile
-
-
-    @staticmethod
-    def _exponential_backoff(_try_number):
-        time.sleep(EXPONENTIAL_BACKOFF_MINIMUM_SECONDS + random.randint(0, EXPONENTIAL_BACKOFF_JITTER_SECONDS))
-
-
-    @staticmethod
-    def _elapsed_seconds(start_time):
-        return time.monotonic()-start_time
-
-
-    @staticmethod
-    def _start_timer():
-        return time.monotonic()
