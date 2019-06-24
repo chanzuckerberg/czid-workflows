@@ -1,6 +1,7 @@
 import multiprocessing
 import os
 import json
+import re
 
 from idseq_dag.engine.pipeline_step import PipelineStep
 import idseq_dag.util.command as command
@@ -8,6 +9,8 @@ import idseq_dag.util.log as log
 import idseq_dag.util.s3 as s3
 import idseq_dag.util.count as count
 import idseq_dag.util.validate_constants as vc
+
+RE_SPLIT = re.compile('(/[12])?\t')
 
 class PipelineStepRunStar(PipelineStep):
     """ Implements the step for running STAR.
@@ -17,6 +20,7 @@ class PipelineStepRunStar(PipelineStep):
     Note that these attributes cannot be set in the __init__ method because required
     file path information only becomes available once the wait_for_input_files() has run.
     """
+
     def __init__(self, *args):
         super().__init__(*args)
         self.sequence_input_files = None
@@ -202,6 +206,10 @@ class PipelineStepRunStar(PipelineStep):
         return output_fnames
 
     @staticmethod
+    def extract_rid(s):
+        return RE_SPLIT.split(s, 1)[0].strip()
+
+    @staticmethod
     def get_read(f):
         # The FASTQ/FASTA format specifies that each read consists of 4/2 lines,
         # the first of which begins with @/> followed by read ID.
@@ -209,12 +217,12 @@ class PipelineStepRunStar(PipelineStep):
         line = f.readline()
         if line:
             if line[0] == 64:  # Equivalent to '@', fastq format
-                rid = line.decode('utf-8').split('\t', 1)[0].strip()
+                rid = PipelineStepRunStar.extract_rid(line.decode('utf-8'))
                 read.append(line)
                 for i in range(3):
                     read.append(f.readline())
             elif line[0] == 62: # Equivalent to '>', fasta format
-                rid = line.decode('utf-8').split('\t', 1)[0].strip()
+                rid = PipelineStepRunStar.extract_rid(line.decode('utf-8'))
                 read.append(line)
                 read.append(f.readline())
             else:
