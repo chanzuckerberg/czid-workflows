@@ -3,7 +3,7 @@ import os
 import json
 import re
 
-from idseq_dag.engine.pipeline_step import PipelineStep
+from idseq_dag.engine.pipeline_step import PipelineStep, StepStatus, InputFileErrors
 import idseq_dag.util.command as command
 import idseq_dag.util.log as log
 import idseq_dag.util.s3 as s3
@@ -69,8 +69,13 @@ class PipelineStepRunStar(PipelineStep):
             count_genes = part_idx == 0
             self.run_star_part(tmp, genome_part, unmapped, count_genes, use_starlong)
 
-            unmapped = PipelineStepRunStar.sync_pairs(
+            unmapped, too_discrepant = PipelineStepRunStar.sync_pairs(
                 PipelineStepRunStar.unmapped_files_in(tmp, num_inputs))
+
+            if too_discrepant:
+               self.input_file_error = InputFileErrors.BROKEN_PAIRS
+               self.status = StepStatus.INVALID_INPUT
+               return
 
             # Run part 0 in gene-counting mode:
             # (a) ERCCs are doped into part 0 and we want their counts.
@@ -152,11 +157,13 @@ class PipelineStepRunStar(PipelineStep):
         outstanding_r1 = {}
         mem = 0
         max_mem = 0
+        total = 0
         while True:
             r0, r0id = PipelineStepRunStar.get_read(if0)
             r1, r1id = PipelineStepRunStar.get_read(if1)
             if not r0 and not r1:
                 break
+            total += 2
             if r0id == r1id:
                 # If the input pairs are already synchronized, we take this
                 # branch on every iteration.
@@ -169,23 +176,24 @@ class PipelineStepRunStar(PipelineStep):
                 mem, max_mem = PipelineStepRunStar.handle_outstanding_read(
                     r1, r1id, outstanding_r1, outstanding_r0, of1, of0, mem,
                     max_mem)
-        return outstanding_r0, outstanding_r1, max_mem
+        return outstanding_r0, outstanding_r1, max_mem, total
 
     @staticmethod
-    def sync_pairs(fastq_files, max_discrepancies=0):
+    def sync_pairs(fastq_files, max_discrepant_fraction=0):
         """The given fastq_files contain the same read IDs but in different order.
-        Output the same data in synchronized order. Omit up to max_discrepancies
-        if necessary. If more must be suppressed, raise assertion.
+        Output the same data in synchronized order. Omit any reads missing their mate
+        up to max_discrepant_fraction if necessary. If more must be suppressed,
+        indicate it in the second value of the returned tuple.
         """
         if len(fastq_files) != 2:
-            return fastq_files
+            return fastq_files, False
 
         output_fnames = [ifn + ".synchronized_pairs.fq" for ifn in fastq_files]
         with open(fastq_files[0], "rb") as if_0, open(fastq_files[1],
                                                       "rb") as if_1:
             with open(output_fnames[0], "wb") as of_0, open(
                     output_fnames[1], "wb") as of_1:
-                outstanding_r0, outstanding_r1, max_mem = PipelineStepRunStar.sync_pairs_work(
+                outstanding_r0, outstanding_r1, max_mem, total = PipelineStepRunStar.sync_pairs_work(
                     of_0, of_1, if_0, if_1)
         if max_mem:
             # This will be printed if some pairs were out of order.
@@ -202,8 +210,8 @@ class PipelineStepRunStar(PipelineStep):
                 fqf=fastq_files,
                 example=(outstanding_r0 or outstanding_r1).popitem()[0])
             log.write(msg)
-            assert discrepancies_count <= max_discrepancies, msg
-        return output_fnames
+        too_discrepant = (discrepancies_count > max_discrepant_fraction * total)
+        return output_fnames, too_discrepant
 
     @staticmethod
     def extract_rid(s):

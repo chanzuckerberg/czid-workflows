@@ -21,6 +21,7 @@ class StepStatus(IntEnum):
 class InputFileErrors(Enum):
     ''' This error will be used by the front-end to display a user-friendly error message '''
     INSUFFICIENT_READS = "INSUFFICIENT_READS"
+    BROKEN_PAIRS = "BROKEN_PAIRS"
 
 class InvalidInputFileError(Exception):
     def __init__(self, json):
