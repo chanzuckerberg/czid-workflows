@@ -31,7 +31,8 @@ class PipelineStep(object):
     ''' Each Pipeline Run Step i.e. run_star, run_bowtie2, etc '''
     def __init__(self, name, input_files, output_files,
                  output_dir_local, output_dir_s3, ref_dir_local,
-                 additional_files, additional_attributes):
+                 additional_files, additional_attributes,
+                 step_status_local, step_status_lock):
         ''' Set up all the input_files and output_files here '''
         self.name = name
         self.input_files = input_files # list of list files
@@ -40,6 +41,10 @@ class PipelineStep(object):
         self.output_dir_s3 = output_dir_s3.rstrip('/')
         self.ref_dir_local = ref_dir_local
         self.create_local_dirs()
+
+        self.status_dict = {}
+        self.step_status_local = step_status_local
+        self.step_status_lock = step_status_lock
 
         self.additional_files = additional_files
         self.additional_attributes = additional_attributes
@@ -95,6 +100,24 @@ class PipelineStep(object):
         for f in self.additional_folders_to_upload:
             idseq_dag.util.s3.upload_folder_with_retries(f, self.s3_path(f))
         self.status = StepStatus.UPLOADED
+
+    def update_status_json_file(self):
+        log.write(f"Updating status file for step {self.name}")
+        #  First, update own status dictionary
+        if not "description" in self.status_dict:
+            self.status_dict["description"] = self.step_description()
+        self.status_dict["status"] = self.status
+        if self.input_file_error:
+            self.status_dict["error"] = self.input_file_error.name
+
+        # Then, update file by reading the json, modifying, and overwriting.
+        with self.step_status_lock:
+            with open(self.step_status_local, 'r') as status_file:
+                status = json.load(status_file)
+            status.update({ self.name: self.status_dict })
+            with open(self.step_status_local, 'w') as status_file:
+                json.dump(status, status_file)
+            idseq_dag.util.s3.upload_with_retries(self.step_status_local, self.output_dir_s3 + "/")
 
     def s3_path(self, local_path):
         relative_path = os.path.relpath(local_path, self.output_dir_local)
@@ -167,6 +190,8 @@ class PipelineStep(object):
     def thread_run(self):
         ''' Actually running the step '''
         self.status = StepStatus.STARTED
+        self.update_status_json_file()
+
         v = {"step": self.name}
         with log.log_context("dag_step", v):
             with log.log_context("substep_wait_for_input_files", v):
@@ -178,6 +203,7 @@ class PipelineStep(object):
             if self.input_file_error:
                 log.write("Invalid input detected for step %s" % self.name)
                 self.status = StepStatus.INVALID_INPUT
+                self.update_stage_status_json()
                 return
 
             with log.log_context("substep_run", v):
@@ -191,6 +217,7 @@ class PipelineStep(object):
         self.upload_thread = threading.Thread(target=self.uploading_results)
         self.upload_thread.start()
         self.status = StepStatus.FINISHED
+        self.update_status_json_file()
 
     def start(self):
         ''' function to be called after instantiation to start running the step '''
@@ -201,3 +228,15 @@ class PipelineStep(object):
         relative_path = os.path.relpath(local_path, self.output_dir_local)
         s3_path = os.path.join(self.output_dir_s3, relative_path)
         return s3_path
+
+    def step_description(self, require_docstrings=False):
+        ''' Retrieves description for the given step.
+        By default, it pulls the docstring of the class but
+        should be overridden for more dynamic descriptions
+        that depends on the inputs. If no docstring is provided,
+        it throws an exception.
+        '''
+        docstring = self.__doc__ or ""
+        if not docstring and require_docstrings:
+            raise TypeError(f"No docstring for step {self.name}")
+        return docstring.strip()

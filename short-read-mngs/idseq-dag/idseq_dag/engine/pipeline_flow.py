@@ -9,6 +9,7 @@ import idseq_dag.util.s3
 import idseq_dag.util.command as command
 import idseq_dag.util.log as log
 import idseq_dag.util.count as count
+from idseq_dag.util.trace_lock import TraceLock
 from idseq_dag.engine.pipeline_step import PipelineStep, InvalidInputFileError
 
 DEFAULT_OUTPUT_DIR_LOCAL = '/mnt/idseq/results/%d' % os.getpid()
@@ -26,6 +27,7 @@ class PipelineFlow(object):
         self.steps = dag["steps"]
         self.given_targets = dag["given_targets"]
         self.output_dir_s3 = dag["output_dir_s3"]
+        self.name = dag["name"]
         if versioned_output:
             self.output_dir_s3 = os.path.join(self.output_dir_s3, self.parse_output_version(idseq_dag.__version__))
 
@@ -33,6 +35,7 @@ class PipelineFlow(object):
         self.ref_dir_local = dag.get("ref_dir_local", DEFAULT_REF_DIR_LOCAL)
         self.large_file_list = []
 
+        self.step_status_local = f"{self.output_dir_local}/{self.name}_status.json"
         command.execute("mkdir -p %s %s" % (self.output_dir_local, self.ref_dir_local))
 
     @staticmethod
@@ -54,13 +57,14 @@ class PipelineFlow(object):
           "targets": lists of files that are given or would be generated
           "steps": steps that species actions to generate input and output
           "given_targets": input files that are given
-
+          "name": the name of the stage running
         '''
         dag = json.loads(open(dag_json).read())
         output_dir = dag["output_dir_s3"]
         targets = dag["targets"]
         steps = dag["steps"]
         given_targets = dag["given_targets"]
+        name = dag["name"]
         covered_targets = set()
         for s in steps:
             # validate each step in/out are valid targets
@@ -85,6 +89,9 @@ class PipelineFlow(object):
         for target_name in targets.keys():
             if target_name not in covered_targets:
                 raise ValueError("%s couldn't be generated from the steps" % target_name)
+        # Check that name exists
+        if name is None:
+            raise ValueError("Name does not exist for given dag_json")
 
         return dag
 
@@ -206,6 +213,14 @@ class PipelineFlow(object):
 
         idseq_dag.util.s3.upload_with_retries(local_input_errors_file, self.output_dir_s3 + "/")
 
+    def create_status_json_file(self):
+        """Create [stage name]_status.json, which will include step-level job status updates to be used in idseq-web."""
+        log.write(f"Creating {self.step_status_local}")
+
+        with open(self.step_status_local, 'w') as status_file:
+            json.dump({}, status_file)
+        idseq_dag.util.s3.upload_with_retries(self.step_status_local, self.output_dir_s3 + "/")
+
     def start(self):
         # Come up with the plan
         (step_list, self.large_file_list, covered_targets) = self.plan()
@@ -215,13 +230,13 @@ class PipelineFlow(object):
                 target_info = covered_targets[target]
                 if target_info['s3_downloadable']:
                     threading.Thread(target=self.fetch_target_from_s3, args=(target,)).start()
-
         # TODO(boris): check the following implementation
         threading.Thread(target=self.prefetch_large_files).start()
 
-
+        self.create_status_json_file()
         # Start initializing all the steps and start running them and wait until all of them are done
         step_instances = []
+        step_status_lock = TraceLock(f"Step-level status updates for stage {self.name}", threading.RLock())
         for step in step_list:
             log.write("Initializing step %s" % step["out"])
             StepClass = getattr(importlib.import_module(step["module"]), step["class"])
@@ -229,7 +244,8 @@ class PipelineFlow(object):
             step_inputs = [self.targets[itarget] for itarget in step["in"]]
             step_instance = StepClass(step["out"], step_inputs, step_output,
                                       self.output_dir_local, self.output_dir_s3, self.ref_dir_local,
-                                      step["additional_files"], step["additional_attributes"])
+                                      step["additional_files"], step["additional_attributes"],
+                                      self.step_status_local, step_status_lock)
             step_instance.start()
             step_instances.append(step_instance)
         # Collecting stats files

@@ -1,4 +1,5 @@
 {
+  "name": "paired_dag",
   "output_dir_s3": "s3://idseq-samples-prod/test_samples/20180917/results",
   "targets": {
     "fastqs": [
