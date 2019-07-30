@@ -1,5 +1,4 @@
 {
-  "name": "download_accessions",
   "output_dir_s3": "s3://idseq-samples-development/yunfang/samples_4534/download_accessions_test",
   "targets": {
     "gsnap_out": [

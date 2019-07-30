@@ -1,5 +1,4 @@
 {
-  "name": "generate_coverage_viz",
   "output_dir_s3": "s3://idseq-samples-development/markazhang/samples_12452/generate_coverage_viz_test",
   "targets": {
     "refined_gsnap_in": [

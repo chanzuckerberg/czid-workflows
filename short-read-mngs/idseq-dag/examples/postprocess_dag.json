@@ -1,5 +1,4 @@
 {
-  "name": "post_process_dag",
   "output_dir_s3": "s3://idseq-samples-prod/samples/12/5815/postprocess_test",
   "targets": {
     "taxid_fasta_in": [

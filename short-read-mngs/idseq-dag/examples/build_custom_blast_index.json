@@ -1,5 +1,4 @@
 {
-  "name": "build_custom_blast_index",
   "output_dir_s3": "s3://idseq-samples-development/yunfang/rvdb/2018-12-01",
   "targets": {
     "dummy_input": [

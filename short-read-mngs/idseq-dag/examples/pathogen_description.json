@@ -1,5 +1,4 @@
 {
-  "name": "pathogen_description",
   "output_dir_s3": "s3://idseq-database/taxonomy/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/",
   "targets": {
     "taxid_list": ["taxid_list.txt"],
