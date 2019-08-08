@@ -3,11 +3,21 @@ import idseq_dag.util.command as command
 import idseq_dag.util.count as count
 
 class PipelineStepRunCDHitDup(PipelineStep):
-    '''
-    CD-HIT-DUP is used to identify duplicates from single or paired reads.
-    Two FASTA inputs means paired reads.
-    See: http://weizhongli-lab.org/cd-hit/
-    '''
+    """ Removes duplicate reads.
+
+    ```
+    cd-hit-dup 
+    -i {input_fasta}
+    -o {output_fasta}
+    -e 0.05
+    -u 70
+    ```
+
+    Per the CDHit Documentation, available [here](https://github.com/weizhongli/cdhit/wiki), 
+    this command uses a 0.05 threshold for the number of mismatches - indicating that if 
+    two reads are > 95% similar they will be considered duplicates. It uses only the 
+    first/last 70 bases of each read to do the analysis on sequence similarity. 
+    """
     def validate_input_files(self):
         if not count.files_have_min_reads(self.input_files_local[0], 2):
             self.input_file_error = InputFileErrors.INSUFFICIENT_READS

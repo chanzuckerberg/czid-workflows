@@ -9,7 +9,45 @@ import idseq_dag.util.log as log
 import idseq_dag.util.count as count
 
 class PipelineStepRunAssembly(PipelineStep):
-    ''' Assembly PipelineStep implementation '''
+    """ To obtain longer contigs for improved sensitivity in mapping, short reads must be 
+    de novo assembled using SPADES. 
+    The SPADES output loses the information about which contig each individual read belongs to. 
+    Therefore, we use  bowtie2 to map the original reads onto their assembled contigs.
+
+    1. The short reads are assembled into contigs using SPADES.
+
+    ```
+    spades.py 
+    -1 {input_fasta}
+    -2 {input_fasta2}
+    -o {assembled_dir}
+    -m {memory} 
+    -t 32 
+    —only-assembler
+    ```
+
+    SPADES documentation can be found [here](http://cab.spbu.ru/software/spades/)
+
+    2. The single-read identity of reads merged into each contig are lost by SPADES. 
+    To recover this information and identify which contig each read belongs to, 
+    the contigs are then used to build a Bowtie2 database:
+
+    ```
+    bowtie2-build {assembled_contig} {bowtie_index_path}
+    ```
+
+    3. The original reads are mapped back to their assembled contigs:
+
+    ```
+    bowtie2 
+    -x {bowtie_index_path} 
+    -f 
+    -U {fasta_file} 
+    --very-sensitive 
+    -p 32 > {output_bowtie_sam}
+    ```
+    """
+
     def run(self):
         """
            Run Assembly

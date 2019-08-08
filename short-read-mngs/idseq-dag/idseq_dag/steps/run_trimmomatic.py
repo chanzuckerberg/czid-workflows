@@ -7,7 +7,61 @@ import idseq_dag.util.fasta as fasta
 
 
 class PipelineStepRunTrimmomatic(PipelineStep):
-    ''' Trimmomatic PipelineStep implementation '''
+    """ Removes adapter sequences.
+
+    ```
+    java -jar /usr/local/bin/trimmomatic-0.38.jar 
+    PE|SE 
+    -phred33 
+    [input_files] 
+    [output_files] 
+    ILLUMINACLIP:{adapter_fasta}:2:30:10:8:true
+    MINLEN:35
+    ```
+
+    Where, the adapter_fasta for single-end reads is: __illumina_TruSeq3-SE.fasta__
+
+    ```
+    >TruSeq3_IndexedAdapter
+    AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC
+    >TruSeq3_UniversalAdapter
+    AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTA
+    ```
+
+    And paired-end reads: __illumina_TruSeq3-PE-2_NexteraPE-PE.fasta__
+
+    ```
+    >PrefixPE/1
+    TACACTCTTTCCCTACACGACGCTCTTCCGATCT
+    >PrefixPE/2
+    GTGACTGGAGTTCAGACGTGTGCTCTTCCGATCT
+    >PE1
+    TACACTCTTTCCCTACACGACGCTCTTCCGATCT
+    >PE1_rc
+    AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTA
+    >PE2
+    GTGACTGGAGTTCAGACGTGTGCTCTTCCGATCT
+    >PE2_rc
+    AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC>PrefixNX/1
+    AGATGTGTATAAGAGACAG
+    >PrefixNX/2
+    AGATGTGTATAAGAGACAG
+    >Trans1
+    TCGTCGGCAGCGTCAGATGTGTATAAGAGACAG
+    >Trans1_rc
+    CTGTCTCTTATACACATCTGACGCTGCCGACGA
+    >Trans2
+    GTCTCGTGGGCTCGGAGATGTGTATAAGAGACAG
+    >Trans2_rc
+    CTGTCTCTTATACACATCTCCGAGCCCACGAGAC
+    ```
+
+    __note:__ the output reads at this step include full-length reads that have no adapter, 
+    plus reads where the adapter has been identified and lopped off, leaving a shorter read 
+    (but not shorter than 35nt). In cases where the insert size is small, resulting in adapter 
+    read-through, R2 will be a direct reverse complement of R1; the "true" parameter enables 
+    these reads to be saved for downstream analysis.
+    """
     def validate_input_files(self):
         if not count.files_have_min_reads(self.input_files_local[0][0:2], 1):
             self.input_file_error = InputFileErrors.INSUFFICIENT_READS

@@ -11,6 +11,16 @@ from idseq_dag.util.thread_with_result import mt_map
 
 
 class PipelineStepRunLZW(PipelineStep):
+    """ Remove low-complexity reads to mitigate challenges in aligning repetitive sequences.
+
+    LZW refers to the Lempel-Ziv-Welch (LZW) algorithm, which provides loss-less data compression. 
+    The ratio of LZW-compressed sequence length to the original sequence length is computed for each read. 
+    Reads with a compression ratio greater than the specified threshold of 0.45 are retained. 
+    In the case where all reads are filtered by this threshold, a reduced threshold of 0.42 is used. 
+    If reads are greater than 150 basepairs long, the LZW score is scaled to avoid penalizing long reads. 
+    In particular, for reads longer that 150 basepairs, the raw LZW score is multiplied by the 
+    adjustment_heuristic = (1 + (seq_length - 150) / 1000).
+    """
 
     MAX_SUBPROCS = 16
 

@@ -14,12 +14,57 @@ RE_SPLIT = re.compile('(/[12])?\t')
 
 class PipelineStepRunStar(PipelineStep):
     """ Implements the step for running STAR.
-    The attributes 'validated_input_counts_file' and 'sequence_input_files' should be
-    initialized in the run() method of any children that are not for execution directly
-    on the output of the 'run_validate_input' step.
-    Note that these attributes cannot be set in the __init__ method because required
-    file path information only becomes available once the wait_for_input_files() has run.
+
+    The STAR aligner is used for rapid first-pass host filtration.
+    Unmapped reads are passed to the subsequent step. The current implementation of STAR,
+    will fail to remove host sequences that map to multiple regions, thus these are filtered
+    out by a subsequent host filtration step using Bowtie2.
+
+    Different parameters are required for alignment of short vs long reads using STAR.
+    Therefore, based on the initial input validation, the appropriate parameters are selected.
+
+    If short reads:
+    ```
+    STAR 
+    --outFilterMultimapNmax 99999 
+    --outFilterScoreMinOverLread 0.5 
+    --outFilterMatchNminOverLread 0.5
+    --outReadsUnmapped Fastx
+    --outFilterMismatchNmax 999
+    --outSAMmode None 
+    --clip3pNbases 0
+    --runThreadN {cpus}
+    --genomeDir {genome_dir}
+    --readFilesIn {input files}
+    ```
+
+    If long reads (specifically if there are more than 1 reads with length greater than
+    READ_LEN_CUTOFF_HIGH, as determined during input validation step):
+    ```
+    STARlong 
+    --outFilterMultimapNmax 99999 
+    --outFilterScoreMinOverLread 0.5 
+    --outFilterMatchNminOverLread 0.5
+    --outReadsUnmapped Fastx
+    --outFilterMismatchNmax 999
+    --outSAMmode None 
+    --clip3pNbases 0
+    --runThreadN {cpus}
+    --genomeDir {genome_dir}
+    --readFilesIn {input files}
+    --seedSearchStartLmax 20
+    --seedPerReadNmax 100000
+    --seedPerWindowNmax 1000
+    --alignTranscriptsPerReadNmax 100000
+    ```
+
+    STAR documentation can be found [here](https://github.com/alexdobin/STAR/blob/master/doc/STARmanual.pdf)
     """
+    # The attributes 'validated_input_counts_file' and 'sequence_input_files' should be
+    # initialized in the run() method of any children that are not for execution directly
+    # on the output of the 'run_validate_input' step.
+    # Note that these attributes cannot be set in the __init__ method because required
+    # file path information only becomes available once the wait_for_input_files() has run.
 
     def __init__(self, *args):
         super().__init__(*args)

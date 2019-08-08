@@ -8,6 +8,11 @@ import idseq_dag.util.validate_constants as vc
 import idseq_dag.util.s3 as s3
 
 class PipelineStepRunValidateInput(PipelineStep):
+    """ Validates that the input files are .fastq format and truncates to 75 million fragments
+    (specifically, 75 million reads for single-end libraries or 150 million reads for paired-end libraries).
+    The validation process counts the number of sequences that fall in specified length buckets, which will
+    inform the parameters used downstream for initial host removal by STAR.
+    """
     def run(self):
         # Setup
         input_files = self.input_files_local[0][0:2]

@@ -8,7 +8,10 @@ import idseq_dag.util.command as command
 
 class PipelineStepRunSRST2(PipelineStep):
     '''
-    srst2 is used to detect resistance genes.
+    Short Read Sequence Typing for Bacterial Pathogens
+
+    This program is designed to take Illumina sequence data, a MLST database and/or a database
+    of gene sequences (e.g. resistance genes, virulence genes, etc) and report the presence of STs and/or reference genes.
     See: https://github.com/katholt/srst2
     '''
 

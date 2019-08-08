@@ -26,9 +26,42 @@ CHUNK_MAX_TRIES = 3
 DEFAULT_CHUNK_TIMEOUT = 60*60
 
 class PipelineStepRunAlignmentRemotely(PipelineStep):
-    '''
-    Run gsnap/rapsearch2 remotely
-    '''
+    """ Runs gsnap/rapsearch2 remotely.
+
+    For GSNAP:
+    ```
+    gsnapl
+    -A m8
+    --batch=0
+    --use-shared-memory=0
+    --gmap-mode=none
+    --npaths=100
+    --ordered
+    -t 36
+    --max-mismatches=40
+    -D {remote_index_dir}
+    -d nt_k16 
+    {remote_input_files} > {multihit_remote_outfile}
+    ```
+
+    GSNAP documentation is available [here](http://research-pub.gene.com/gmap/).
+
+    For Rapsearch:
+    ```
+    rapsearch 
+    -d {remote_index_dir}/nr_rapsearch 
+    -e -6 
+    -l 10 
+    -a T 
+    -b 0 
+    -v 50 
+    -z 24 
+    -q {remote_input_files} 
+    -o {multihit_remote_outfile}
+    ```
+
+    Rapsearch2 documentation is available [here](http://omics.informatics.indiana.edu/mg/RAPSearch2/).
+    """
 
     def validate_input_files(self):
         if not count.files_have_min_reads(self.input_files_local[0][0:2], 1):
@@ -408,3 +441,47 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
 
         # Whether lazy or not lazy, we've now got the chunk result locally here.
         return multihit_local_outfile
+
+    def step_description(self, require_docstrings=False):
+        if (self.name == "gsnap_out"):
+            return """
+                Runs gsnap remotely.
+
+                ```
+                gsnapl
+                -A m8
+                --batch=0
+                --use-shared-memory=0
+                --gmap-mode=none
+                --npaths=100
+                --ordered
+                -t 36
+                --max-mismatches=40
+                -D {remote_index_dir}
+                -d nt_k16 
+                {remote_input_files} > {multihit_remote_outfile}
+                ```
+
+                GSNAP documentation is available [here](http://research-pub.gene.com/gmap/).
+            """
+        elif (self.name == "rapsearch2_out"):
+            return """
+                Runs rapsearch remotely.
+                
+                ```
+                rapsearch 
+                -d {remote_index_dir}/nr_rapsearch 
+                -e -6 
+                -l 10 
+                -a T 
+                -b 0 
+                -v 50 
+                -z 24 
+                -q {remote_input_files} 
+                -o {multihit_remote_outfile}
+                ```
+
+                Rapsearch2 documentation is available [here](http://omics.informatics.indiana.edu/mg/RAPSearch2/).
+            """
+        # If neither, then return default step_description method.
+        return super(PipelineStepRunAlignmentRemotely, self).step_description()

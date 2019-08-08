@@ -6,9 +6,15 @@ import idseq_dag.util.log as log
 import idseq_dag.util.count as count
 
 class PipelineStepRunSubsample(PipelineStep):
-    '''
-    Subsample the input data to max_fragments
-    '''
+    """
+    Randomly subsample 1 million fragments.
+
+    For samples with a high fraction of non-host reads (ie stool samples), the .fasta outputs 
+    following bowtie alignment may contain large numbers of sequences. 
+    GSNAP alignment to NT and NR databases is a resource-intensive step. 
+    To reduce computational time, the reads are randomly sub-sampled to 
+    1 million total fragments (1 million single-end reads or 2 million paired-end reads).
+    """
 
     def validate_input_files(self):
         if not count.files_have_min_reads(self.input_files_local[0][0:2], 1):

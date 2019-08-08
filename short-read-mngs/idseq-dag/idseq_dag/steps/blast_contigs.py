@@ -16,9 +16,22 @@ MIN_REF_FASTA_SIZE = 25
 MIN_ASEEMBLED_CONTIG_SIZE = 25
 
 class PipelineStepBlastContigs(PipelineStep):
-    '''
-        BLAST the assembled results to the candidate accessions
-    '''
+    """ The BLAST step is run independently for the contigs. First against the NT-BLAST database 
+    constructed from putative taxa identified from short read alignments to NCBI NT using GSNAP. 
+    Then, against the NR-BLAST database constructed from putative taxa identified from short read 
+    alignments to NCBI NR with Rapsearch2.
+
+
+    ```
+    blast_command 
+    -query {assembled_contig} 
+    -db {blast_index_path} 
+    -out {blast_m8} 
+    -outfmt 6 
+    -num_alignments 5 
+    -num_threads 32
+    ```
+    """
 
     # Opening lineage sqlite in parallel for NT and NR sometimes hangs.
     # In fact it's generally not helpful to run NT and NR in parallel in this step,

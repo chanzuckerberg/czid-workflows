@@ -8,7 +8,28 @@ import idseq_dag.util.s3 as s3
 import idseq_dag.util.count as count
 
 class PipelineStepBuildCustomBlastIndex(PipelineStep):
-    ''' Build Custom Blast Index implementation '''
+    """ From GSNAP, we know the *best match* from the NT db for each read. 
+    All sequences that have accessions in the list of NT matches are downloaded. 
+    A BLAST database is generated from the resulting '.fa' file via the following command:
+
+    ```
+    makeblastdb 
+    -in assembly/nt.refseq.fasta
+    -dbtype nt 
+    -out {blast_index_path}
+    ```
+
+    Similarly, from Rapsearch2, we know the *best match* from the NR db for each read. 
+    All sequences that have accessions in the list of NR matches are downloaded. 
+    A BLAST database is generated from the resulting '.fa' file via the following command:
+
+    ```
+    makeblastdb 
+    -in assembly/nr.refseq.fasta
+    -dbtype nr 
+    -out {blast_index_path}
+    ```
+    """
     def run(self):
         """
           Build custom blast index from an S3 location or a url

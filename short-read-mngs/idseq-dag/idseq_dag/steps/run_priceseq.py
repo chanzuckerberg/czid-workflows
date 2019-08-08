@@ -8,7 +8,29 @@ import idseq_dag.util.count as count
 import idseq_dag.util.fasta as fasta
 
 class PipelineStepRunPriceSeq(PipelineStep):
-    ''' PriceSeq PipelineStep implementation '''
+    """ Removes low-quality reads to reduce their impact on downstream alignment and analysis.
+
+    The default input is a .fastq file, which enables the use of -rqf parameter for filtering on base quality. 
+
+    ```
+    PriceSeqFilter 
+    -a 12 
+    -rnf 90 
+    -log c 
+    -fp {input files}
+    -op {output files} 
+    -rqf 85 0.98
+    ```
+
+    Per the PriceSeq Documentation, available [here](http://derisilab.ucsf.edu/software/price/PriceDocumentation130506/independentQualityFilter.html),
+    this command uses 12 threads to 
+
+    1. filter out pairs of reads if either has an unacceptably high number of uncalled nucleotides (N's), 
+    requiring that 90% of nucleotides are called per read.
+    2. filter out sequences with an unacceptably high number of low-quality nucleotides, as defined by 
+    the provided quality score, requiring that 85% of nucleotides have a probability of being correct of 
+    greater than 0.98.
+    """
     def validate_input_files(self):
         if not count.files_have_min_reads(self.input_files_local[0][0:2], 1):
             self.input_file_error = InputFileErrors.INSUFFICIENT_READS

@@ -8,14 +8,30 @@ from idseq_dag.util.s3 import fetch_from_s3
 
 
 class PipelineStepRunGsnapFilter(PipelineStep):
-    """GSNAP is an aligner we use to filter out reads mapping to the host
-    genome. We add this additional step after STAR/Bowtie-based filtering to
-    increase our sensitivity to host filtering. Currently only runs on the
-    human host with a chimp reference genome to increase sensitivity to human
-    matches. Two input FASTAs means paired reads.
+    """ Regardless of specified “host” organism, it is essential to remove all potentially-human 
+    sequences for privacy reasons. Thus, a final GSNAP alignment is performed against the human 
+    genome for samples from all host types.
 
-    http://research-pub.gene.com/gmap/
+    ```
+    gsnapl
+    -A sam
+    --batch=0
+    --use-shared-memory=0
+    --gmap-mode=all
+    --npaths=1
+    --ordered
+    -t 32
+    --max-mismatches=40
+    -D {gsnap_base_dir}
+    -d {gsnap_index_name}
+    -o {output_sam_file} 
+    {input_fas}
+    ```
+
+    Two input FASTAs means paired reads.
+    The GSNAP documentation can be found [here](http://research-pub.gene.com/gmap/src/README).
     """
+    # Two input FASTAs means paired reads.
 
     def validate_input_files(self):
         if not count.files_have_min_reads(self.input_files_local[0][0:2], 1):
