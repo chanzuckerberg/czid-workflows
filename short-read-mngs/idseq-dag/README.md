@@ -54,8 +54,8 @@ or `python3 -m unittest tests/<module_file> ` for testing individual modules.
 ## DAG Execution Details
 
 ### Composing an example dag json file
-There are four basic elements of an IdSeq Dag
-
+There are five basic elements of an IdSeq Dag
+ - **name**: the name of the IdSeq Dag.
  - **output_dir_s3**: the s3 directory where the output files will be copied to.
  - **targets**: the outputs that are to be generated through dag execution. Each target consists of a list of files that will be copied to *output_dir_s3*
  - **steps**: the steps that will be executed in order to generate the targets. For each step, the following attributes can be specified:
@@ -71,6 +71,7 @@ The following is an example dag for generating alignment output for idseq. The *
 
 ```
 {
+  "name": "alignment",
   "output_dir_s3": "s3://idseq-samples-prod/samples/12/5815/results_test",
   "targets": {
     "host_filter_out": [
@@ -225,6 +226,10 @@ IDseq DAGs require the use of several indices prepared from files in NCBI. If yo
 TODO: Move this code over to the idseq-dag repo.
 
 ## Release notes
+
+- 3.8.0
+   - Creates a [status name]_status.json file for each dag_json received, which each step updates with information
+     about itself and its status.
 
 - 3.7.6
    - Fail with an informative user error if the input contains broken read pairs.

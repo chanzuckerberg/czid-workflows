@@ -1,4 +1,5 @@
 {
+  "name": "generic_test_dag",
   "output_dir_s3": "",
   "targets": {
     "fastqs": ["1.fastq.gz", "2.fastq.gz"],
