@@ -105,12 +105,12 @@ class PipelineStep(object):
     def update_status_json_file(self, status):
         log.write(f"Updating status file for step {self.name} with status {status}")
         # First, update own status dictionary
-        if not "start_time" in self.status_dict:
-            self.status_dict["start_time"] = time.time() # seconds since epoch
         if not "description" in self.status_dict:
             self.status_dict["description"] = self.step_description()
         if not "resources" in self.status_dict:
             self.status_dict["resources"] = self.step_resources()
+        if not "start_time" in self.status_dict and status == "running":
+            self.status_dict["start_time"] = time.time() # seconds since epoch
 
         self.status_dict["status"] = status
         if self.input_file_error:
