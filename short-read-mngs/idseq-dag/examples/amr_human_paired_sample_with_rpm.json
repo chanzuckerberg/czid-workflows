@@ -2,7 +2,7 @@
   "name": "amr_human_sample_paired_rds_dag",
   "output_dir_s3": "s3://idseq-samples-prod/samples/12/5815/postprocess_test",
   "targets": {
-    "srst2_out": ["out.log", "out__genes__ARGannot_r2__results.txt", "out__fullgenes__ARGannot_r2__results.txt", "amr_processed_results.csv", "amr_summary_results.csv"],
+    "srst2_out": ["out.log", "out__genes__ARGannot_r2__results.txt", "out__fullgenes__ARGannot_r2__results.txt", "amr_processed_results.csv", "amr_summary_results.csv", "output__.ARGannot_r2.sorted.bam"],
     "fastqs": ["AMR_TR-DNA-NOVA042518_1-6mo_S111_R1_001.fastq.gz", "AMR_TR-DNA-NOVA042518_1-6mo_S111_R2_001.fastq.gz"]
   },
   "steps": [
@@ -11,17 +11,21 @@
       "out": "srst2_out",
       "class": "PipelineStepRunSRST2",
       "module": "idseq_dag.steps.run_srst2",
-      "additional_files": {"resist_gene_db": "s3://idseq-database/test/AMR/ARGannot_r2.fasta"},
+      "additional_files": {
+        "resist_gene_db": "s3://idseq-database/amr/ARGannot_r2.fasta",
+        "resist_genome_bed": "s3://idseq-database/amr/argannot_genome.bed"
+      },
       "additional_attributes": {
         "min_cov": 0,
         "n_threads": 16,
-        "file_type": ""
+        "file_type": "",
+        "file_ext": "fastq"
       }
     }
   ],
   "given_targets": {
     "fastqs": {
-      "s3_dir":  "s3://idseq-samples-prod/samples/64/4241/fastqs", "count_reads": 1, "max_fragments": 75000000} 
+      "s3_dir":  "s3://idseq-samples-test/", "count_reads": 1, "max_fragments": 75000000} 
   }
 }
 

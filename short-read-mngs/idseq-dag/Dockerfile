@@ -6,11 +6,7 @@ ENV DEBIAN_FRONTEND noninteractive
 MAINTAINER IDseq Team idseq-tech@chanzuckerberg.com
 
 # Add packages, update image, and clear cache
-RUN apt-get update && apt-get install -y build-essential curl wget python-pip python-dev python-scipy python-redis gdebi-core zip unzip g++ zlib1g-dev gcc pkg-config apt-utils make perl cmake libbz2-dev
-
-RUN pip install --upgrade pip
-RUN pip install redis biopython pysam
-RUN pip install htseq==0.6.1p1
+RUN apt-get update && apt-get install -y build-essential curl wget python-pip python-dev python-scipy python-redis gdebi-core zip unzip g++ zlib1g-dev gcc pkg-config apt-utils make perl cmake libbz2-dev liblzma-dev
 
 RUN apt-get install -y software-properties-common
 RUN add-apt-repository ppa:deadsnakes/ppa
@@ -18,6 +14,11 @@ RUN apt-get update && apt-get install -y python3.7
 
 RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.5 1
 RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.7 2
+
+RUN pip install --upgrade pip
+RUN pip install redis biopython pysam
+RUN pip install htseq==0.6.1p1
+
 
 WORKDIR /tmp
 # install STAR
@@ -68,7 +69,7 @@ WORKDIR /tmp
 #RUN gdebi --non-interactive fastx-toolkit_0.0.14-1_amd64.deb
 
 # For aegea
-RUN apt-get install -y python3-pip
+RUN apt-get install -y python3-pip cython python3.7-dev
 RUN pip3 install awscli-cwlogs==1.4.0 keymaker==0.2.1 boto3==1.4.3 awscli==1.11.44 dynamoq==0.0.5 tractorbeam==0.1.3
 RUN pip3 install pysam biopython
 #RUN echo iptables-persistent iptables-persistent/autosave_v4 boolean true | debconf-set-selections
@@ -109,6 +110,8 @@ RUN pip install scipy
 RUN pip install git+https://github.com/chanzuckerberg/srst2
 # TODO: Test both pip installations, consider keeping pip use consistent
 RUN pip3 install pandas
+# Bedtools for obtaining total reads for each gene and calculating reads per million
+RUN apt-get install -y bedtools
 
 # Blast command line
 RUN wget -N ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/2.6.0/ncbi-blast-2.6.0+-1.x86_64.rpm
