@@ -94,7 +94,7 @@ class PipelineStepRunSRST2(PipelineStep):
                     gunzip_params = ['gunzip', '-k']
                     gunzip_params.extend([filename])
                     command.execute(" ".join(gunzip_params))
-                unzipped_filenames.push(filename[:len(filename)-3])
+                unzipped_filenames.append(filename[:len(filename)-3])
             input_filenames = unzipped_filenames
         if is_fasta: # Number of lines per read can vary, so we use grep
             grep_params = ['grep', '-c', '"^>"'] # fastas start reads with "^>".
