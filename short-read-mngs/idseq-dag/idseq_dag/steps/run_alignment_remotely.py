@@ -443,7 +443,8 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
         return multihit_local_outfile
 
     def step_description(self, require_docstrings=False):
-        if (self.name == "gsnap_out"):
+        service = self.additional_attributes["service"]
+        if (service == "gsnap"):
             return """
                 Runs gsnap remotely.
 
@@ -464,7 +465,7 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
 
                 GSNAP documentation is available [here](http://research-pub.gene.com/gmap/).
             """
-        elif (self.name == "rapsearch2_out"):
+        elif (service == "rapsearch2"):
             return """
                 Runs rapsearch remotely.
                 
