@@ -89,6 +89,7 @@ def fetch_from_s3(src,   #pylint: disable=dangerous-default-value
                   mutex=TraceLock("fetch_from_s3", threading.RLock()),
                   locks={}):
     """Fetch a file from S3 if needed, using either s3mi or aws cp."""
+    assert "prod/samples/549/" not in src, "Sorry, project 549 has been disabled."
     with mutex:
         if os.path.exists(dst) and os.path.isdir(dst):
             dst = os.path.join(dst, os.path.basename(src))
