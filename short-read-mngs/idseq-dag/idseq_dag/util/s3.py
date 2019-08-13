@@ -27,6 +27,7 @@ def split_identifiers(s3_path):
 
 def check_s3_presence(s3_path):
     """True if s3_path exists. False otherwise."""
+    assert "prod/samples/549/" not in s3_path, "Sorry, project 549 has been disabled."
     try:
         o = command.execute_with_output("aws s3 ls %s" % s3_path)
         if o:
