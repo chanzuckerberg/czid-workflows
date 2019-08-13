@@ -90,11 +90,11 @@ class PipelineStepRunSRST2(PipelineStep):
         if is_zipped:
             unzipped_filenames = []
             for filename in input_filenames:
-                if not os.path.exists(filename[:len(name)-3]):
+                if not os.path.exists(filename[:len(filename)-3]):
                     gunzip_params = ['gunzip', '-k']
                     gunzip_params.extend([filename])
                     command.execute(" ".join(gunzip_params))
-                unzipped_filenames.push(filename[:len(name)-3])
+                unzipped_filenames.push(filename[:len(filename)-3])
             input_filenames = unzipped_filenames
         if is_fasta: # Number of lines per read can vary, so we use grep
             grep_params = ['grep', '-c', '"^>"'] # fastas start reads with "^>".
