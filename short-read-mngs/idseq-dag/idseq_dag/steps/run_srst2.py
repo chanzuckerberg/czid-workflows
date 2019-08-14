@@ -99,15 +99,11 @@ class PipelineStepRunSRST2(PipelineStep):
             If a new resistance gene db is used, the .bed file will need to be updated manually."""
         bed_file_path = fetch_from_s3(self.additional_files["resist_genome_bed"], self.output_dir_local, allow_s3mi=False)
         command.execute(
-            command_patterns.SingleCommand(
-                cmd='bedtools',
+            command_patterns.ShellScriptCommand(
+                script='''bedtools coverage -b "$1" -a "$2" > "$3";''',
                 args=[
-                    'coverage',
-                    '-b',
                     self.output_files_local()[5],
-                    '-a',
                     bed_file_path,
-                    '>',
                     os.path.join(self.output_dir_local, 'matched_reads.tsv')
                 ]
             )
