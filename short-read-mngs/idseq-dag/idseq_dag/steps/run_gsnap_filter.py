@@ -1,6 +1,7 @@
 import os
 from idseq_dag.engine.pipeline_step import PipelineStep, InputFileErrors
 import idseq_dag.util.command as command
+import idseq_dag.util.command_patterns as command_patterns
 import idseq_dag.util.convert as convert
 import idseq_dag.util.log as log
 import idseq_dag.util.count as count
@@ -52,13 +53,18 @@ class PipelineStepRunGsnapFilter(PipelineStep):
         gsnap_index_name = os.path.basename(genome_dir)
         # Run Gsnap
         gsnap_params = [
-            'gsnapl', '-A sam', '--batch=0', '--use-shared-memory=0',
-            '--gmap-mode=all', '--npaths=1', '--ordered', '-t 32',
+            '-A', 'sam', '--batch=0', '--use-shared-memory=0',
+            '--gmap-mode=all', '--npaths=1', '--ordered', '-t', 32,
             '--max-mismatches=40', '-D', gsnap_base_dir, '-d', gsnap_index_name,
             '-o',
             output_sam_file
         ] + input_fas
-        command.execute(" ".join(gsnap_params))
+        command.execute(
+            command_patterns.SingleCommand(
+                cmd='gsnapl',
+                args=gsnap_params
+            )
+        )
         log.write("Finished GSNAP alignment.")
 
         # Extract out unmapped files from sam

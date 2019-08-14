@@ -61,7 +61,7 @@ class PipelineStepGenerateCoverageViz(PipelineStep):
         # Create a separate coverage viz JSON file for each accession.
         # This file will be passed to the front-end when the user views that particular accession.
         coverage_viz_dir = os.path.join(self.output_dir_local, "coverage_viz")
-        command.execute(f"mkdir -p {coverage_viz_dir}")
+        command.make_dirs(coverage_viz_dir)
         for accession_id in coverage_viz_data:
             upload_file = os.path.join(coverage_viz_dir, f"{accession_id}_coverage_viz.json")
 

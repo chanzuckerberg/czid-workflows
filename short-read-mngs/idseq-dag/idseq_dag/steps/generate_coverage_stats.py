@@ -5,6 +5,7 @@ import pysam
 
 from idseq_dag.engine.pipeline_step import PipelineStep
 import idseq_dag.util.command as command
+import idseq_dag.util.command_patterns as command_patterns
 import idseq_dag.util.log as log
 from idseq_dag.util.sequence import chunks
 MIN_CONTIG_FILE_SIZE = 50
@@ -20,15 +21,30 @@ class PipelineStepGenerateCoverageStats(PipelineStep):
         coverage_json, coverage_summary_csv = self.output_files_local()
 
         if os.path.getsize(contigs) < MIN_CONTIG_FILE_SIZE:
-            command.execute("echo '{}' > " +  coverage_json)
-            command.execute("echo 'No Contigs' > " +  coverage_summary_csv)
+            command.write_text_to_file('{}', coverage_json)
+            command.write_text_to_file('No Contigs', coverage_summary_csv)
             return
 
         # generate bam files
         bam_file = read_contig_sam.replace(".sam", ".bam")
-        command.execute(f"samtools view -S -b  {read_contig_sam} | samtools sort - -o {bam_file}")
-        command.execute(f"samtools index {bam_file}")
-
+        command.execute(
+            command_patterns.ShellScriptCommand(
+                script=r'''samtools view -S -b "${read_contig_sam}" | samtools sort - -o "${bam_file}";''',
+                named_args={
+                    'read_contig_sam': read_contig_sam,
+                    'bam_file': bam_file
+                }
+            )
+        )
+        command.execute(
+            command_patterns.SingleCommand(
+                cmd="samtools",
+                args=[
+                    "index",
+                    bam_file
+                ]
+            )
+        )
         # run coverage info
         contig2coverage = self.calc_contig2coverage(bam_file)
 

@@ -4,7 +4,7 @@ import os
 from idseq_dag.engine.pipeline_step import PipelineStep
 import idseq_dag.util.log as log
 import idseq_dag.util.command as command
-import idseq_dag.util.count as count
+import idseq_dag.util.command_patterns as command_patterns
 
 class PipelineStepGenerateGsnapIndex(PipelineStep):
     ''' Generate  gsnap index '''
@@ -19,8 +19,33 @@ class PipelineStepGenerateGsnapIndex(PipelineStep):
         output_base = os.path.basename(output_nt_index_tar)
         k = self.additional_attributes.get("k", 16) # kmer k
         log.write(f"input: {nt_db} output: {output_nt_index_tar}")
-        command.execute(f"gmap_build -D {output_nt_index_dir} -d {output_base[:-4]} -k {k} {nt_db} ")
-        command.execute(f"cd {output_nt_index_dir}; tar cvf {output_base} {output_base[:-4]}")
+        command.execute(
+            command_patterns.SingleCommand(
+                cmd="gmap_build",
+                args=[
+                    "-D",
+                    output_nt_index_dir,
+                    "-d",
+                    output_base[:-4],
+                    "-k",
+                    k,
+                    nt_db
+                ]
+            )
+        )
+
+        command.execute(
+            command_patterns.SingleCommand(
+                cd=output_nt_index_dir,
+                cmd="tar",
+                args=[
+                    "cvf",
+                    output_base,
+                    output_base[:-4]
+                ]
+            )
+        )
+
 
     def count_reads(self):
         ''' Count reads '''

@@ -2,7 +2,7 @@ import json
 
 from idseq_dag.engine.pipeline_step import PipelineStep
 import idseq_dag.util.command as command
-import idseq_dag.util.log as log
+import idseq_dag.util.command_patterns as command_patterns
 import idseq_dag.util.count as count
 import idseq_dag.util.validate_constants as vc
 import idseq_dag.util.s3 as s3
@@ -31,9 +31,13 @@ class PipelineStepRunValidateInput(PipelineStep):
 
                 # unzip if .gz file
                 if file[-3:] == '.gz':
-                    cmd = f"gunzip {file}"
                     try:
-                        command.execute(cmd)
+                        command.execute(
+                            command_patterns.SingleCommand(
+                                cmd='gunzip',
+                                args=[file]
+                            )
+                        )
                     except:
                         raise RuntimeError(f"Invalid gzip file")
                     input_files[i] = file = file[:-3]
@@ -134,7 +138,16 @@ class PipelineStepRunValidateInput(PipelineStep):
             num_lines = max_fragments * 4
         else:
             num_lines = max_fragments * 2
-        command.execute(f"head -n {num_lines} {infile} > {outfile}")
+        command.execute(
+            command_patterns.ShellScriptCommand(
+                script=r'''head -n "${num_lines}" "${infile}" > "${outfile}";''',
+                named_args={
+                    'num_lines': num_lines,
+                    'infile': infile,
+                    'outfile': outfile
+                }
+            )
+        )
         num_fragments = count.reads(outfile)
         self.summary_dict[vc.BUCKET_NORMAL] += num_fragments
         return num_fragments

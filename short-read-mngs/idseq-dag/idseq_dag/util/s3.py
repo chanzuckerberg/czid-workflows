@@ -5,7 +5,11 @@ import os
 import multiprocessing
 import logging
 import errno
+from urllib.parse import urlparse
+import boto3
+import botocore
 from idseq_dag.util.trace_lock import TraceLock
+import idseq_dag.util.command_patterns as command_patterns
 
 import idseq_dag.util.command as command
 import idseq_dag.util.log as log
@@ -25,16 +29,29 @@ IOSTREAM_UPLOADS = multiprocessing.Semaphore(MAX_CONCURRENT_UPLOAD_OPERATIONS)
 def split_identifiers(s3_path):
     return s3_path[5:].split("/", 1)
 
-def check_s3_presence(s3_path):
+def check_s3_presence(s3_path, allow_zero_byte_files=True):
     """True if s3_path exists. False otherwise."""
-    assert "prod/samples/549/" not in s3_path, "Sorry, project 549 has been disabled."
-    try:
-        o = command.execute_with_output("aws s3 ls %s" % s3_path)
-        if o:
-            return True
-    except:
-        pass
-    return False
+    with log.log_context(context_name="s3.check_s3_presence", values={'s3_path': s3_path}, log_context_mode=log.LogContextMode.EXEC_LOG_EVENT) as lc:
+        s3 = boto3.resource('s3')
+        parsed_url = urlparse(s3_path, allow_fragments=False)
+        bucket = parsed_url.netloc
+        key = parsed_url.path.lstrip('/')
+        try:
+            o = s3.Object(
+                bucket,
+                key
+            )
+            size = o.content_length
+            lc.values['size'] = size
+            exists = (allow_zero_byte_files and size >= 0) or (not allow_zero_byte_files and size > 0)
+        except botocore.exceptions.ClientError as e:
+            if e.response['Error']['Code'] == "404":
+                exists = False
+            else:
+                # Something else has gone wrong.
+                raise
+        lc.values['exists'] = exists
+        return exists
 
 
 def check_s3_presence_for_file_list(s3_dir, file_list):
@@ -46,7 +63,19 @@ def check_s3_presence_for_file_list(s3_dir, file_list):
 
 def touch_s3_file(s3_file_path):
     try:
-        command.execute("aws s3 cp --metadata '{\"touched\":\"now\"}' %s %s" % (s3_file_path, s3_file_path))
+        command.execute(
+            command_patterns.SingleCommand(
+                cmd="aws",
+                args=[
+                    "s3",
+                    "cp",
+                    "--metadata",
+                    '{"touched":"now"}',
+                    s3_file_path,
+                    s3_file_path
+                ]
+            )
+        )
         return True
     except:
         return False
@@ -90,17 +119,15 @@ def fetch_from_s3(src,   #pylint: disable=dangerous-default-value
                   mutex=TraceLock("fetch_from_s3", threading.RLock()),
                   locks={}):
     """Fetch a file from S3 if needed, using either s3mi or aws cp."""
-    assert "prod/samples/549/" not in src, "Sorry, project 549 has been disabled."
     with mutex:
         if os.path.exists(dst) and os.path.isdir(dst):
             dst = os.path.join(dst, os.path.basename(src))
         unzip = ""
         if auto_unzip:
-            for zext, zdecomp in ZIP_EXTENSIONS.items():
-                if dst.lower().endswith(zext.lower()):
-                    unzip += f" | {zdecomp}"
-                    dst = dst[:-len(zext)]
-                    break
+            file_without_ext, ext = os.path.splitext(dst)
+            if ext in ZIP_EXTENSIONS:
+                unzip = " | " + ZIP_EXTENSIONS[ext] # this command will be used to decompress stdin to stdout
+                dst = file_without_ext # remove file extension from dst
         untar = auto_untar and dst.lower().endswith(".tar")
         if untar:
             dst = dst[:-4]  # Remove .tar
@@ -120,7 +147,7 @@ def fetch_from_s3(src,   #pylint: disable=dangerous-default-value
         try:
             destdir = os.path.dirname(dst)
             if destdir:
-                os.makedirs(destdir)
+                command.make_dirs(destdir)
         except OSError as e:
             # It's okay if the parent directory already exists, but all other
             # errors are fatal.
@@ -146,16 +173,23 @@ def fetch_from_s3(src,   #pylint: disable=dangerous-default-value
                     elif wait_duration >= 5:
                         log.write(f"Waited {wait_duration} seconds to acquire S3MI semaphore for {src}.")
 
-                write_dst = f" > {dst}"
                 if untar:
-                    write_dst = f" | tar xvf - -C {destdir}"
+                    write_dst = r''' | tar xvf - -C "${destdir}";'''
+                    named_args = {'destdir': destdir}
+                else:
+                    write_dst = r''' > "${dst}";'''
+                    named_args = {'dst': dst}
                 command_params = f"{unzip} {write_dst}"
-                log.write(f"command_params: {command_params}")
 
+                named_args.update({'src': src})
                 try:
                     assert allow_s3mi
-                    cmd = f"set -o pipefail; s3mi cat {src} {command_params}"
-                    command.execute(cmd)
+                    command.execute(
+                        command_patterns.ShellScriptCommand(
+                            script=r'set -o pipefail; s3mi cat "${src}" ' + command_params,
+                            named_args=named_args
+                        )
+                    )
                 except:
                     if allow_s3mi:
                         allow_s3mi = False
@@ -163,8 +197,12 @@ def fetch_from_s3(src,   #pylint: disable=dangerous-default-value
                         log.write(
                             "Failed to download with s3mi. Trying with aws s3 cp..."
                         )
-                    cmd = f"set -o pipefail; aws s3 cp --only-show-errors {src} - {command_params}"
-                    command.execute(cmd)
+                    command.execute(
+                        command_patterns.ShellScriptCommand(
+                            script=r'aws s3 cp --only-show-errors "${src}" - ' + command_params,
+                            named_args=named_args
+                        )
+                    )
                 return dst
             except subprocess.CalledProcessError:
                 # Most likely the file doesn't exist in S3.
@@ -209,15 +247,12 @@ def fetch_reference(src,
     if auto_unzip and not src.endswith(".tar") and not any(src.endswith(zext) for zext in ZIP_EXTENSIONS):
         # Try to guess which compressed version of the file exists in S3;  then download and decompress it.
         for zext in ZIP_EXTENSIONS:
-            try:
+            if check_s3_presence(src + zext):
                 return fetch_from_s3(src + zext,
                                      dst,
                                      auto_unzip=auto_unzip,
                                      auto_untar=auto_untar,
                                      allow_s3mi=allow_s3mi)
-            except:
-                # It's okay - if all these fail, we'll try to fetch src directly.
-                pass
     return fetch_from_s3(src,
                          dst,
                          auto_unzip=auto_unzip,
@@ -226,21 +261,52 @@ def fetch_reference(src,
 
 
 def fetch_byterange(first_byte, last_byte, bucket, key, output_file):
-    get_range = f"aws s3api get-object " \
-                f"--range bytes={first_byte}-{last_byte} " \
-                f"--bucket {bucket} " \
-                f"--key {key} {output_file}"
-    get_range_proc = subprocess.Popen(get_range, shell=True, stdout=subprocess.DEVNULL)
+    get_range_params = [
+        "aws",
+        "s3api",
+        "get-object",
+        "--range",
+        f"bytes={first_byte}-{last_byte}",
+        "--bucket",
+        bucket,
+        "--key",
+        key,
+        output_file
+    ]
+    get_range_proc = subprocess.Popen(get_range_params, shell=False, stdout=subprocess.DEVNULL)
     get_range_proc.wait()
 
 
 @command.retry
 def upload_with_retries(from_f, to_f):
-    command.execute(f"aws s3 cp --only-show-errors {from_f} {to_f}")
+    command.execute(
+        command_patterns.SingleCommand(
+            cmd="aws",
+            args=[
+                "s3",
+                "cp",
+                "--only-show-errors",
+                from_f,
+                to_f
+            ]
+        )
+    )
 
 @command.retry
 def upload_folder_with_retries(from_f, to_f):
-    command.execute(f"aws s3 cp --only-show-errors --recursive {from_f.rstrip('/')}/ {to_f.rstrip('/')}/")
+    command.execute(
+        command_patterns.SingleCommand(
+            cmd="aws",
+            args=[
+                "s3",
+                "cp",
+                "--only-show-errors",
+                "--recursive",
+                os.path.join(from_f, ""),
+                os.path.join(to_f, "")
+            ]
+        )
+    )
 
 def upload(from_f, to_f, status, status_lock=TraceLock("upload", threading.RLock())):
     try:
@@ -259,4 +325,15 @@ def upload_log_file(sample_s3_output_path, lock=TraceLock("upload_log_file", thr
     with lock:
         logh = logging.getLogger().handlers[0]
         logh.flush()
-        command.execute(f"aws s3 cp --only-show-errors {logh.baseFilename} {sample_s3_output_path}/")
+        command.execute(
+            command_patterns.SingleCommand(
+                cmd="aws",
+                args=[
+                    "s3",
+                    "cp",
+                    "--only-show-errors",
+                    logh.baseFilename,
+                    os.path.join(sample_s3_output_path, "")
+                ]
+            )
+        )

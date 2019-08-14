@@ -4,6 +4,7 @@ import multiprocessing
 
 from idseq_dag.engine.pipeline_step import PipelineStep
 import idseq_dag.util.command as command
+import idseq_dag.util.command_patterns as command_patterns
 import idseq_dag.util.log as log
 import idseq_dag.util.s3 as s3
 
@@ -24,7 +25,16 @@ class PipelineStepGenerateHostGenome(PipelineStep):
         if input_fasta_path[-3:] == '.gz':
             # unzip the file
             dest_path = input_fasta_path[:-3]
-            command.execute(f"gzip -dc {input_fasta_path} > {dest_path}")
+            command.execute(
+                command_patterns.ShellScriptCommand(
+                    script=r'''gzip -dc "${input_fasta_path}" > "${dest_path}";''',
+                    named_args={
+                        'input_fasta_path': input_fasta_path,
+                        'dest_path': dest_path
+                    }
+                )
+            )
+
             input_fasta_path = dest_path
 
         input_gtf_path = None
@@ -40,17 +50,35 @@ class PipelineStepGenerateHostGenome(PipelineStep):
 
         host_name = self.additional_attributes["host_name"]
         input_fasta_with_ercc = f"{input_fasta_path}.with_ercc"
-        command.execute(f"cat {ercc_fasta_path} {input_fasta_path}  > {input_fasta_with_ercc}")
+        command.execute(
+            command_patterns.ShellScriptCommand(
+                script=r'''cat "${ercc_fasta_path}" "${input_fasta_path}" > "${input_fasta_with_ercc}";''',
+                named_args={
+                    'ercc_fasta_path': ercc_fasta_path,
+                    'input_fasta_path': input_fasta_path,
+                    'input_fasta_with_ercc': input_fasta_with_ercc
+                }
+            )
+        )
 
         input_gtf_with_ercc = ercc_gtf_path
         if input_gtf_path:
             input_gtf_with_ercc = f"{input_gtf_path}.with_ercc"
-            command.execute(f"cat {ercc_gtf_path} {input_gtf_path} > {input_gtf_with_ercc}")
+            command.execute(
+                command_patterns.ShellScriptCommand(
+                    script=r'''cat "${ercc_gtf_path}" "${input_gtf_path}" > "${input_gtf_with_ercc}";''',
+                    named_args={
+                        'ercc_gtf_path': ercc_gtf_path,
+                        'input_gtf_path': input_gtf_path,
+                        'input_gtf_with_ercc': input_gtf_with_ercc
+                    }
+                )
+            )
 
         output_fasta_file, output_gtf_file, output_star_index, output_bowtie2_index = self.output_files_local()
 
-        command.execute(f"cp {input_fasta_with_ercc} {output_fasta_file}")
-        command.execute(f"cp {input_gtf_with_ercc} {output_gtf_file}")
+        command.copy_file(input_fasta_with_ercc, output_fasta_file)
+        command.copy_file(input_gtf_with_ercc, output_gtf_file)
 
         # make STAR index
         self.make_star_index(input_fasta_with_ercc, input_gtf_with_ercc, output_star_index)
@@ -102,44 +130,75 @@ class PipelineStepGenerateHostGenome(PipelineStep):
 
         for i in range(len(fasta_file_list)):
             log.write("start making STAR index part %d" % i)
-            gtf_command_part = ''
+            gtf_command_part = []
             if i == 0 and gtf_file:
-                gtf_command_part = f"--sjdbGTFfile {gtf_file}"
+                gtf_command_part = ["--sjdbGTFfile", gtf_file]
 
             star_genome_part_dir = f"{star_genome_dir_name}/part-{i}"
+
+            command.make_dirs(star_genome_part_dir)
             star_command_params = [
-                'mkdir -p ', star_genome_part_dir, ';',
-                'STAR', '--runThreadN',
+                '--runThreadN',
                 str(multiprocessing.cpu_count()), '--runMode', 'genomeGenerate',
-                gtf_command_part, '--genomeDir', star_genome_part_dir,
+                *gtf_command_part, '--genomeDir', star_genome_part_dir,
                 '--genomeFastaFiles', fasta_file_list[i]
             ]
-            command.execute(" ".join(star_command_params))
+            command.execute(
+                command_patterns.SingleCommand(
+                    cmd='STAR',
+                    args=star_command_params
+                )
+            )
             log.write(f"finished making STAR index part {i}")
         # record # parts into parts.txt
-        command.execute(" echo %d > %s/parts.txt" %
-                        (len(fasta_file_list), star_genome_dir_name))
+        command.write_text_to_file(len(fasta_file_list), os.path.join(star_genome_dir_name, "parts.txt"))
         star_genome = os.path.basename(star_genome_dir_name)
         star_work_dir = os.path.dirname(star_genome_dir_name)
-        command.execute(f"tar cvf {output_star_genome_path} -C {star_work_dir} {star_genome}")
+        command.execute(
+            command_patterns.SingleCommand(
+                cmd="tar",
+                args=[
+                    "cvf",
+                    output_star_genome_path,
+                    "-C",
+                    star_work_dir,
+                    star_genome
+                ]
+            )
+        )
 
     @staticmethod
     def make_bowtie2_index(host_name, fasta_file, output_bowtie2_index):
         bowtie2_genome_dir_name = output_bowtie2_index[:-4]
-        bowtie2_command_params = [
-            'mkdir -p ', bowtie2_genome_dir_name, ';', 'cd', bowtie2_genome_dir_name,
-            ';', 'bowtie2-build', fasta_file, host_name
-        ]
-        command.execute(" ".join(bowtie2_command_params))
+        command.make_dirs(bowtie2_genome_dir_name)
+        command.execute(
+            command_patterns.SingleCommand(
+                cd=bowtie2_genome_dir_name,
+                cmd='bowtie2-build',
+                args=[
+                    fasta_file,
+                    host_name
+                ]
+            )
+        )
         log.write("finished making bowtie2 index")
         # archive
         bowtie_genome = os.path.basename(bowtie2_genome_dir_name)
         bowtie_work_dir = os.path.dirname(bowtie2_genome_dir_name)
-        command.execute(f"tar cvf {output_bowtie2_index} -C {bowtie_work_dir} {bowtie_genome}")
+        command.execute(
+            command_patterns.SingleCommand(
+                cmd="tar",
+                args=[
+                    "cvf",
+                    output_bowtie2_index,
+                    "-C",
+                    bowtie_work_dir,
+                    bowtie_genome
+                ]
+            )
+        )
 
 
     def count_reads(self):
         ''' Count reads '''
         pass
-
-

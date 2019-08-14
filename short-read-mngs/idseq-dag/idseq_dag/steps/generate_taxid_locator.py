@@ -1,8 +1,9 @@
 import os
+import json
 
 from idseq_dag.engine.pipeline_step import PipelineStep
 import idseq_dag.util.command as command
-import json
+import idseq_dag.util.command_patterns as command_patterns
 
 
 class PipelineStepGenerateTaxidLocator(PipelineStep):
@@ -11,7 +12,7 @@ class PipelineStepGenerateTaxidLocator(PipelineStep):
         input_fa = self.input_files_local[0][0]
         out_files = self.output_files_local()
         tmp = os.path.join(self.output_dir_local, "scratch_taxid_locator")
-        command.execute(f"mkdir -p {tmp}")
+        command.make_dirs(tmp)
 
         # TODO: Design a way to map in/out files more robustly, e.g. by name/type
         # Generate locator files for species NT, species NR, genus NT...
@@ -31,7 +32,7 @@ class PipelineStepGenerateTaxidLocator(PipelineStep):
         PipelineStepGenerateTaxidLocator.combine_json(input_jsons, output_json)
 
         # Cleanup
-        command.execute(f"rm -rf {tmp}")
+        command.remove_rf(tmp)
 
     def count_reads(self):
         pass
@@ -85,14 +86,23 @@ class PipelineStepGenerateTaxidLocator(PipelineStep):
     def delimit_fasta(input_fa, tmp, taxid_field_num, output_fa):
         # Put every 2-line fasta record on a single line with delimiter
         # ":lineseparator:":
-        cmd = "awk 'NR % 2 == 1 { o=$0 ; next } "
-        cmd += "{ print o \":lineseparator:\" $0 }' " + input_fa
+        script = r'''awk 'NR % 2 == 1 { o=$0 ; next } { print o ":lineseparator:" $0 }' "${input_fa}" '''
         # Sort the records based on the field containing the taxids
-        cmd += f" | sort -T {tmp} --key {taxid_field_num} "
-        cmd += "--field-separator ':' --numeric-sort"
+        script += r''' | sort -T "${tmp}" --key "${taxid_field_num}" --field-separator ':' --numeric-sort '''
         # Split every record back over 2 lines
-        cmd += f" | sed 's/:lineseparator:/\\n/g' > {output_fa}"
-        command.execute(cmd)
+        script += r''' | sed 's/:lineseparator:/\n/g' > "${output_fa}";'''
+        command.execute(
+            command_patterns.ShellScriptCommand(
+                script=script,
+                named_args={
+                    "input_fa": input_fa,
+                    "tmp": tmp,
+                    "taxid_field_num": taxid_field_num,
+                    "output_fa": output_fa
+                }
+            )
+        )
+
 
     @staticmethod
     def get_taxid_field_num(taxid_field, input_fasta):

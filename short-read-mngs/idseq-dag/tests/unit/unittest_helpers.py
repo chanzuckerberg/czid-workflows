@@ -1,4 +1,5 @@
 import re
+import os
 
 class MATCH_RE(object):
     """
@@ -26,3 +27,15 @@ class MATCH_RE(object):
         if self.pattern is not None:
             return f'<MATCH_RE({self.pattern})>'
         return f'<MATCH_RE(regex={self.regex})>'
+
+
+def file_contents(file_path):
+    with open(file_path, 'r') as f:
+        return f.read()
+
+
+def relative_file_path(file_path, relative_path):
+    p1 = os.path.abspath(file_path)
+    if os.path.isfile(file_path):
+        p1 = os.path.dirname(p1)
+    return os.path.abspath(os.path.join(p1, relative_path))

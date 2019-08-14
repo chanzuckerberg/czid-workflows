@@ -3,6 +3,7 @@ import os
 
 from idseq_dag.engine.pipeline_step import PipelineStep, InputFileErrors
 import idseq_dag.util.command as command
+import idseq_dag.util.command_patterns as command_patterns
 import idseq_dag.util.log as log
 import idseq_dag.util.count as count
 import idseq_dag.util.fasta as fasta
@@ -103,7 +104,7 @@ class PipelineStepRunPriceSeq(PipelineStep):
             log.write(f"Finished {step}.")
 
     def run_priceseqfilter(self, in_files, out_files, is_paired, file_type):
-        params = ["PriceSeqFilter", '-a', '12', '-rnf', '90', '-log', 'c']
+        params = ['-a', '12', '-rnf', '90', '-log', 'c']
         if is_paired:
             params.extend([
                 '-fp', in_files[0], in_files[1], '-op', out_files[0],
@@ -113,8 +114,12 @@ class PipelineStepRunPriceSeq(PipelineStep):
             params.extend(['-f', in_files[0], '-o', out_files[0]])
         if file_type != "fasta":  # Default fastq. Explicitly specify fasta.
             params.extend(['-rqf', '85', '0.98'])
-        cmd = " ".join(params)
-        command.execute(cmd)
+        command.execute(
+            command_patterns.SingleCommand(
+                cmd='PriceSeqFilter',
+                args=params
+            )
+        )
 
 
     def count_reads(self):

@@ -5,8 +5,7 @@ import traceback
 from collections import defaultdict
 from idseq_dag.engine.pipeline_step import PipelineStep
 import idseq_dag.util.command as command
-import idseq_dag.util.log as log
-import idseq_dag.util.count as count
+import idseq_dag.util.command_patterns as command_patterns
 
 class PipelineStepRunAssembly(PipelineStep):
     """ To obtain longer contigs for improved sensitivity in mapping, short reads must be 
@@ -76,31 +75,60 @@ class PipelineStepRunAssembly(PipelineStep):
                  memory=100):
         basedir = os.path.dirname(assembled_contig)
         assembled_dir = os.path.join(basedir, 'spades')
-        command.execute(f"mkdir -p {assembled_dir}")
+        command.make_dirs(assembled_dir)
         assembled_contig_tmp = os.path.join(assembled_dir, 'contigs.fasta')
         assembled_scaffold_tmp = os.path.join(assembled_dir, 'scaffolds.fasta')
 
         try:
             if input_fasta2:
-                command.execute(f"spades.py -1 {input_fasta} -2 {input_fasta2} -o {assembled_dir} -m {memory} -t 32 --only-assembler")
+                command.execute(
+                    command_patterns.SingleCommand(
+                        cmd="spades.py",
+                        args=[
+                            "-1",
+                            input_fasta,
+                            "-2",
+                            input_fasta2,
+                            "-o",
+                            assembled_dir,
+                            "-m",
+                            memory,
+                            "-t",
+                            32,
+                            "--only-assembler"
+                        ]
+                    )
+                )
             else:
-                command.execute(f"spades.py -s {input_fasta} -o {assembled_dir} -m {memory} -t 32 --only-assembler")
-            command.execute(f"mv {assembled_contig_tmp} {assembled_contig}")
-            command.execute(f"mv {assembled_scaffold_tmp} {assembled_scaffold}")
+                command.execute(
+                    command_patterns.SingleCommand(
+                        cmd="spades.py",
+                        args=[
+                            "-s",
+                            input_fasta,
+                            "-o",
+                            assembled_dir,
+                            "-m",
+                            memory,
+                            "-t",
+                            32,
+                            "--only-assembler"
+                        ]
+                    )
+                )
+            command.move_file(assembled_contig_tmp, assembled_contig)
+            command.move_file(assembled_scaffold_tmp, assembled_scaffold)
 
-            # build the bowtie index based on the contigs
             PipelineStepRunAssembly.generate_read_to_contig_mapping(assembled_contig, bowtie_fasta,
                                                                     read2contig, bowtie_sam, contig_stats)
         except:
             # Assembly failed. create dummy output files
-            command.execute(f"echo ';ASSEMBLY FAILED' > {assembled_contig}")
-            command.execute(f"echo ';ASSEMBLY FAILED' > {assembled_scaffold}")
-            command.execute(f"echo '@NO INFO' > {bowtie_sam}")
-            command.execute("echo '{}' > " +  contig_stats)
+            command.write_text_to_file(';ASSEMBLY FAILED', assembled_contig)
+            command.write_text_to_file(';ASSEMBLY FAILED', assembled_scaffold)
+            command.write_text_to_file('@NO INFO', bowtie_sam)
+            command.write_text_to_file('{}', contig_stats)
             traceback.print_exc()
-
-        command.execute(f"rm -rf {assembled_dir}")
-
+        command.remove_rf(assembled_dir)
     @staticmethod
     def generate_read_to_contig_mapping(assembled_contig,
                                         fasta_file,
@@ -111,8 +139,26 @@ class PipelineStepRunAssembly(PipelineStep):
         base_output_dir = os.path.dirname(fasta_file)
         # build bowtie index based on assembled_contig
         bowtie_index_path = os.path.join(base_output_dir, 'bowtie-contig')
-        command.execute(f"mkdir -p {bowtie_index_path}; bowtie2-build {assembled_contig} {bowtie_index_path}")
-        command.execute(f"bowtie2 -x {bowtie_index_path} -f -U {fasta_file} --very-sensitive -p 32 > {output_bowtie_sam}")
+        command.make_dirs(bowtie_index_path)
+        command.execute(
+            command_patterns.SingleCommand(
+                cmd='bowtie2-build',
+                args=[
+                    assembled_contig,
+                    bowtie_index_path
+                ]
+            )
+        )
+        command.execute(
+            command_patterns.ShellScriptCommand(
+                script=r'''bowtie2 -x "${bowtie_index_path}" -f -U "${fasta_file}" --very-sensitive -p 32 > "${output_bowtie_sam}";''',
+                named_args={
+                    'bowtie_index_path': bowtie_index_path,
+                    'fasta_file': fasta_file,
+                    'output_bowtie_sam': output_bowtie_sam
+                }
+            )
+        )
         contig_stats = defaultdict(int)
         PipelineStepRunAssembly.generate_info_from_sam(output_bowtie_sam, read2contig, contig_stats)
         with open(output_contig_stats, 'w') as ocf:

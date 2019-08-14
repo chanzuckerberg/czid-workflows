@@ -1,6 +1,7 @@
 ''' Run Trimmomatic '''
 from idseq_dag.engine.pipeline_step import PipelineStep, InputFileErrors
 import idseq_dag.util.command as command
+import idseq_dag.util.command_patterns as command_patterns
 import idseq_dag.util.count as count
 import idseq_dag.util.s3 as s3
 import idseq_dag.util.fasta as fasta
@@ -83,7 +84,7 @@ class PipelineStepRunTrimmomatic(PipelineStep):
         if fasta.input_file_type(input_files[0]) != 'fastq':
             # Not fastq
             for in_file, out_file in zip(input_files, output_files):
-                command.execute(f"cp {in_file} {out_file}")
+                command.copy_file(in_file, out_file)
             return
 
         if is_paired:
@@ -96,8 +97,8 @@ class PipelineStepRunTrimmomatic(PipelineStep):
             paired_arg = "SE"
             output_args = output_files
 
-        cmd = " ".join([
-            "java -jar /usr/local/bin/trimmomatic-0.38.jar",
+        params = [
+            "-jar", "/usr/local/bin/trimmomatic-0.38.jar",
             paired_arg,
             "-phred33",
             *input_files,
@@ -111,8 +112,13 @@ class PipelineStepRunTrimmomatic(PipelineStep):
             #    kept even when an adapter read-through occurs and R2 is a direct reverse complement of R1.
             "MINLEN:35"
             # Discard reads which are less than *75* bases long after these steps.
-        ])
-        command.execute(cmd)
+        ]
+        command.execute(
+            command_patterns.SingleCommand(
+                cmd="java",
+                args=params
+            )
+        )
 
     def count_reads(self):
         ''' Count reads '''

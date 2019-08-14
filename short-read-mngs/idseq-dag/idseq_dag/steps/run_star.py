@@ -5,6 +5,7 @@ import re
 
 from idseq_dag.engine.pipeline_step import PipelineStep, StepStatus, InputFileErrors
 import idseq_dag.util.command as command
+import idseq_dag.util.command_patterns as command_patterns
 import idseq_dag.util.log as log
 import idseq_dag.util.s3 as s3
 import idseq_dag.util.count as count
@@ -131,13 +132,13 @@ class PipelineStepRunStar(PipelineStep):
                 if os.path.isfile(gene_count_file) and output_gene_file:
                     moved = os.path.join(self.output_dir_local,
                                          output_gene_file)
-                    command.execute(f"mv {gene_count_file} {moved}")
+                    command.move_file(gene_count_file, moved)
                     self.additional_files_to_upload.append(moved)
 
         # Cleanup
         for src, dst in zip(unmapped, output_files_local):
-            command.execute(f"mv {src} {dst}")  # Move out of scratch dir
-        command.execute("cd %s; rm -rf *" % scratch_dir)
+            command.move_file(src, dst)    # Move out of scratch dir
+        command.remove_rf(f"{scratch_dir}/*")
 
     def count_reads(self):
         self.should_count_reads = True
@@ -149,10 +150,12 @@ class PipelineStepRunStar(PipelineStep):
                       input_files,
                       count_genes,
                       use_starlong):
-        command.execute("mkdir -p %s" % output_dir)
+        command.make_dirs(output_dir)
+
         cpus = str(multiprocessing.cpu_count())
+        cd = output_dir
+        cmd = 'STARlong' if use_starlong else 'STAR'
         params = [
-            'cd', output_dir, ';', 'STARlong' if use_starlong else 'STAR',
             '--outFilterMultimapNmax', '99999',
             '--outFilterScoreMinOverLread', '0.5',
             '--outFilterMatchNminOverLread', '0.5',
@@ -162,10 +165,10 @@ class PipelineStepRunStar(PipelineStep):
             '--clip3pNbases', '0',
             '--runThreadN', cpus,
             '--genomeDir', genome_dir,
-            '--readFilesIn', " ".join(input_files)
+            '--readFilesIn', *input_files
         ]
         if use_starlong:
-            params+= [
+            params += [
                 '--seedSearchStartLmax', '20',
                 '--seedPerReadNmax', '100000',
                 '--seedPerWindowNmax', '1000',
@@ -175,8 +178,13 @@ class PipelineStepRunStar(PipelineStep):
 
         if count_genes and os.path.isfile(count_file):
             params += ['--quantMode', 'GeneCounts']
-        cmd = " ".join(params)
-        command.execute(cmd)
+        command.execute(
+            command_patterns.SingleCommand(
+                cd=cd,
+                cmd=cmd,
+                args=params
+            )
+        )
 
     @staticmethod
     def handle_outstanding_read(r0, r0id, outstanding_r0, outstanding_r1, of0,

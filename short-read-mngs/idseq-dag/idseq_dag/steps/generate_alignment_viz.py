@@ -244,7 +244,7 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
             return f"{output_json_dir}/{db_type}.{tag}.{int(lin_id)}.align_viz.json"
 
         # Generate JSON files for the align_viz folder
-        command.execute(f"mkdir -p {output_json_dir}")
+        command.make_dirs(output_json_dir)
         for (family_id, family_dict) in result_dict.items():
             fn = align_viz_name("family", family_id)
             with open(fn, 'w') as out_f:

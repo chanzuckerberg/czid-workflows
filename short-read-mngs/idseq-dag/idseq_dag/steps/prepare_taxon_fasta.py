@@ -1,9 +1,9 @@
 ''' Generate Phylogenetic tree '''
 import os
-import glob
 
 from idseq_dag.engine.pipeline_step import PipelineStep
 import idseq_dag.util.command as command
+import idseq_dag.util.command_patterns as command_patterns
 import idseq_dag.util.s3 as s3
 import idseq_dag.util.count as count
 
@@ -41,14 +41,34 @@ class PipelineStepPrepareTaxonFasta(PipelineStep):
     @staticmethod
     def trim_adapters_in_place(local_file):
         local_file_trimmed = os.path.join(os.path.dirname(local_file), "trimmed_" + os.path.basename(local_file))
-        command.execute(f"cutadapt -a AGATCGGAAGAGCACACGTCT -o {local_file_trimmed} {local_file}")
-        command.execute(f"mv {local_file_trimmed} {local_file}")
+        command.execute(
+            command_patterns.SingleCommand(
+                cmd='cutadapt',
+                args=[
+                    "-a",
+                    "AGATCGGAAGAGCACACGTCT",
+                    "-o",
+                    local_file_trimmed,
+                    local_file
+                ]
+            )
+        )
+        command.move_file(local_file_trimmed, local_file)
 
     @staticmethod
     def fasta_union(partial_fasta_files, full_fasta_file):
         ''' Takes a list of fasta file paths and writes the union of the fasta records to full_fasta_file. '''
         if len(partial_fasta_files) == 1:
-            command.execute(f"ln -s {partial_fasta_files[0]} {full_fasta_file}")
+            command.execute(
+                command_patterns.SingleCommand(
+                    cmd='ln',
+                    args=[
+                        "-s",
+                        partial_fasta_files[0],
+                        full_fasta_file
+                    ]
+                )
+            )
             return
         # For now, just load the files into memory. They are relatively small and
         # the same approach is used in the web app to serve taxon fasta files.

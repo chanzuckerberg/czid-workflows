@@ -15,10 +15,9 @@ class PipelineStepReclassifyReads(PipelineStep):
         input_files = self.input_files_local[0]
         output_files = self.output_files_local()
         for i in range(len(input_files)):
-            command.execute(f"cp {input_files[i]} {output_files[i]}")
-        command.execute(f"echo 1234 > {output_files[4]}")
+            command.copy_file(input_files[i], output_files[i])
 
+        command.write_text_to_file('1234', output_files[4])
 
     def count_reads(self):
         pass
-

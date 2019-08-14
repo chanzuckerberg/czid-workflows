@@ -2,6 +2,7 @@ import random
 
 from idseq_dag.engine.pipeline_step import PipelineStep, InputFileErrors
 import idseq_dag.util.command as command
+import idseq_dag.util.command_patterns as command_patterns
 import idseq_dag.util.log as log
 import idseq_dag.util.count as count
 
@@ -43,13 +44,22 @@ class PipelineStepRunSubsample(PipelineStep):
         ''' In memory subsampling '''
         paired = len(input_fas) >= 2
         # count lines
-        cmd = "wc -l %s | cut -f1 -d ' '" % input_fas[0]
-        total_records = int(command.execute_with_output(cmd)) // 2
+        cmd_output = command.execute_with_output(
+            command_patterns.SingleCommand(
+                cmd="wc",
+                args=[
+                    "-l",
+                    input_fas[0]
+                ]
+            )
+        )
+        lines_count = int(cmd_output.strip().split(' ')[0])
+        total_records = lines_count // 2
         log.write("total reads: %d" % total_records)
         log.write("target reads: %d" % max_fragments)
         if total_records <= max_fragments:
             for infile, outfile in zip(input_fas, output_fas):
-                command.execute("cp %s %s" % (infile, outfile))
+                command.copy_file(infile, outfile)
             return
 
         # total_records > max_fragments, sample

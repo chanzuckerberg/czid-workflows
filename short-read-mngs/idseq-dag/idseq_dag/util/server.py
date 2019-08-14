@@ -13,6 +13,7 @@ from copy import deepcopy
 from idseq_dag.util.periodic_thread import PeriodicThread
 
 import idseq_dag.util.command as command
+import idseq_dag.util.command_patterns as command_patterns
 import idseq_dag.util.log as log
 
 
@@ -223,7 +224,18 @@ def get_server_ips_work(service_name, environment, draining_tag):
     value = "%s-%s" % (service_name, environment)
     describe_json = json.loads(
         command.execute_with_output(
-            f"aws ec2 describe-instances --filters 'Name=tag:service,Values={value}' 'Name=instance-state-name,Values=running'"))
+            command_patterns.SingleCommand(
+                cmd="aws",
+                args=[
+                    "ec2",
+                    "describe-instances",
+                    "--filters",
+                    f"Name=tag:service,Values={value}",
+                    "Name=instance-state-name,Values=running"
+                ]
+            )
+        )
+    )
     server_ips = {
         instance["NetworkInterfaces"][0]["PrivateIpAddress"]: instance["InstanceId"]
         for reservation in describe_json["Reservations"]
@@ -405,12 +417,36 @@ def build_job_tag(job_tag_prefix, chunk_id):
     return job_tag_key, job_tag_value_func
 
 
-def create_tag(instance_iD, tag_key, tag_value_func):
-    command.execute(f"aws ec2 create-tags --resources {instance_iD} --tags Key={tag_key},Value={tag_value_func()}")
+def create_tag(instance_id, tag_key, tag_value_func):
+    command.execute(
+        command_patterns.SingleCommand(
+            cmd="aws",
+            args=[
+                "ec2",
+                "create-tags",
+                "--resources",
+                instance_id,
+                "--tags",
+                f"Key={tag_key},Value={tag_value_func()}"
+            ]
+        )
+    )
 
 
-def delete_tag_with_retries(instance_iD, tag_key):
-    command.execute_with_retries(f"aws ec2 delete-tags --resources {instance_iD} --tags Key={tag_key}")
+def delete_tag_with_retries(instance_id, tag_key):
+    command.execute_with_retries(
+        command_patterns.SingleCommand(
+            cmd="aws",
+            args=[
+                "ec2",
+                "delete-tags",
+                "--resources",
+                instance_id,
+                "--tags",
+                f"Key={tag_key}"
+            ]
+        )
+    )
 
 
 @contextmanager
@@ -435,21 +471,21 @@ def ASGInstance(service, key_path, remote_username, environment, chunk_id, try_n
                 t_print = time.time()
                 log.write(f"try {try_number} for chunk {chunk_id} has been waiting for {(t_print - t_start):3.1f} seconds for other chunks' prior tries to complete")
             time.sleep(15.0)
-        instance_ip, instance_iD = wait_for_server_ip(service, key_path, remote_username, environment, max_concurrent, chunk_id,
+        instance_ip, instance_id = wait_for_server_ip(service, key_path, remote_username, environment, max_concurrent, chunk_id,
                                                       max_interval_between_describe_instances, draining_tag)
     finally:
         tracker.register_chunk_dispatched(chunk_id, try_number)
     log.write(f"starting alignment for chunk {chunk_id} on {service} server {instance_ip}")
     job_tag_key, job_tag_value_func = build_job_tag(job_tag_prefix, chunk_id)
     t = PeriodicThread(target=create_tag, wait_seconds=job_tag_refresh_seconds, stop_latency_seconds=60,
-                       args=(instance_iD, job_tag_key, job_tag_value_func))
+                       args=(instance_id, job_tag_key, job_tag_value_func))
     t.start()
     try:
         yield instance_ip
     finally:
         t.stop()
         t.join()
-        delete_tag_with_retries(instance_iD, job_tag_key)
+        delete_tag_with_retries(instance_id, job_tag_key)
 
 
 def run_test():

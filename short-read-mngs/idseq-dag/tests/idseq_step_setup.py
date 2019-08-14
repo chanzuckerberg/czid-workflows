@@ -34,7 +34,8 @@ class IdseqStepSetup(object):
                                                             int(paired),
                                                             os.getpid())
         ref_dir_local = '/mnt/idseq/ref'
-        command.execute(f"mkdir -p {result_dir_local} {ref_dir_local}")
+        command.make_dirs(result_dir_local)
+        command.make_dirs(ref_dir_local)
 
         input_files = []
         for target in step_info["in"]:
@@ -78,7 +79,8 @@ class IdseqStepSetup(object):
                                      f"testrun_{step_name}_{int(time.time())}")
         result_dir_local = f"/mnt/idseq/results/{step_name}/{os.getpid()}"
         ref_dir_local = '/mnt/idseq/ref'
-        command.execute(f"mkdir -p {result_dir_local} {ref_dir_local}")
+        command.make_dirs(result_dir_local)
+        command.make_dirs(ref_dir_local)
 
         input_files = []
         for target in step_info["in"]:

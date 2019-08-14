@@ -3,9 +3,8 @@ import os
 import urllib.request
 from idseq_dag.engine.pipeline_step import PipelineStep
 import idseq_dag.util.command as command
-import idseq_dag.util.log as log
+import idseq_dag.util.command_patterns as command_patterns
 import idseq_dag.util.s3 as s3
-import idseq_dag.util.count as count
 
 class PipelineStepBuildCustomBlastIndex(PipelineStep):
     """ From GSNAP, we know the *best match* from the NT db for each read. 
@@ -51,14 +50,50 @@ class PipelineStepBuildCustomBlastIndex(PipelineStep):
 
         # Build blast index
         if db_file.endswith(".bz2"):
-            command.execute(f"bzip2 -dk {db_file}")
+            command.execute(
+                command_patterns.SingleCommand(
+                    cmd='bzip2',
+                    args=[
+                        "-dk",
+                        db_file
+                    ]
+                )
+            )
             db_file = db_file[:-4]
         elif db_file.endswith(".zip"):
-            command.execute(f"unzip {db_file}")
+            command.execute(
+                command_patterns.SingleCommand(
+                    cmd='unzip',
+                    args=[
+                        db_file
+                    ]
+                )
+            )
             db_file = db_file[:-4]
 
-        command.execute(f"makeblastdb -in {db_file} -dbtype {db_type} -out {output_db_name}")
-        command.execute(f"tar cvf {output_tar_file}  {output_db_name}.*")
+        command.execute(
+            command_patterns.SingleCommand(
+                cmd='makeblastdb',
+                args=[
+                    "-in",
+                    db_file,
+                    "-dbtype",
+                    db_type,
+                    "-out",
+                    output_db_name
+                ]
+            )
+        )
+        command.execute(
+            command_patterns.SingleCommand(
+                cmd='tar',
+                args=[
+                    "cvf",
+                    output_tar_file,
+                    output_db_name + ".*"
+                ]
+            )
+        )
 
     def count_reads(self):
         ''' Count reads '''

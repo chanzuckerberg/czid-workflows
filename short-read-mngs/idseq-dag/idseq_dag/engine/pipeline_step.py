@@ -1,14 +1,13 @@
 import json
-import sys
 import os
 import threading
 import time
-import idseq_dag.util.command as command
-import idseq_dag.util.log as log
+import datetime
 from abc import abstractmethod
 from enum import Enum, IntEnum
-
-import idseq_dag.util.count as count
+import pytz
+import idseq_dag.util.command as command
+import idseq_dag.util.log as log
 import idseq_dag.util.s3
 
 class StepStatus(IntEnum):
@@ -88,7 +87,7 @@ class PipelineStep(object):
     def create_local_dirs(self):
         ''' make sure proper local directories are created for files with subdirs '''
         for f in self.output_files_local():
-            command.execute("mkdir -p %s" % os.path.dirname(f))
+            command.make_dirs(os.path.dirname(f))
 
     def uploading_results(self):
         ''' Upload output files to s3 '''
@@ -174,7 +173,8 @@ class PipelineStep(object):
                 raise RuntimeError("output file %s should be generated after run" % f)
             # Tag the done files
             done_file = self.done_file(f)
-            command.execute("date > %s" % done_file)
+            fmt_now = datetime.datetime.now(tz=pytz.UTC).strftime("%a %b %e %H:%M:%S %Z %Y")
+            command.write_text_to_file(fmt_now, done_file)
         self.count_reads()
 
     def wait_until_finished(self):

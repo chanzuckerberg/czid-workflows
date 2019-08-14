@@ -2,6 +2,7 @@
 import os
 import glob
 import json
+import itertools
 import xml.etree.ElementTree as ET
 
 from collections import defaultdict
@@ -9,6 +10,7 @@ from collections import defaultdict
 from idseq_dag.engine.pipeline_step import PipelineStep
 from idseq_dag.steps.generate_alignment_viz import PipelineStepGenerateAlignmentViz
 import idseq_dag.util.command as command
+import idseq_dag.util.command_patterns as command_patterns
 import idseq_dag.util.s3 as s3
 import idseq_dag.util.log as log
 import idseq_dag.util.convert as convert
@@ -38,9 +40,18 @@ class PipelineStepGeneratePhyloTree(PipelineStep):
         # - file names do not have dots except before extension (also no spaces)
         # - file names cannot be too long (for kSNP3 tree building).
         input_dir_for_ksnp3 = f"{self.output_dir_local}/inputs_for_ksnp3"
-        command.execute(f"mkdir {input_dir_for_ksnp3}")
+        command.make_dirs(input_dir_for_ksnp3)
         for local_file in local_taxon_fasta_files:
-            command.execute(f"ln -s {local_file} {input_dir_for_ksnp3}/{os.path.basename(local_file)}")
+            command.execute(
+                command_patterns.SingleCommand(
+                    cmd="ln",
+                    args=[
+                        "-s",
+                        local_file,
+                        os.path.join(input_dir_for_ksnp3, os.path.basename(local_file))
+                    ]
+                )
+            )
 
         # Retrieve Genbank references (full assembled genomes).
         genbank_fastas = self.get_genbank_genomes(reference_taxids, input_dir_for_ksnp3, superkingdom_name, 0)
@@ -58,15 +69,35 @@ class PipelineStepGeneratePhyloTree(PipelineStep):
 
         # Run MakeKSNP3infile.
         ksnp3_input_file = f"{self.output_dir_local}/inputs.txt"
-        command.execute(f"cd {input_dir_for_ksnp3}/..; MakeKSNP3infile {os.path.basename(input_dir_for_ksnp3)} {ksnp3_input_file} A")
+        command.execute(
+            command_patterns.SingleCommand(
+                cd=input_dir_for_ksnp3,
+                cmd='MakeKSNP3infile',
+                args=[
+                    os.path.basename(input_dir_for_ksnp3),
+                    ksnp3_input_file,
+                    "A"
+                ]
+            )
+        )
 
         # Specify the names of finished reference genomes.
         # Used for annotation & variant-calling.
         annotated_genome_input = f"{self.output_dir_local}/annotated_genomes"
         reference_fasta_files = list(genbank_fastas.values()) + list(accession_fastas.values())
         if reference_fasta_files:
-            grep_options = " ".join([f"-e '{path}'" for path in reference_fasta_files])
-            command.execute(f"grep {grep_options} {ksnp3_input_file} | cut -f2 > {annotated_genome_input}")
+            grep_options = (("-e", path) for path in reference_fasta_files)
+            grep_options = list(itertools.chain.from_iterable(grep_options)) # flatmap
+            command.execute(
+                command_patterns.ShellScriptCommand(
+                    script=r'''grep "${grep_options[@]}" "${ksnp3_input_file}" | cut -f2 > "${annotated_genome_input}";''',
+                    named_args={
+                        'ksnp3_input_file': ksnp3_input_file,
+                        'annotated_genome_input': annotated_genome_input,
+                        'grep_options': grep_options
+                    }
+                )
+            )
 
         # Now build ksnp3 command:
         k_config = {
@@ -79,24 +110,42 @@ class PipelineStepGeneratePhyloTree(PipelineStep):
         }
         k = k_config[superkingdom_name]
         ksnp_output_dir = f"{self.output_dir_local}/ksnp3_outputs"
-        ksnp_cmd = (f"mkdir {ksnp_output_dir}; cd {os.path.dirname(ksnp_output_dir)}; "
-                    f"kSNP3 -in inputs.txt -outdir {os.path.basename(ksnp_output_dir)} -k {k}")
+        command.make_dirs(ksnp_output_dir)
+        ksnp_cd = os.path.dirname(ksnp_output_dir)
+        ksnp_cmd = "kSNP3"
+        ksnap_args = [
+            "-in",
+            "inputs.txt",
+            "-outdir",
+            os.path.basename(ksnp_output_dir),
+            "-k",
+            k
+        ]
 
         # Annotate SNPs using reference genomes:
         # TODO: fix gi vs accession problem
         if os.path.isfile(annotated_genome_input):
-            ksnp_cmd += f" -annotate {os.path.basename(annotated_genome_input)}"
+            ksnap_args.extend([
+                "-annotate",
+                os.path.basename(annotated_genome_input)
+            ])
             self.optional_files_to_upload.append(f"{ksnp_output_dir}/SNPs_all_annotated")
 
         # Produce VCF file with respect to first reference genome in annotated_genome_input:
         if os.path.isfile(annotated_genome_input):
-            ksnp_cmd += " -vcf"
+            ksnap_args.append("-vcf")
 
         # Run ksnp3 command:
-        command.execute(ksnp_cmd)
+        command.execute(
+            command_patterns.SingleCommand(
+                cd=ksnp_cd,
+                cmd=ksnp_cmd,
+                args=ksnap_args
+            )
+        )
 
         # Postprocess output names in preparation for upload:
-        command.execute(f"mv {ksnp_output_dir}/tree.parsimony.tre {output_files[0]}")
+        command.move_file(os.path.join(ksnp_output_dir, "tree.parsimony.tre"), output_files[0])
         ksnp_vcf_file = glob.glob(f"{ksnp_output_dir}/*.vcf")
         if ksnp_vcf_file:
             target_vcf_file = f"{ksnp_output_dir}/variants_reference1.vcf"
@@ -111,6 +160,27 @@ class PipelineStepGeneratePhyloTree(PipelineStep):
 
     def count_reads(self):
         pass
+
+    @staticmethod
+    def get_taxid_genomes(genome_list_local, taxid, n_per_taxid):
+        cmd = command_patterns.ShellScriptCommand(
+            script=(
+                # columns: 1 = assembly_accession; 6 = taxid; 7 = species_taxid, 8 = organism_name, 20 = ftp_path
+                r'''cut -f1,6,7,8,20 "${genome_list_local}" '''
+                # try to find taxid in the taxid column (2nd column of the piped input)
+                r''' | awk -F '\t' "${awk_find_pattern}" '''
+                # take only top n_per_taxid results
+                r''' | head -n "${n_per_taxid}";'''
+            ),
+            named_args={
+                'genome_list_local': genome_list_local,
+                'awk_find_pattern': f'$2 == "{taxid}"',
+                'n_per_taxid': n_per_taxid
+            }
+        )
+        taxid_genomes = list(filter(None, command.execute_with_output(cmd).split("\n")))
+        return taxid_genomes
+
 
     def get_genbank_genomes(self, reference_taxids, destination_dir, superkingdom_name, n=10):
         '''
@@ -139,13 +209,10 @@ class PipelineStepGeneratePhyloTree(PipelineStep):
             genome_list_local = s3.fetch_from_s3(genome_list_path_s3, destination_dir)
             genomes = []
             for taxid in reference_taxids:
-                cmd = f"cut -f1,6,7,8,20 {genome_list_local}" # columns: 1 = assembly_accession; 6 = taxid; 7 = species_taxid, 8 = organism_name, 20 = ftp_path
-                cmd += f" | awk -F '\t' '$2 == {taxid}'" # try to find taxid in the taxid column (2nd column of the piped input)
-                cmd += f" | head -n {n_per_taxid}" # take only top n_per_taxid results
-                taxid_genomes = list(filter(None, command.execute_with_output(cmd).split("\n")))
+                taxid_genomes = PipelineStepGeneratePhyloTree.get_taxid_genomes(genome_list_local, taxid, n_per_taxid)
                 genomes += [entry for entry in taxid_genomes if entry not in genomes]
             genomes = genomes[:n]
-            command.execute_with_output(f"rm {genome_list_local}")
+            command.remove_file(genome_list_local)
             if genomes:
                 genbank_fastas = {}
                 for line in genomes:
@@ -155,8 +222,24 @@ class PipelineStepGeneratePhyloTree(PipelineStep):
                     local_fasta = f"{destination_dir}/{tree_node_name}.fasta"
                     if os.path.isfile(local_fasta):
                         local_fasta = f"{local_fasta.split('.')[0]}__I.fasta"
-                    command.execute(f"wget -O {local_fasta}.gz {ftp_fasta_gz}")
-                    command.execute(f"gunzip {local_fasta}.gz")
+                    command.execute(
+                        command_patterns.SingleCommand(
+                            cmd='wget',
+                            args=[
+                                "-O",
+                                f"{local_fasta}.gz",
+                                ftp_fasta_gz
+                            ]
+                        )
+                    )
+                    command.execute(
+                        command_patterns.SingleCommand(
+                            cmd='gunzip',
+                            args=[
+                                f"{local_fasta}.gz"
+                            ]
+                        )
+                    )
                     genbank_fastas[assembly_accession] = local_fasta
                 return genbank_fastas
         return {}
@@ -243,12 +326,59 @@ class PipelineStepGeneratePhyloTree(PipelineStep):
                 continue
             clean_accession = self.clean_name_for_ksnp3(acc)
             local_fasta = f"{dest_dir}/NCBI_NT_accession_{clean_accession}.fasta"
-            command.execute(f"ln -s {info['seq_file']} {local_fasta}")
-            command.execute(f"echo '>{acc}' | cat - {local_fasta} > temp_file && mv temp_file {local_fasta}")
+            command.execute(
+                command_patterns.SingleCommand(
+                    cmd="ln",
+                    args=[
+                        "-s",
+                        info['seq_file'],
+                        local_fasta
+                    ]
+                )
+            )
+            command.execute_with_output(
+                command_patterns.ShellScriptCommand(
+                    script=r'''echo ">${acc}" | cat - "${local_fasta}" > temp_file;''',
+                    named_args={
+                        'acc': acc,
+                        'local_fasta': local_fasta
+                    }
+                )
+            )
+            command.move_file('temp_file', local_fasta)
+
             accession_fastas[acc] = local_fasta
 
         # Return kept accessions and paths of their fasta files
         return accession_fastas
+
+
+    @staticmethod
+    def fetch_ncbi(accession):
+        query = accession
+        base = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
+        search_url = f"{base}/esearch.fcgi?db=nuccore&term={query}&usehistory=y"
+        output = command.execute_with_output(
+            command_patterns.SingleCommand(
+                cmd="curl",
+                args=[search_url]
+            )
+        )
+        root = ET.fromstring(output)
+        web = root.find('WebEnv').text
+        key = root.find('QueryKey').text
+        fetch_url = f"{base}/efetch.fcgi?db=nuccore&query_key={key}&WebEnv={web}&rettype=gb&retmode=xml"
+        genbank_xml = command.execute_with_output(
+            command_patterns.SingleCommand(
+                cmd="curl",
+                args=[fetch_url]
+            )
+        )
+        return {
+            'search_url': search_url,
+            'fetch_url': fetch_url,
+            'genbank_xml': genbank_xml
+        }
 
     @staticmethod
     def get_accession_metadata(accession):
@@ -257,20 +387,12 @@ class PipelineStepGeneratePhyloTree(PipelineStep):
         TODO: Put this data in S3 instead and get it from there.
         '''
         accession_metadata = {}
-        efetch_command = ";".join([
-            f"QUERY={accession}",
-            "BASE=https://eutils.ncbi.nlm.nih.gov/entrez/eutils",
-            "SEARCH_URL=${BASE}/esearch.fcgi?db=nuccore\&term=${QUERY}\&usehistory=y",
-            "OUTPUT=$(curl $SEARCH_URL)",
-            "WEB=$(echo $OUTPUT | sed -e 's/.*<WebEnv>\(.*\)<\/WebEnv>.*/\\1/')",
-            "KEY=$(echo $OUTPUT | sed -e 's/.*<QueryKey>\(.*\)<\/QueryKey>.*/\\1/')",
-            "FETCH_URL=${BASE}/efetch.fcgi?db=nuccore\&query_key=${KEY}\&WebEnv=${WEB}\&rettype=gb\&retmode=xml",
-            f"curl $FETCH_URL"
-        ])
-        genbank_xml = command.execute_with_output(efetch_command)
+        fetch_ncbi_result = PipelineStepGeneratePhyloTree.fetch_ncbi(accession)
+        genbank_xml = fetch_ncbi_result['genbank_xml']
+
         root = ET.fromstring(genbank_xml).find('GBSeq')
         if not root:
-            log.write(f"WARNING: {efetch_command} did not give a result")
+            log.write(f"WARNING: {fetch_ncbi_result} did not return a result")
             return accession_metadata
         accession_metadata['name'] = root.find('GBSeq_definition').text
         qualifiers_needed = {'country', 'collection_date'}
@@ -292,18 +414,48 @@ class PipelineStepGeneratePhyloTree(PipelineStep):
             metadata_by_node[node] = metadata
         return metadata_by_node
 
+    @staticmethod
+    def _vcf_new_column_description(input_file, sample_names_by_run_ids):
+        vcf_columns = "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT"
+        column_description_line = command.execute_with_output(
+            command_patterns.SingleCommand(
+                cmd='awk',
+                args=[
+                    f"/^{vcf_columns}/",
+                    input_file
+                ]
+            )
+        )
+        column_description_line = column_description_line.strip()
+        additional_columns = column_description_line.split("FORMAT\t")[1].split("\t")
+        sample_names_in_order = [
+            sample_names_by_run_ids.get(id, f"pipeline_run_{id}") if convert.can_convert_to_int(id) else id
+            for id in additional_columns
+        ]
+        new_column_description = '\t'.join([vcf_columns] + sample_names_in_order)
+        return new_column_description
+
+    @staticmethod
+    def _vcf_replace_column_description(input_file, output_file, new_column_description):
+        escaped_new_column_description = new_column_description.replace("\\", "\\\\").replace("&", "\\&").replace("/", r"\/")
+        command.execute(
+            command_patterns.ShellScriptCommand(
+                script=r'''sed "${sed_pattern}" "${input_file}" > "${output_file}"''',
+                named_args={
+                    'sed_pattern': f"s/^#CHROM.*/{escaped_new_column_description}/",
+                    'input_file': input_file,
+                    'output_file': output_file
+                }
+            )
+        )
+
     def name_samples_vcf(self, input_file, output_file):
         # The VCF has standard columns CHROM, POS, ID, REF, ALT, QUAL, FILTER, INFO, FORMAT,
         # followed by 1 column for each of the pipeline_run_ids. This function replaces the pipeline_run)_ids
         # by the corresponding sample names so that users can understand the file.
         sample_names_by_run_ids = self.additional_attributes["sample_names_by_run_ids"]
-        vcf_columns = "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT"
-        column_description_line = command.execute_with_output(f"awk /'^{vcf_columns}'/ {input_file}")
-        column_description_line = column_description_line.strip()
-        run_ids_in_order = [id for id in column_description_line.split("FORMAT\t")[1].split("\t") if convert.can_convert_to_int(id)]
-        sample_names_in_order = [sample_names_by_run_ids.get(id, f"pipeline_run_{id}") for id in run_ids_in_order]
-        new_column_description = '\t'.join([vcf_columns] + sample_names_in_order)
-        command.execute(f"sed 's/^#CHROM.*/{new_column_description}/' {input_file} > {output_file}")
+        new_column_description = self._vcf_new_column_description(input_file, sample_names_by_run_ids)
+        self._vcf_replace_column_description(input_file, output_file, new_column_description)
 
     @staticmethod
     def clean_name_for_ksnp3(name):

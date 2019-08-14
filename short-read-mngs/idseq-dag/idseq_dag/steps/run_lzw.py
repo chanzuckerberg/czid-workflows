@@ -3,6 +3,7 @@ from typing import Iterator
 import os
 from idseq_dag.engine.pipeline_step import PipelineStep, InputFileErrors
 import idseq_dag.util.command as command
+import idseq_dag.util.command_patterns as command_patterns
 from idseq_dag.util.command import run_in_subprocess
 import idseq_dag.util.log as log
 import idseq_dag.util.count as count
@@ -115,7 +116,15 @@ class PipelineStepRunLZW(PipelineStep):
         slice_outputs = temp_file_names[:-1]
         coalesced_score_file = temp_file_names[-1]
         # Paste can insert newlines at the end;  we grep those out.
-        command.execute("paste -d '\n' " + " ".join(slice_outputs) + " | grep -v ^$ > " + coalesced_score_file)
+        command.execute(
+            command_patterns.ShellScriptCommand(
+                script=r'''paste -d '\n' "${slice_outputs[@]}" | grep -v ^$ > "${coalesced_score_file}";''',
+                named_args={
+                    'coalesced_score_file': coalesced_score_file,
+                    'slice_outputs': slice_outputs
+                }
+            )
+        )
         for tfn in slice_outputs:
             os.remove(tfn)
         return coalesced_score_file
@@ -180,7 +189,7 @@ class PipelineStepRunLZW(PipelineStep):
                 filtered = total_reads - kept_count
                 # move the output files over
                 for outfile, output_file in zip(outfiles, output_files):
-                    command.execute("mv %s %s" % (outfile, output_file))
+                    command.move_file(outfile, output_file)
                 break
 
         if kept_count == 0:

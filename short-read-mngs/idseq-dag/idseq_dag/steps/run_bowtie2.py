@@ -2,10 +2,10 @@ import os
 import multiprocessing
 from idseq_dag.engine.pipeline_step import PipelineStep, InputFileErrors
 import idseq_dag.util.command as command
+import idseq_dag.util.command_patterns as command_patterns
 import idseq_dag.util.count as count
 import idseq_dag.util.convert as convert
 import idseq_dag.util.log as log
-import idseq_dag.util.count as count
 from idseq_dag.util.s3 import fetch_from_s3
 
 
@@ -51,15 +51,12 @@ class PipelineStepRunBowtie2(PipelineStep):
         self.additional_files_to_upload.append(output_sam_file)
         # The file structure looks like
         # "bowtie2_genome/GRCh38.primary_assembly.genome.3.bt2"
-        # The code below will handle up to "bowtie2_genome/GRCh38.primary_assembly.
-        # genome.99.bt2" but not 100.
-        cmd = "ls {genome_dir}/*.bt2*".format(genome_dir=genome_dir)
-        local_genome_dir_ls = command.execute_with_output(cmd)
-        genome_basename = local_genome_dir_ls.split("\n")[0][:-6]
-        if genome_basename[-1] == '.':
-            genome_basename = genome_basename[:-1]
+        genome_basename = command.glob(f"{genome_dir}/*.bt2*", max_results=1)[0]
+        # remove two extensions: ex: hg38_phiX_rRNA_mito_ERCC.3.bt2 -> hg38_phiX_rRNA_mito_ERCC
+        genome_basename = os.path.splitext(os.path.splitext(genome_basename)[0])[0]
+
         bowtie2_params = [
-            'bowtie2', '-q', '-x', genome_basename, '-f',
+            '-q', '-x', genome_basename, '-f',
             '--very-sensitive-local', '-S', output_sam_file
         ]
 
@@ -74,7 +71,18 @@ class PipelineStepRunBowtie2(PipelineStep):
             bowtie2_params.extend(['-1', input_fas[0], '-2', input_fas[1]])
         else:
             bowtie2_params.extend(['-U', input_fas[0]])
-        command.execute(" ".join(bowtie2_params))
+
+        # Example:
+        # bowtie2 -q -x /mnt/idseq/ref/bowtie2_genome/hg38_phiX_rRNA_mito_ERCC -f \
+        #         --very-sensitive-local -S /mnt/idseq/results/589/bowtie2_human.sam \
+        #         -p 32 \
+        #         -1 /mnt/idseq/results/589/unmapped_human_1.fa -2 /mnt/idseq/results/589/unmapped_human_2.fa
+        command.execute(
+            command_patterns.SingleCommand(
+                cmd='bowtie2',
+                args=bowtie2_params
+            )
+        )
         log.write("Finished Bowtie alignment.")
 
         if len(input_fas) == 2:

@@ -1,16 +1,14 @@
 import os
 from idseq_dag.engine.pipeline_step import PipelineStep
-from idseq_dag.util.command import run_in_subprocess
 import idseq_dag.util.command as command
-import idseq_dag.util.log as log
-import idseq_dag.util.count as count
+import idseq_dag.util.command_patterns as command_patterns
 
 class PipelineStepNonhostFastq(PipelineStep):
   # Either one or two input read files can be supplied.
   # Works for both FASTA and FASTQ, although non-host FASTQ is more useful.
   def run(self):
     scratch_dir = os.path.join(self.output_dir_local, "scratch_nonhost_fastq")
-    command.execute("mkdir -p %s" % scratch_dir)
+    command.make_dirs(scratch_dir)
     self.nonhost_headers = [
       os.path.join(scratch_dir, "nonhost_headers_r1.txt"),
       os.path.join(scratch_dir, "nonhost_headers_r2.txt")
@@ -39,8 +37,17 @@ class PipelineStepNonhostFastq(PipelineStep):
 
     for fastq in fastqs:
       if fastq[-3:] == '.gz':
-        cmd = "gunzip -f -k %s" % fastq
-        command.execute(cmd)
+        command.execute(
+          command_patterns.SingleCommand(
+            cmd="gunzip",
+            args=[
+              "-f",
+              "-k",
+              fastq
+            ]
+          )
+        )
+
         new_fastqs.append(fastq[:-3])
       else:
         new_fastqs.append(fastq)
@@ -96,8 +103,16 @@ class PipelineStepNonhostFastq(PipelineStep):
   @staticmethod
   # Use seqtk, which is orders of magnitude faster than Python for this particular step.
   def generate_nonhost_fastq(nonhost_headers, fastq, output_file):
-    cmd = "seqtk subseq %s %s > %s" % (fastq, nonhost_headers, output_file)
-    command.execute(cmd)
+    command.execute(
+      command_patterns.ShellScriptCommand(
+        script=r'''seqtk subseq "$1" "$2" > "$3";''',
+        args=[
+          fastq,
+          nonhost_headers,
+          output_file
+        ]
+      )
+    )
 
   def count_reads(self):
     pass

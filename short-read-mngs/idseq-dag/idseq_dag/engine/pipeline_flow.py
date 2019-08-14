@@ -3,7 +3,8 @@ import json
 import os
 import threading
 import traceback
-
+import datetime
+import pytz
 import idseq_dag
 import idseq_dag.util.s3
 import idseq_dag.util.command as command
@@ -36,7 +37,8 @@ class PipelineFlow(object):
         self.large_file_list = []
 
         self.step_status_local = f"{self.output_dir_local}/{self.name}_status.json"
-        command.execute("mkdir -p %s %s" % (self.output_dir_local, self.ref_dir_local))
+        command.make_dirs(self.output_dir_local)
+        command.make_dirs(self.ref_dir_local)
 
     @staticmethod
     def parse_output_version(version):
@@ -60,6 +62,7 @@ class PipelineFlow(object):
           "name": the name of the stage running
         '''
         dag = json.loads(open(dag_json).read())
+        log.log_event("pipeline_flow.dag_json_loaded", values={"file": dag_json, "contents": dag})
         output_dir = dag["output_dir_s3"]
         targets = dag["targets"]
         steps = dag["steps"]
@@ -148,13 +151,14 @@ class PipelineFlow(object):
             s3_file = os.path.join(input_dir_s3, f)
             local_file = os.path.join(result_dir_local, f)
             local_dir = os.path.dirname(local_file)
-            command.execute("mkdir -p %s" % local_dir)
+            command.make_dirs(local_dir)
             # copy the file over
             output_file = idseq_dag.util.s3.fetch_from_s3(s3_file, local_dir, allow_s3mi=True)
             if output_file:
                 # write the done_file
                 done_file = PipelineStep.done_file(local_file)
-                command.execute("date > %s" % done_file)
+                fmt_now = datetime.datetime.now(tz=pytz.UTC).strftime("%a %b %e %H:%M:%S %Z %Y")
+                command.write_text_to_file(fmt_now, done_file)
             else:
                 raise RuntimeError(f"{s3_file} likely doesn't exist")
 

@@ -227,6 +227,10 @@ TODO: Move this code over to the idseq-dag repo.
 
 ## Release notes
 
+- 3.9.1
+   - Refactoring of command execution patterns and logs.
+   - Removed some false error log messages related to lz4 file download support.
+
 - 3.9.0
    - Add number of reads, reads per million, and depth per million to the output of PipelineStepRunSRST2.
 

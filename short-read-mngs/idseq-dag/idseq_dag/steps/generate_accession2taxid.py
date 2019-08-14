@@ -6,6 +6,7 @@ import threading
 from idseq_dag.engine.pipeline_step import PipelineStep
 from idseq_dag.util.command import run_in_subprocess
 import idseq_dag.util.command as command
+import idseq_dag.util.command_patterns as command_patterns
 import idseq_dag.util.log as log
 from idseq_dag.util.dict import IdSeqDictForUpdate, IdSeqDictValue
 
@@ -183,10 +184,26 @@ class PipelineStepGenerateAccession2Taxid(PipelineStep):
 
 
     def grab_accession_names(self, source_file, dest_file):
-        command.execute(f"grep '^>' {source_file} |cut -f 1 -d' ' > {dest_file}")
+        command.execute(
+            command_patterns.ShellScriptCommand(
+                script=r'''grep '^>' "${source_file}" | cut -f 1 -d' ' > "${dest_file}";''',
+                named_args={
+                    'source_file': source_file,
+                    'dest_file': dest_file
+                }
+            )
+        )
 
     def grab_wgs_accessions(self, source_file, dest_file):
-        command.execute(f"grep '^>' {source_file} | grep 'complete genome' | cut -f 1 -d' ' > {dest_file}")
+        command.execute(
+            command_patterns.ShellScriptCommand(
+                script=r'''grep '^>' "${source_file}" | grep 'complete genome' | cut -f 1 -d' ' > "${dest_file}";''',
+                named_args={
+                    'source_file': source_file,
+                    'dest_file': dest_file
+                }
+            )
+        )
 
     @run_in_subprocess
     def grab_accession_mapping_list(self, source_gz, num_partitions, partition_id,

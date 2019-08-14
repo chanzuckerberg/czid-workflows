@@ -5,10 +5,16 @@ import sys
 import os
 import threading
 import time
-import sqlite3
+import datetime
+import glob as _glob
+import shutil
+import shlex
 from functools import wraps
+import pytz
+from typing import List, Union, Dict, Any
 import idseq_dag.util.log as log
 from idseq_dag.util.trace_lock import TraceLock
+import idseq_dag.util.command_patterns as command_patterns
 
 
 class Updater(object):
@@ -205,65 +211,156 @@ def execute_with_retries(command,
                          progress_file=None,
                          timeout=None,
                          grace_period=None,
-                         merge_stderr=False):
-    execute(command, progress_file, timeout, grace_period, merge_stderr)
+                         merge_stderr=False,
+                         log_context_mode=log.LogContextMode.START_END_LOG_EVENTS):
+    execute(
+        command=command,
+        progress_file=progress_file,
+        timeout=timeout,
+        grace_period=grace_period,
+        merge_stderr=merge_stderr,
+        log_context_mode=log_context_mode
+    )
 
 
-def execute(command,
-            progress_file=None,
-            timeout=None,
-            grace_period=None,
-            capture_stdout=False,
-            merge_stderr=False):
+def execute(command: Union[command_patterns.CommandPattern, str],
+            progress_file: str = None,
+            timeout: int = None,
+            grace_period: int = None,
+            capture_stdout: bool = False,
+            merge_stderr: bool = False,
+            log_context_mode: log.LogContextMode = log.LogContextMode.START_END_LOG_EVENTS) -> Union[str, None]:
     """Primary way to start external commands in subprocesses and handle
     execution with logging.
     """
+    if not isinstance(command, command_patterns.CommandPattern):
+        # log warning if using legacy format
+        log.write(warning=True, message=f"Command parameter is using legacy type str. Use idseq_dag.util.command_patterns.", obj_data={"cmd": command, "type": type(command)})
+        cmd = command_patterns.ShellScriptCommand(script=command, args=[])
+    else:
+        cmd = command
+
     with CommandTracker() as ct:
-        log.write("Command {}: {}".format(ct.id, command))
-        with ProgressFile(progress_file):
-            if timeout:
-                ct.timeout = timeout
-            if grace_period:
-                ct.grace_period = grace_period
-            if capture_stdout:
-                # Capture only stdout. Child stderr = parent stderr unless
-                # merge_stderr specified. Child input = parent stdin.
-                ct.proc = subprocess.Popen(
-                    command,
-                    shell=True,
-                    executable="/bin/bash",
-                    stdin=sys.stdin.fileno(),
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT
-                    if merge_stderr else sys.stderr.fileno())
-                stdout, _ = ct.proc.communicate()
-            else:
-                # Capture nothing. Child inherits parent stdin/out/err.
-                ct.proc = subprocess.Popen(command, shell=True, executable="/bin/bash")
-                ct.proc.wait()
-                stdout = None
+        log_values = {"cid": f"Command {ct.id}", "command": cmd.as_dict()}
+        with log.log_context('command_execute', values=log_values, log_context_mode=log_context_mode) as lctx:
+            with ProgressFile(progress_file):
+                if timeout:
+                    ct.timeout = timeout
+                if grace_period:
+                    ct.grace_period = grace_period
+                if capture_stdout:
+                    # Capture only stdout. Child stderr = parent stderr unless
+                    # merge_stderr specified. Child input = parent stdin.
+                    ct.proc = cmd.open(
+                        stdin=sys.stdin.fileno(),
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.STDOUT if merge_stderr else sys.stderr.fileno()
+                    )
+                    stdout, _ = ct.proc.communicate()
+                else:
+                    # Capture nothing. Child inherits parent stdin/out/err.
+                    ct.proc = cmd.open()
+                    ct.proc.wait()
+                    stdout = None
 
-            log.write("Command {} completed. Return code {}".format(ct.id, ct.proc.returncode))
+                lctx.values.update({"returncode": ct.proc.returncode})
 
-            if ct.proc.returncode:
-                raise subprocess.CalledProcessError(ct.proc.returncode,
-                                                    command, stdout)
-            if capture_stdout:
-                return stdout
+                if ct.proc.returncode:
+                    raise subprocess.CalledProcessError(ct.proc.returncode,
+                                                        str(command), stdout)
+                if capture_stdout:
+                    return stdout
 
 
-def execute_with_output(command,
-                        progress_file=None,
-                        timeout=None,
-                        grace_period=None,
-                        merge_stderr=False):
+def execute_with_output(command: Union[command_patterns.CommandPattern, str],
+                        progress_file: str = None,
+                        timeout: int = None,
+                        grace_period: int = None,
+                        merge_stderr: bool = False,
+                        log_context_mode: log.LogContextMode = log.LogContextMode.START_END_LOG_EVENTS):
     return execute(
-        command,
-        progress_file,
-        timeout,
-        grace_period,
+        command=command,
+        progress_file=progress_file,
+        timeout=timeout,
+        grace_period=grace_period,
         capture_stdout=True,
-        merge_stderr=merge_stderr).decode('utf-8')
+        merge_stderr=merge_stderr,
+        log_context_mode=log_context_mode
+    ).decode('utf-8')
+
+
+def make_dirs(path: str):
+    if not os.path.isdir(path):
+        with log.log_context(context_name="command.make_dirs", values={'path': path}, log_context_mode=log.LogContextMode.EXEC_LOG_EVENT):
+            os.makedirs(path, exist_ok=True)
+
+
+def write_text_to_file(text: str, file_path: str):
+    with log.log_context(context_name='command.write_text_to_file', values={'path': file_path, 'text': text}, log_context_mode=log.LogContextMode.EXEC_LOG_EVENT):
+        with open(file_path, "w") as f:
+            print(text, file=f)
+
+
+def copy_file(src: str, dst: str):
+    with log.log_context(context_name='command.copy_file', values={'src': src, 'dest': dst}, log_context_mode=log.LogContextMode.EXEC_LOG_EVENT):
+        shutil.copy(src, dst)
+
+
+def move_file(src: str, dst: str):
+    with log.log_context(context_name='command.move_file', values={'src': src, 'dest': dst}, log_context_mode=log.LogContextMode.EXEC_LOG_EVENT):
+        shutil.move(src, dst)
+
+
+def remove_file(file_path: str):
+    with log.log_context(context_name='command.remove_file', values={'path': file_path}, log_context_mode=log.LogContextMode.EXEC_LOG_EVENT):
+        os.remove(file_path)
+
+
+def remove_rf(path: str):
+    '''Mimics behavior of rm -rf linux command.'''
+    def _remove_entry(path_entry):
+        if os.path.isdir(path_entry) and not os.path.islink(path_entry):
+            shutil.rmtree(path_entry)
+        elif os.path.exists(path_entry):
+            os.remove(path_entry)
+    with log.log_context(context_name='command.remove_rf', values={'path': path}, log_context_mode=log.LogContextMode.EXEC_LOG_EVENT):
+        path_list = _glob.glob(path)
+        if len(path_list) == 1 and path_list[0] == path:
+            _remove_entry(path)
+        else:
+            for path_entry in path_list:
+                with log.log_context(context_name='command.remove_rf._remove_entry', values={'path_entry': path_entry}, log_context_mode=log.LogContextMode.EXEC_LOG_EVENT):
+                    _remove_entry(path_entry)
+
+
+def chmod(path: str, mode: int):
+    '''Execute a chmod operation.
+       Parameter 'mode' must be in octal format. Ex: chmod('/tmp/test.txt', 0o400)'''
+    with log.log_context(context_name='command.chmod', values={'path': path, 'mode': oct(mode)}, log_context_mode=log.LogContextMode.EXEC_LOG_EVENT):
+        os.chmod(path, mode)
+
+
+def glob(glob_pattern: str, strip_folder_names: bool = False, max_results: int = 0):
+    '''
+        Execute a glob pattern to local file system.
+            Parameters:
+                glob_pattern(str): A glob pattern. Ex: /tmp/*.gz
+                max_results(int): Limit the number of results to be returned. Zero means not limit is set.
+                strip_folder_names(bool): Return only the file names without folder information.
+                                          Ex: "/tmp/123.txt" is returned as "123.txt"
+            Returns:
+                Array of strings containing the files found. Empty array if none is found.
+    '''
+    values = {'glob_pattern': glob_pattern, 'strip_folder_names': strip_folder_names, 'max_results': max_results}
+    with log.log_context(context_name='command.glob', values=values, log_context_mode=log.LogContextMode.EXEC_LOG_EVENT):
+        results = _glob.glob(glob_pattern)
+        results.sort()
+        if max_results > 0:
+            results = results[:max_results]
+        if strip_folder_names:
+            results = list(map(os.path.basename, results))
+        values["results"] = results
+        return results
 
 
 def scp(key_path, remote_username, instance_ip, remote_path, local_path):
@@ -272,19 +369,30 @@ def scp(key_path, remote_username, instance_ip, remote_path, local_path):
     assert " " not in local_path
     # ServerAliveInterval to fix issue with containers keeping open an SSH
     # connection even after worker machines had finished running.
-    return 'scp -o "StrictHostKeyChecking no" -o "ConnectTimeout 15" ' \
-           '-o "ServerAliveInterval 60" -i {key_path} ' \
-           '{username}@{ip}:{remote_path} {local_path}'.format(
-        key_path=key_path,
-        username=remote_username,
-        ip=instance_ip,
-        remote_path=remote_path,
-        local_path=local_path)
+    return command_patterns.SingleCommand(
+        cmd="scp",
+        args=[
+            "-o", "StrictHostKeyChecking no",
+            "-o", "ConnectTimeout 15",
+            "-o", "ServerAliveInterval 60",
+            "-i", key_path,
+            f"{remote_username}@{instance_ip}:{remote_path}",
+            local_path
+        ]
+    )
 
 
 def remote(base_command, key_path, remote_username, instance_ip):
     # ServerAliveInterval to fix issue with containers keeping open an SSH
     # connection even after worker machines had finished running.
-    return 'ssh -o "StrictHostKeyChecking no" -o "ConnectTimeout 15" ' \
-           '-o "ServerAliveInterval 60" -i %s %s@%s "%s"' % (
-        key_path, remote_username, instance_ip, base_command)
+    return command_patterns.SingleCommand(
+        cmd="ssh",
+        args=[
+            "-o", "StrictHostKeyChecking no",
+            "-o", "ConnectTimeout 15",
+            "-o", "ServerAliveInterval 60",
+            "-i", key_path,
+            f"{remote_username}@{instance_ip}",
+            base_command
+        ]
+    )

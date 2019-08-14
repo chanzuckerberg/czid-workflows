@@ -5,7 +5,7 @@ from collections import defaultdict
 from idseq_dag.engine.pipeline_step import PipelineStep
 from idseq_dag.util.trace_lock import TraceLock
 import idseq_dag.util.command as command
-import idseq_dag.util.count as count
+import idseq_dag.util.command_patterns as command_patterns
 import idseq_dag.util.s3 as s3
 import idseq_dag.util.m8 as m8
 import idseq_dag.util.log as log
@@ -55,12 +55,12 @@ class PipelineStepBlastContigs(PipelineStep):
             os.path.getsize(reference_fasta) < MIN_REF_FASTA_SIZE:
                 # No assembled results or refseq fasta available.
                 # Create empty output files.
-                command.execute(f"echo ' ' > {blast_m8}")
-                command.execute(f"echo ' ' > {blast_top_m8}")
-                command.execute(f"cp {deduped_m8} {refined_m8}")
-                command.execute(f"cp {hit_summary} {refined_hit_summary}")
-                command.execute(f"cp {orig_counts} {refined_counts}")
-                command.execute("echo '[]' > " + contig_summary_json)
+                command.write_text_to_file(' ', blast_m8)
+                command.write_text_to_file(' ', blast_top_m8)
+                command.copy_file(deduped_m8, refined_m8)
+                command.copy_file(hit_summary, refined_hit_summary)
+                command.copy_file(orig_counts, refined_counts)
+                command.write_text_to_file('[]', contig_summary_json)
                 return
 
         (read_dict, accession_dict, _selected_genera) = m8.summarize_hits(hit_summary)
@@ -213,8 +213,38 @@ class PipelineStepBlastContigs(PipelineStep):
         if db_type == 'nr':
             blast_type = 'prot'
             blast_command = 'blastx'
-        command.execute(f"makeblastdb -in {reference_fasta} -dbtype {blast_type} -out {blast_index_path}")
-        command.execute(f"{blast_command} -query {assembled_contig} -db {blast_index_path} -out {blast_m8} -outfmt 6 -num_alignments 5 -num_threads 16")
+        command.execute(
+            command_patterns.SingleCommand(
+                cmd="makeblastdb",
+                args=[
+                    "-in",
+                    reference_fasta,
+                    "-dbtype",
+                    blast_type,
+                    "-out",
+                    blast_index_path
+                ]
+            )
+        )
+        command.execute(
+            command_patterns.SingleCommand(
+                cmd=blast_command,
+                args=[
+                    "-query",
+                    assembled_contig,
+                    "-db",
+                    blast_index_path,
+                    "-out",
+                    blast_m8,
+                    "-outfmt",
+                    6,
+                    "-num_alignments",
+                    5,
+                    "-num_threads",
+                    16
+                ]
+            )
+        )
         # further processing of getting the top m8 entry for each contig.
         PipelineStepBlastContigs.get_top_m8(blast_m8, blast_top_m8)
 

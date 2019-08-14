@@ -1,5 +1,6 @@
 from idseq_dag.engine.pipeline_step import PipelineStep
 import idseq_dag.util.command as command
+import idseq_dag.util.command_patterns as command_patterns
 import idseq_dag.util.count as count
 import idseq_dag.util.m8 as m8
 
@@ -53,5 +54,11 @@ class PipelineStepGenerateAnnotatedFasta(PipelineStep):
     def generate_unidentified_fasta(input_fa, output_fa):
         #TODO  remove annotated fasta intermediate file and replace > with : below
         command.execute(
-            "grep -A 1 '>NR::NT::' %s | sed '/^--$/d' > %s" % (input_fa, output_fa))
-
+            command_patterns.ShellScriptCommand(
+                script=r'''grep -A 1 '>NR::NT::' "$1" | sed '/^--$/d' > "$2";''',
+                args=[
+                    input_fa,
+                    output_fa
+                ]
+            )
+        )

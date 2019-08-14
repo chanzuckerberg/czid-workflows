@@ -1,4 +1,5 @@
 import idseq_dag.util.command as command
+import idseq_dag.util.command_patterns as command_patterns
 
 def reads_in_group(file_group, max_fragments=None):
     '''
@@ -17,19 +18,33 @@ def reads(local_file_path, max_reads=None):
     up to a maximum of max_reads.
     '''
     if local_file_path.endswith(".gz"):
-        cmd = "zcat {}".format(local_file_path)
+        cmd = r'''zcat "${local_file_path}"'''
         file_format = local_file_path.split(".")[-2]
     else:
-        cmd = "cat {}".format(local_file_path)
+        cmd = r'''cat "${local_file_path}"'''
         file_format = local_file_path.split(".")[-1]
+
+    named_args = {
+        'local_file_path': local_file_path
+    }
 
     if max_reads:
         max_lines = reads2lines(max_reads, file_format)
         assert max_lines is not None, "Could not convert max_reads to max_lines"
-        cmd += " | head -n {}".format(max_lines)
+        cmd += r''' | head -n "${max_lines}"'''
+        named_args.update({
+            'max_lines': max_lines
+        })
 
     cmd += " |  wc -l"
-    line_count = int(command.execute_with_output(cmd))
+
+    cmd_output = command.execute_with_output(
+        command_patterns.ShellScriptCommand(
+            script=cmd,
+            named_args=named_args
+        )
+    )
+    line_count = int(cmd_output.strip().split(' ')[0])
     return lines2reads(line_count, file_format)
 
 def lines2reads(line_count, file_format):

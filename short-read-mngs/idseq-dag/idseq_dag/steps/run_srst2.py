@@ -6,6 +6,7 @@ from functools import reduce
 from idseq_dag.engine.pipeline_step import PipelineStep
 from idseq_dag.util.s3 import fetch_from_s3
 import idseq_dag.util.command as command
+import idseq_dag.util.command_patterns as command_patterns
 
 class PipelineStepRunSRST2(PipelineStep):
     '''
@@ -50,20 +51,38 @@ class PipelineStepRunSRST2(PipelineStep):
     def execute_srst2(self, is_paired, is_fasta, is_zipped):
         """Executes srst2 with appropriate parameters based on whether input files are zipped,
            paired reads and on file type."""
-        srst2_params = ['srst2']
+        srst2_params = []
         srst2_params.extend(self.get_common_params())
         if is_fasta:
             file_ext = '.fasta.gz' if is_zipped else '.fasta'
             srst2_params.extend(['--read_type', 'f'])
         else:
             file_ext = '.fastq.gz' if is_zipped else '.fastq'
-        if is_paired: srst2_params.extend(['--input_pe'])
-        else: srst2_params.extend(['--input_se'])
+        if is_paired:
+            srst2_params.extend(['--input_pe'])
+        else:
+            srst2_params.extend(['--input_se'])
         for i, rd in enumerate(self.input_files_local[0]):
-            command.execute(f"ln -sf {rd} _R{i+1}_001"+file_ext)
-            srst2_params.extend(['_R'+ str(i+1) + '_001'+file_ext])
-        if is_paired: srst2_params.extend(['--forward', '_R1_001', '--reverse', '_R2_001'])
-        command.execute(" ".join(srst2_params))
+            link_name = f"_R{i+1}_001{file_ext}"
+            command.execute(
+                command_patterns.SingleCommand(
+                    cmd='ln',
+                    args=[
+                        '-sf',
+                        rd,
+                        link_name
+                    ]
+                )
+            )
+            srst2_params.append(link_name)
+        if is_paired:
+            srst2_params.extend(['--forward', '_R1_001', '--reverse', '_R2_001'])
+        command.execute(
+            command_patterns.SingleCommand(
+                cmd='srst2',
+                args=srst2_params
+            )
+        )
 
 
     def get_common_params(self):
@@ -72,15 +91,27 @@ class PipelineStepRunSRST2(PipelineStep):
         min_cov = str(self.additional_attributes['min_cov'])
         # srst2 expects this to be a string, in dag could be passed in as a number
         n_threads = str(self.additional_attributes['n_threads'])
-        return ['--min_coverage', min_cov,'--threads', n_threads,
-                '--output',  os.path.join(self.output_dir_local, 'output'), '--log', '--gene_db', db_file_path]
+        return ['--min_coverage', min_cov, '--threads', n_threads,
+                '--output', os.path.join(self.output_dir_local, 'output'), '--log', '--gene_db', db_file_path]
 
     def generate_mapped_reads_tsv(self):
         """Use bedtools to generate a table of mapped reads for each genome in the ARG ANNOT database.
             If a new resistance gene db is used, the .bed file will need to be updated manually."""
         bed_file_path = fetch_from_s3(self.additional_files["resist_genome_bed"], self.output_dir_local, allow_s3mi=False)
-        bedtools_params = ['bedtools', 'coverage', '-b', self.output_files_local()[5], '-a', bed_file_path, '>', os.path.join(self.output_dir_local, 'matched_reads.tsv')]
-        command.execute(" ".join(bedtools_params))
+        command.execute(
+            command_patterns.SingleCommand(
+                cmd='bedtools',
+                args=[
+                    'coverage',
+                    '-b',
+                    self.output_files_local()[5],
+                    '-a',
+                    bed_file_path,
+                    '>',
+                    os.path.join(self.output_dir_local, 'matched_reads.tsv')
+                ]
+            )
+        )
 
     def get_total_reads(self, is_zipped, is_fasta):
         """Gets the total number of reads in the sample by counting them directly from the
@@ -91,20 +122,33 @@ class PipelineStepRunSRST2(PipelineStep):
             unzipped_filenames = []
             for filename in input_filenames:
                 if not os.path.exists(filename[:len(filename)-3]):
-                    gunzip_params = ['gunzip', '-k']
-                    gunzip_params.extend([filename])
-                    command.execute(" ".join(gunzip_params))
+                    command.execute(
+                        command_patterns.SingleCommand(
+                            cmd='gunzip',
+                            args=[
+                                '-k',
+                                filename
+                            ]
+                        )
+                    )
                 unzipped_filenames.append(filename[:len(filename)-3])
             input_filenames = unzipped_filenames
         if is_fasta: # Number of lines per read can vary, so we use grep
-            grep_params = ['grep', '-c', '"^>"'] # fastas start reads with "^>".
-            grep_params.extend(input_filenames) 
-            grep_output = command.execute_with_output(" ".join(grep_params))
+            grep_output = command.execute_with_output(
+                command_patterns.SingleCommand(
+                    cmd='grep',
+                    args=[
+                        '-c',
+                        '^>', # fastas start reads with "^>".
+                        *input_filenames
+                    ]
+                )
+            )
             output_lines = [line for line in grep_output.split("\n") if line != '']
-            if ":" in output_lines[0]: 
+            if ":" in output_lines[0]:
                 # for paired fastas - when run on just one file, grep outputs only
                 # a number. But when this command is run on two files, grep outputs
-                # a string formatted as filename:count for each file, with count being 
+                # a string formatted as filename:count for each file, with count being
                 # what we want to add up.
                 read_counts = map(lambda line: int(line.split(":")[1]), output_lines)
                 return reduce(lambda x, y: x + y, list(read_counts))
@@ -119,7 +163,7 @@ class PipelineStepRunSRST2(PipelineStep):
             wc_lines = [line for line in wc_output.split("\n") if line != '']
             wc_target_line = [line for line in wc_lines[-1].split(" ") if line != '']
             total_line_count = int(wc_target_line[0])
-            return total_line_count / 4 
+            return total_line_count / 4
 
     @staticmethod
     def _append_dpm_to_results(amr_results, total_reads):

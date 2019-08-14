@@ -4,6 +4,7 @@ import time
 import traceback
 from idseq_dag.engine.pipeline_step import PipelineStep
 import idseq_dag.util.command as command
+import idseq_dag.util.command_patterns as command_patterns
 import idseq_dag.util.s3 as s3
 import idseq_dag.util.m8 as m8
 
@@ -63,7 +64,7 @@ class PipelineStepDownloadAccessions(PipelineStep):
 
         bucket, key = db_s3_path[5:].split("/", 1)
         accession_dir = os.path.join(self.output_dir_local, db_type, 'accessions')
-        command.execute(f"mkdir -p {accession_dir}")
+        command.make_dirs(accession_dir)
         for accession, _taxinfo in accession_dict.items():
             entry = loc_dict.get(accession)
             if not entry:
@@ -83,7 +84,15 @@ class PipelineStepDownloadAccessions(PipelineStep):
         if error_flags:
             raise RuntimeError("Error in getting sequences by accession list.")
         # Combine all the downloaded accessions to a fasta file
-        command.execute(f"find {accession_dir}/ -type f | xargs -n 32 -P 1 cat >> {output_reference_fasta}")
+        command.execute(
+            command_patterns.ShellScriptCommand(
+                script=r'''find "${accession_dir}" -type f | xargs -n 32 -P 1 cat >> "${output_reference_fasta}";''',
+                named_args={
+                    'accession_dir': os.path.join(accession_dir, ""), # adds a slash at the end if it doesn't have one
+                    'output_reference_fasta': output_reference_fasta
+                }
+            )
+        )
 
     @staticmethod
     def get_sequence_by_accession_from_file(accession_id, loc_dict, db_file):

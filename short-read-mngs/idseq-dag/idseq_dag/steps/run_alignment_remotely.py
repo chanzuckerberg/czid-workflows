@@ -5,10 +5,12 @@ import random
 import traceback
 import multiprocessing
 import time
+import shlex
 
 from idseq_dag.engine.pipeline_step import PipelineStep, InputFileErrors
 
 import idseq_dag.util.command as command
+import idseq_dag.util.command_patterns as command_patterns
 import idseq_dag.util.count as count
 from idseq_dag.util.server import ASGInstance, ChunkStatus, chunk_status_tracker
 import idseq_dag.util.log as log
@@ -73,8 +75,7 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
         self.chunks_result_dir_local = os.path.join(self.output_dir_local, "chunks")
         self.chunks_result_dir_s3 = os.path.join(self.output_dir_s3, "chunks")
         self.iostream_upload = multiprocessing.Semaphore(MAX_CONCURRENT_CHUNK_UPLOADS)
-
-        command.execute("mkdir -p %s" % self.chunks_result_dir_local)
+        command.make_dirs(self.chunks_result_dir_local)
 
     def count_reads(self):
         pass
@@ -182,7 +183,7 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
 
     def fetch_key(self, key_path_s3):
         key_path = fetch_from_s3(key_path_s3, self.output_dir_local)
-        command.execute("chmod 400 %s" % key_path)
+        command.chmod(key_path, 0o400)
         return key_path
 
     def chunk_input(self, input_files, chunksize):
@@ -194,8 +195,16 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
 
         for input_file in input_files:
             # Count number of lines in the file
-            nlines = int(command.execute_with_output("wc -l %s" % input_file)
-                         .strip().split()[0])
+            cmd_output = command.execute_with_output(
+                command_patterns.SingleCommand(
+                    cmd="wc",
+                    args=[
+                        "-l",
+                        input_file
+                    ]
+                )
+            )
+            nlines = int(cmd_output.strip().split()[0])
             # Number of lines should be the same in paired files
             if known_nlines is not None:
                 msg = "Mismatched line counts in supposedly paired files: {}".format(
@@ -211,15 +220,44 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
             out_prefix = os.path.join(self.chunks_result_dir_local, out_prefix_base)
 
             # Split large file into smaller named pieces
-            command.execute("split -a %d --numeric-suffixes -l %d %s %s" %
-                            (ndigits, chunk_nlines, input_file, out_prefix))
-            command.execute_with_retries(f"aws s3 sync --only-show-errors {self.chunks_result_dir_local}/ {self.chunks_result_dir_s3}/ --exclude '*' --include '{out_prefix_base}*'")
+            command.execute(
+                command_patterns.SingleCommand(
+                    cmd="split",
+                    args=[
+                        "-a",
+                        ndigits,
+                        "--numeric-suffixes",
+                        "-l",
+                        chunk_nlines,
+                        input_file,
+                        out_prefix
+                    ]
+                )
+            )
+            command.execute_with_retries(
+                command_patterns.SingleCommand(
+                    cmd="aws",
+                    args=[
+                        "s3",
+                        "sync",
+                        "--only-show-errors",
+                        os.path.join(self.chunks_result_dir_local, ""),
+                        os.path.join(self.chunks_result_dir_s3, ""),
+                        "--exclude",
+                        "*",
+                        "--include",
+                        out_prefix_base + "*"
+                    ]
+                )
+            )
 
             # Get the partial file names
             partial_files = []
-            paths = command.execute_with_output("ls %s*" % out_prefix).rstrip().split("\n")
-            for pf in paths:
-                partial_files.append(os.path.basename(pf))
+            paths = command.glob(
+                glob_pattern=out_prefix + "*",
+                strip_folder_names=True
+            )
+            partial_files.extend(paths)
 
             # Check that the partial files match our expected chunking pattern
             pattern = "{:0%dd}" % ndigits
@@ -248,10 +286,12 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
                     service, input_chunks[err_i]))
     @staticmethod
     def concatenate_files(chunk_output_files, output_m8):
-        with open(output_m8, 'wb') as outf:
-            for f in chunk_output_files:
-                with open(f, 'rb') as fd:
-                    shutil.copyfileobj(fd, outf)
+        with log.log_context("run_alignment_remote.concatenate_files", {"chunk_output_files": chunk_output_files}):
+            with open(output_m8, 'wb') as outf:
+                for f in chunk_output_files:
+                    with log.log_context("run_alignment_remote.concatenate_files#chunk", {"f": f}):
+                        with open(f, 'rb') as fd:
+                            shutil.copyfileobj(fd, outf)
 
     @staticmethod
     def run_chunk_wrapper(chunks_in_flight, chunk_output_files, n, mutex, target, args):
@@ -288,10 +328,10 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
         # Check if every row has correct number of columns (12) in the output
         # file on the remote machine
         if service == "gsnap":
-            verification_command = "cat %s" % multihit_remote_outfile
+            verification_command = "cat %s" % shlex.quote(multihit_remote_outfile)
         else:
             # For rapsearch, first remove header lines starting with '#'
-            verification_command = "grep -v '^#' %s" % multihit_remote_outfile
+            verification_command = "grep -v '^#' %s" % shlex.quote(multihit_remote_outfile)
         verification_command += " | awk '{print NF}' | sort -nu | head -n 1"
         min_column_number_string = command.execute_with_output(
             command.remote(verification_command, key_path, remote_username, instance_ip))
@@ -311,8 +351,12 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
         # Copy output from remote machine to local machine.  This needs to happen while we are
         # holding the machine reservation, i.e., inside the "with ASGInstnace" context.
         command.execute(
-            command.scp(key_path, remote_username, instance_ip,
-                        multihit_remote_outfile, multihit_local_outfile))
+            command.scp(
+                key_path, remote_username, instance_ip,
+                multihit_remote_outfile,
+                multihit_local_outfile
+            )
+        )
 
     def run_chunk(self, part_suffix, remote_home_dir, remote_index_dir, remote_work_dir,
                   remote_username, input_files, key_path, service, lazy_run):
@@ -327,12 +371,13 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
         multihit_remote_outfile = os.path.join(remote_work_dir, multihit_basename)
         multihit_s3_outfile = os.path.join(self.chunks_result_dir_s3, multihit_basename)
 
-        base_str = "aws s3 cp --only-show-errors {s3_path}/{input_fa} {remote_work_dir}/{input_fa} "
-        download_input_from_s3 = " ; ".join(
-            base_str.format(
-                s3_path=self.chunks_result_dir_s3,
-                input_fa=input_fa,
-                remote_work_dir=remote_work_dir) for input_fa in input_files)
+        def aws_cp_operation(input_fa):
+            return "aws s3 cp --only-show-errors {src} {dest}".format(
+                src=shlex.quote(os.path.join(self.chunks_result_dir_s3, input_fa)),
+                dest=shlex.quote(os.path.join(remote_work_dir, input_fa))
+            )
+
+        download_input_from_s3 = " ; ".join(map(aws_cp_operation, input_files))
 
         base_str = "mkdir -p {remote_work_dir} ; {download_input_from_s3} ; "
         environment = self.additional_attributes["environment"]
@@ -342,14 +387,12 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
             commands = base_str + "/usr/local/bin/rapsearch -d {remote_index_dir}/nr_rapsearch -e -6 -l 10 -a T -b 0 -v 50 -z 24 -q {remote_input_files} -o {multihit_remote_outfile}"
 
         commands = commands.format(
-            remote_work_dir=remote_work_dir,
+            remote_work_dir=shlex.quote(remote_work_dir),
             download_input_from_s3=download_input_from_s3,
-            remote_home_dir=remote_home_dir,
-            remote_index_dir=remote_index_dir,
-            remote_input_files=" ".join(
-                remote_work_dir + "/" + input_fa for input_fa in input_files),
-            multihit_remote_outfile=multihit_remote_outfile
-            if service == "gsnap" else multihit_remote_outfile[:-3]
+            remote_home_dir=shlex.quote(remote_home_dir),
+            remote_index_dir=shlex.quote(remote_index_dir),
+            remote_input_files=" ".join(shlex.quote(remote_work_dir + "/" + input_fa) for input_fa in input_files),
+            multihit_remote_outfile=shlex.quote(multihit_remote_outfile) if service == "gsnap" else shlex.quote(multihit_remote_outfile[:-3])
             # Strip the .m8 for RAPSearch as it adds that
         )
 
@@ -436,15 +479,25 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
 
             # Upload to s3
             with self.iostream_upload:  # Limit concurrent uploads so as not to stall the pipeline.
-                command.execute(f"aws s3 cp --only-show-errors {multihit_local_outfile} {self.chunks_result_dir_s3}/")
+                command.execute(
+                    command_patterns.SingleCommand(
+                        cmd="aws",
+                        args=[
+                            "s3",
+                            "cp",
+                            "--only-show-errors",
+                            multihit_local_outfile,
+                            os.path.join(self.chunks_result_dir_s3, "")
+                        ]
+                    )
+                )
             log.write(f"finished alignment for chunk {chunk_id} on {service} server {instance_ip}")
 
         # Whether lazy or not lazy, we've now got the chunk result locally here.
         return multihit_local_outfile
 
     def step_description(self, require_docstrings=False):
-        service = self.additional_attributes["service"]
-        if (service == "gsnap"):
+        if (self.name == "gsnap_out"):
             return """
                 Runs gsnap remotely.
 
@@ -465,7 +518,7 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
 
                 GSNAP documentation is available [here](http://research-pub.gene.com/gmap/).
             """
-        elif (service == "rapsearch2"):
+        elif (self.name == "rapsearch2_out"):
             return """
                 Runs rapsearch remotely.
                 
