@@ -227,6 +227,9 @@ TODO: Move this code over to the idseq-dag repo.
 
 ## Release notes
 
+- 3.9.2
+  - Fixed error in run_srst2 that failed to take into account different naming patterns from srst2 for the sorted bam file that it outputs.
+
 - 3.9.1
    - Refactoring of command execution patterns and logs.
    - Removed some false error log messages related to lz4 file download support.
