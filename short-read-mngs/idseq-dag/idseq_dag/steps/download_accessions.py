@@ -1,6 +1,7 @@
 import os
 import threading
 import time
+import re
 import traceback
 from idseq_dag.engine.pipeline_step import PipelineStep
 import idseq_dag.util.command as command
@@ -44,6 +45,58 @@ class PipelineStepDownloadAccessions(PipelineStep):
                     allow_s3mi=ALLOW_S3MI)
                 self.download_ref_sequences_from_file(accession_dict, loc_dict, db_path, output_reference_fasta)
 
+
+    FIX_COMMA_REGEXP = re.compile(r'^(?P<accession_id>[^ ]+) (?P<wrong_pattern>, *)?(?P<description>.*)$')
+
+    @staticmethod
+    def _fix_ncbi_record(accession_data: str) -> str:
+        '''
+            We found a ncbi record that is oddly annotated (title starts with a comma,
+            as you can see here: https://www.ncbi.nlm.nih.gov/protein/XP_002289390.1)
+            That produce wrong results in blastx (blastx understand this accession
+            as being "XP_002289390.1," instead of "XP_002289390.1")
+
+            This method detects and removes this trailling comma from the title, and
+            it is being invoked before writing it to file assembly/nr.refseq.fasta,
+            which is a subset of the original nr index.
+
+            `accession_data` is a string that looks like this:
+
+                accession_data = (
+                    '>XP_002289390.1 , partial [Thalassiosira pseudonana CCMP1335]\x01EED92927.1 Conserved Hypothetical Protein, partial [Thalassiosira pseudonana CCMP1335]\n'
+                    'GGREKKKLLKSQKDGSAKDRHNPRAFSVANIVRTQRNVQRNLDRAQKKEYVPLSDRRAARVEEGPPSLVAVVGPPGVGKS\n'
+                    'TLIRSLVKLYTNHNLTNPTGPITVCTSQTKRITFLECPNTPTAMLDVAKIADLVLLCVDAKFGFEMETFEFLNMMQTHGF\n'
+                    'PKVMGIFTHLDQFRTQKNLRKTKKLLKHRFWTEIYDGAKMFYFSGCVNGKYLKHEVKQLSLLLSRIKYRPLVWRNTHPYV\n'
+                    # (...more lines with sequence data...)
+                )
+                # note entry above represents a single string and line breaks and ^A character are part of it.
+
+            this method returns same string with title correction:
+
+            result = (
+                '>XP_002289390.1 partial [Thalassiosira pseudonana CCMP1335]\x01EED92927.1 Conserved Hypothetical Protein, partial [Thalassiosira pseudonana CCMP1335]\n'
+                'GGREKKKLLKSQKDGSAKDRHNPRAFSVANIVRTQRNVQRNLDRAQKKEYVPLSDRRAARVEEGPPSLVAVVGPPGVGKS\n'
+                'TLIRSLVKLYTNHNLTNPTGPITVCTSQTKRITFLECPNTPTAMLDVAKIADLVLLCVDAKFGFEMETFEFLNMMQTHGF\n'
+                'PKVMGIFTHLDQFRTQKNLRKTKKLLKHRFWTEIYDGAKMFYFSGCVNGKYLKHEVKQLSLLLSRIKYRPLVWRNTHPYV\n'
+                # (...more lines with sequence data...)
+            )
+
+            Right now this method is only being used to remove the heading comma,
+            since this is the only case that we found so far affecting the pipeline.
+            It may be extended the future to handle more exceptions if it is needed.
+        '''
+        def _fix_headers(line):
+            if len(line) > 0 and line[0] == ">":
+                # support for multiheader line separted by CTRL_A (https://en.wikipedia.org/wiki/FASTA_format#Description_line)
+                header_items = line.lstrip(">").split("\x01")
+                header_items = (PipelineStepDownloadAccessions.FIX_COMMA_REGEXP.sub(r"\g<accession_id> \g<description>", header_item) for header_item in header_items)
+                return ">" + ("\x01".join(header_items))
+            return line
+
+        lines = accession_data.split("\n")
+        lines = (_fix_headers(line) for line in lines)
+        return "\n".join(lines)
+
     def download_ref_sequences_from_file(self, accession_dict, loc_dict, db_path,
                                          output_reference_fasta):
         db_file = open(db_path, 'r')
@@ -51,6 +104,7 @@ class PipelineStepDownloadAccessions(PipelineStep):
             for accession, _taxinfo in accession_dict.items():
                 accession_data = self.get_sequence_by_accession_from_file(accession, loc_dict, db_file)
                 if accession_data:
+                    accession_data = self._fix_ncbi_record(accession_data)
                     orf.write(accession_data)
         db_file.close()
 
