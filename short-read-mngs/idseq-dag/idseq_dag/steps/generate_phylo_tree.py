@@ -71,7 +71,7 @@ class PipelineStepGeneratePhyloTree(PipelineStep):
         ksnp3_input_file = f"{self.output_dir_local}/inputs.txt"
         command.execute(
             command_patterns.SingleCommand(
-                cd=input_dir_for_ksnp3,
+                cd=self.output_dir_local,
                 cmd='MakeKSNP3infile',
                 args=[
                     os.path.basename(input_dir_for_ksnp3),
