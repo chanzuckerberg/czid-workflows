@@ -8,6 +8,8 @@ from idseq_dag.util.s3 import fetch_from_s3
 import idseq_dag.util.command as command
 import idseq_dag.util.command_patterns as command_patterns
 
+MATCHED_READS_FILE = "matched_reads.tsv"
+
 class PipelineStepRunSRST2(PipelineStep):
     '''
     Short Read Sequence Typing for Bacterial Pathogens
@@ -107,7 +109,7 @@ class PipelineStepRunSRST2(PipelineStep):
                 command_patterns.SingleCommand(
                     cmd='mv',
                     args=[
-                        unpaired_bam_path, 
+                        unpaired_bam_path,
                         self.output_files_local()[5]
                     ]
                 )
@@ -117,16 +119,37 @@ class PipelineStepRunSRST2(PipelineStep):
         """Use bedtools to generate a table of mapped reads for each genome in the ARG ANNOT database.
             If a new resistance gene db is used, the .bed file will need to be updated manually."""
         bed_file_path = fetch_from_s3(self.additional_files["resist_genome_bed"], self.output_dir_local, allow_s3mi=False)
+        sample_bam_file_path = self.output_files_local()[5]
+
+        tmp_sort_dir = os.path.join(self.output_dir_local, "tmp_sort")
+        command.make_dirs(tmp_sort_dir)
+
+        # Convert the sorted.bam output from SRST2 to the bed format, then sort the bed file.
+        # This allows us to use the "sorted" mode of bedtools coverage, which is memory-efficient.
+        # Otherwise, large sorted.bam files will cause our machines to run out of RAM.
+        #
+        # Note that despite being called "sorted.bam", the bam is not sorted the way we need it to be.
+        #
+        # env LC_ALL=C ensures that the sort command uses the same sort order on all machines.
+        #
+        # The -T flag with tmp_sort_dir ensures that we make tmp files inside /mnt, which is where our huge AWS volumes are mounted.
+        # By default, the sort command creates temp files in /tmp, which has very little disk space.
         command.execute(
             command_patterns.ShellScriptCommand(
-                script='''bedtools coverage -b "$1" -a "$2" > "$3";''',
+                script='''
+                    bedtools bamtobed -i "$1" |
+                    env LC_ALL=C sort -T "$2" -k1,1 -k2,2n |
+                    bedtools coverage -sorted -a "$3" -b stdin > "$4";''',
                 args=[
-                    self.output_files_local()[5],
+                    sample_bam_file_path,
+                    tmp_sort_dir,
                     bed_file_path,
-                    os.path.join(self.output_dir_local, 'matched_reads.tsv')
+                    os.path.join(self.output_dir_local, MATCHED_READS_FILE)
                 ]
             )
         )
+
+        command.remove_rf(tmp_sort_dir)
 
     def get_total_reads(self, is_zipped, is_fasta):
         """Gets the total number of reads in the sample by counting them directly from the
@@ -182,7 +205,7 @@ class PipelineStepRunSRST2(PipelineStep):
 
     @staticmethod
     def _append_dpm_to_results(amr_results, total_reads):
-        """Calculates the depth per million for each gene in the result and appends it to the 
+        """Calculates the depth per million for each gene in the result and appends it to the
             results dataframe."""
         amr_results["dpm"] = amr_results.apply(lambda row: row["depth"] * 1000000 / total_reads, axis=1)
         return amr_results
@@ -261,7 +284,7 @@ class PipelineStepRunSRST2(PipelineStep):
             encoding='utf-8')
         sorted_amr = amr_results.sort_values(by=['gene_family'])
         proc_amr = pd.merge_ordered(sorted_amr, amr_summary, fill_method='ffill', left_by=['gene_family'])
-        proc_amr_with_rpm = PipelineStepRunSRST2._append_rpm_to_results(proc_amr, os.path.join(self.output_dir_local, 'matched_reads.tsv'), total_reads)
+        proc_amr_with_rpm = PipelineStepRunSRST2._append_rpm_to_results(proc_amr, os.path.join(self.output_dir_local, MATCHED_READS_FILE), total_reads)
         proc_amr_with_rpm_and_dpm = PipelineStepRunSRST2._append_dpm_to_results(proc_amr_with_rpm, total_reads)
         proc_amr_with_rpm_and_dpm.to_csv(
             self.output_files_local()[3],
