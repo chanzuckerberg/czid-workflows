@@ -29,7 +29,7 @@ class PipelineStepGenerateAnnotatedFasta(PipelineStep):
             return dict((read_id, accession_id)
                         for read_id, accession_id, _percent_id,
                         _alignment_length, _e_value, _bitscore, _line in m8.iterate_m8(
-                            m8_file, "annotate_fasta_with_accessions"))
+                            m8_file, 0, "annotate_fasta_with_accessions"))
 
         nt_map = get_map(nt_m8)
         nr_map = get_map(nr_m8)

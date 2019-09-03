@@ -227,6 +227,9 @@ TODO: Move this code over to the idseq-dag repo.
 
 ## Release notes
 
+- 3.10
+  - Apply a length filter, requiring all NT alignments (GSNAP and BLAST) be >= 36 nucleotides long.
+
 - 3.9.4
   - Additional performance improvements in run_srst2 step, so that the step uses less RAM.
 

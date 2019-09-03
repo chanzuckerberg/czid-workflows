@@ -42,7 +42,7 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
     -t 36
     --max-mismatches=40
     -D {remote_index_dir}
-    -d nt_k16 
+    -d nt_k16
     {remote_input_files} > {multihit_remote_outfile}
     ```
 
@@ -50,15 +50,15 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
 
     For Rapsearch:
     ```
-    rapsearch 
-    -d {remote_index_dir}/nr_rapsearch 
-    -e -6 
-    -l 10 
-    -a T 
-    -b 0 
-    -v 50 
-    -z 24 
-    -q {remote_input_files} 
+    rapsearch
+    -d {remote_index_dir}/nr_rapsearch
+    -e -6
+    -l 10
+    -a T
+    -b 0
+    -v 50
+    -z 24
+    -q {remote_input_files}
     -o {multihit_remote_outfile}
     ```
 
@@ -86,6 +86,7 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
         [output_m8, deduped_output_m8, output_hitsummary, output_counts_json] = self.output_files_local()
         service = self.additional_attributes["service"]
         assert service in ("gsnap", "rapsearch2")
+        min_alignment_length = 36 if service == 'gsnap' else 0 # alignments < 36-NT are false positives
 
         self.run_remotely(input_fas, output_m8, service)
 
@@ -95,7 +96,7 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
         blacklist_s3_file = self.additional_attributes.get('taxon_blacklist', DEFAULT_BLACKLIST_S3)
         taxon_blacklist = fetch_from_s3(blacklist_s3_file, self.ref_dir_local)
         m8.call_hits_m8(output_m8, lineage_db, accession2taxid_db,
-                        deduped_output_m8, output_hitsummary, taxon_blacklist)
+                        deduped_output_m8, output_hitsummary, min_alignment_length, taxon_blacklist)
 
         # check deuterostome
         deuterostome_db = None
@@ -512,7 +513,7 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
                 -t 36
                 --max-mismatches=40
                 -D {remote_index_dir}
-                -d nt_k16 
+                -d nt_k16
                 {remote_input_files} > {multihit_remote_outfile}
                 ```
 
@@ -521,17 +522,17 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
         elif (self.name == "rapsearch2_out"):
             return """
                 Runs rapsearch remotely.
-                
+
                 ```
-                rapsearch 
-                -d {remote_index_dir}/nr_rapsearch 
-                -e -6 
-                -l 10 
-                -a T 
-                -b 0 
+                rapsearch
+                -d {remote_index_dir}/nr_rapsearch
+                -e -6
+                -l 10
+                -a T
+                -b 0
                 -v 50 
-                -z 24 
-                -q {remote_input_files} 
+                -z 24
+                -q {remote_input_files}
                 -o {multihit_remote_outfile}
                 ```
 
