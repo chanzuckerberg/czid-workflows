@@ -333,3 +333,10 @@ class CommandModuleMethodsFileOperationsTestCase(unittest.TestCase):
             len(either_one_of_those.intersection(result))==1,
             f"result should be an array containing either {TMP_SRC_FOLDER} or {TMP_DEST_FOLDER}, but result contains {{ {result} }}"
         )
+
+
+    def test_get_resource_filename(self):
+        '''WHEN get_resource_filename is invoked with a relative file path to the root folder, THEN it returns the absolute path for that file.'''
+        result = command.get_resource_filename("scripts/fastq-fasta-line-validation.awk")
+
+        self.assertRegex(result, r"^.+/scripts/fastq-fasta-line-validation.awk")

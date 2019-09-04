@@ -1,4 +1,5 @@
 import json
+import os
 
 from idseq_dag.engine.pipeline_step import PipelineStep
 import idseq_dag.util.command as command
@@ -16,31 +17,62 @@ class PipelineStepRunValidateInput(PipelineStep):
     def run(self):
         # Setup
         input_files = self.input_files_local[0][0:2]
-        self.num_inputs = len(input_files)
-        assert self.num_inputs == 1 or self.num_inputs == 2, 'Invalid number of input files'
+        num_inputs = len(input_files)
+        assert num_inputs in [1, 2], 'Invalid number of input files'
         output_files = self.output_files_local()[1:3]
         summary_file = self.output_files_local()[0]
         max_fragments = self.additional_attributes["truncate_fragments_to"]
 
         file_ext = self.additional_attributes.get("file_ext")
-        assert file_ext == 'fastq' or file_ext == 'fasta', 'Invalid file extension'
+        assert file_ext in ['fastq', 'fasta'], 'Invalid file extension'
+
+        is_fastq = file_ext == 'fastq'
 
         try:
-            for i in range(self.num_inputs):
-                file = input_files[i]
+            for i in range(num_inputs):
+                input_file = input_files[i]
+                splited_input_file_name, splited_input_file_ext = os.path.splitext(input_file)
+
+                num_lines = self.calc_max_num_lines(is_fastq, max_fragments)
 
                 # unzip if .gz file
-                if file[-3:] == '.gz':
+                if splited_input_file_ext == '.gz':
+                    input_files[i] = splited_input_file_name
                     try:
                         command.execute(
-                            command_patterns.SingleCommand(
-                                cmd='gunzip',
-                                args=[file]
+                            command_patterns.ShellScriptCommand(
+                                script=r'''gzip -dc "${input_file}" | cut -c -"$[max_line_length+1]" | head -n "${num_lines}" | awk -f "${awk_script_file}" -v max_line_length="${max_line_length}" > "${output_file}";''',
+                                named_args={
+                                    "input_file": input_file,
+                                    "awk_script_file": command.get_resource_filename("scripts/fastq-fasta-line-validation.awk"),
+                                    "max_line_length": vc.MAX_LINE_LENGTH,
+                                    "num_lines": num_lines,
+                                    "output_file": splited_input_file_name
+                                }
                             )
                         )
                     except:
-                        raise RuntimeError(f"Invalid gzip file")
-                    input_files[i] = file = file[:-3]
+                        raise RuntimeError(f"Invalid fastq/fasta/gzip file")
+                else:
+                    # Validate and truncate the input file to keep behavior consistent with gz input files
+                    try:
+                        tmp_file = splited_input_file_name + ".tmp"
+                        command.execute(
+                            command_patterns.ShellScriptCommand(
+                                script=r'''cat "${input_file}" | cut -c -"$[max_line_length+1]" | head -n "${num_lines}" | awk -f "${awk_script_file}" -v max_line_length="${max_line_length}" > "${output_file}";''',
+                                named_args={
+                                    "input_file": input_file,
+                                    "awk_script_file": command.get_resource_filename("scripts/fastq-fasta-line-validation.awk"),
+                                    "max_line_length": vc.MAX_LINE_LENGTH,
+                                    "num_lines": num_lines,
+                                    "output_file": tmp_file
+                                }
+                            )
+                        )
+                        command.remove_file(input_file)
+                        command.move_file(tmp_file, input_file)
+                    except:
+                        raise RuntimeError(f"Invalid fastq/fasta file")
 
             # keep a dictionary of the distribution of read lengths in the files
             self.summary_dict = {vc.BUCKET_TOO_SHORT:0,
@@ -49,16 +81,16 @@ class PipelineStepRunValidateInput(PipelineStep):
                                  vc.BUCKET_TOO_LONG: 0}
 
             quick_check_passed = \
-                self.quick_check_file(input_files[0], file_ext == 'fastq') and \
-                (self.num_inputs == 1 or self.quick_check_file(input_files[1], file_ext == 'fastq'))
+                self.quick_check_file(input_files[0], is_fastq) and \
+                (num_inputs == 1 or self.quick_check_file(input_files[1], is_fastq))
 
             all_fragments = []
 
             for infile, outfile in zip(input_files, output_files):
                 if quick_check_passed:
-                    num_fragments = self.truncate_file(infile, outfile, file_ext == 'fastq', max_fragments)
+                    num_fragments = self.truncate_file(infile, outfile, is_fastq, max_fragments)
                 else:
-                    num_fragments = self.full_check_and_truncate_file(infile, outfile, file_ext == 'fastq', max_fragments)
+                    num_fragments = self._full_check_and_truncate_file(infile, outfile, is_fastq, max_fragments, num_inputs)
                 all_fragments.append(num_fragments)
 
             if len(all_fragments) == 2 and abs(all_fragments[1]-all_fragments[0]) > 1000:
@@ -133,11 +165,17 @@ class PipelineStepRunValidateInput(PipelineStep):
 
         return True
 
-    def truncate_file(self, infile, outfile, is_fastq, max_fragments):
+
+    def calc_max_num_lines(self, is_fastq, max_fragments):
         if is_fastq:
             num_lines = max_fragments * 4
         else:
             num_lines = max_fragments * 2
+        return num_lines
+
+
+    def truncate_file(self, infile, outfile, is_fastq, max_fragments):
+        num_lines = self.calc_max_num_lines(is_fastq, max_fragments)
         command.execute(
             command_patterns.ShellScriptCommand(
                 script=r'''head -n "${num_lines}" "${infile}" > "${outfile}";''',
@@ -152,15 +190,14 @@ class PipelineStepRunValidateInput(PipelineStep):
         self.summary_dict[vc.BUCKET_NORMAL] += num_fragments
         return num_fragments
 
-    # full_check_and_truncate_file does an exhaustive check of the input file, up to
+    # _full_check_and_truncate_file does an exhaustive check of the input file, up to
     # max_fragments, and reformats the output to conform to what the rest of the
     # computational pipeline expects (single-line reads of max-length 10,000). After
     # viewing max_fragments reads or encountering EOF, the function returns.
     #
     # Throws an exception in the case of an unrecoverable abnormality
-    def full_check_and_truncate_file(self, infile, outfile, is_fastq, max_fragments):
+    def _full_check_and_truncate_file(self, infile, outfile, is_fastq, max_fragments, num_inputs):
         num_fragments = 0
-        fragment_length = 0
 
         with open(infile, 'r', encoding='utf-8') as input_f, open(outfile, 'w') as output_f:
             next_line = input_f.readline()
@@ -221,7 +258,7 @@ class PipelineStepRunValidateInput(PipelineStep):
 
                 if read_len < vc.READ_LEN_CUTOFF_LOW:
                     self.summary_dict[vc.BUCKET_TOO_SHORT] += 1
-                    if self.num_inputs == 1:
+                    if num_inputs == 1:
                         continue
                 elif read_len < vc.READ_LEN_CUTOFF_MID:
                     self.summary_dict[vc.BUCKET_NORMAL] += 1
@@ -229,9 +266,9 @@ class PipelineStepRunValidateInput(PipelineStep):
                     self.summary_dict[vc.BUCKET_LONG] += 1
                 else:
                     self.summary_dict[vc.BUCKET_TOO_LONG] += 1
-                    read_l = read_l[0:10000]
+                    read_l = read_l[0:vc.READ_LEN_CUTOFF_HIGH]
                     if is_fastq:
-                        quality_l = quality_l[0:10000]
+                        quality_l = quality_l[0:vc.READ_LEN_CUTOFF_HIGH]
 
                 output_f.write(identifier_l + read_l + "\n")
                 if is_fastq:
