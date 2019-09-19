@@ -5,6 +5,7 @@ import threading
 import traceback
 import datetime
 import pytz
+
 import idseq_dag
 import idseq_dag.util.s3
 import idseq_dag.util.command as command
@@ -15,6 +16,7 @@ from idseq_dag.engine.pipeline_step import PipelineStep, InvalidInputFileError
 
 DEFAULT_OUTPUT_DIR_LOCAL = '/mnt/idseq/results/%d' % os.getpid()
 DEFAULT_REF_DIR_LOCAL = '/mnt/idseq/ref'
+
 
 class PipelineFlow(object):
     def __init__(self, lazy_run, dag_json, versioned_output):
@@ -30,7 +32,8 @@ class PipelineFlow(object):
         self.output_dir_s3 = dag["output_dir_s3"]
         self.name = dag["name"]
         if versioned_output:
-            self.output_dir_s3 = os.path.join(self.output_dir_s3, self.parse_output_version(idseq_dag.__version__))
+            self.output_dir_s3 = os.path.join(
+                self.output_dir_s3, self.parse_output_version(idseq_dag.__version__))
 
         self.output_dir_local = dag.get("output_dir_local", DEFAULT_OUTPUT_DIR_LOCAL).rstrip('/')
         self.ref_dir_local = dag.get("ref_dir_local", DEFAULT_REF_DIR_LOCAL)
@@ -48,7 +51,8 @@ class PipelineFlow(object):
         with log.log_context("prefetch_large_files", values={"file_list": self.large_file_list}):
             for f in self.large_file_list:
                 with log.log_context("fetch_reference", values={"file": f}):
-                    idseq_dag.util.s3.fetch_reference(f, self.ref_dir_local, auto_unzip=True, auto_untar=True, allow_s3mi=True)
+                    idseq_dag.util.s3.fetch_reference(
+                        f, self.ref_dir_local, auto_unzip=True, auto_untar=True, allow_s3mi=True)
 
     @staticmethod
     def parse_and_validate_conf(dag_json):
@@ -59,7 +63,6 @@ class PipelineFlow(object):
           "targets": lists of files that are given or would be generated
           "steps": steps that species actions to generate input and output
           "given_targets": input files that are given
-          "name": the name of the stage running
         '''
         dag = json.loads(open(dag_json).read())
         log.log_event("pipeline_flow.dag_json_loaded", values={"file": dag_json, "contents": dag})
@@ -67,7 +70,7 @@ class PipelineFlow(object):
         targets = dag["targets"]
         steps = dag["steps"]
         given_targets = dag["given_targets"]
-        name = dag["name"]
+        dag['name'] = dag.get("name", _get_name_from_path(dag_json))
         covered_targets = set()
         for s in steps:
             # validate each step in/out are valid targets
@@ -92,9 +95,6 @@ class PipelineFlow(object):
         for target_name in targets.keys():
             if target_name not in covered_targets:
                 raise ValueError("%s couldn't be generated from the steps" % target_name)
-        # Check that name exists
-        if name is None:
-            raise ValueError("Name does not exist for given dag_json")
 
         return dag
 
@@ -108,7 +108,8 @@ class PipelineFlow(object):
         large_file_download_list = []
         step_list = []
         for target_name in self.given_targets.keys():
-            covered_targets[target_name] = { 'depth': 0, 'lazy_run': self.lazy_run, 's3_downloadable': True }
+            covered_targets[target_name] = {'depth': 0,
+                                            'lazy_run': self.lazy_run, 's3_downloadable': True}
         steps_complete = set()
         while len(steps_complete) < len(self.steps):
             # run until all the steps can be run
@@ -126,9 +127,9 @@ class PipelineFlow(object):
                             depth_max = max(covered_targets[target]['depth'], depth_max)
                             if covered_targets[target]['lazy_run'] == False:
                                 lazy_run = False
-                    if step_can_be_run: # All the input is satisfied
+                    if step_can_be_run:  # All the input is satisfied
                         steps_complete.add(step["out"])
-                        file_list= self.targets[step["out"]]
+                        file_list = self.targets[step["out"]]
                         if lazy_run and idseq_dag.util.s3.check_s3_presence_for_file_list(self.output_dir_s3, file_list):
                             # output can be lazily generated. touch the output
                             #idseq_dag.util.s3.touch_s3_file_list(self.output_dir_s3, file_list)
@@ -141,7 +142,8 @@ class PipelineFlow(object):
                             # The following can be changed to append if we want to get the round information
                             large_file_download_list += step["additional_files"].values()
                         # update targets available for the next round
-                        current_targets[step["out"]] = { 'depth': (depth_max + 1), 'lazy_run': lazy_run, 's3_downloadable': s3_downloadable}
+                        current_targets[step["out"]] = {
+                            'depth': (depth_max + 1), 'lazy_run': lazy_run, 's3_downloadable': s3_downloadable}
             covered_targets.update(current_targets)
         return (step_list, large_file_download_list, covered_targets)
 
@@ -170,7 +172,7 @@ class PipelineFlow(object):
         s3_count_file = "%s/%s" % (result_dir_s3, count_file_basename)
 
         read_count = count.reads_in_group(local_input_files, max_fragments=max_fragments)
-        counts_dict = { target_name: read_count }
+        counts_dict = {target_name: read_count}
         if read_count == len(local_input_files) * max_fragments:
             # If the number of reads is exactly equal to the maximum we specified,
             # it means that the input has been truncated.
@@ -179,7 +181,6 @@ class PipelineFlow(object):
         with open(local_count_file, 'w') as count_file:
             json.dump(counts_dict, count_file)
         idseq_dag.util.s3.upload_with_retries(local_count_file, s3_count_file)
-
 
     def fetch_target_from_s3(self, target):
         ''' .done file should be written to the result dir when the download is complete '''
@@ -205,7 +206,7 @@ class PipelineFlow(object):
                 except AssertionError as e:
                     # The counting methods may raise assertion errors if assumptions
                     # about input format are not satisfied.
-                    self.write_invalid_input_json({ "error": str(e), "step": None })
+                    self.write_invalid_input_json({"error": str(e), "step": None})
 
     def write_invalid_input_json(self, error_json):
         ''' Upload an invalid_step_input.json file for this step, which can be detected by other services like idseq-web. '''
@@ -229,7 +230,7 @@ class PipelineFlow(object):
         # Come up with the plan
         (step_list, self.large_file_list, covered_targets) = self.plan()
 
-        for step in step_list: # download the files from s3 when necessary
+        for step in step_list:  # download the files from s3 when necessary
             for target in step["in"]:
                 target_info = covered_targets[target]
                 if target_info['s3_downloadable']:
@@ -240,7 +241,8 @@ class PipelineFlow(object):
         self.create_status_json_file()
         # Start initializing all the steps and start running them and wait until all of them are done
         step_instances = []
-        step_status_lock = TraceLock(f"Step-level status updates for stage {self.name}", threading.RLock())
+        step_status_lock = TraceLock(
+            f"Step-level status updates for stage {self.name}", threading.RLock())
         for step in step_list:
             log.write("Initializing step %s" % step["out"])
             StepClass = getattr(importlib.import_module(step["module"]), step["class"])
@@ -267,3 +269,25 @@ class PipelineFlow(object):
                 log.write("An exception was thrown. Stage failed.")
                 raise e
         log.write("all steps are done")
+
+
+def _get_name_from_path(dag_json: str) -> str:
+    """
+    Returns a useful stage name from a dag_json file page for when the dag_json
+    is missing an explicit name.
+
+    >>> _get_name_from_path('templates/gsnap_index.json')
+    'gsnap_index'
+
+    >>> _get_name_from_path('gsnap_index.json')
+    'gsnap_index'
+
+    >>> _get_name_from_path('templates/gsnap_index')
+    'gsnap_index'
+    """
+    return os.path.splitext(os.path.basename(dag_json))[0]
+
+
+if __name__ == '__main__':
+    import doctest
+    doctest.testmod()
