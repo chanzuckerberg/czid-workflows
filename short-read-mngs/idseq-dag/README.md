@@ -227,7 +227,10 @@ TODO: Move this code over to the idseq-dag repo.
 
 ## Release notes
 
-- 3.10
+- 3.10.1
+  - Increase GSNAP threads to 48 for better utilization of r5d.metal instances.
+
+- 3.10.0
   - Apply a length filter, requiring all NT alignments (GSNAP and BLAST) be >= 36 nucleotides long.
 
 - 3.9.4

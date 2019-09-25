@@ -39,7 +39,7 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
     --gmap-mode=none
     --npaths=100
     --ordered
-    -t 36
+    -t 48
     --max-mismatches=40
     -D {remote_index_dir}
     -d nt_k16
@@ -47,6 +47,8 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
     ```
 
     GSNAP documentation is available [here](http://research-pub.gene.com/gmap/).
+    -t (threads): r5d.metal machines have 96 vCPUs. Use 48 threads and each process will be able to
+    concurrently process 2 chunks (see attribute 'max_concurrent').
 
     For Rapsearch:
     ```
@@ -382,8 +384,10 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
 
         base_str = "mkdir -p {remote_work_dir} ; {download_input_from_s3} ; "
         environment = self.additional_attributes["environment"]
+
+        # See step class docstrings for more parameter details.
         if service == "gsnap":
-            commands = base_str + "{remote_home_dir}/bin/gsnapl -A m8 --batch=0 --use-shared-memory=0 --gmap-mode=none --npaths=100 --ordered -t 36 --max-mismatches=40 -D {remote_index_dir} -d nt_k16 {remote_input_files} > {multihit_remote_outfile}"
+            commands = base_str + "{remote_home_dir}/bin/gsnapl -A m8 --batch=0 --use-shared-memory=0 --gmap-mode=none --npaths=100 --ordered -t 48 --max-mismatches=40 -D {remote_index_dir} -d nt_k16 {remote_input_files} > {multihit_remote_outfile}"
         else:
             commands = base_str + "/usr/local/bin/rapsearch -d {remote_index_dir}/nr_rapsearch -e -6 -l 10 -a T -b 0 -v 50 -z 24 -q {remote_input_files} -o {multihit_remote_outfile}"
 
@@ -510,7 +514,7 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
                 --gmap-mode=none
                 --npaths=100
                 --ordered
-                -t 36
+                -t 48
                 --max-mismatches=40
                 -D {remote_index_dir}
                 -d nt_k16
