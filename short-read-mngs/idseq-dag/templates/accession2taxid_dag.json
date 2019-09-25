@@ -3,9 +3,7 @@
   "targets": {
     "accession2taxid_input": [
       "nucl_wgs.accession2taxid.gz",
-      "nucl_est.accession2taxid.gz",
       "nucl_gb.accession2taxid.gz",
-      "nucl_gss.accession2taxid.gz",
       "pdb.accession2taxid.gz",
       "prot.accession2taxid.gz"
     ],
