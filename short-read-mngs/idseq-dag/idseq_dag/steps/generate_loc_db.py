@@ -1,23 +1,32 @@
 ''' Generate loc db  '''
 import dbm
-import shelve
+import idseq_dag.util.log as log
 import re
+import shelve
+
 from idseq_dag.engine.pipeline_step import PipelineStep
 from idseq_dag.util.command import run_in_subprocess
-import idseq_dag.util.log as log
 from idseq_dag.util.dict import IdSeqDictForUpdate, IdSeqDictValue
 BATCH_INSERT_SIZE = 300
 
+
 class PipelineStepGenerateLocDB(PipelineStep):
     ''' Generate Loc DB for NT/NR '''
+
     def run(self):
         """
         Generate Loc DB for NT/NR
         """
         db_file = self.input_files_local[0][0]
-        loc_db_file = self.output_files_local()[0]
-        info_db_file = self.output_files_local()[1]
-        self.generate_loc_db(db_file, loc_db_file, info_db_file)
+
+        loc_db_file_sqlite = self.output_files_local()[0]
+        info_db_file_sqlite = self.output_files_local()[1]
+        self.generate_loc_db_for_sqlite(db_file, loc_db_file_sqlite, info_db_file_sqlite)
+
+        loc_db_file = self.output_files_local()[2]
+        # TODO: (gdingle): this needs to be added
+        # info_db_file = self.output_files_local()[3]
+        self.generate_loc_db_for_shelf(db_file, loc_db_file)
 
     @staticmethod
     def generate_loc_db_work(db_file, loc_db, info_db):
@@ -70,14 +79,13 @@ class PipelineStepGenerateLocDB(PipelineStep):
             info_db.batch_inserts(info_batch_list)
 
     @run_in_subprocess
-    def generate_loc_db(self, db_file, loc_db_file, info_db_file):
+    def generate_loc_db_for_sqlite(self, db_file, loc_db_file, info_db_file):
         with IdSeqDictForUpdate(loc_db_file, IdSeqDictValue.VALUE_TYPE_ARRAY) as loc_db, \
-             IdSeqDictForUpdate(info_db_file, IdSeqDictValue.VALUE_TYPE_ARRAY) as info_db:
+                IdSeqDictForUpdate(info_db_file, IdSeqDictValue.VALUE_TYPE_ARRAY) as info_db:
             PipelineStepGenerateLocDB.generate_loc_db_work(db_file, loc_db, info_db)
 
     @run_in_subprocess
-    def generate_loc_db_old(self, db_file, loc_db_file):
-        # TODO: To be deprecated. Using shelve
+    def generate_loc_db_for_shelf(self, db_file, loc_db_file):
         loc_dict = shelve.Shelf(dbm.ndbm.open(loc_db_file.replace(".db", ""), 'c'))
         with open(db_file) as dbf:
             seq_offset = 0

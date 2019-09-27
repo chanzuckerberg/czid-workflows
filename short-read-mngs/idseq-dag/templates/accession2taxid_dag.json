@@ -17,15 +17,19 @@
       "accession2taxid.gz",
       "accession2taxid_wgs.gz",
       "accession2taxid.sqlite3",
-      "taxid2wgs_accession.sqlite3"
+      "taxid2wgs_accession.sqlite3",
+      "accession2taxid.db",
+      "taxid2wgs_accession.db"
     ],
     "nt_loc_out": [
       "nt_loc.sqlite3",
-      "nt_info.sqlite3"
+      "nt_info.sqlite3",
+      "nt_loc.db"
     ],
     "nr_loc_out": [
       "nr_loc.sqlite3",
-      "nr_info.sqlite3"
+      "nr_info.sqlite3",
+      "nr_loc.db"
     ]
   },
   "steps": [

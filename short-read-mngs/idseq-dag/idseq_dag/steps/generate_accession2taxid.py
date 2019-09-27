@@ -1,25 +1,27 @@
 ''' Accession2Taxid'''
-import gzip
-import shelve
 import dbm
-import threading
-from idseq_dag.engine.pipeline_step import PipelineStep
-from idseq_dag.util.command import run_in_subprocess
+import gzip
 import idseq_dag.util.command as command
 import idseq_dag.util.command_patterns as command_patterns
 import idseq_dag.util.log as log
+import shelve
+import threading
+
+from idseq_dag.engine.pipeline_step import PipelineStep
+from idseq_dag.util.command import run_in_subprocess
 from idseq_dag.util.dict import IdSeqDictForUpdate, IdSeqDictValue
 
 BATCH_INSERT_SIZE = 300
 NUM_PARTITIONS = 8
 
+
 class PipelineStepGenerateAccession2Taxid(PipelineStep):
-    """ After alignment, IDseq uses the NCBI accession2taxid database to map accessions to taxonomic IDs. 
-    The full database contains billions of entries, but only ~15% of those are found in either NR or NT databases. 
-    Therefore, the full NCBI accession2taxid database is subsetted to include only the relevant entries and then used 
-    to map accessions to taxonomic IDs. 
-    Finally, the taxonomic lineage for each read is computed using the [ncbitax2lin](https://github.com/chanzuckerberg/ncbitax2lin) script. 
-    For each taxonomic ID this results in the following: taxid → [superkingdom, phylum, class, order ..., species]. 
+    """ After alignment, IDseq uses the NCBI accession2taxid database to map accessions to taxonomic IDs.
+    The full database contains billions of entries, but only ~15% of those are found in either NR or NT databases.
+    Therefore, the full NCBI accession2taxid database is subsetted to include only the relevant entries and then used
+    to map accessions to taxonomic IDs.
+    Finally, the taxonomic lineage for each read is computed using the [ncbitax2lin](https://github.com/chanzuckerberg/ncbitax2lin) script.
+    For each taxonomic ID this results in the following: taxid → [superkingdom, phylum, class, order ..., species].
 
     __Final Read Assignment__
     For any given read, the tax ID is assigned by the following steps:
@@ -51,6 +53,7 @@ class PipelineStepGenerateAccession2Taxid(PipelineStep):
 
     __note:__ columns 3 and 10 of the hitsummary2.xxx.tab files should always be identical.
     """
+
     def run(self):
         """
         1. Download NT/NR
@@ -63,7 +66,14 @@ class PipelineStepGenerateAccession2Taxid(PipelineStep):
         accession_mapping_files = self.input_files_local[0]
         nt_file = self.input_files_local[1][0]
         nr_file = self.input_files_local[2][0]
-        (output_gz, output_wgs_gz, accession2taxid_db, taxid2wgs_accession_db) = self.output_files_local()
+        (
+            output_gz,
+            output_wgs_gz,
+            accession2taxid_db_sqlite,
+            taxid2wgs_accession_db_sqlite,
+            accession2taxid_db,
+            taxid2wgs_accession_db,
+         ) = self.output_files_local()
 
         # Get accession_list
         accessions_files = []
@@ -108,16 +118,18 @@ class PipelineStepGenerateAccession2Taxid(PipelineStep):
         for t in threads:
             t.join()
         wgs_thread.join()
-        accessions = [] # reset accessions to release memory
+        accessions = []  # reset accessions to release memory
 
-        self.output_dicts_to_db(mapping_files, wgs_accessions,
-                                accession2taxid_db, taxid2wgs_accession_db,
-                                output_gz, output_wgs_gz)
+        self.output_dicts_to_db_for_sqlite(mapping_files, wgs_accessions,
+                                           accession2taxid_db_sqlite, taxid2wgs_accession_db_sqlite,
+                                           output_gz, output_wgs_gz)
+        self.output_dicts_to_db_for_shelf(mapping_files, wgs_accessions,
+                                          accession2taxid_db, taxid2wgs_accession_db,
+                                          output_gz, output_wgs_gz)
 
-
-    def output_dicts_to_db(self, mapping_files, wgs_accessions,
-                           accession2taxid_db, taxid2wgs_accession_db,
-                           output_gz, output_wgs_gz):
+    def output_dicts_to_db_for_sqlite(self, mapping_files, wgs_accessions,
+                                      accession2taxid_db, taxid2wgs_accession_db,
+                                      output_gz, output_wgs_gz):
         # generate the accession2taxid db and file
         with IdSeqDictForUpdate(accession2taxid_db, IdSeqDictValue.VALUE_TYPE_SCALAR) as accession_dict:
             batch_list = {}
@@ -136,25 +148,24 @@ class PipelineStepGenerateAccession2Taxid(PipelineStep):
                                     batch_list = {}
                 accession_dict.batch_inserts(batch_list.items())
 
-        # generate taxid2 accession
-        taxid2accession_dict = {}
-        with gzip.open(output_wgs_gz, "wt") as gzf:
-            with open(wgs_accessions, 'r', encoding="utf-8") as wgsf:
-                for line in wgsf:
-                    accession = line[1:].split(".")[0]
-                    taxid = accession_dict.get(accession)
-                    if taxid:
-                        current_match = taxid2accession_dict.get(taxid, "")
-                        taxid2accession_dict[taxid] = f"{current_match},{accession}"
-                        gzf.write(line)
+            # generate taxid2 accession
+            taxid2accession_dict = {}
+            with gzip.open(output_wgs_gz, "wt") as gzf:
+                with open(wgs_accessions, 'r', encoding="utf-8") as wgsf:
+                    for line in wgsf:
+                        accession = line[1:].split(".")[0]
+                        taxid = accession_dict.get(accession)
+                        if taxid:
+                            current_match = taxid2accession_dict.get(taxid, "")
+                            taxid2accession_dict[taxid] = f"{current_match},{accession}"
+                            gzf.write(line)
 
         with IdSeqDictForUpdate(taxid2wgs_accession_db, IdSeqDictValue.VALUE_TYPE_SCALAR) as taxid2wgs_accession_dict:
             taxid2wgs_accession_dict.batch_inserts(taxid2accession_dict.items())
 
-
-    def output_dicts_to_db_old(self, mapping_files, wgs_accessions,
-                               accession2taxid_db, taxid2wgs_accession_db,
-                               output_gz, output_wgs_gz):
+    def output_dicts_to_db_for_shelf(self, mapping_files, wgs_accessions,
+                                     accession2taxid_db, taxid2wgs_accession_db,
+                                     output_gz, output_wgs_gz):
         # generate the accession2taxid db and file
         accession_dict = shelve.Shelf(dbm.ndbm.open(accession2taxid_db.replace(".db", ""), 'c'))
         with gzip.open(output_gz, "wt") as gzf:
@@ -181,7 +192,6 @@ class PipelineStepGenerateAccession2Taxid(PipelineStep):
                             gzf.write(line)
 
         accession_dict.close()
-
 
     def grab_accession_names(self, source_file, dest_file):
         command.execute(
@@ -220,7 +230,6 @@ class PipelineStepGenerateAccession2Taxid(PipelineStep):
                     num_lines += 1
                     if num_lines % 1000000 == 0:
                         log.write(f"{source_gz} partition {partition_id} line {num_lines/1000000}M")
-
 
     def count_reads(self):
         ''' Count reads '''

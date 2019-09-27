@@ -1,7 +1,7 @@
-import sqlite3
-import shelve
-import pathlib
 import multiprocessing
+import pathlib
+import shelve
+import sqlite3
 
 from enum import IntEnum
 
