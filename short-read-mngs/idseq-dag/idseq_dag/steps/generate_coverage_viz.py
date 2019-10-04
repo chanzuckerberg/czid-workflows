@@ -1,12 +1,14 @@
-from collections import defaultdict
 import json
 import math
 import os
 
-import idseq_dag.util.m8 as m8
-import idseq_dag.util.log as log
-import idseq_dag.util.s3 as s3
+from collections import defaultdict
+
 import idseq_dag.util.command as command
+import idseq_dag.util.log as log
+import idseq_dag.util.m8 as m8
+import idseq_dag.util.s3 as s3
+
 from idseq_dag.engine.pipeline_step import PipelineStep
 from idseq_dag.util.dict import IdSeqDictValue, open_file_db_by_extension
 
@@ -36,6 +38,10 @@ class PipelineStepGenerateCoverageViz(PipelineStep):
         min_contig_size = self.additional_attributes.get("min_contig_size", MIN_CONTIG_SIZE)
 
         # Info DB contains the name and sequence length of each accession.
+        # IMPORTANT NOTE: This info_db file is currently nt_info.sqlite3.
+        # SQLite is known to fail intermittently in our pipeline when it is
+        # run inside of multiprocessing. So don't do that here, or else switch
+        # to berkeley DB, as detailed in https://jira.czi.team/browse/IDSEQ-1536.
         info_db = s3.fetch_reference(
             self.additional_files["info_db"],
             self.ref_dir_local,
