@@ -7,6 +7,7 @@ from idseq_dag.engine.pipeline_step import PipelineStep
 from idseq_dag.util.s3 import fetch_from_s3
 import idseq_dag.util.command as command
 import idseq_dag.util.command_patterns as command_patterns
+import idseq_dag.util.log as log
 
 MATCHED_READS_FILE = "matched_reads.tsv"
 
@@ -230,10 +231,18 @@ class PipelineStepRunSRST2(PipelineStep):
         rpm_list = []
         total_reads_list = []
         for row in amr_df.itertuples():
+            if len(rpm_df[rpm_df["allele"] == row.allele]["reads"].values) == 0:
+                # This should never happen, but it has happened before
+                # because there were typos in allele names in ARGannot_r2.fasta that caused mismatches with argannot_genome.bed.
+                # Log an error. The following line will crash the pipeline step, which is intended.
+                # We prefer failing the pipeline step to showing incorrect or missing data while failing silently to the user.
+                log.write(f"AmrAlleleMismatchError: {row.allele} (from ARGannot_r2.fasta) could not be found in argannot_genome.bed")
+
             reads_for_allele = rpm_df[rpm_df["allele"] == row.allele]["reads"].values[0]
             total_reads_list.append(reads_for_allele)
             rpm_for_allele = reads_for_allele * 1000000 / total_reads
             rpm_list.append(rpm_for_allele)
+
         return [rpm_list, total_reads_list]
 
     @staticmethod
