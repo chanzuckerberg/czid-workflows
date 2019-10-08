@@ -227,6 +227,9 @@ TODO: Move this code over to the idseq-dag repo.
 
 ## Release notes
 
+- 3.11.0
+  - Modify the LZW filter to apply a more stringent cutoff at higher read lengths. 
+
 - 3.10.2
   - Better logging for a rare AMR bug.
 

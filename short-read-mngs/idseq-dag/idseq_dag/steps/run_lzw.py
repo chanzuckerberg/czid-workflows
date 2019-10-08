@@ -9,17 +9,18 @@ import idseq_dag.util.log as log
 import idseq_dag.util.count as count
 import idseq_dag.util.fasta as fasta
 from idseq_dag.util.thread_with_result import mt_map
+import math
 
 
 class PipelineStepRunLZW(PipelineStep):
     """ Remove low-complexity reads to mitigate challenges in aligning repetitive sequences.
 
-    LZW refers to the Lempel-Ziv-Welch (LZW) algorithm, which provides loss-less data compression. 
-    The ratio of LZW-compressed sequence length to the original sequence length is computed for each read. 
-    Reads with a compression ratio greater than the specified threshold of 0.45 are retained. 
-    In the case where all reads are filtered by this threshold, a reduced threshold of 0.42 is used. 
-    If reads are greater than 150 basepairs long, the LZW score is scaled to avoid penalizing long reads. 
-    In particular, for reads longer that 150 basepairs, the raw LZW score is multiplied by the 
+    LZW refers to the Lempel-Ziv-Welch (LZW) algorithm, which provides loss-less data compression.
+    The ratio of LZW-compressed sequence length to the original sequence length is computed for each read.
+    Reads with a compression ratio greater than the specified threshold of 0.45 are retained.
+    In the case where all reads are filtered by this threshold, a reduced threshold of 0.42 is used.
+    If reads are greater than 150 basepairs long, the LZW score is scaled to avoid penalizing long reads.
+    In particular, for reads longer that 150 basepairs, the raw LZW score is multiplied by the
     adjustment_heuristic = (1 + (seq_length - 150) / 1000).
     """
 
@@ -51,8 +52,20 @@ class PipelineStepRunLZW(PipelineStep):
         self.should_count_reads = True
         self.counts_dict[self.name] = count.reads_in_group(self.output_files_local()[0:2])
 
+    # predict LZW score from sequence length based on model fit to mean LZW score across mean lengths
+    # Across a total of 63 samples with varying read legths, the average read length and LZW compression 
+    #     score were computed for the first 500 reads. From these values, a linear model was fit using
+    #     the R stats package.
+    # model formula: lm(formula = y ~ log(x))
+    #     Residual standard error: 0.01952 on 61 degrees of freedom
+    #     Multiple R-squared:  0.9291,    Adjusted R-squared:  0.928
+    #     F-statistic: 799.7 on 1 and 61 DF,  p-value: < 2.2e-16
     @staticmethod
-    def lzw_score(sequence, threshold_readlength):
+    def predict_lzw(read_length):
+        return -0.113148 * math.log(read_length) + 1.043456
+
+    @staticmethod
+    def lzw_score(sequence, threshold_readlength, cutoff):
         sequence = str(sequence)
         if sequence == "":
             return 0.0
@@ -84,14 +97,15 @@ class PipelineStepRunLZW(PipelineStep):
 
         if seq_length > threshold_readlength:
             # Make sure longer reads don't get excessively penalized
-            adjustment_heuristic = (1 + (seq_length - threshold_readlength) / 1000) # TODO: revisit
-            score = lzw_fraction * adjustment_heuristic
+            predicted_score = PipelineStepRunLZW.predict_lzw(seq_length)
+            delta = cutoff - predicted_score
+            score = lzw_fraction + delta
         else:
             score = lzw_fraction
         return score
 
     @staticmethod
-    def lzw_compute(input_files, threshold_readlength, slice_step=NUM_SLICES):
+    def lzw_compute(input_files, threshold_readlength, cutoff, slice_step=NUM_SLICES):
         """Spawn subprocesses on NUM_SLICES of the input files, then coalesce the
         scores into a temp file, and return that file's name."""
 
@@ -107,7 +121,7 @@ class PipelineStepRunLZW(PipelineStep):
             with open(temp_file_names[slice_start], "a") as slice_output:
                 for i, reads in enumerate(fasta.synchronized_iterator(input_files)):
                     if i % slice_step == slice_start:
-                        lzw_min_score = min(lzw_score(r.sequence, threshold_readlength) for r in reads)
+                        lzw_min_score = min(lzw_score(r.sequence, threshold_readlength, cutoff) for r in reads)
                         slice_output.write(str(lzw_min_score) + "\n")
 
         # slices run in parallel
@@ -133,10 +147,10 @@ class PipelineStepRunLZW(PipelineStep):
     def generate_lzw_filtered(fasta_files, output_files, cutoff_scores, threshold_readlength):
         assert len(fasta_files) == len(output_files)
 
-        # This is the bulk of the computation.  Everything else below is just binning by cutoff score.
-        coalesced_score_file = PipelineStepRunLZW.lzw_compute(fasta_files, threshold_readlength)
-
         cutoff_scores.sort(reverse=True) # Make sure cutoff is from high to low
+
+        # This is the bulk of the computation.  Everything else below is just binning by cutoff score.
+        coalesced_score_file = PipelineStepRunLZW.lzw_compute(fasta_files, threshold_readlength, cutoff_scores[0])
 
         readcount_list = [] # one item per cutoff
         outstreams_list = [] # one item per cutoff
