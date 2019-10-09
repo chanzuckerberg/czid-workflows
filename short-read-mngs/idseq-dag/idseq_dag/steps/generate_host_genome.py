@@ -1,14 +1,13 @@
 ''' Generate Host Genome given a fasta'''
 import os
 import multiprocessing
+from psutil import virtual_memory
 
 from idseq_dag.engine.pipeline_step import PipelineStep
 import idseq_dag.util.command as command
 import idseq_dag.util.command_patterns as command_patterns
 import idseq_dag.util.log as log
 import idseq_dag.util.s3 as s3
-
-MAX_STAR_PART_SIZE = 3252010122
 
 class PipelineStepGenerateHostGenome(PipelineStep):
     ''' Generate Host Genome PipelineStep implementation '''
@@ -49,6 +48,7 @@ class PipelineStepGenerateHostGenome(PipelineStep):
                                          auto_unzip=True)
 
         host_name = self.additional_attributes["host_name"]
+        max_star_part_size = self.additional_attributes.get("max_star_part_size")
         input_fasta_with_ercc = f"{input_fasta_path}.with_ercc"
         command.execute(
             command_patterns.ShellScriptCommand(
@@ -81,7 +81,8 @@ class PipelineStepGenerateHostGenome(PipelineStep):
         command.copy_file(input_gtf_with_ercc, output_gtf_file)
 
         # make STAR index
-        self.make_star_index(input_fasta_with_ercc, input_gtf_with_ercc, output_star_index)
+        self.make_star_index(
+            input_fasta_with_ercc, input_gtf_with_ercc, output_star_index, max_star_part_size)
 
         # make bowtie2 index
         self.make_bowtie2_index(host_name, input_fasta_with_ercc, output_bowtie2_index)
@@ -117,14 +118,15 @@ class PipelineStepGenerateHostGenome(PipelineStep):
         return fasta_file_list
 
     @staticmethod
-    def make_star_index(fasta_file, gtf_file, output_star_genome_path):
+    def make_star_index(fasta_file, gtf_file, output_star_genome_path, max_star_part_size):
         star_genome_dir_name = output_star_genome_path[:-4]
 
         # star genome organization
         # STAR_genome/part-${i}, parts.txt
         fasta_file_list = []
-        if os.path.getsize(fasta_file) > MAX_STAR_PART_SIZE:
-            fasta_file_list = PipelineStepGenerateHostGenome.split_fasta(fasta_file, MAX_STAR_PART_SIZE)
+        if max_star_part_size and os.path.getsize(fasta_file) > max_star_part_size:
+            fasta_file_list = PipelineStepGenerateHostGenome.split_fasta(
+                fasta_file, max_star_part_size)
         else:
             fasta_file_list.append(fasta_file)
 
@@ -141,7 +143,8 @@ class PipelineStepGenerateHostGenome(PipelineStep):
                 '--runThreadN',
                 str(multiprocessing.cpu_count()), '--runMode', 'genomeGenerate',
                 *gtf_command_part, '--genomeDir', star_genome_part_dir,
-                '--genomeFastaFiles', fasta_file_list[i]
+                '--genomeFastaFiles', fasta_file_list[i],
+                '--limitGenomeGenerateRAM', virtual_memory().available
             ]
             command.execute(
                 command_patterns.SingleCommand(

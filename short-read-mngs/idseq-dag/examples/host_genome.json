@@ -15,7 +15,7 @@
           "ercc_fasta": "s3://idseq-database/host_filter/pig/2019-02-06/ERCC.fasta", 
           "ercc_gtf": "s3://idseq-database/host_filter/pig/2019-02-06/ERCC.gtf" 
       },
-      "additional_attributes": {"host_name": "pig"}
+      "additional_attributes": {"host_name": "pig", "max_star_part_size": null}
     }
   ],
   "given_targets": {
