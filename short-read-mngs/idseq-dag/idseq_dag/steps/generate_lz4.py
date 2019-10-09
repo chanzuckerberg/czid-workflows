@@ -20,13 +20,15 @@ class PipelineStepGenerateLZ4(PipelineStep):
                     command.execute(self.get_command(input_file))
 
     def get_command(self, input_file):
-        log.write(f"input: {input_file} output: {input_file}.lz4")
+        output_file = input_file + '.lz4';
+        log.write(f"input: {input_file} output: {output_file}")
         return command_patterns.SingleCommand(
             cmd="lz4",
             args=[
                 "-9", # max compression
                 "-f", # force overwrite output file
-                input_file
+                input_file,
+                output_file,
             ]
         )
 

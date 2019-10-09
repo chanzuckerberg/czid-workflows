@@ -28,6 +28,6 @@ class TestPipelineStepGenerateLZ4(unittest.TestCase):
         command = self.step.get_command(INPUT_FILE)
         self.assertEqual('lz4', command.cmd)
         self.assertSequenceEqual(
-            ['-9', '-f', INPUT_FILE],
+            ['-9', '-f', INPUT_FILE, INPUT_FILE + '.lz4'],
             command.args
         )
