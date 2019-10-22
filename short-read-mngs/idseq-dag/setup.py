@@ -9,7 +9,7 @@ setup(name='idseq_dag',
       author_email='idseqhelp@chanzuckerberg.com',
       license='MIT',
       packages=['idseq_dag'],
-      install_requires=[],
+      install_requires=['pytz'],
       dependency_links=[],
       entry_points={
         'console_scripts': [
