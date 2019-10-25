@@ -227,8 +227,11 @@ TODO: Move this code over to the idseq-dag repo.
 
 ## Release notes
 
+- 3.12.0
+  - Update NCBI databases to those downloaded on 2019-09-17.
+
 - 3.11.0
-  - Modify the LZW filter to apply a more stringent cutoff at higher read lengths. 
+  - Modify the LZW filter to apply a more stringent cutoff at higher read lengths.
 
 - 3.10.2
   - Better logging for a rare AMR bug.
