@@ -75,7 +75,7 @@ class PipelineStepRunValidateInput(PipelineStep):
                         raise RuntimeError(f"Invalid fastq/fasta file")
 
             # keep a dictionary of the distribution of read lengths in the files
-            self.summary_dict = {vc.BUCKET_TOO_SHORT:0,
+            self.summary_dict = {vc.BUCKET_TOO_SHORT: 0,
                                  vc.BUCKET_NORMAL: 0,
                                  vc.BUCKET_LONG: 0,
                                  vc.BUCKET_TOO_LONG: 0}
@@ -93,7 +93,7 @@ class PipelineStepRunValidateInput(PipelineStep):
                     num_fragments = self._full_check_and_truncate_file(infile, outfile, is_fastq, max_fragments, num_inputs)
                 all_fragments.append(num_fragments)
 
-            if len(all_fragments) == 2 and abs(all_fragments[1]-all_fragments[0]) > 1000:
+            if len(all_fragments) == 2 and abs(all_fragments[1] - all_fragments[0]) > 1000:
                 raise RuntimeError(f"Paired input files need to contain the same number of reads")
 
             with open(summary_file, 'w') as summary_f:
@@ -116,7 +116,7 @@ class PipelineStepRunValidateInput(PipelineStep):
     #   all identical or if there is another possibly recoverable error
     #
     #   Throws an exception in the case of an unrecoverable abnormality
-    def quick_check_file(self, file, is_fastq, max_fragments_to_check = 100):
+    def quick_check_file(self, file, is_fastq, max_fragments_to_check=100):
         num_fragments = 0
         fragment_length = 0
 
@@ -127,11 +127,11 @@ class PipelineStepRunValidateInput(PipelineStep):
                     break
 
                 identifier_l = input_f.readline()
-                if len(identifier_l) == 0: # EOF
+                if len(identifier_l) == 0:  # EOF
                     break
 
                 read_l = input_f.readline()
-                if len(read_l) == 0: # unexpected EOF
+                if len(read_l) == 0:  # unexpected EOF
                     raise RuntimeError("Invalid input file")
 
                 if is_fastq:
@@ -149,22 +149,21 @@ class PipelineStepRunValidateInput(PipelineStep):
                         return False
                 else:
                     if identifier_l[0] != '>':
-                         # may be FASTA file with multi-line reads, requires full check
+                        # may be FASTA file with multi-line reads, requires full check
                         return False
 
                 if fragment_length == 0:
                     fragment_length = len(read_l)
                     if fragment_length < vc.READ_LEN_CUTOFF_LOW or fragment_length > vc.READ_LEN_CUTOFF_MID:
-                         # non-standard fragment lengths require more detailed examination
+                        # non-standard fragment lengths require more detailed examination
                         return False
 
                 if fragment_length != len(read_l) or (is_fastq and fragment_length != len(quality_l)):
-                     # file does not meet "quick check" requirements since fragments/quality
-                     # scores are not all of same length
+                    # file does not meet "quick check" requirements since fragments/quality
+                    # scores are not all of same length
                     return False
 
         return True
-
 
     def calc_max_num_lines(self, is_fastq, max_fragments):
         if is_fastq:
@@ -172,7 +171,6 @@ class PipelineStepRunValidateInput(PipelineStep):
         else:
             num_lines = max_fragments * 2
         return num_lines
-
 
     def truncate_file(self, infile, outfile, is_fastq, max_fragments):
         num_lines = self.calc_max_num_lines(is_fastq, max_fragments)
@@ -207,7 +205,7 @@ class PipelineStepRunValidateInput(PipelineStep):
                     break
 
                 identifier_l = next_line
-                if len(identifier_l) == 0: # EOF
+                if len(identifier_l) == 0:  # EOF
                     break
 
                 read_l = input_f.readline()
@@ -279,5 +277,5 @@ class PipelineStepRunValidateInput(PipelineStep):
     def count_reads(self):
         self.should_count_reads = True
         self.counts_dict[self.name] = self.summary_dict[vc.BUCKET_NORMAL] + \
-                                      self.summary_dict[vc.BUCKET_LONG] + \
-                                      self.summary_dict[vc.BUCKET_TOO_LONG]
+            self.summary_dict[vc.BUCKET_LONG] + \
+            self.summary_dict[vc.BUCKET_TOO_LONG]

@@ -76,8 +76,8 @@ def generate_unmapped_pairs_from_sam(sam_file, out_fas):
     sam_f.close()
 
 def can_convert_to_int(x):
-  try:
-    int(x)
-    return True
-  except:
-    return False
+    try:
+        int(x)
+        return True
+    except:
+        return False

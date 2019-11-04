@@ -11,15 +11,15 @@ from idseq_dag.util.s3 import fetch_from_s3
 
 class PipelineStepRunBowtie2(PipelineStep):
     """ Removes remaining host reads.
-    
-    While STAR provides an initial, rapid removal of host sequences,  
-    it is possible that some host sequences will make it past this step. 
-    Therefore, to improve filter sensitivity, an additional host removal step is 
+
+    While STAR provides an initial, rapid removal of host sequences,
+    it is possible that some host sequences will make it past this step.
+    Therefore, to improve filter sensitivity, an additional host removal step is
     performed using Bowtie2 to clean up any remaining sequences.
 
     ```
     bowtie2
-    -q 
+    -q
     -x {genome_basename}
     -f
     --very-sensitive-local
@@ -27,7 +27,7 @@ class PipelineStepRunBowtie2(PipelineStep):
     --seed random_seed
     -p {number_of_cpus}
     -1 [input R1]
-    -2 [input R2] 
+    -2 [input R2]
     ```
 
     If the input is single-end the `-U [input R, if not paired]` argument is used instead of `-1` and `-2`.

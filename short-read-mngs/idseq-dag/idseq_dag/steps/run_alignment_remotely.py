@@ -25,7 +25,7 @@ CHUNK_MAX_TRIES = 3
 
 # Please override this with gsnap_chunk_timeout or rapsearch_chunk_timeout in DAG json.
 # Default 60 minutes is several sigmas beyond the pale and indicates the data has to be QC-ed better.
-DEFAULT_CHUNK_TIMEOUT = 60*60
+DEFAULT_CHUNK_TIMEOUT = 60 * 60
 
 class PipelineStepRunAlignmentRemotely(PipelineStep):
     """ Runs gsnap/rapsearch2 remotely.
@@ -88,7 +88,7 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
         [output_m8, deduped_output_m8, output_hitsummary, output_counts_json] = self.output_files_local()
         service = self.additional_attributes["service"]
         assert service in ("gsnap", "rapsearch2")
-        min_alignment_length = 36 if service == 'gsnap' else 0 # alignments < 36-NT are false positives
+        min_alignment_length = 36 if service == 'gsnap' else 0  # alignments < 36-NT are false positives
 
         self.run_remotely(input_fas, output_m8, service)
 
@@ -110,7 +110,6 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
         m8.generate_taxon_count_json_from_m8(
             deduped_output_m8, output_hitsummary, evalue_type, db_type,
             lineage_db, deuterostome_db, output_counts_json)
-
 
     def run_remotely(self, input_fas, output_m8, service):
         key_path = self.fetch_key(os.environ['KEY_PATH_S3'])
@@ -287,6 +286,7 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
                 err_i = chunk_output_files.index("error")
                 raise RuntimeError("All retries failed for {} chunk {}.".format(
                     service, input_chunks[err_i]))
+
     @staticmethod
     def concatenate_files(chunk_output_files, output_m8):
         with log.log_context("run_alignment_remote.concatenate_files", {"chunk_output_files": chunk_output_files}):
@@ -309,7 +309,6 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
                 chunk_output_files[n] = result
             chunks_in_flight.release()
 
-
     @staticmethod
     def __interpret_min_column_number_string(min_column_number_string,
                                              correct_number_of_output_columns,
@@ -324,9 +323,8 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
             min_column_number = correct_number_of_output_columns
         return min_column_number
 
-
     @command.retry
-    def __check_if_output_is_corrupt(self, service, key_path, remote_username, instance_ip, # self unused
+    def __check_if_output_is_corrupt(self, service, key_path, remote_username, instance_ip,  # self unused
                                      multihit_remote_outfile, chunk_id, try_number):
         # Check if every row has correct number of columns (12) in the output
         # file on the remote machine
@@ -534,7 +532,7 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
                 -l 10
                 -a T
                 -b 0
-                -v 50 
+                -v 50
                 -z 24
                 -q {remote_input_files}
                 -o {multihit_remote_outfile}

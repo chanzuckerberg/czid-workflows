@@ -53,7 +53,7 @@ class PipelineStepRunLZW(PipelineStep):
         self.counts_dict[self.name] = count.reads_in_group(self.output_files_local()[0:2])
 
     # predict LZW score from sequence length based on model fit to mean LZW score across mean lengths
-    # Across a total of 63 samples with varying read legths, the average read length and LZW compression 
+    # Across a total of 63 samples with varying read legths, the average read length and LZW compression
     #     score were computed for the first 500 reads. From these values, a linear model was fit using
     #     the R stats package.
     # model formula: lm(formula = y ~ log(x))
@@ -147,14 +147,14 @@ class PipelineStepRunLZW(PipelineStep):
     def generate_lzw_filtered(fasta_files, output_files, cutoff_scores, threshold_readlength):
         assert len(fasta_files) == len(output_files)
 
-        cutoff_scores.sort(reverse=True) # Make sure cutoff is from high to low
+        cutoff_scores.sort(reverse=True)  # Make sure cutoff is from high to low
 
         # This is the bulk of the computation.  Everything else below is just binning by cutoff score.
         coalesced_score_file = PipelineStepRunLZW.lzw_compute(fasta_files, threshold_readlength, cutoff_scores[0])
 
-        readcount_list = [] # one item per cutoff
-        outstreams_list = [] # one item per cutoff
-        outfiles_list = [] # one item per cutoff
+        readcount_list = []  # one item per cutoff
+        outstreams_list = []  # one item per cutoff
+        outfiles_list = []  # one item per cutoff
 
         for cutoff in cutoff_scores:
             readcount_list.append(0)
@@ -209,7 +209,7 @@ class PipelineStepRunLZW(PipelineStep):
         if kept_count == 0:
             raise RuntimeError("All the reads are filtered by LZW with lowest cutoff: %f" % cutoff_frac)
 
-        kept_ratio = float(kept_count)/float(total_reads)
+        kept_ratio = float(kept_count) / float(total_reads)
         msg = "LZW filter: cutoff_frac: %f, total reads: %d, filtered reads: %d, " \
               "kept ratio: %f" % (cutoff_frac, total_reads, filtered, kept_ratio)
         log.write(msg)

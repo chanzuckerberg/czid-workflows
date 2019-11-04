@@ -33,7 +33,7 @@ class PipelineStepGenerateTaxidFasta(PipelineStep):
 
         with open(input_fa_name, 'rb') as input_fa, \
              open(self.output_files_local()[0], 'wb') as output_fa, \
-             open_file_db_by_extension(lineage_db, IdSeqDictValue.VALUE_TYPE_ARRAY) as lineage_map:
+             open_file_db_by_extension(lineage_db, IdSeqDictValue.VALUE_TYPE_ARRAY) as lineage_map:  # noqa
             seq_name = input_fa.readline()
             seq_data = input_fa.readline()
             while len(seq_name) > 0 and len(seq_data) > 0:

@@ -73,7 +73,7 @@ class PipelineStepGenerateAccession2Taxid(PipelineStep):
             taxid2wgs_accession_db_sqlite,
             accession2taxid_db,
             taxid2wgs_accession_db,
-         ) = self.output_files_local()
+        ) = self.output_files_local()
 
         # Get accession_list
         accessions_files = []

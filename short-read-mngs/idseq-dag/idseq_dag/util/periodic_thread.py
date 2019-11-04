@@ -38,8 +38,8 @@ class PeriodicThread(threading.Thread):
             if unixtime_now - last_target_run_unixtime >= self.wait_seconds:
                 try:
                     self.target(*self.args, **self.kwargs)
-                except: #pylint: disable=bare-except
+                except:
                     traceback.print_exc()
                 finally:
-                    last_target_run_time = unixtime_now
+                    last_target_run_time = unixtime_now  # noqa
             time.sleep(self.stop_latency_seconds)

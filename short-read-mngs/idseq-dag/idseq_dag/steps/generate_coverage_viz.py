@@ -475,7 +475,7 @@ class PipelineStepGenerateCoverageViz(PipelineStep):
         def process_hit(hit_type, hit_name):
             hit_data = read_data if hit_type == "read" else contig_data
 
-            if not hit_name in hit_data:
+            if hit_name not in hit_data:
                 log.write(f"Could not find {hit_type} in map: {hit_name}")
                 return
 
@@ -713,11 +713,11 @@ class PipelineStepGenerateCoverageViz(PipelineStep):
                 # Use an array of numbers instead of a dict with field names to save space in the JSON file.
                 # There will be many of these coverage arrays.
                 final_coverage.append([
-                    index, # bin index
-                    _format_number(coverage_obj["depth"]), # average coverage depth
-                    _format_percent(PipelineStepGenerateCoverageViz.calculate_covered_length(coverage_obj["endpoints"]) / bin_size), # coverage breadth
-                    coverage_obj["num_contigs"], # number of contigs
-                    coverage_obj["num_reads"], # number of reads
+                    index,  # bin index
+                    _format_number(coverage_obj["depth"]),  # average coverage depth
+                    _format_percent(PipelineStepGenerateCoverageViz.calculate_covered_length(coverage_obj["endpoints"]) / bin_size),  # coverage breadth
+                    coverage_obj["num_contigs"],  # number of contigs
+                    coverage_obj["num_reads"],  # number of reads
                 ])
 
         return (final_coverage, bin_size)

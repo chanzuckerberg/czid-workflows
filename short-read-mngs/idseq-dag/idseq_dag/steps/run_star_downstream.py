@@ -7,7 +7,7 @@ class PipelineStepRunStarDownstream(PipelineStepRunStar):
     (2) validation counts (output from validation step)
         --> first file is a count json; remaining files are sanitized sequence files which we don't need
             because we use the files from (1)
-    """ 
+    """
 
     def run(self):
         self.sequence_input_files = self.input_files_local[0][:2]

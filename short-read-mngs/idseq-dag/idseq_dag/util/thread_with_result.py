@@ -37,7 +37,7 @@ class ThreadWithResult(threading.Thread):
         try:
             self.result = self.target(*self.args, **self.kwargs)
             self.exception = False
-        except: #pylint: disable=bare-except
+        except:
             if self.print_traceback:
                 traceback.print_exc()
             self.exception = True
@@ -71,6 +71,7 @@ def _unit_test_1(r=random.Random(time.time())):
     test = "thread_with_result: exception handling test"
     try:
         threads_to_fail = set([2, 3, 5, 7])
+
         def target(i: int) -> int:
             time.sleep(r.random())
             if i in threads_to_fail:
@@ -87,7 +88,7 @@ def _unit_test_1(r=random.Random(time.time())):
             run_all(threads)
         except AssertionError:
             pass
-        except:  #pylint: disable=bare-except
+        except:
             print("Unexpected exception.")
             raise
         else:
@@ -109,6 +110,7 @@ def _unit_test_2(r=random.Random(time.time())):
     test = "thread_with_result: mt_map and mt_starmap test"
     try:
         numbers_to_modify = set([2, 3, 5, 7])
+
         def target(i: int) -> int:
             time.sleep(r.random())
             if i in numbers_to_modify:
@@ -116,7 +118,7 @@ def _unit_test_2(r=random.Random(time.time())):
             return i
         try:
             results = mt_map(target, range(16))
-        except:  #pylint: disable=bare-except
+        except:  # pylint: disable=bare-except
             print("Unexpected exception.")
             raise
         for i, r in enumerate(results):
@@ -128,6 +130,7 @@ def _unit_test_2(r=random.Random(time.time())):
     except:
         print(f"{test} failed")
         raise
+
 
 if __name__ == "__main__":
     _unit_test_1()

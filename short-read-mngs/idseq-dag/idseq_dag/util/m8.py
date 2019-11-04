@@ -18,11 +18,11 @@ def log_corrupt(m8_file, line):
 
 def summarize_hits(hit_summary_file, min_reads_per_genus=0):
     ''' Parse the hit summary file from alignment and get the relevant into'''
-    read_dict = {} # read_id => line
-    accession_dict = {} # accession => (species, genus)
-    genus_read_counts = defaultdict(int) # genus => read_counts
-    genus_species = defaultdict(set) # genus => list of species
-    genus_accessions = defaultdict(set) # genus => list of accessions
+    read_dict = {}  # read_id => line
+    accession_dict = {}  # accession => (species, genus)
+    genus_read_counts = defaultdict(int)  # genus => read_counts
+    genus_species = defaultdict(set)  # genus => list of species
+    genus_accessions = defaultdict(set)  # genus => list of accessions
     total_reads = 0
     with open(hit_summary_file, 'r') as hsf:
         for line in hsf:
@@ -37,14 +37,14 @@ def summarize_hits(hit_summary_file, min_reads_per_genus=0):
                 genus_read_counts[genus_taxid] += 1
                 genus_species[genus_taxid].add(species_taxid)
                 genus_accessions[genus_taxid].add(accession_id)
-    selected_genera = {} # genus => accession_list
+    selected_genera = {}  # genus => accession_list
     for genus_taxid, reads in genus_read_counts.items():
         if reads >= min_reads_per_genus and len(genus_species[genus_taxid]) > 1:
             selected_genera[genus_taxid] = list(genus_accessions[genus_taxid])
 
     return (read_dict, accession_dict, selected_genera)
 
-def iterate_m8(m8_file, min_alignment_length = 0, debug_caller=None, logging_interval=25000000, full_line=False):
+def iterate_m8(m8_file, min_alignment_length=0, debug_caller=None, logging_interval=25000000, full_line=False):
     """Generate an iterator over the m8 file and return values for each line.
     Work around and warn about any invalid hits detected.
     Return a subset of values (read_id, accession_id, percent_id, alignment_length,
@@ -90,7 +90,7 @@ def iterate_m8(m8_file, min_alignment_length = 0, debug_caller=None, logging_int
                 last_invalid_line = line
                 continue
 
-            ### Alignment Length Filter ###
+            # *** Alignment Length Filter ***
             # Alignments with length <=35 bp are associated with false-positives in NT
             # when the .m8 file is generated via service = "gsnap" or using blast db "nt",
             # the min_alignment_length filter is passed to require a minimum .m8 length
@@ -192,7 +192,7 @@ def call_hits_m8(input_m8, lineage_map_path, accession2taxid_dict_path,
         * http://www.metagenomics.wiki/tools/blast/evalue
     """
     with open_file_db_by_extension(lineage_map_path, IdSeqDictValue.VALUE_TYPE_ARRAY) as lineage_map, \
-         open_file_db_by_extension(accession2taxid_dict_path) as accession2taxid_dict:
+         open_file_db_by_extension(accession2taxid_dict_path) as accession2taxid_dict:  # noqa
         _call_hits_m8_work(input_m8, lineage_map, accession2taxid_dict,
                            output_m8, output_summary, min_alignment_length, taxon_blacklist)
 
@@ -248,7 +248,6 @@ def _call_hits_m8_work(input_m8, lineage_map, accession2taxid_dict,
                 accession_id = most_frequent_accession(accession_list)
                 return level + 1, taxid, accession_id
         return -1, "-1", None
-
 
     def call_hit_level_v2(hits):
         ''' Always call hit at the species level with the taxid with most matches '''
@@ -353,7 +352,6 @@ def generate_taxon_count_json_from_m8(
     # Parse through hit file and m8 input file and format a JSON file with
     # our desired attributes, including aggregated statistics.
 
-
     if deuterostome_path:
         with log.log_context("generate_taxon_count_json_from_m8", {"substep": "read_file_into_set"}):
             taxids_to_remove = read_file_into_set(deuterostome_path)
@@ -370,7 +368,7 @@ def generate_taxon_count_json_from_m8(
     aggregation = {}
     with open(hit_level_file, 'r', encoding='utf-8') as hit_f, \
          open(m8_file, 'r', encoding='utf-8') as m8_f, \
-         open_file_db_by_extension(lineage_map_path, IdSeqDictValue.VALUE_TYPE_ARRAY) as lineage_map:
+         open_file_db_by_extension(lineage_map_path, IdSeqDictValue.VALUE_TYPE_ARRAY) as lineage_map:  # noqa
         # Lines in m8_file and hit_level_file correspond (same read_id)
         hit_line = hit_f.readline()
         m8_line = m8_f.readline()
@@ -382,7 +380,7 @@ def generate_taxon_count_json_from_m8(
             while hit_line and m8_line:
                 # Retrieve data values from files
                 hit_line_columns = hit_line.rstrip("\n").split("\t")
-                _read_id = hit_line_columns[0]
+                # _read_id = hit_line_columns[0]
                 hit_level = hit_line_columns[1]
                 hit_taxid = hit_line_columns[2]
                 if int(hit_level) < 0:  # Skip negative levels and continue
@@ -451,7 +449,6 @@ def generate_taxon_count_json_from_m8(
 
                 hit_line = hit_f.readline()
                 m8_line = m8_f.readline()
-
 
     # Produce the final output
     taxon_counts_attributes = []

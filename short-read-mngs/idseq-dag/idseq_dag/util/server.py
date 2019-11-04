@@ -24,7 +24,7 @@ MAX_DISPATCHES_PER_MINUTE = 10
 
 
 def _duct_tape(service_name):
-     # TODO: remove this duct tape
+    # TODO: remove this duct tape
     if service_name == 'rapsearch2':
         return 'rapsearch'
     return service_name
@@ -210,7 +210,7 @@ class ChunkStatusTracker:
         log.log_event(f"FULL OUTCOME DATA FOR {self.service}", values=outcomes)
 
 
-def chunk_status_tracker(service, #pylint: disable=dangerous-default-value
+def chunk_status_tracker(service,  # pylint: disable=dangerous-default-value
                          trackers={
                              "gsnap": ChunkStatusTracker("gsnap"),
                              "rapsearch": ChunkStatusTracker("rapsearch")
@@ -245,7 +245,7 @@ def get_server_ips_work(service_name, environment, draining_tag):
     return server_ips
 
 
-def get_server_ips(service_name, #pylint: disable=dangerous-default-value
+def get_server_ips(service_name,  # pylint: disable=dangerous-default-value
                    environment,
                    max_interval_between_describe_instances,
                    draining_tag,
@@ -272,7 +272,7 @@ def get_server_ips(service_name, #pylint: disable=dangerous-default-value
         return []
 
 
-def wait_for_server_ip_work(service_name, #pylint: disable=dangerous-default-value
+def wait_for_server_ip_work(service_name,  # pylint: disable=dangerous-default-value
                             key_path,
                             remote_username,
                             environment,
@@ -367,7 +367,7 @@ def wait_for_server_ip_work(service_name, #pylint: disable=dangerous-default-val
             time.sleep(wait_seconds)
 
 
-def wait_for_server_ip(service_name, #pylint: disable=dangerous-default-value
+def wait_for_server_ip(service_name,  # pylint: disable=dangerous-default-value
                        key_path,
                        remote_username,
                        environment,
@@ -502,10 +502,10 @@ def run_test():
     chunk_status_tracker("rapsearch2").register_chunk_waiting(100, 1)
     chunk_status_tracker("rapsearch2").register_chunk_waiting(100, 1)
     chunk_status_tracker("rapsearch2").register_chunk_waiting(99, 2)
-    assert True == chunk_status_tracker("rapsearch2").chunk_has_try_priority(100, 1)
-    assert False == chunk_status_tracker("rapsearch2").chunk_has_try_priority(99, 2)
+    assert chunk_status_tracker("rapsearch2").chunk_has_try_priority(100, 1)
+    assert not chunk_status_tracker("rapsearch2").chunk_has_try_priority(99, 2)
     chunk_status_tracker("rapsearch2").register_chunk_dispatched(100, 1)
-    assert True == chunk_status_tracker("rapsearch2").chunk_has_try_priority(99, 2)
+    assert chunk_status_tracker("rapsearch2").chunk_has_try_priority(99, 2)
     input_chunks = {
         'rapsearch2': set(range(110)),
         'gsnap': set(range(30)),

@@ -66,7 +66,7 @@ def lines2reads(line_count, file_format):
         # ourselves, following the single-line format.
         assert line_count % 2 == 0, "File does not follow single-line fasta format"
         read_count = line_count // 2
-    else: 
+    else:
         read_count = line_count
     return read_count
 
@@ -92,4 +92,3 @@ def files_have_min_reads(input_files, min_reads):
         if num_reads < min_reads:
             return False
     return True
-

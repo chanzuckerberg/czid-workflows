@@ -103,7 +103,6 @@ class PipelineStepGenerateTaxidLocator(PipelineStep):
             )
         )
 
-
     @staticmethod
     def get_taxid_field_num(taxid_field, input_fasta):
         with open(input_fasta) as f:

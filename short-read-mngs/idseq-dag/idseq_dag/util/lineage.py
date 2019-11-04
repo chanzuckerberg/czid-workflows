@@ -59,8 +59,7 @@ def fill_missing_calls(cleaned_lineage):
         if me >= 0:
             closest_real_hit_just_above_me = me
         elif closest_real_hit_just_above_me >= 0 and blank(me):
-            result[tax_level - 1] = str(tax_level * INVALID_CALL_BASE_ID -
-                                        closest_real_hit_just_above_me)
+            result[tax_level - 1] = str(tax_level * INVALID_CALL_BASE_ID - closest_real_hit_just_above_me)
         tax_level -= 1
     return result
 

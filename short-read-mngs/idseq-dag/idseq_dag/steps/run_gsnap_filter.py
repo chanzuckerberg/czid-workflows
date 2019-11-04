@@ -9,8 +9,8 @@ from idseq_dag.util.s3 import fetch_from_s3
 
 
 class PipelineStepRunGsnapFilter(PipelineStep):
-    """ Regardless of specified “host” organism, it is essential to remove all potentially-human 
-    sequences for privacy reasons. Thus, a final GSNAP alignment is performed against the human 
+    """ Regardless of specified “host” organism, it is essential to remove all potentially-human
+    sequences for privacy reasons. Thus, a final GSNAP alignment is performed against the human
     genome for samples from all host types.
 
     ```
@@ -25,7 +25,7 @@ class PipelineStepRunGsnapFilter(PipelineStep):
     --max-mismatches=40
     -D {gsnap_base_dir}
     -d {gsnap_index_name}
-    -o {output_sam_file} 
+    -o {output_sam_file}
     {input_fas}
     ```
 

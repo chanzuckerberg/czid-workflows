@@ -8,27 +8,27 @@ import idseq_dag.util.command as command
 import idseq_dag.util.command_patterns as command_patterns
 
 class PipelineStepRunAssembly(PipelineStep):
-    """ To obtain longer contigs for improved sensitivity in mapping, short reads must be 
-    de novo assembled using SPADES. 
-    The SPADES output loses the information about which contig each individual read belongs to. 
+    """ To obtain longer contigs for improved sensitivity in mapping, short reads must be
+    de novo assembled using SPADES.
+    The SPADES output loses the information about which contig each individual read belongs to.
     Therefore, we use  bowtie2 to map the original reads onto their assembled contigs.
 
     1. The short reads are assembled into contigs using SPADES.
 
     ```
-    spades.py 
+    spades.py
     -1 {input_fasta}
     -2 {input_fasta2}
     -o {assembled_dir}
-    -m {memory} 
-    -t 32 
+    -m {memory}
+    -t 32
     —only-assembler
     ```
 
     SPADES documentation can be found [here](http://cab.spbu.ru/software/spades/)
 
-    2. The single-read identity of reads merged into each contig are lost by SPADES. 
-    To recover this information and identify which contig each read belongs to, 
+    2. The single-read identity of reads merged into each contig are lost by SPADES.
+    To recover this information and identify which contig each read belongs to,
     the contigs are then used to build a Bowtie2 database:
 
     ```
@@ -38,11 +38,11 @@ class PipelineStepRunAssembly(PipelineStep):
     3. The original reads are mapped back to their assembled contigs:
 
     ```
-    bowtie2 
-    -x {bowtie_index_path} 
-    -f 
-    -U {fasta_file} 
-    --very-sensitive 
+    bowtie2
+    -x {bowtie_index_path}
+    -f
+    -U {fasta_file}
+    --very-sensitive
     -p 32 > {output_bowtie_sam}
     ```
     """
@@ -63,10 +63,11 @@ class PipelineStepRunAssembly(PipelineStep):
         memory = self.additional_attributes.get('memory', 100)
         self.assemble(input_fasta, input_fasta2, bowtie_fasta, assembled_contig, assembled_scaffold,
                       bowtie_sam, contig_stats, read2contig, int(memory))
+
     @staticmethod
     def assemble(input_fasta,
                  input_fasta2,
-                 bowtie_fasta, # fasta file for running bowtie against contigs
+                 bowtie_fasta,  # fasta file for running bowtie against contigs
                  assembled_contig,
                  assembled_scaffold,
                  bowtie_sam,
@@ -129,6 +130,7 @@ class PipelineStepRunAssembly(PipelineStep):
             command.write_text_to_file('{}', contig_stats)
             traceback.print_exc()
         command.remove_rf(assembled_dir)
+
     @staticmethod
     def generate_read_to_contig_mapping(assembled_contig,
                                         fasta_file,
@@ -176,8 +178,6 @@ class PipelineStepRunAssembly(PipelineStep):
                 contig_stats[contig] += 1
                 if contig != '*':
                     read2contig[read] = contig
-
-
 
     def count_reads(self):
         ''' count reads '''

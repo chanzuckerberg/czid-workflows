@@ -8,7 +8,7 @@ import idseq_dag.util.s3 as s3
 import idseq_dag.util.count as count
 
 class PipelineStepPrepareTaxonFasta(PipelineStep):
-    ''' 
+    '''
     Fetch fasta file(s) of reads mapping to a taxid (NT/NR) in a sample.
     To be used as input for phylo_trees.
     '''

@@ -37,7 +37,6 @@ class PipelineStepFetchTaxInfo(PipelineStep):
                     fields = line.rstrip().split(",")
                     id2namedict[fields[0]] = fields[1]
 
-
         if s3.check_s3_presence(self.s3_path(taxid2wiki)):
             # generated
             taxid2wiki = s3.fetch_from_s3(self.s3_path(taxid2wiki), taxid2wiki)
@@ -48,10 +47,9 @@ class PipelineStepFetchTaxInfo(PipelineStep):
         else:
             self.fetch_ncbi_wiki_map(num_threads, batch_size, taxid_list, taxid2wikidict)
 
-
         # output dummay for actual wiki content for now
         taxid2wikicontent = {}
-        self.fetch_wiki_content(num_threads*4, taxid2wikidict,
+        self.fetch_wiki_content(num_threads * 4, taxid2wikidict,
                                 taxid2wikicontent, id2namedict)
 
         with open(taxid2desc, 'w') as desc_outputf:
@@ -73,7 +71,7 @@ class PipelineStepFetchTaxInfo(PipelineStep):
         semaphore = threading.Semaphore(num_threads)
         mutex = TraceLock("fetch_wiki_content", threading.RLock())
         for taxid, url in taxid2wikidict.items():
-            m = re.search("curid=(\d+)", url)
+            m = re.search(r"curid=(\d+)", url)
             pageid = None
             if m:
                 pageid = m[1]
@@ -84,7 +82,7 @@ class PipelineStepFetchTaxInfo(PipelineStep):
                     target=PipelineStepFetchTaxInfo.
                     get_wiki_content_for_page,
                     args=[taxid, pageid, name, taxid2wikicontent, mutex, semaphore]
-                    )
+                )
                 t.start()
                 threads.append(t)
         for t in threads:
@@ -114,7 +112,7 @@ class PipelineStepFetchTaxInfo(PipelineStep):
 
                 if page:
                     output = {
-                        "pageid" : page.pageid,
+                        "pageid": page.pageid,
                         "description": page.content[:1000],
                         "title": page.title,
                         "summary": page.summary
@@ -137,7 +135,7 @@ class PipelineStepFetchTaxInfo(PipelineStep):
             for line in taxf:
                 taxid = line.rstrip()
                 if taxid == 'taxid':
-                    continue # header
+                    continue  # header
                 batch.append(taxid)
                 if len(batch) >= batch_size:
                     semaphore.acquire()
@@ -145,7 +143,7 @@ class PipelineStepFetchTaxInfo(PipelineStep):
                         target=PipelineStepFetchTaxInfo.
                         get_taxid_mapping_for_batch,
                         args=[batch, taxid2wikidict, mutex, semaphore]
-                        )
+                    )
                     t.start()
                     threads.append(t)
                     batch = []
@@ -155,12 +153,11 @@ class PipelineStepFetchTaxInfo(PipelineStep):
                 target=PipelineStepFetchTaxInfo.
                 get_taxid_mapping_for_batch,
                 args=[batch, taxid2wikidict, mutex, semaphore]
-                )
+            )
             t.start()
             threads.append(t)
         for t in threads:
             t.join()
-
 
     @staticmethod
     def get_taxid_mapping_for_batch(taxids, taxid2wikidict, mutex, semaphore, max_attempt=3):
@@ -192,7 +189,5 @@ class PipelineStepFetchTaxInfo(PipelineStep):
         with mutex:
             taxid2wikidict.update(parsed)
 
-
     def count_reads(self):
         pass
-

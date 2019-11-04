@@ -108,7 +108,7 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
 
         # Write summary file
         summary_msg = f"Read2Seq Size: {len(read2seq)}, M8 lines {line_count}, " \
-                  f"{len(groups)} unique accession ids "
+            f"{len(groups)} unique accession ids "
         summary_file_name = f"{output_json_dir}.summary"
         with open(summary_file_name, 'w') as summary_f:
             summary_f.write(summary_msg)
@@ -265,8 +265,8 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
     def parse_reads(annotated_fasta, db_type):
         read2seq = {}
         search_string = f"species_{db_type}"
-        adv_search_string = "family_%s:([-\d]+):.*genus_%s:([-\d]+):.*species_%s:(" \
-                            "[-\d]+).*NT:[^:]*:(.*)" % (
+        adv_search_string = r"family_%s:([-\d]+):.*genus_%s:([-\d]+):.*species_%s:(" \
+                            r"[-\d]+).*NT:[^:]*:(.*)" % (
                                 db_type, db_type, db_type)
 
         with open(annotated_fasta, 'r') as af:
@@ -276,7 +276,7 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
                     read_id = line
                 else:
                     sequence = line
-                    m = re.search("%s:([\d-]*)" % search_string, read_id)
+                    m = re.search(r"%s:([\d-]*)" % search_string, read_id)
                     if m:
                         species_id = int(m.group(1))
                         if species_id > 0 or species_id < INVALID_CALL_BASE_ID:
@@ -328,7 +328,7 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
             raise RuntimeError("Error in getting sequences by accession list.")
 
     @staticmethod
-    def get_sequence_for_thread(error_flags,  #pylint: disable=dangerous-default-value
+    def get_sequence_for_thread(error_flags,  # pylint: disable=dangerous-default-value
                                 accession_info,
                                 accession_id,
                                 entry,

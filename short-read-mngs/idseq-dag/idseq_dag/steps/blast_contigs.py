@@ -52,16 +52,16 @@ class PipelineStepBlastContigs(PipelineStep):
         (blast_m8, refined_m8, refined_hit_summary, refined_counts, contig_summary_json, blast_top_m8) = self.output_files_local()
         db_type = self.additional_attributes["db_type"]
         if os.path.getsize(assembled_contig) < MIN_ASSEMBLED_CONTIG_SIZE or \
-            os.path.getsize(reference_fasta) < MIN_REF_FASTA_SIZE:
-                # No assembled results or refseq fasta available.
-                # Create empty output files.
-                command.write_text_to_file(' ', blast_m8)
-                command.write_text_to_file(' ', blast_top_m8)
-                command.copy_file(deduped_m8, refined_m8)
-                command.copy_file(hit_summary, refined_hit_summary)
-                command.copy_file(orig_counts, refined_counts)
-                command.write_text_to_file('[]', contig_summary_json)
-                return
+           os.path.getsize(reference_fasta) < MIN_REF_FASTA_SIZE:
+            # No assembled results or refseq fasta available.
+            # Create empty output files.
+            command.write_text_to_file(' ', blast_m8)
+            command.write_text_to_file(' ', blast_top_m8)
+            command.copy_file(deduped_m8, refined_m8)
+            command.copy_file(hit_summary, refined_hit_summary)
+            command.copy_file(orig_counts, refined_counts)
+            command.write_text_to_file('[]', contig_summary_json)
+            return
 
         (read_dict, accession_dict, _selected_genera) = m8.summarize_hits(hit_summary)
         PipelineStepBlastContigs.run_blast(assembled_contig, reference_fasta,
@@ -71,7 +71,7 @@ class PipelineStepBlastContigs(PipelineStep):
         PipelineStepRunAssembly.generate_info_from_sam(bowtie_sam, read2contig, contig_stats)
 
         (updated_read_dict, read2blastm8, contig2lineage, added_reads) = self.update_read_dict(
-                read2contig, blast_top_m8, read_dict, accession_dict)
+            read2contig, blast_top_m8, read_dict, accession_dict)
         self.generate_m8_and_hit_summary(updated_read_dict, added_reads, read2blastm8,
                                          hit_summary, deduped_m8,
                                          refined_hit_summary, refined_m8)
@@ -80,17 +80,17 @@ class PipelineStepBlastContigs(PipelineStep):
         lineage_db = s3.fetch_from_s3(
             self.additional_files["lineage_db"],
             self.ref_dir_local,
-            allow_s3mi=False) # Too small to waste s3mi
+            allow_s3mi=False)  # Too small to waste s3mi
         deuterostome_db = None
         evalue_type = 'raw'
         if self.additional_files.get("deuterostome_db"):
             deuterostome_db = s3.fetch_from_s3(self.additional_files["deuterostome_db"],
-                                               self.ref_dir_local, allow_s3mi=False) # Too small for s3mi
+                                               self.ref_dir_local, allow_s3mi=False)  # Too small for s3mi
         with TraceLock("PipelineStepBlastContigs-CYA", PipelineStepBlastContigs.cya_lock, debug=False):
             with log.log_context("PipelineStepBlastContigs", {"substep": "generate_taxon_count_json_from_m8", "db_type": db_type, "refined_counts": refined_counts}):
                 m8.generate_taxon_count_json_from_m8(refined_m8, refined_hit_summary,
-                                                    evalue_type, db_type.upper(),
-                                                    lineage_db, deuterostome_db, refined_counts)
+                                                     evalue_type, db_type.upper(),
+                                                     lineage_db, deuterostome_db, refined_counts)
 
         # generate contig stats at genus/species level
         with log.log_context("PipelineStepBlastContigs", {"substep": "generate_taxon_summary"}):
@@ -137,8 +137,8 @@ class PipelineStepBlastContigs(PipelineStep):
         for idx, summary in enumerate([species_summary, genus_summary]):
             tax_level = idx + 1
             for taxid, contig_counts in summary.items():
-                entry = { 'taxid': taxid, 'tax_level': tax_level,
-                          'count_type': db_type.upper(), 'contig_counts': contig_counts}
+                entry = {'taxid': taxid, 'tax_level': tax_level,
+                         'count_type': db_type.upper(), 'contig_counts': contig_counts}
                 output_array.append(entry)
         return output_array
 
@@ -261,7 +261,7 @@ class PipelineStepBlastContigs(PipelineStep):
                 # Get the top entry of each read_id based on the bitscore
                 if read_id != current_read_id:
                     # Different batch start
-                    if current_read_id: # Not the first line
+                    if current_read_id:  # Not the first line
                         top_m8f.write(top_line)
                     current_read_id = read_id
                     top_line = line

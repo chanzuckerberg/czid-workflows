@@ -24,7 +24,6 @@ class PipelineStepCombineTaxonCounts(PipelineStep):
             with open(input_file_name, 'r') as input_file:
                 data = json.load(input_file)
                 taxon_counts += data["pipeline_output"]["taxon_counts_attributes"]
-        output_dict = {"pipeline_output": { "taxon_counts_attributes": taxon_counts}}
+        output_dict = {"pipeline_output": {"taxon_counts_attributes": taxon_counts}}
         with open(output_json_path, 'w') as output_file:
             json.dump(output_dict, output_file)
-

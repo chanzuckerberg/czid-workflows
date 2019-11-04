@@ -74,7 +74,7 @@ class CommandTracker(Updater):
         """
         if self.proc is None or self.proc.poll() is None:
             log.write("Command %d still running after %3.1f seconds." %
-                        (self.id, t_elapsed))
+                      (self.id, t_elapsed))
         else:
             # This should be uncommon, unless there is lengthy python
             # processing following the command in the same CommandTracker
@@ -97,7 +97,7 @@ class CommandTracker(Updater):
         elif not self.t_sigterm_sent:
             # Send SIGTERM first.
             msg = "Command %d has exceeded timeout of %3.1f seconds. " \
-                    "Sending SIGTERM." % (self.id, self.timeout)
+                "Sending SIGTERM." % (self.id, self.timeout)
             log.write(msg)
             self.t_sigterm_sent = time.time()
             self.proc.terminate()
@@ -105,13 +105,13 @@ class CommandTracker(Updater):
             # Grace_period after SIGTERM, send SIGKILL.
             if time.time() > self.t_sigterm_sent + self.grace_period:
                 msg = "Command %d still alive %3.1f seconds after " \
-                        "SIGTERM. Sending SIGKILL." % (self.id, time.time() - self.t_sigterm_sent)
+                    "SIGTERM. Sending SIGKILL." % (self.id, time.time() - self.t_sigterm_sent)
                 log.write(msg)
                 self.t_sigkill_sent = time.time()
                 self.proc.kill()
         else:
             msg = "Command %d still alive %3.1f seconds after " \
-                    "SIGKILL." % (self.id, time.time() - self.t_sigkill_sent)
+                "SIGKILL." % (self.id, time.time() - self.t_sigkill_sent)
             log.write(msg)
 
 
@@ -172,6 +172,7 @@ def run_in_subprocess(target):
     @wraps(target)
     def wrapper(*args, **kwargs):
         original_caller = log.get_caller_info(3)
+
         def subprocess_scope(*args, **kwargs):
             with log.log_context("subprocess_scope", {"target": target.__qualname__, "original_caller": original_caller}):
                 target(*args, **kwargs)

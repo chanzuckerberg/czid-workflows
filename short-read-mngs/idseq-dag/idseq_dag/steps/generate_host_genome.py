@@ -201,7 +201,6 @@ class PipelineStepGenerateHostGenome(PipelineStep):
             )
         )
 
-
     def count_reads(self):
         ''' Count reads '''
         pass

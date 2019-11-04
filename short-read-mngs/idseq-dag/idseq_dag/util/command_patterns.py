@@ -19,7 +19,7 @@ class CommandPattern(abc.ABC):
     def __repr__(self):
         r'''
             Returns a more descriptive message when printing this object.
-            for example: 
+            for example:
                 cp = command_patterns.SingleCommand(cmd="echo", args=["test"])
                 print(cp)
             will return something like:
@@ -41,7 +41,7 @@ class CommandPattern(abc.ABC):
 
 class SingleCommand(CommandPattern):
     r'''
-        This pattern is used to execute a single command. 
+        This pattern is used to execute a single command.
         This is the preferred pattern and you should favor it over ShellScriptCommand,
         since you don't need to quote parameters when using SingleCommand.
 
@@ -177,7 +177,7 @@ class ShellScriptCommand(CommandPattern):
         pos = 1
         for key, value in self.named_args.items():
             if isinstance(value, str) or isinstance(value, int):
-                script_vars.append(f'{key}="${{{pos}}}"') # ex: abc="${3}"
+                script_vars.append(f'{key}="${{{pos}}}"')  # ex: abc="${3}"
                 args.append(value)
                 pos += 1
             elif isinstance(value, Iterable):
@@ -185,8 +185,8 @@ class ShellScriptCommand(CommandPattern):
                 if items_cnt == 0:
                     shell_array = ""
                 else:
-                    shell_array = '${' + f"@:{pos}:{items_cnt}" + '}' # ex: ${@:2:4}
-                script_vars.append(f'{key}=( "{shell_array}" )') # ex: abc=( "${@:2:4}" )
+                    shell_array = '${' + f"@:{pos}:{items_cnt}" + '}'  # ex: ${@:2:4}
+                script_vars.append(f'{key}=( "{shell_array}" )')  # ex: abc=( "${@:2:4}" )
                 args.extend(value)
                 pos += items_cnt
             else:
@@ -219,7 +219,6 @@ class ShellScriptCommand(CommandPattern):
             executable="/bin/bash"
         )
         return self.popen_handler
-
 
     def as_dict(self) -> Dict[str, Any]:
         if self.named_args is not None:

@@ -24,29 +24,29 @@ class TraceLock():
 
     State diagram:
     ```
-           some thread is trying               
-             to acquire a lock                 
-                     ||                        
-                     /\                        
-           +-------- \/ --------+ lock is      
+           some thread is trying
+             to acquire a lock
+                     ||
+                     /\
+           +-------- \/ --------+ lock is
  lock is   |                    | not available
- available |              +-----v----+         
-           |              | waiting  |         
-           |              +-----|----+         
-           |                    | lock is now  
-           |                    | available    
-     +-----v----+     +---------v---------+    
-     | acquired |     |acquired_after_wait|    
-     +-----|----+     +---------|---------+    
-           |                    |              
-           |   thread realeases |              
-           |      the lock      |              
-           +-------->/\<--------+              
-                     \/                        
-                     ||                        
-                     vv                        
-              +--------------+                 
-              |   released   |                 
+ available |              +-----v----+
+           |              | waiting  |
+           |              +-----|----+
+           |                    | lock is now
+           |                    | available
+     +-----v----+     +---------v---------+
+     | acquired |     |acquired_after_wait|
+     +-----|----+     +---------|---------+
+           |                    |
+           |   thread realeases |
+           |      the lock      |
+           +-------->/\<--------+
+                     \/
+                     ||
+                     vv
+              +--------------+
+              |   released   |
               +--------------+
     ```
     """

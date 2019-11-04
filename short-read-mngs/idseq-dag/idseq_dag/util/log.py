@@ -95,7 +95,7 @@ def log_event(event_name: str, values: object = None, start_time: datetime.datet
     if values is not None:
         obj_data["values"] = values
     if start_time is not None:
-        duration = (_get_current_time()-start_time).total_seconds()
+        duration = (_get_current_time() - start_time).total_seconds()
         obj_data["duration_ms"] = math.floor(duration * 1000)
     write(obj_data=obj_data, warning=warning, debug=debug, flush=flush)
     return _get_current_time()
@@ -166,9 +166,9 @@ def log_context(context_name: str, values: dict = None, log_caller_info: bool = 
     context_name (str): Name for this context.
     values(dict): Optional. Values associated to that event. Will be logged in json format.
     log_caller_info(bool): Log the caller file_name and method name.
-    log_caller_info_depth(int): A number that indicates how deep it goes into the stack trace to get data about the caller. 
+    log_caller_info_depth(int): A number that indicates how deep it goes into the stack trace to get data about the caller.
                                 Default is 0, which represents the method that invoked log_context method.
-                                For example, if you increase this number to 1, this will log 
+                                For example, if you increase this number to 1, this will log
                                 the parent method that invoked the method where log_context is being invoked.
                                 Ex:
                                     def method_a():
@@ -211,7 +211,7 @@ def log_context(context_name: str, values: dict = None, log_caller_info: bool = 
     context = LogContext(values=values, extra_fields={"context_name": context_name, "uid": secrets.token_hex(6)})
 
     if log_caller_info:
-        context.extra_fields["caller"] = get_caller_info(3+log_caller_info_depth)
+        context.extra_fields["caller"] = get_caller_info(3 + log_caller_info_depth)
 
     start = _get_current_time()
     if log_context_mode == LogContextMode.START_END_LOG_EVENTS:

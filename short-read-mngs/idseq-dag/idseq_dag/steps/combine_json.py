@@ -38,4 +38,3 @@ class PipelineStepCombineJson(PipelineStep):
                         raise RuntimeError(f"combine json can't combine data_type {data_type}")
         with open(output_json_path, 'w') as output_file:
             json.dump(output_struct, output_file)
-

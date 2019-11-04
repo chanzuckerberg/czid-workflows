@@ -79,7 +79,7 @@ class PipelineStepGenerateCoverageStats(PipelineStep):
                         if contig_len <= 0:
                             continue
 
-                        avg = sum(coverage)/contig_len
+                        avg = sum(coverage) / contig_len
                         avg2xcnt = 0
                         cnt0 = 0
                         cnt1 = 0
@@ -99,9 +99,9 @@ class PipelineStepGenerateCoverageStats(PipelineStep):
                             "avg": avg,
                             "p0": sorted_coverage[0],
                             "p100": sorted_coverage[-1],
-                            "p25": sorted_coverage[int(0.25*contig_len)],
-                            "p50": sorted_coverage[int(0.5*contig_len)],
-                            "p75": sorted_coverage[int(0.75*contig_len)],
+                            "p25": sorted_coverage[int(0.25 * contig_len)],
+                            "p50": sorted_coverage[int(0.5 * contig_len)],
+                            "p75": sorted_coverage[int(0.75 * contig_len)],
                             "avg2xcnt": avg2xcnt / contig_len,
                             "cnt0": cnt0 / contig_len,
                             "cnt1": cnt1 / contig_len,
@@ -127,7 +127,6 @@ class PipelineStepGenerateCoverageStats(PipelineStep):
                     raise Exception(f"Key {key} already present in contig2coverage")
             contig2coverage.update(chunk_result)
         return contig2coverage
-
 
     def count_reads(self):
         ''' Count reads '''

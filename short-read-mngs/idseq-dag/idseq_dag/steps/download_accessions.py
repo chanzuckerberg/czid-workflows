@@ -14,7 +14,7 @@ from idseq_dag.util.trace_lock import TraceLock
 
 MIN_ACCESSIONS_WHOLE_DB_DOWNLOAD = 5000
 MAX_ACCESSION_SEQUENCE_LEN = 100000000
-ALLOW_S3MI = False # Allow s3mi only if running on an instance with enough RAM to fit NT and NR together...
+ALLOW_S3MI = False  # Allow s3mi only if running on an instance with enough RAM to fit NT and NR together...
 
 class PipelineStepDownloadAccessions(PipelineStep):
     '''
@@ -44,7 +44,6 @@ class PipelineStepDownloadAccessions(PipelineStep):
                     auto_unzip=True,   # This is default for references, but let's be explicit
                     allow_s3mi=ALLOW_S3MI)
                 self.download_ref_sequences_from_file(accession_dict, loc_dict, db_path, output_reference_fasta)
-
 
     FIX_COMMA_REGEXP = re.compile(r'^(?P<accession_id>[^ ]+) (?P<wrong_pattern>, *)?(?P<description>.*)$')
 
@@ -142,7 +141,7 @@ class PipelineStepDownloadAccessions(PipelineStep):
             command_patterns.ShellScriptCommand(
                 script=r'''find "${accession_dir}" -type f | xargs -n 32 -P 1 cat >> "${output_reference_fasta}";''',
                 named_args={
-                    'accession_dir': os.path.join(accession_dir, ""), # adds a slash at the end if it doesn't have one
+                    'accession_dir': os.path.join(accession_dir, ""),  # adds a slash at the end if it doesn't have one
                     'output_reference_fasta': output_reference_fasta
                 }
             )

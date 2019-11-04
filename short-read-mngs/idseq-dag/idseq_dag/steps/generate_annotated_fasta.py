@@ -50,9 +50,10 @@ class PipelineStepGenerateAnnotatedFasta(PipelineStep):
                     output_fasta_f.write(sequence_data)
                     sequence_name = input_fasta_f.readline()
                     sequence_data = input_fasta_f.readline()
+
     @staticmethod
     def generate_unidentified_fasta(input_fa, output_fa):
-        #TODO  remove annotated fasta intermediate file and replace > with : below
+        # TODO  remove annotated fasta intermediate file and replace > with : below
         command.execute(
             command_patterns.ShellScriptCommand(
                 script=r'''grep -A 1 '>NR::NT::' "$1" | sed '/^--$/d' > "$2";''',

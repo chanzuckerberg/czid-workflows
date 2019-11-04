@@ -26,13 +26,13 @@ class PipelineStepRunStar(PipelineStep):
 
     If short reads:
     ```
-    STAR 
-    --outFilterMultimapNmax 99999 
-    --outFilterScoreMinOverLread 0.5 
+    STAR
+    --outFilterMultimapNmax 99999
+    --outFilterScoreMinOverLread 0.5
     --outFilterMatchNminOverLread 0.5
     --outReadsUnmapped Fastx
     --outFilterMismatchNmax 999
-    --outSAMmode None 
+    --outSAMmode None
     --clip3pNbases 0
     --runThreadN {cpus}
     --genomeDir {genome_dir}
@@ -42,13 +42,13 @@ class PipelineStepRunStar(PipelineStep):
     If long reads (specifically if there are more than 1 reads with length greater than
     READ_LEN_CUTOFF_HIGH, as determined during input validation step):
     ```
-    STARlong 
-    --outFilterMultimapNmax 99999 
-    --outFilterScoreMinOverLread 0.5 
+    STARlong
+    --outFilterMultimapNmax 99999
+    --outFilterScoreMinOverLread 0.5
     --outFilterMatchNminOverLread 0.5
     --outReadsUnmapped Fastx
     --outFilterMismatchNmax 999
-    --outSAMmode None 
+    --outSAMmode None
     --clip3pNbases 0
     --runThreadN {cpus}
     --genomeDir {genome_dir}
@@ -107,7 +107,7 @@ class PipelineStepRunStar(PipelineStep):
             validated_input_counts = json.load(validated_input_counts_f)
 
         use_starlong = validated_input_counts[vc.BUCKET_LONG] > 1 or \
-                       validated_input_counts[vc.BUCKET_TOO_LONG] > 1
+            validated_input_counts[vc.BUCKET_TOO_LONG] > 1
 
         for part_idx in range(num_parts):
             tmp = f"{scratch_dir}/star-part-{part_idx}"
@@ -119,9 +119,9 @@ class PipelineStepRunStar(PipelineStep):
                 PipelineStepRunStar.unmapped_files_in(tmp, num_inputs))
 
             if too_discrepant:
-               self.input_file_error = InputFileErrors.BROKEN_PAIRS
-               self.status = StepStatus.INVALID_INPUT
-               return
+                self.input_file_error = InputFileErrors.BROKEN_PAIRS
+                self.status = StepStatus.INVALID_INPUT
+                return
 
             # Run part 0 in gene-counting mode:
             # (a) ERCCs are doped into part 0 and we want their counts.
@@ -250,18 +250,16 @@ class PipelineStepRunStar(PipelineStep):
                     of_0, of_1, if_0, if_1)
         if max_mem:
             # This will be printed if some pairs were out of order.
-            msg = "WARNING: Pair order out of sync in {fqf}. " \
-                              "Synchronized using RAM for {max_mem} pairs.".format(
-                fqf=fastq_files, max_mem=max_mem)
+            msg = "WARNING: Pair order out of sync in {fqf}. Synchronized using RAM for {max_mem} pairs."
+            msg = msg.format(fqf=fastq_files, max_mem=max_mem)
             log.write(msg)
 
         discrepancies_count = len(outstanding_r0) + len(outstanding_r1)
         if discrepancies_count:
-            msg = "WARNING: Found {dc} broken pairs in {fqf}, e.g., " \
-                              "{example}.".format(
-                dc=discrepancies_count,
-                fqf=fastq_files,
-                example=(outstanding_r0 or outstanding_r1).popitem()[0])
+            msg = "WARNING: Found {dc} broken pairs in {fqf}, e.g., {example}."
+            msg = msg.format(dc=discrepancies_count,
+                             fqf=fastq_files,
+                             example=(outstanding_r0 or outstanding_r1).popitem()[0])
             log.write(msg)
         too_discrepant = (discrepancies_count > max_discrepant_fraction * total)
         return output_fnames, too_discrepant
@@ -282,7 +280,7 @@ class PipelineStepRunStar(PipelineStep):
                 read.append(line)
                 for i in range(3):
                     read.append(f.readline())
-            elif line[0] == 62: # Equivalent to '>', fasta format
+            elif line[0] == 62:  # Equivalent to '>', fasta format
                 rid = PipelineStepRunStar.extract_rid(line.decode('utf-8'))
                 read.append(line)
                 read.append(f.readline())

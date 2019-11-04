@@ -12,10 +12,10 @@ import idseq_dag.util.s3
 
 class StepStatus(IntEnum):
     INITIALIZED = 0
-    STARTED = 1 # step.start() called
-    FINISHED = 2 # step.run() finished
-    UPLOADED = 3 # all results uploaded to s3
-    INVALID_INPUT = 4 # an error occurred when validating the input file
+    STARTED = 1  # step.start() called
+    FINISHED = 2  # step.run() finished
+    UPLOADED = 3  # all results uploaded to s3
+    INVALID_INPUT = 4  # an error occurred when validating the input file
 
 class InputFileErrors(Enum):
     ''' This error will be used by the front-end to display a user-friendly error message '''
@@ -34,8 +34,8 @@ class PipelineStep(object):
                  step_status_local, step_status_lock):
         ''' Set up all the input_files and output_files here '''
         self.name = name
-        self.input_files = input_files # list of list files
-        self.output_files = output_files # s3 location
+        self.input_files = input_files  # list of list files
+        self.output_files = output_files  # s3 location
         self.output_dir_local = output_dir_local
         self.output_dir_s3 = output_dir_s3.rstrip('/')
         self.ref_dir_local = ref_dir_local
@@ -104,12 +104,12 @@ class PipelineStep(object):
     def update_status_json_file(self, status):
         log.write(f"Updating status file for step {self.name} with status {status}")
         # First, update own status dictionary
-        if not "description" in self.status_dict:
+        if "description" not in self.status_dict:
             self.status_dict["description"] = self.step_description()
-        if not "resources" in self.status_dict:
+        if "resources" not in self.status_dict:
             self.status_dict["resources"] = self.step_resources()
-        if not "start_time" in self.status_dict and status == "running":
-            self.status_dict["start_time"] = time.time() # seconds since epoch
+        if "start_time" not in self.status_dict and status == "running":
+            self.status_dict["start_time"] = time.time()  # seconds since epoch
 
         self.status_dict["status"] = status
         if self.input_file_error:
@@ -121,15 +121,10 @@ class PipelineStep(object):
         with self.step_status_lock:
             with open(self.step_status_local, 'r') as status_file:
                 status = json.load(status_file)
-            status.update({ self.name: self.status_dict })
+            status.update({self.name: self.status_dict})
             with open(self.step_status_local, 'w') as status_file:
                 json.dump(status, status_file)
             idseq_dag.util.s3.upload_with_retries(self.step_status_local, self.output_dir_s3 + "/")
-
-    def s3_path(self, local_path):
-        relative_path = os.path.relpath(local_path, self.output_dir_local)
-        s3_path = os.path.join(self.output_dir_s3, relative_path)
-        return s3_path
 
     @staticmethod
     def done_file(filename):
@@ -195,10 +190,10 @@ class PipelineStep(object):
             self.upload_thread.join()
         except InvalidInputFileError as e:
             self.update_status_json_file("user_errored")
-            raise e # Raise again to be caught in PipelineFlow and stop other steps
+            raise e  # Raise again to be caught in PipelineFlow and stop other steps
         except Exception as e:
             self.update_status_json_file("pipeline_errored")
-            raise e # Raise again to be caught in PipelineFlow and stop other steps
+            raise e  # Raise again to be caught in PipelineFlow and stop other steps
 
         if self.status < StepStatus.UPLOADED:
             self.update_status_json_file("pipeline_errored")
@@ -265,6 +260,4 @@ class PipelineStep(object):
         These will be used on the sidebar of the pipeline visualization on the idseq-web app.
         By default, show link to idseq-dag documentation.
         '''
-        return { "IDseq Docs": "https://github.com/chanzuckerberg/idseq-dag/wiki" }
-
-
+        return {"IDseq Docs": "https://github.com/chanzuckerberg/idseq-dag/wiki"}
