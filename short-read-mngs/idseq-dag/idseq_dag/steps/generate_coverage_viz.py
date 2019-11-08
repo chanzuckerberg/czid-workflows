@@ -226,7 +226,10 @@ class PipelineStepGenerateCoverageViz(PipelineStep):
                 values = line.rstrip().split("\t")
 
                 # Only count the contig if the contig is valid, i.e. it is larger than min_contig_size.
-                if len(values) == 12 and values[7] in valid_contigs_with_read_counts:
+                #
+                # For a particular line in hit_summary, if the line only has 7 columns, this means the read wasn't assembled.
+                # If the line has 12 or 13 columns, then the read was assembled into a contig.
+                if len(values) >= 12 and values[7] in valid_contigs_with_read_counts:
                     taxon_data[values[9]]["accessions"].add(values[8])
                     accession_data[values[8]]["contigs"].add(values[7])
                 else:

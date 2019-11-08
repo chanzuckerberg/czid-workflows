@@ -227,6 +227,9 @@ TODO: Move this code over to the idseq-dag repo.
 
 ## Release notes
 
+- 3.12.1
+  - Fix bug where reads unassigned during alignment that were assembled into contigs were also being counted as loose reads.
+
 - 3.12.0
   - Update NCBI databases to those downloaded on 2019-09-17.
 
