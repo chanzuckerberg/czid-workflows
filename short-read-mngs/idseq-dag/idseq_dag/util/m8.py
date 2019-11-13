@@ -11,6 +11,79 @@ import idseq_dag.util.lineage as lineage
 
 from idseq_dag.util.dict import IdSeqDictValue, open_file_db_by_extension
 
+
+# blastn output format 6 as documented in
+# http://www.metagenomics.wiki/tools/blast/blastn-output-format-6
+# it's also the format of our GSNAP and RAPSEARCH output
+BLAST_OUTPUT_SCHEMA = {
+    "qseqid": str,
+    "sseqid": str,
+    "pident": float,
+    "length": int,
+    "mismatch": int,
+    "gapopen": int,
+    "qstart": int,
+    "qend": int,
+    "sstart": int,
+    "send": int,
+    "evalue": float,
+    "bitscore": float,
+}
+
+
+# Additional blastn output columns.
+BLAST_OUTPUT_NT_SCHEMA = dict(BLAST_OUTPUT_SCHEMA, **{
+    "qlen": int,      # query sequence length, helpful for computing qcov
+    "slen": int,      # subject sequence length, so far unused in IDseq
+})
+
+
+# Re-ranked output of blastn.  One row per query.  Two additional columns.
+RERANKED_BLAST_OUTPUT_NT_SCHEMA = dict(BLAST_OUTPUT_NT_SCHEMA, **{
+    "qcov": float,     # fraction of query covered by the optimal set of HSPs
+    "hsp_count": int   # cardinality of optimal fragment cover;  see BlastCandidate
+})
+
+
+RERANKED_BLAST_OUTPUT_SCHEMA = {
+    'nt': {
+        'contig_level': RERANKED_BLAST_OUTPUT_NT_SCHEMA,   # only NT contigs are reranked
+        'read_level': BLAST_OUTPUT_SCHEMA
+    },
+    'nr': {
+        'contig_level': BLAST_OUTPUT_SCHEMA,
+        'read_level': BLAST_OUTPUT_SCHEMA,
+    }
+}
+
+
+def parse_tsv(path, schema, expect_headers=False, raw_lines=False):
+    '''Parse TSV file with given schema, yielding a dict per line.  See BLAST_OUTPUT_SCHEMA, for example.  When expect_headers=True, treat the first line as column headers.'''
+    assert expect_headers == False, "Headers not yet implemented."
+    schema_items = schema.items()
+    with open(path, "r") as stream:
+        for line_number, raw_line in enumerate(stream):
+            try:
+                row = raw_line.rstrip("\n").split("\t")
+                assert len(row) == len(schema)
+                row_dict = {cname: ctype(vstr) for vstr, (cname, ctype) in zip(row, schema_items)}
+            except:
+                msg = f"{path}:{line_number + 1}:  Parse error.  Input does not conform to schema: {schema}"
+                log.write(msg, warning=True)
+                raise
+            if raw_lines:
+                yield row_dict, raw_line
+            else:
+                yield row_dict
+
+
+def unparse_tsv(path, schema, rows_generator):
+    schema_keys = schema.keys()
+    with open(path, 'w') as stream:
+        for row in rows_generator:
+            stream.write("\t".join(str(row[k]) for k in schema_keys) + "\n")
+
+
 def log_corrupt(m8_file, line):
     msg = m8_file + " is corrupt at line:\n" + line + "\n----> delete it and its corrupt ancestors before restarting run"
     log.write(msg)
@@ -44,6 +117,9 @@ def summarize_hits(hit_summary_file, min_reads_per_genus=0):
 
     return (read_dict, accession_dict, selected_genera)
 
+
+# TODO:  Deprecate this iterate_m8() function, particularly its debug switches and modes,
+# in favor of the better encapsulated and more flexible parse_tsv() above.
 def iterate_m8(m8_file, min_alignment_length=0, debug_caller=None, logging_interval=25000000, full_line=False):
     """Generate an iterator over the m8 file and return values for each line.
     Work around and warn about any invalid hits detected.
@@ -199,8 +275,6 @@ def call_hits_m8(input_m8, lineage_map_path, accession2taxid_dict_path,
 def _call_hits_m8_work(input_m8, lineage_map, accession2taxid_dict,
                        output_m8, output_summary, min_alignment_length, taxon_blacklist):
     # Helper functions
-    # TODO: Represent taxids by numbers instead of strings to reduce
-    # memory footprint and increase speed.
     lineage_cache = {}
     blacklist_taxids = set()
     if taxon_blacklist:

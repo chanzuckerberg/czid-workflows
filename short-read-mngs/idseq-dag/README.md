@@ -227,6 +227,9 @@ TODO: Move this code over to the idseq-dag repo.
 
 ## Release notes
 
+- 3.13
+  - Rerank NT blast results by taking into account all fragments for a given contig and reference sequence, not just the highest scoring one.
+
 - 3.12.1
   - Fix bug where reads unassigned during alignment that were assembled into contigs were also being counted as loose reads.
 
