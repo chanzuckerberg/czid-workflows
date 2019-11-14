@@ -29,8 +29,6 @@ MAX_S3MI_WAIT = 15
 S3MI_SEM = multiprocessing.Semaphore(MAX_CONCURRENT_S3MI_DOWNLOADS)
 IOSTREAM_UPLOADS = multiprocessing.Semaphore(MAX_CONCURRENT_UPLOAD_OPERATIONS)
 
-s3 = boto3.resource('s3')
-
 config = {
     # Configured in idseq_dag.engine.pipeline_flow.PipelineFlow
     "REF_DIR": "ref",
@@ -47,7 +45,7 @@ def check_s3_presence(s3_path, allow_zero_byte_files=True):
         bucket = parsed_url.netloc
         key = parsed_url.path.lstrip('/')
         try:
-            o = s3.Object(
+            o = boto3.resource('s3').Object(
                 bucket,
                 key
             )
@@ -159,7 +157,7 @@ def fetch_from_s3(src,  # pylint: disable=dangerous-default-value
                 try:
                     with open(os.path.join(config["REF_FETCH_LOG_DIR"], abspath_hash)) as fh:
                         fetch_record = json.load(fh)
-                    obj = s3.Bucket(parsed_s3_url.netloc).Object(parsed_s3_url.path.lstrip('/'))
+                    obj = boto3.resource('s3').Bucket(parsed_s3_url.netloc).Object(parsed_s3_url.path.lstrip('/'))
                     assert fetch_record["bucket_name"] == obj.bucket_name
                     assert fetch_record["key"] == obj.key
                     assert fetch_record["e_tag"] == obj.e_tag
@@ -231,7 +229,7 @@ def fetch_from_s3(src,  # pylint: disable=dangerous-default-value
                 if abspath.startswith(config["REF_DIR"]):
                     os.makedirs(config["REF_FETCH_LOG_DIR"], exist_ok=True)
                     with open(os.path.join(config["REF_FETCH_LOG_DIR"], abspath_hash), "w") as fh:
-                        obj = s3.Bucket(parsed_s3_url.netloc).Object(parsed_s3_url.path.lstrip('/'))
+                        obj = boto3.resource('s3').Bucket(parsed_s3_url.netloc).Object(parsed_s3_url.path.lstrip('/'))
                         json.dump(dict(bucket_name=obj.bucket_name, key=obj.key, e_tag=obj.e_tag), fh)
                 return dst
             except subprocess.CalledProcessError:
