@@ -290,6 +290,8 @@ class PipelineStepGeneratePhyloTree(PipelineStep):
         # Choose accessions to process.
         s3_hitsummary2_files = self.additional_attributes["hitsummary2_files"].values()
         accessions = defaultdict(lambda: 0)
+        # TODO: Address issue where accessions in nr can be chosen in the following code.
+        # These accessions will not be found in nt_loc and will be subsequently omitted.
         for file_list in s3_hitsummary2_files:
             tally = defaultdict(lambda: 0)
             for s3_file in file_list:
@@ -320,7 +322,7 @@ class PipelineStepGeneratePhyloTree(PipelineStep):
         # Put 1 fasta file per accession into the destination directory
         accession_fastas = {}
         for acc, info in accession2info.items():
-            if info['seq_file'] is None:
+            if 'seq_file' not in info or info['seq_file'] is None:
                 log.write(f"WARNING: No sequence retrieved for {acc}")
                 continue
             clean_accession = self.clean_name_for_ksnp3(acc)

@@ -227,6 +227,9 @@ TODO: Move this code over to the idseq-dag repo.
 
 ## Release notes
 
+- 3.13.1
+  - Make phylo tree and alignment viz steps more robust to missing accessions in index.
+
 - 3.13
   - Rerank NT blast results by taking into account all fragments for a given contig and reference sequence, not just the highest scoring one.
 

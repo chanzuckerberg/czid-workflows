@@ -17,6 +17,8 @@ import idseq_dag.util.s3 as s3
 from idseq_dag.util.dict import IdSeqDictValue, open_file_db_by_extension
 
 MIN_ACCESSIONS_WHOLE_DB_DOWNLOAD = 5000
+ERROR_UNKNOWN = 1
+ERROR_MISSING_ACCESSION = 2
 
 class PipelineStepGenerateAlignmentViz(PipelineStep):
     """Pipeline step to generate JSON file for read alignment visualizations to
@@ -325,7 +327,12 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
         for t in threads:
             t.join()
         if error_flags:
-            raise RuntimeError("Error in getting sequences by accession list.")
+            # Sequences might fail to be fetched if those accessions have been removed from nt_db.
+            # We can still proceed even if they failed to be fetched.
+            if error_flags["error"] == ERROR_MISSING_ACCESSION:
+                log.write("Some accessions could not be found in nt_db.")
+            else:
+                raise RuntimeError("SequenceByAccessionListError: Unknown error in getting sequences by accession list.")
 
     @staticmethod
     def get_sequence_for_thread(error_flags,  # pylint: disable=dangerous-default-value
@@ -349,11 +356,14 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
                     msg = f"{seq_count[0]} sequences fetched, most recently " \
                           f"{accession_id}"
                     log.write(msg)
-        except:
+        except Exception as e:
             with mutex:
                 if not error_flags:
                     traceback.print_exc()
-                error_flags["error"] = 1
+                if isinstance(e, IndexError):
+                    error_flags["error"] = ERROR_MISSING_ACCESSION
+                else:
+                    error_flags["error"] = ERROR_UNKNOWN
         finally:
             semaphore.release()
 
@@ -399,6 +409,13 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
                 # Get the sequence length based on the file size
                 seq_len = os.stat(accession_file).st_size
                 break
+            except IndexError as e:
+                # This may occur if the byterange fetched above is empty or does not properly align to an accession.
+                # This has occurred in the past when a reference cache issue caused the nt_loc_db and nt indices to be out of sync.
+                # Such issues should be investigated. However, the pipeline step can still complete with the missing data.
+                log.write("ntDbIndexError: Failed to get nt sequence by accession ID"
+                          f"{accession_id} {range_start} {range_end} {nt_bucket} {nt_key}: {e}")
+                raise e
             except Exception as e:
                 if attempt + 1 < num_retries:  # Exponential backoff
                     time.sleep(1.0 * (4**attempt))
