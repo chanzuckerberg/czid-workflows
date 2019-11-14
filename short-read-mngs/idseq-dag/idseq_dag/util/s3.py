@@ -5,6 +5,9 @@ import os
 import multiprocessing
 import logging
 import errno
+import base64
+import hashlib
+import json
 from urllib.parse import urlparse
 import boto3
 import botocore
@@ -26,13 +29,20 @@ MAX_S3MI_WAIT = 15
 S3MI_SEM = multiprocessing.Semaphore(MAX_CONCURRENT_S3MI_DOWNLOADS)
 IOSTREAM_UPLOADS = multiprocessing.Semaphore(MAX_CONCURRENT_UPLOAD_OPERATIONS)
 
+s3 = boto3.resource('s3')
+
+config = {
+    # Configured in idseq_dag.engine.pipeline_flow.PipelineFlow
+    "REF_DIR": "ref",
+    "REF_FETCH_LOG_DIR": "fetch_log"
+}
+
 def split_identifiers(s3_path):
     return s3_path[5:].split("/", 1)
 
 def check_s3_presence(s3_path, allow_zero_byte_files=True):
     """True if s3_path exists. False otherwise."""
     with log.log_context(context_name="s3.check_s3_presence", values={'s3_path': s3_path}, log_context_mode=log.LogContextMode.EXEC_LOG_EVENT) as lc:
-        s3 = boto3.resource('s3')
         parsed_url = urlparse(s3_path, allow_fragments=False)
         bucket = parsed_url.netloc
         key = parsed_url.path.lstrip('/')
@@ -132,6 +142,8 @@ def fetch_from_s3(src,  # pylint: disable=dangerous-default-value
         if untar:
             dst = dst[:-4]  # Remove .tar
         abspath = os.path.abspath(dst)
+        abspath_hash = base64.urlsafe_b64encode(hashlib.sha256(abspath.encode()).digest()).decode()
+        parsed_s3_url = urlparse(src, allow_fragments=False)
         if abspath not in locks:
             locks[abspath] = TraceLock(f"fetch_from_s3: {abspath}", threading.RLock())
         destination_lock = locks[abspath]
@@ -140,9 +152,22 @@ def fetch_from_s3(src,  # pylint: disable=dangerous-default-value
         # This check is a bit imperfect when untarring... unless you follow the discipline that
         # all contents of file foo.tar are under directory foo/...
         if os.path.exists(dst):
-            # No need to fetch this file from s3, it has been just produced
-            # on this instance.
-            return dst
+            # Destination filename exists. If it is in the reference download directory, check the reference fetch log
+            # for a record of the source key and etag, and short-circuit the download if they match. Otherwise, blindly
+            # assume that it's the same file and short-circuit the download.
+            if abspath.startswith(config["REF_DIR"]):
+                try:
+                    with open(os.path.join(config["REF_FETCH_LOG_DIR"], abspath_hash)) as fh:
+                        fetch_record = json.load(fh)
+                    obj = s3.Bucket(parsed_s3_url.netloc).Object(parsed_s3_url.path.lstrip('/'))
+                    assert fetch_record["bucket_name"] == obj.bucket_name
+                    assert fetch_record["key"] == obj.key
+                    assert fetch_record["e_tag"] == obj.e_tag
+                    return dst
+                except Exception:
+                    pass
+            else:
+                return dst
 
         try:
             destdir = os.path.dirname(dst)
@@ -203,6 +228,11 @@ def fetch_from_s3(src,  # pylint: disable=dangerous-default-value
                             named_args=named_args
                         )
                     )
+                if abspath.startswith(config["REF_DIR"]):
+                    os.makedirs(config["REF_FETCH_LOG_DIR"], exist_ok=True)
+                    with open(os.path.join(config["REF_FETCH_LOG_DIR"], abspath_hash), "w") as fh:
+                        obj = s3.Bucket(parsed_s3_url.netloc).Object(parsed_s3_url.path.lstrip('/'))
+                        json.dump(dict(bucket_name=obj.bucket_name, key=obj.key, e_tag=obj.e_tag), fh)
                 return dst
             except subprocess.CalledProcessError:
                 # Most likely the file doesn't exist in S3.

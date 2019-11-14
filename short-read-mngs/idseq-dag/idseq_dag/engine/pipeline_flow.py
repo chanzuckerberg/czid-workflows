@@ -37,6 +37,8 @@ class PipelineFlow(object):
 
         self.output_dir_local = dag.get("output_dir_local", DEFAULT_OUTPUT_DIR_LOCAL).rstrip('/')
         self.ref_dir_local = dag.get("ref_dir_local", DEFAULT_REF_DIR_LOCAL)
+        idseq_dag.util.s3.config["REF_DIR"] = self.ref_dir_local
+        idseq_dag.util.s3.config["REF_FETCH_LOG_DIR"] = os.path.join(self.ref_dir_local, "fetch_log")
         self.large_file_list = []
 
         self.step_status_local = f"{self.output_dir_local}/{self.name}_status.json"
