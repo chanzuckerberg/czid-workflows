@@ -1,5 +1,4 @@
 import time
-import threading
 import subprocess
 import os
 import multiprocessing
@@ -45,6 +44,7 @@ def check_s3_presence(s3_path, allow_zero_byte_files=True):
         bucket = parsed_url.netloc
         key = parsed_url.path.lstrip('/')
         try:
+            # TODO:  Don't boto3.resource(s3) objects share the global boto "default" session?   Can that be used from multiple processes/threads?
             o = boto3.resource('s3').Object(
                 bucket,
                 key
@@ -94,7 +94,7 @@ def touch_s3_file_list(s3_dir, file_list):
         touch_s3_file(os.path.join(s3_dir, f))
 
 
-def install_s3mi(installed={}, mutex=TraceLock("install_s3mi", threading.RLock())):  # pylint: disable=dangerous-default-value
+def install_s3mi(installed={}, mutex=TraceLock("install_s3mi", multiprocessing.RLock())):  # pylint: disable=dangerous-default-value
     with mutex:
         if installed:  # Mutable default value persists
             return
@@ -124,7 +124,7 @@ def fetch_from_s3(src,  # pylint: disable=dangerous-default-value
                   auto_unzip=DEFAULT_AUTO_UNZIP,
                   auto_untar=DEFAULT_AUTO_UNTAR,
                   allow_s3mi=DEFAULT_ALLOW_S3MI,
-                  mutex=TraceLock("fetch_from_s3", threading.RLock()),
+                  mutex=TraceLock("fetch_from_s3", multiprocessing.RLock()),
                   locks={}):
     """Fetch a file from S3 if needed, using either s3mi or aws cp."""
     with mutex:
@@ -143,7 +143,7 @@ def fetch_from_s3(src,  # pylint: disable=dangerous-default-value
         abspath_hash = base64.urlsafe_b64encode(hashlib.sha256(abspath.encode()).digest()).decode()
         parsed_s3_url = urlparse(src, allow_fragments=False)
         if abspath not in locks:
-            locks[abspath] = TraceLock(f"fetch_from_s3: {abspath}", threading.RLock())
+            locks[abspath] = TraceLock(f"fetch_from_s3: {abspath}", multiprocessing.RLock())
         destination_lock = locks[abspath]
 
     with destination_lock:
@@ -157,12 +157,13 @@ def fetch_from_s3(src,  # pylint: disable=dangerous-default-value
                 try:
                     with open(os.path.join(config["REF_FETCH_LOG_DIR"], abspath_hash)) as fh:
                         fetch_record = json.load(fh)
+                    # TODO:  Don't boto3.resource(s3) objects share the global boto "default" session?   Can that be used from multiple processes/threads?
                     obj = boto3.resource('s3').Bucket(parsed_s3_url.netloc).Object(parsed_s3_url.path.lstrip('/'))
                     assert fetch_record["bucket_name"] == obj.bucket_name
                     assert fetch_record["key"] == obj.key
                     assert fetch_record["e_tag"] == obj.e_tag
                     return dst
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     pass
             else:
                 return dst
@@ -229,6 +230,7 @@ def fetch_from_s3(src,  # pylint: disable=dangerous-default-value
                 if abspath.startswith(config["REF_DIR"]):
                     os.makedirs(config["REF_FETCH_LOG_DIR"], exist_ok=True)
                     with open(os.path.join(config["REF_FETCH_LOG_DIR"], abspath_hash), "w") as fh:
+                        # TODO:  Don't boto3.resource(s3) objects share the global boto "default" session?   Can that be used from multiple processes/threads?
                         obj = boto3.resource('s3').Bucket(parsed_s3_url.netloc).Object(parsed_s3_url.path.lstrip('/'))
                         json.dump(dict(bucket_name=obj.bucket_name, key=obj.key, e_tag=obj.e_tag), fh)
                 return dst
@@ -245,16 +247,18 @@ def fetch_from_s3(src,  # pylint: disable=dangerous-default-value
                 if allow_s3mi:
                     S3MI_SEM.release()
 
-def fetch_reference(src,
+def fetch_reference(src,  # pylint: disable=dangerous-default-value
                     dst,
                     auto_unzip=True,
                     auto_untar=True,
-                    allow_s3mi=DEFAULT_ALLOW_S3MI):
+                    allow_s3mi=DEFAULT_ALLOW_S3MI,
+                    mutex=multiprocessing.RLock(),
+                    presence_cache={}):
     '''
         This function behaves like fetch_from_s3 in most cases, with one excetpion:
 
             *  When auto_unzip=True, src is NOT a compressed file and NOT a tar file, and a compressed
-               version of src exists in s3, this function downloads and uncompresses it.
+               version of src exists in s3, and allow_as3mi=True, this function downloads and uncompresses it.
 
         This function behaves identically to fetch_from_s3 when:
 
@@ -264,17 +268,29 @@ def fetch_reference(src,
 
             * auto_unzip=True and src is a compressed file, or
 
-            * auto_unzip=True, src is NOT a compressed file, and no compressed version of src exists in s3
+            * auto_unzip=True, src is NOT a compressed file, and no compressed version of src exists in s3, or
+
+            * allow_s3mi=False
 
         We generally try to keep all our references in S3 either lz4-compressed or tar'ed, because this
         guards against corruption errors that sometimes occur during download.  If we accidentally
         download a corrupt file, it would fail to unlz4 or to untar, and we would retry the download.
+
+        We trust "aws s3 cp" to do its own integrity checking, so we only prefer the lz4 version of a file
+        if we are allowed to use s3mi.
     '''
-    if auto_unzip and not src.endswith(".tar") and not any(src.endswith(zext) for zext in ZIP_EXTENSIONS):
+    if auto_unzip and not src.endswith(".tar") and not any(src.endswith(zext) for zext in ZIP_EXTENSIONS) and allow_s3mi:
         # Try to guess which compressed version of the file exists in S3;  then download and decompress it.
         for zext in ZIP_EXTENSIONS:
-            if check_s3_presence(src + zext):
-                return fetch_from_s3(src + zext,
+            compressed = src + zext
+            # We reduce presence checks using a cache.  Evidence from logs is that we often repeat a presence check.
+            # It's safe to do so for references, because those are static in S3.
+            with mutex:
+                if compressed not in presence_cache:
+                    presence_cache[compressed] = check_s3_presence(compressed)
+                present = presence_cache[compressed]
+            if present:
+                return fetch_from_s3(compressed,
                                      dst,
                                      auto_unzip=auto_unzip,
                                      auto_untar=auto_untar,
@@ -334,7 +350,7 @@ def upload_folder_with_retries(from_f, to_f):
         )
     )
 
-def upload(from_f, to_f, status, status_lock=TraceLock("upload", threading.RLock())):
+def upload(from_f, to_f, status, status_lock=TraceLock("upload", multiprocessing.RLock())):
     try:
         with IOSTREAM_UPLOADS:  # Limit concurrent uploads so as not to stall the pipeline.
             with IOSTREAM:  # Still counts toward the general semaphore.
@@ -347,7 +363,7 @@ def upload(from_f, to_f, status, status_lock=TraceLock("upload", threading.RLock
         raise
 
 
-def upload_log_file(sample_s3_output_path, lock=TraceLock("upload_log_file", threading.RLock())):
+def upload_log_file(sample_s3_output_path, lock=TraceLock("upload_log_file", multiprocessing.RLock())):
     with lock:
         logh = logging.getLogger().handlers[0]
         logh.flush()

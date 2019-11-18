@@ -227,8 +227,10 @@ TODO: Move this code over to the idseq-dag repo.
 
 ## Release notes
 
-- 3.13.1
+- 3.13.1 - 3.13.3
   - Make phylo tree and alignment viz steps more robust to missing accessions in index.
+  - Ensure reference caching respects version.
+  - Reduce frequency of s3 requests, other stability fixes.
 
 - 3.13
   - Rerank NT blast results by taking into account all fragments for a given contig and reference sequence, not just the highest scoring one.

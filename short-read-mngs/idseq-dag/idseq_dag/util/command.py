@@ -176,8 +176,13 @@ def run_in_subprocess(target):
         def subprocess_scope(*args, **kwargs):
             with log.log_context("subprocess_scope", {"target": target.__qualname__, "original_caller": original_caller}):
                 target(*args, **kwargs)
-        p = multiprocessing.Process(target=subprocess_scope, args=args, kwargs=kwargs)
-        p.start()
+
+        # holding this lock during fork reduces deadlock dangers related to file locking within CPython
+        # it's magic, but seems to help, and is the least painful of workarounds
+        with log.print_lock:
+            p = multiprocessing.Process(target=subprocess_scope, args=args, kwargs=kwargs)
+            p.start()
+
         p.join()
         if p.exitcode != 0:
             raise RuntimeError("Failed {} on {}, {}".format(
@@ -186,25 +191,35 @@ def run_in_subprocess(target):
     return wrapper
 
 
-def retry(operation, randgen=random.Random().random):
+def retry(operation, MAX_TRIES=3):
     """Retry decorator for external commands."""
     # Note the use of a separate random generator for retries so transient
     # errors won't perturb other random streams used in the application.
+    invocation = [0]  # a python trick, without which the nested function would not increment a counter defined in the parent
     @wraps(operation)
     def wrapped_operation(*args, **kwargs):
-        remaining_attempts = 3
+        randgen = None
+        remaining_attempts = MAX_TRIES
         delay = 1.0
         while remaining_attempts > 1:
             try:
+                t_start = time.time()
                 return operation(*args, **kwargs)
             except:
-                # Random jitter and exponential delay
-                time.sleep(delay * (1.0 + randgen()))
+                t_end = time.time()
+                if randgen == None:
+                    invocation[0] += 1
+                    randgen = random.Random(os.getpid() * 10000 + invocation[0]).random  # seed based on pid so subprocesses won't retry in lockstep
+                if t_end - t_start > 30:
+                    # For longer operations, the delay should increase, so that the backoff will meaningfully reduce load on the failing service.
+                    delay = (t_end - t_start) * 0.2
+                wait_time = delay * (1.0 + 2.0 * randgen())
+                log.write(f"Sleeping {wait_time} seconds before retry {MAX_TRIES - remaining_attempts + 1} of {operation} with {args}, {kwargs}.")
+                time.sleep(wait_time)
                 delay *= 3.0
                 remaining_attempts -= 1
         # The last attempt is outside try/catch so caller can handle exception
         return operation(*args, **kwargs)
-
     return wrapped_operation
 
 

@@ -1,18 +1,10 @@
-import os
-import threading
-import time
 import re
-import traceback
 from idseq_dag.engine.pipeline_step import PipelineStep
-import idseq_dag.util.command as command
-import idseq_dag.util.command_patterns as command_patterns
 import idseq_dag.util.s3 as s3
 import idseq_dag.util.m8 as m8
 
 from idseq_dag.util.dict import IdSeqDictValue, open_file_db_by_extension
-from idseq_dag.util.trace_lock import TraceLock
 
-MIN_ACCESSIONS_WHOLE_DB_DOWNLOAD = 5000
 MAX_ACCESSION_SEQUENCE_LEN = 100000000
 ALLOW_S3MI = False  # Allow s3mi only if running on an instance with enough RAM to fit NT and NR together...
 
@@ -29,21 +21,15 @@ class PipelineStepDownloadAccessions(PipelineStep):
             auto_unzip=True,  # This is default for references, but let's be explicit.
             allow_s3mi=ALLOW_S3MI)
         db_s3_path = self.additional_attributes["db"]
-        db_type = self.additional_attributes["db_type"]
+        # db_type = self.additional_attributes["db_type"]
         (_read_dict, accession_dict, _selected_genera) = m8.summarize_hits(hit_summary)
         with open_file_db_by_extension(loc_db, IdSeqDictValue.VALUE_TYPE_ARRAY) as loc_dict:
-            if len(accession_dict) < MIN_ACCESSIONS_WHOLE_DB_DOWNLOAD:
-                self.download_ref_sequences_from_s3(accession_dict, output_reference_fasta, db_type,
-                                                    loc_dict, db_s3_path)
-            else:
-                # download the whole alignment db
-                #
-                db_path = s3.fetch_reference(
-                    db_s3_path,
-                    self.ref_dir_local,
-                    auto_unzip=True,   # This is default for references, but let's be explicit
-                    allow_s3mi=ALLOW_S3MI)
-                self.download_ref_sequences_from_file(accession_dict, loc_dict, db_path, output_reference_fasta)
+            db_path = s3.fetch_reference(
+                db_s3_path,
+                self.ref_dir_local,
+                auto_unzip=True,   # This is default for references, but let's be explicit
+                allow_s3mi=ALLOW_S3MI)
+            self.download_ref_sequences_from_file(accession_dict, loc_dict, db_path, output_reference_fasta)
 
     FIX_COMMA_REGEXP = re.compile(r'^(?P<accession_id>[^ ]+) (?P<wrong_pattern>, *)?(?P<description>.*)$')
 
@@ -107,46 +93,6 @@ class PipelineStepDownloadAccessions(PipelineStep):
                     orf.write(accession_data)
         db_file.close()
 
-    def download_ref_sequences_from_s3(self, accession_dict, output_reference_fasta, db_type,
-                                       loc_dict, db_s3_path):
-        ''' Download accessions specified in the selected_genera '''
-        threads = []
-        error_flags = {}
-        semaphore = threading.Semaphore(64)
-        mutex = TraceLock("download_ref_sequences_from_s3", threading.RLock())
-
-        bucket, key = db_s3_path[5:].split("/", 1)
-        accession_dir = os.path.join(self.output_dir_local, db_type, 'accessions')
-        command.make_dirs(accession_dir)
-        for accession, _taxinfo in accession_dict.items():
-            entry = loc_dict.get(accession)
-            if not entry:
-                continue
-            accession_out_file = os.path.join(accession_dir, accession)
-            semaphore.acquire()
-            t = threading.Thread(
-                target=PipelineStepDownloadAccessions.fetch_sequence_for_thread,
-                args=[
-                    error_flags, accession, accession_out_file, list(entry),
-                    bucket, key, semaphore, mutex
-                ])
-            t.start()
-            threads.append(t)
-        for t in threads:
-            t.join()
-        if error_flags:
-            raise RuntimeError("Error in getting sequences by accession list.")
-        # Combine all the downloaded accessions to a fasta file
-        command.execute(
-            command_patterns.ShellScriptCommand(
-                script=r'''find "${accession_dir}" -type f | xargs -n 32 -P 1 cat >> "${output_reference_fasta}";''',
-                named_args={
-                    'accession_dir': os.path.join(accession_dir, ""),  # adds a slash at the end if it doesn't have one
-                    'output_reference_fasta': output_reference_fasta
-                }
-            )
-        )
-
     @staticmethod
     def get_sequence_by_accession_from_file(accession_id, loc_dict, db_file):
         entry = loc_dict.get(accession_id)
@@ -157,32 +103,3 @@ class PipelineStepDownloadAccessions(PipelineStep):
                 db_file.seek(range_start, 0)
                 return db_file.read(seq_len)
         return None
-
-    @staticmethod
-    def fetch_sequence_for_thread(error_flags, accession, accession_out_file,
-                                  entry, bucket, key,
-                                  semaphore, mutex):
-        ''' fetch sequence from S3 for the specific accession'''
-        try:
-            assert entry
-            range_start, name_length, seq_len = [int(e) for e in entry]
-            range_end = range_start + name_length + seq_len - 1
-            if seq_len <= MAX_ACCESSION_SEQUENCE_LEN:
-                num_retries = 3
-                for attempt in range(num_retries):
-                    try:
-                        s3.fetch_byterange(range_start, range_end, bucket, key, accession_out_file)
-                        break
-                    except Exception as e:
-                        if attempt + 1 < num_retries:  # Exponential backoff
-                            time.sleep(1.0 * (4**attempt))
-                        else:
-                            msg = f"All retries failed for getting sequence by accession ID {accession}: {e}"
-                        raise RuntimeError(msg)
-        except:
-            with mutex:
-                if not error_flags:
-                    traceback.print_exc()
-                error_flags["error"] = 1
-        finally:
-            semaphore.release()

@@ -12,7 +12,7 @@ from collections import namedtuple
 
 from contextlib import contextmanager
 
-__print_lock = multiprocessing.RLock()
+print_lock = multiprocessing.RLock()  # print_lock is needed outside this module for voodoo magic in run_in_subprocess
 
 LogContext = namedtuple('LogContext', ['values', 'extra_fields'])
 
@@ -52,7 +52,7 @@ def write(message: str = None, warning: bool = False, flush: bool = True,
     debug(boolean): Optional. Log this event using debug level.
     flush(boolean): Optional (default true). Flush stdout after logging.
     '''
-    with __print_lock:
+    with print_lock:
         logger = logging.getLogger()
         if warning:
             logger.warning(msg=message, extra={"obj_data": obj_data})

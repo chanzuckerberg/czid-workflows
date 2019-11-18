@@ -1,11 +1,11 @@
 import json
 import os
 import re
-import threading
 import time
 import traceback
 from collections import defaultdict
 import subprocess
+import threading
 
 from idseq_dag.engine.pipeline_step import PipelineStep
 from idseq_dag.util.lineage import INVALID_CALL_BASE_ID
@@ -15,10 +15,6 @@ import idseq_dag.util.command as command
 import idseq_dag.util.s3 as s3
 
 from idseq_dag.util.dict import IdSeqDictValue, open_file_db_by_extension
-
-MIN_ACCESSIONS_WHOLE_DB_DOWNLOAD = 5000
-ERROR_UNKNOWN = 1
-ERROR_MISSING_ACCESSION = 2
 
 class PipelineStepGenerateAlignmentViz(PipelineStep):
     """Pipeline step to generate JSON file for read alignment visualizations to
@@ -56,17 +52,8 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
         groups, line_count = self.process_reads_from_m8_file(
             annotated_m8, read2seq)
 
-        # Check if nt_db is already downloaded
-        is_nt_local = (not nt_db.startswith("s3://"))
-        if not is_nt_local:
-            potential_nt_db = os.path.join(self.ref_dir_local, os.path.basename(nt_db))
-            if os.path.isfile(potential_nt_db):
-                nt_db = potential_nt_db
-                is_nt_local = True
-
-        # If nt_db is not yet downloaded, but there are too many accessions to be fetched,
-        # then do download nt_db here
-        if not is_nt_local and len(groups) >= MIN_ACCESSIONS_WHOLE_DB_DOWNLOAD:
+        # If nt_db is not yet downloaded, then do download nt_db here
+        if nt_db.startswith("s3://"):
             # TODO: Handle this better.  We might be poorly provisioned to allow s3mi speed
             # for this step, on the instance where it is running.
             nt_db = s3.fetch_reference(
@@ -74,17 +61,11 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
                 self.ref_dir_local,
                 auto_unzip=True,   # this is default for reference uploads, just being explicit
                 allow_s3mi=True)   # s3mi probably okay here because we tend to download only NT and little else in this stage
-            is_nt_local = True
 
         with open_file_db_by_extension(nt_loc_db, IdSeqDictValue.VALUE_TYPE_ARRAY) as nt_loc_dict:
-            if is_nt_local:
-                log.write("Getting sequences by accession list from file...")
-                PipelineStepGenerateAlignmentViz.get_sequences_by_accession_list_from_file(
-                    groups, nt_loc_dict, nt_db)
-            else:
-                log.write("Getting sequences by accession list from S3...")
-                PipelineStepGenerateAlignmentViz.get_sequences_by_accession_list_from_s3(
-                    groups, nt_loc_dict, nt_db)
+            log.write("Getting sequences by accession list from file...")
+            PipelineStepGenerateAlignmentViz.get_sequences_by_accession_list_from_file(
+                groups, nt_loc_dict, nt_db)
 
         for _accession_id, ad in groups.items():
             ad['coverage_summary'] = PipelineStepGenerateAlignmentViz.calculate_alignment_coverage(
@@ -304,68 +285,29 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
                 accession_info['ref_seq_len'] = len(ref_seq)
                 accession_info['name'] = seq_name
 
+    # This is now only used by Phylo tree.  Please don't call it with long lists;  it's now sequential.
     @staticmethod
-    def get_sequences_by_accession_list_from_s3(accession_id_groups,
-                                                nt_loc_dict, nt_s3_path):
-        threads = []
-        error_flags = {}
-        semaphore = threading.Semaphore(64)
-        mutex = TraceLock("get_sequences_by_accession_list_from_s3", threading.RLock())
+    def get_sequences_by_accession_list_from_s3(accession_id_groups, nt_loc_dict, nt_s3_path):
+        index_errors = 0
         nt_bucket, nt_key = nt_s3_path[5:].split("/", 1)
         for accession_id, accession_info in accession_id_groups.items():
-            entry = nt_loc_dict.get(accession_id)
-            semaphore.acquire()
-            t = threading.Thread(
-                target=PipelineStepGenerateAlignmentViz.
-                get_sequence_for_thread,
-                args=[
-                    error_flags, accession_info, accession_id, entry,
-                    nt_bucket, nt_key, semaphore, mutex
-                ])
-            t.start()
-            threads.append(t)
-        for t in threads:
-            t.join()
-        if error_flags:
-            # Sequences might fail to be fetched if those accessions have been removed from nt_db.
-            # We can still proceed even if they failed to be fetched.
-            if error_flags["error"] == ERROR_MISSING_ACCESSION:
-                log.write("Some accessions could not be found in nt_db.")
-            else:
-                raise RuntimeError("SequenceByAccessionListError: Unknown error in getting sequences by accession list.")
-
-    @staticmethod
-    def get_sequence_for_thread(error_flags,  # pylint: disable=dangerous-default-value
-                                accession_info,
-                                accession_id,
-                                entry,
-                                nt_bucket,
-                                nt_key,
-                                semaphore,
-                                mutex,
-                                seq_count=[0]):
-        try:
-            ref_seq_len, seq_name, accession_file = PipelineStepGenerateAlignmentViz.get_sequence_by_accession_id_s3(
-                accession_id, entry, nt_bucket, nt_key)
-            with mutex:
+            try:
+                entry = nt_loc_dict.get(accession_id)
+                ref_seq_len, seq_name, accession_file = PipelineStepGenerateAlignmentViz.get_sequence_by_accession_id_s3(
+                    accession_id, entry, nt_bucket, nt_key)
                 accession_info['seq_file'] = accession_file
                 accession_info['ref_seq_len'] = ref_seq_len
                 accession_info['name'] = seq_name
-                seq_count[0] += 1
-                if seq_count[0] % 100 == 0:
-                    msg = f"{seq_count[0]} sequences fetched, most recently " \
-                          f"{accession_id}"
-                    log.write(msg)
-        except Exception as e:
-            with mutex:
-                if not error_flags:
-                    traceback.print_exc()
-                if isinstance(e, IndexError):
-                    error_flags["error"] = ERROR_MISSING_ACCESSION
-                else:
-                    error_flags["error"] = ERROR_UNKNOWN
-        finally:
-            semaphore.release()
+            except IndexError:
+                if index_errors == 0:
+                    # Since we are swallowing all these exceptions, print one stack trace, for debugging,
+                    # just in case it's an IndexError unrelated to the specific case we are tolerating.
+                    # (should probably have a more specific exception class for that)
+                    log.write(traceback.format_exc())
+                index_errors += 1
+            # all other exceptions are immediatley re-raised
+        if index_errors:
+            log.write(f"Some accessions (count: {index_errors}) could not be found in nt_db.")
 
     @staticmethod
     def get_sequence_by_accession_id_ntf(accession_id, nt_loc_dict, ntf):
@@ -381,6 +323,7 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
             seq_name = seq_name.split(" ", 1)[1]
         return ref_seq, seq_name
 
+    # This is now only used by Phylo tree
     @staticmethod
     def get_sequence_by_accession_id_s3(accession_id, entry, nt_bucket, nt_key):
         seq_len = 0
@@ -415,13 +358,13 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
                 # Such issues should be investigated. However, the pipeline step can still complete with the missing data.
                 log.write("ntDbIndexError: Failed to get nt sequence by accession ID"
                           f"{accession_id} {range_start} {range_end} {nt_bucket} {nt_key}: {e}")
-                raise e
-            except Exception as e:
+                raise
+            except:
                 if attempt + 1 < num_retries:  # Exponential backoff
-                    time.sleep(1.0 * (4**attempt))
+                    time.sleep(1.0 * (4 ** attempt))
                 else:
-                    msg = f"All retries failed for getting sequence by accession ID {accession_id}: {e}"
-                    raise RuntimeError(msg)
+                    log.write(f"All retries failed for getting sequence by accession ID {accession_id}.")
+                    raise
             finally:
                 try:
                     os.remove(range_file)
