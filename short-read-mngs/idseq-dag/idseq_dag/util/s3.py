@@ -126,7 +126,7 @@ def fetch_from_s3(src,  # pylint: disable=dangerous-default-value
                   allow_s3mi=DEFAULT_ALLOW_S3MI,
                   mutex=TraceLock("fetch_from_s3", multiprocessing.RLock()),
                   locks={},
-                  checked_references={}):
+                  downloaded_this_session={}):
     """Fetch a file from S3 if needed, using either s3mi or aws cp."""
     #
     # IT IS NOT SAFE TO CALL THIS FUNCTION FROM MULTIPLE PROCESSES.
@@ -134,7 +134,7 @@ def fetch_from_s3(src,  # pylint: disable=dangerous-default-value
     #
     # Do not be mislead by the multiprocessing.RLock() above -- that just means it won't deadlock
     # if called from multiple processes but does not mean the behaivior will be correct.  It will
-    # be incorrect, because the locks{} and checked_references{} dicts cannot be shared.
+    # be incorrect, because the locks{} and downloaded_this_session{} dicts cannot be shared.
     if os.path.exists(dst) and os.path.isdir(dst):
         dst = os.path.join(dst, os.path.basename(src))
     unzip = ""
@@ -169,12 +169,11 @@ def fetch_from_s3(src,  # pylint: disable=dangerous-default-value
             # because, after the first fetch during a given run, even if the source changed in S3, the local
             # version may have local users so can't be clobbered.  In future we should remove the possibility of
             # the same destination getting fetched from different source locations (with different compression
-            # formats, for example) but currently this possibility does exist, and without the checked_references
+            # formats, for example) but currently this possibility does exist, and without the downloaded_this_session
             # cache, it would result in clobbered destinations and crashing.
             with mutex:
-                if dst in checked_references:
+                if dst in downloaded_this_session:
                     return dst
-                checked_references[dst] = True
             try:
                 with open(os.path.join(config["REF_FETCH_LOG_DIR"], abspath_hash)) as fh:
                     fetch_record = json.load(fh)
@@ -253,6 +252,9 @@ def fetch_from_s3(src,  # pylint: disable=dangerous-default-value
                         # TODO:  Don't boto3.resource(s3) objects share the global boto "default" session?   Can that be used from multiple processes/threads?
                         obj = boto3.resource('s3').Bucket(parsed_s3_url.netloc).Object(parsed_s3_url.path.lstrip('/'))
                         json.dump(dict(bucket_name=obj.bucket_name, key=obj.key, e_tag=obj.e_tag), fh)
+                with mutex:
+                    # If we've successfully downloaded this file once already in this session, we shouldn't download it again.
+                    downloaded_this_session[dst] = True
                 return dst
             except subprocess.CalledProcessError:
                 # Most likely the file doesn't exist in S3.
