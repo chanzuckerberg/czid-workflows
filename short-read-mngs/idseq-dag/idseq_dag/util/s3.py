@@ -125,49 +125,69 @@ def fetch_from_s3(src,  # pylint: disable=dangerous-default-value
                   auto_untar=DEFAULT_AUTO_UNTAR,
                   allow_s3mi=DEFAULT_ALLOW_S3MI,
                   mutex=TraceLock("fetch_from_s3", multiprocessing.RLock()),
-                  locks={}):
+                  locks={},
+                  checked_references={}):
     """Fetch a file from S3 if needed, using either s3mi or aws cp."""
+    #
+    # IT IS NOT SAFE TO CALL THIS FUNCTION FROM MULTIPLE PROCESSES.
+    # It is totally fine to call it from multiple threads (it is designed for that).
+    #
+    # Do not be mislead by the multiprocessing.RLock() above -- that just means it won't deadlock
+    # if called from multiple processes but does not mean the behaivior will be correct.  It will
+    # be incorrect, because the locks{} and checked_references{} dicts cannot be shared.
+    if os.path.exists(dst) and os.path.isdir(dst):
+        dst = os.path.join(dst, os.path.basename(src))
+    unzip = ""
+    if auto_unzip:
+        file_without_ext, ext = os.path.splitext(dst)
+        if ext in ZIP_EXTENSIONS:
+            unzip = " | " + ZIP_EXTENSIONS[ext]  # this command will be used to decompress stdin to stdout
+            dst = file_without_ext  # remove file extension from dst
+    untar = auto_untar and dst.lower().endswith(".tar")
+    if untar:
+        dst = dst[:-4]  # Remove .tar
+    abspath = os.path.abspath(dst)
+
     with mutex:
-        if os.path.exists(dst) and os.path.isdir(dst):
-            dst = os.path.join(dst, os.path.basename(src))
-        unzip = ""
-        if auto_unzip:
-            file_without_ext, ext = os.path.splitext(dst)
-            if ext in ZIP_EXTENSIONS:
-                unzip = " | " + ZIP_EXTENSIONS[ext]  # this command will be used to decompress stdin to stdout
-                dst = file_without_ext  # remove file extension from dst
-        untar = auto_untar and dst.lower().endswith(".tar")
-        if untar:
-            dst = dst[:-4]  # Remove .tar
-        abspath = os.path.abspath(dst)
-        abspath_hash = base64.urlsafe_b64encode(hashlib.sha256(abspath.encode()).digest()).decode()
-        parsed_s3_url = urlparse(src, allow_fragments=False)
         if abspath not in locks:
             locks[abspath] = TraceLock(f"fetch_from_s3: {abspath}", multiprocessing.RLock())
         destination_lock = locks[abspath]
 
     with destination_lock:
+        abspath_hash = base64.urlsafe_b64encode(hashlib.sha256(abspath.encode()).digest()).decode()
+        parsed_s3_url = urlparse(src, allow_fragments=False)
         # This check is a bit imperfect when untarring... unless you follow the discipline that
         # all contents of file foo.tar are under directory foo/...
         if os.path.exists(dst):
-            # Destination filename exists. If it is in the reference download directory, check the reference fetch log
-            # for a record of the source key and etag, and short-circuit the download if they match. Otherwise, blindly
-            # assume that it's the same file and short-circuit the download.
-            if abspath.startswith(config["REF_DIR"]):
-                try:
-                    with open(os.path.join(config["REF_FETCH_LOG_DIR"], abspath_hash)) as fh:
-                        fetch_record = json.load(fh)
-                    # TODO:  Don't boto3.resource(s3) objects share the global boto "default" session?   Can that be used from multiple processes/threads?
-                    obj = boto3.resource('s3').Bucket(parsed_s3_url.netloc).Object(parsed_s3_url.path.lstrip('/'))
-                    assert fetch_record["bucket_name"] == obj.bucket_name
-                    assert fetch_record["key"] == obj.key
-                    assert fetch_record["e_tag"] == obj.e_tag
-                    return dst
-                except Exception:  # pylint: disable=broad-except
-                    pass
-            else:
+            # Because only reference files are persisted from job to job, if this isn't a reference file,
+            # and it exists, it was downloaded by the current job, which means it's fresh and there is
+            # no need to fetch it again from s3.
+            if not abspath.startswith(config["REF_DIR"]):
                 return dst
-
+            # If it is in the reference download directory, check the reference fetch log for a record of the source
+            # key and etag, and re-do the download only if they mismatch.  This check is only safe ONCE per run,
+            # because, after the first fetch during a given run, even if the source changed in S3, the local
+            # version may have local users so can't be clobbered.  In future we should remove the possibility of
+            # the same destination getting fetched from different source locations (with different compression
+            # formats, for example) but currently this possibility does exist, and without the checked_references
+            # cache, it would result in clobbered destinations and crashing.
+            with mutex:
+                if dst in checked_references:
+                    return dst
+                checked_references[dst] = True
+            try:
+                with open(os.path.join(config["REF_FETCH_LOG_DIR"], abspath_hash)) as fh:
+                    fetch_record = json.load(fh)
+                # TODO:  Don't boto3.resource(s3) objects share the global boto "default" session?   Can that be used from multiple processes/threads?
+                obj = boto3.resource('s3').Bucket(parsed_s3_url.netloc).Object(parsed_s3_url.path.lstrip('/'))
+                assert fetch_record["bucket_name"] == obj.bucket_name
+                assert fetch_record["key"] == obj.key
+                assert fetch_record["e_tag"] == obj.e_tag
+                return dst
+            except:  # pylint: disable=broad-except
+                # Let's fetch the file again.  We don't trust the local version.
+                # In this case we need to remove the local version recursively (as it could be expanded from tar).
+                command.remove_rf(dst)
         try:
             destdir = os.path.dirname(dst)
             if destdir:
