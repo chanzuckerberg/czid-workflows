@@ -6,7 +6,7 @@ import idseq_dag.util.command_patterns as command_patterns
 import idseq_dag.util.count as count
 import idseq_dag.util.convert as convert
 import idseq_dag.util.log as log
-from idseq_dag.util.s3 import fetch_from_s3
+from idseq_dag.util.s3 import fetch_reference
 
 
 class PipelineStepRunBowtie2(PipelineStep):
@@ -40,7 +40,7 @@ class PipelineStepRunBowtie2(PipelineStep):
     def run(self):
         input_fas = self.input_files_local[0][0:2]
         output_fas = self.output_files_local()
-        genome_dir = fetch_from_s3(
+        genome_dir = fetch_reference(
             self.additional_files["bowtie2_genome"],
             self.ref_dir_local,
             allow_s3mi=True,

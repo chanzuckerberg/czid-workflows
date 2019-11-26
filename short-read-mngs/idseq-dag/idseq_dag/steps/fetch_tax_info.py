@@ -4,13 +4,13 @@ import re
 import time
 import wikipedia
 from Bio import Entrez
-import idseq_dag.util.command as command
 import idseq_dag.util.log as log
 import idseq_dag.util.s3 as s3
 from idseq_dag.engine.pipeline_step import PipelineStep
 from idseq_dag.util.trace_lock import TraceLock
 
 
+# This does not run from the actual pipeline.  It's an index generation step.
 class PipelineStepFetchTaxInfo(PipelineStep):
     '''
         fetch tax info based on a list
@@ -31,12 +31,14 @@ class PipelineStepFetchTaxInfo(PipelineStep):
         namecsv = self.additional_files.get("taxon2name")
         id2namedict = {}
         if namecsv:
+            # This is fetching a reference without fetch_reference;  but ok because does not run from the actual pipeline
             namecsvf = s3.fetch_from_s3(namecsv, "/mnt/idseq/ref")
             with open(namecsvf, 'r') as namef:
                 for line in namef:
                     fields = line.rstrip().split(",")
                     id2namedict[fields[0]] = fields[1]
 
+        # This is fetching a reference without fetch_reference and doing a presence check;  but ok because does not run from the actual pipeline
         if s3.check_s3_presence(self.s3_path(taxid2wiki)):
             # generated
             taxid2wiki = s3.fetch_from_s3(self.s3_path(taxid2wiki), taxid2wiki)

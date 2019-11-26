@@ -183,15 +183,15 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
                                          refined_hit_summary, refined_m8)
 
         # Generating taxon counts based on updated results
-        lineage_db = s3.fetch_from_s3(
+        lineage_db = s3.fetch_reference(
             self.additional_files["lineage_db"],
             self.ref_dir_local,
             allow_s3mi=False)  # Too small to waste s3mi
         deuterostome_db = None
         evalue_type = 'raw'
         if self.additional_files.get("deuterostome_db"):
-            deuterostome_db = s3.fetch_from_s3(self.additional_files["deuterostome_db"],
-                                               self.ref_dir_local, allow_s3mi=False)  # Too small for s3mi
+            deuterostome_db = s3.fetch_reference(self.additional_files["deuterostome_db"],
+                                                 self.ref_dir_local, allow_s3mi=False)  # Too small for s3mi
         with TraceLock("PipelineStepBlastContigs-CYA", PipelineStepBlastContigs.cya_lock, debug=False):
             with log.log_context("PipelineStepBlastContigs", {"substep": "generate_taxon_count_json_from_m8", "db_type": db_type, "refined_counts": refined_counts}):
                 m8.generate_taxon_count_json_from_m8(refined_m8, refined_hit_summary,

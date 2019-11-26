@@ -5,7 +5,7 @@ import idseq_dag.util.command_patterns as command_patterns
 import idseq_dag.util.convert as convert
 import idseq_dag.util.log as log
 import idseq_dag.util.count as count
-from idseq_dag.util.s3 import fetch_from_s3
+from idseq_dag.util.s3 import fetch_reference
 
 
 class PipelineStepRunGsnapFilter(PipelineStep):
@@ -45,10 +45,10 @@ class PipelineStepRunGsnapFilter(PipelineStep):
                                        self.additional_attributes["output_sam_file"])
         self.additional_files_to_upload.append(output_sam_file)
 
-        genome_dir = fetch_from_s3(self.additional_files["gsnap_genome"],
-                                   self.ref_dir_local,
-                                   allow_s3mi=True,
-                                   auto_untar=True)
+        genome_dir = fetch_reference(self.additional_files["gsnap_genome"],
+                                     self.ref_dir_local,
+                                     allow_s3mi=True,
+                                     auto_untar=True)
         gsnap_base_dir = os.path.dirname(genome_dir)
         gsnap_index_name = os.path.basename(genome_dir)
         # Run Gsnap

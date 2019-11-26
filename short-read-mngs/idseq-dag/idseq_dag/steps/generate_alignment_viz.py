@@ -10,7 +10,6 @@ import threading
 from idseq_dag.engine.pipeline_step import PipelineStep
 from idseq_dag.util.lineage import INVALID_CALL_BASE_ID
 import idseq_dag.util.log as log
-from idseq_dag.util.trace_lock import TraceLock
 import idseq_dag.util.command as command
 import idseq_dag.util.s3 as s3
 
@@ -30,8 +29,6 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
     def run(self):
         # Setup
         nt_db = self.additional_attributes["nt_db"]
-        if nt_db.startswith("s3://") and not s3.check_s3_presence(nt_db):
-            raise RuntimeError(f"nt_db at {nt_db} not found.")
         nt_loc_db = s3.fetch_reference(
             self.additional_files["nt_loc_db"],
             self.ref_dir_local,

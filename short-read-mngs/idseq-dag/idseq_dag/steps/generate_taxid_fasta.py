@@ -22,7 +22,7 @@ class PipelineStepGenerateTaxidFasta(PipelineStep):
             hit_summary_files = {'NT': input_files[1], 'NR': input_files[2]}
 
         # Open lineage db
-        lineage_db = s3.fetch_from_s3(
+        lineage_db = s3.fetch_reference(
             self.additional_files["lineage_db"],
             self.ref_dir_local,
             allow_s3mi=True)

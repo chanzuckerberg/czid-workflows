@@ -137,7 +137,7 @@ class PipelineStepRunStar(PipelineStep):
         output_files_local = self.output_files_local()
         output_gene_file = self.additional_attributes.get("output_gene_file")
 
-        genome_dir = s3.fetch_from_s3(
+        genome_dir = s3.fetch_reference(
             self.additional_files["star_genome"],
             self.ref_dir_local,
             allow_s3mi=True,
@@ -385,7 +385,7 @@ class PipelineStepRunStar(PipelineStep):
             if line[0] == 64:  # Equivalent to '@', fastq format
                 rid = PipelineStepRunStar.extract_rid(line.decode('utf-8'))
                 read.append(line)
-                for i in range(3):
+                for _ in range(3):
                     read.append(f.readline())
             elif line[0] == 62:  # Equivalent to '>', fasta format
                 rid = PipelineStepRunStar.extract_rid(line.decode('utf-8'))

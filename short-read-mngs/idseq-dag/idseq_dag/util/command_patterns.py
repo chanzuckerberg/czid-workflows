@@ -57,11 +57,12 @@ class SingleCommand(CommandPattern):
             )
         )
     '''
-    def __init__(self, cmd: str, args: List[Union[int, str]], cd: str = None):
+    def __init__(self, cmd: str, args: List[Union[int, str]], cd: str = None, env: Dict[str, str] = None):
         super().__init__()
         self.cmd = cmd
         self.args = args
         self.cd = cd
+        self.env = env  # do not print or log env
 
     def _command_args(self):
         return iter([self.cmd, *(str(a) for a in self.args)])
@@ -71,6 +72,7 @@ class SingleCommand(CommandPattern):
             self._command_args(),
             shell=False,
             cwd=self.cd,
+            env=os.environ if self.env == None else self.env,
             stdin=stdin,
             stdout=stdout,
             stderr=stderr
@@ -162,7 +164,7 @@ class ShellScriptCommand(CommandPattern):
                 script.sh <...all parameters here...>
 
     """
-    def __init__(self, script: str, args: List[Union[int, str]] = None, named_args: Dict[str, Union[int, str, List[Union[int, str]]]] = None, cd: str = None):
+    def __init__(self, script: str, args: List[Union[int, str]] = None, named_args: Dict[str, Union[int, str, List[Union[int, str]]]] = None, cd: str = None, env: Dict[str, str] = None):
         super().__init__()
         assert (args is None) or (named_args is None), "You need to use either args or named_args"
         self.script = script
@@ -170,6 +172,7 @@ class ShellScriptCommand(CommandPattern):
         self.named_args = named_args
         self.popen_handler = None
         self.cd = cd
+        self.env = env  # do not print or log env
 
     def _script_named_args(self):
         args = []
@@ -213,6 +216,7 @@ class ShellScriptCommand(CommandPattern):
             self._command_args(),
             shell=True,
             cwd=self.cd,
+            env=os.environ if self.env == None else self.env,
             stdin=stdin,
             stdout=stdout,
             stderr=stderr,

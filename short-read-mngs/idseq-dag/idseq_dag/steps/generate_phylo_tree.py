@@ -298,7 +298,7 @@ class PipelineStepGeneratePhyloTree(PipelineStep):
                 local_basename = s3_file.replace("/", "-").replace(":", "-")
                 local_file = s3.fetch_from_s3(
                     s3_file,
-                    os.path.join(self.ref_dir_local, local_basename))
+                    os.path.join(self.output_dir_local, local_basename))
                 if local_file is None:
                     continue
                 with open(local_file, 'r') as f:

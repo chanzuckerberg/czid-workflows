@@ -93,10 +93,10 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
         self.run_remotely(input_fas, output_m8, service)
 
         # get database
-        lineage_db = fetch_from_s3(self.additional_files["lineage_db"], self.ref_dir_local)
+        lineage_db = fetch_reference(self.additional_files["lineage_db"], self.ref_dir_local)
         accession2taxid_db = fetch_reference(self.additional_files["accession2taxid_db"], self.ref_dir_local, allow_s3mi=True)
         blacklist_s3_file = self.additional_attributes.get('taxon_blacklist', DEFAULT_BLACKLIST_S3)
-        taxon_blacklist = fetch_from_s3(blacklist_s3_file, self.ref_dir_local)
+        taxon_blacklist = fetch_reference(blacklist_s3_file, self.ref_dir_local)
         m8.call_hits_m8(output_m8, lineage_db, accession2taxid_db,
                         deduped_output_m8, output_hitsummary, min_alignment_length, taxon_blacklist)
 
@@ -105,8 +105,8 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
         db_type = 'NT' if service == 'gsnap' else 'NR'
         evalue_type = 'log10' if service == 'rapsearch2' else 'raw'
         if self.additional_files.get("deuterostome_db"):
-            deuterostome_db = fetch_from_s3(self.additional_files["deuterostome_db"],
-                                            self.ref_dir_local, allow_s3mi=True)
+            deuterostome_db = fetch_reference(self.additional_files["deuterostome_db"],
+                                              self.ref_dir_local, allow_s3mi=True)
         m8.generate_taxon_count_json_from_m8(
             deduped_output_m8, output_hitsummary, evalue_type, db_type,
             lineage_db, deuterostome_db, output_counts_json)
@@ -399,7 +399,7 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
             # Strip the .m8 for RAPSearch as it adds that
         )
 
-        if lazy_run and fetch_from_s3(multihit_s3_outfile, multihit_local_outfile):
+        if lazy_run and fetch_from_s3(multihit_s3_outfile, multihit_local_outfile, okay_if_missing=True, allow_s3mi=False):
             log.write(f"finished alignment for chunk {chunk_id} with {service} by lazily fetching last result")
         else:
             chunk_timeout = int(self.additional_attributes.get(f"{service.lower()}_chunk_timeout",

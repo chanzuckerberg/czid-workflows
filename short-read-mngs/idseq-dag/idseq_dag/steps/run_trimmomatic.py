@@ -77,7 +77,7 @@ class PipelineStepRunTrimmomatic(PipelineStep):
         input_files = self.input_files_local[0][0:2]
         output_files = self.output_files_local()
         is_paired = (len(input_files) == 2)
-        adapter_fasta = s3.fetch_from_s3(
+        adapter_fasta = s3.fetch_reference(
             self.additional_files["adapter_fasta"],
             self.ref_dir_local)
 
