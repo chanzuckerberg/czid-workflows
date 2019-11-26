@@ -226,6 +226,11 @@ IDseq DAGs require the use of several indices prepared from files in NCBI. If yo
 TODO: Move this code over to the idseq-dag repo.
 
 ## Release notes
+Version numbers for this repo take the form X.Y.Z.
+- We increase Z for a change that does not add or change results in any way. Example: adding a log statement.
+- We increase Y for a change that adds results, changes results, or has the potential to change results. Example: changing a parameter in the GSNAP command.
+- We increase X for a paradigm shift in how the pipeline is conceived. Example: adding a de-novo assembly step and then reassigning hits based on the assembled contigs.
+Changes to X or Y force recomputation of all results when a sample is rerun using idseq-web. Changes to Z do not force recomputation when the sample is rerun - the pipeline will lazily reuse existing outputs in AWS S3.
 
 - 3.13.1 - 3.13.3
   - Make phylo tree and alignment viz steps more robust to missing accessions in index.
