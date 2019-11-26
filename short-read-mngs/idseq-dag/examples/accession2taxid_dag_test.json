@@ -22,12 +22,14 @@
     "nt_loc_out": [
       "nt_loc.sqlite3",
       "nt_info.sqlite3",
-      "nt_loc.db"
+      "nt_loc.db",
+      "nt_info.db"
     ],
     "nr_loc_out": [
       "nr_loc.sqlite3",
       "nr_info.sqlite3",
-      "nr_loc.db"
+      "nr_loc.db",
+      "nr_info.db"
     ]
   },
   "steps": [

@@ -37,11 +37,6 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
         num_accessions_per_taxon = self.additional_attributes.get("num_accessions_per_taxon", NUM_ACCESSIONS_PER_TAXON)
         min_contig_size = self.additional_attributes.get("min_contig_size", MIN_CONTIG_SIZE)
 
-        # Info DB contains the name and sequence length of each accession.
-        # IMPORTANT NOTE: This info_db file is currently nt_info.sqlite3.
-        # SQLite is known to fail intermittently in our pipeline when it is
-        # run inside of multiprocessing. So don't do that here, or else switch
-        # to berkeley DB, as detailed in https://jira.czi.team/browse/IDSEQ-1536.
         info_db = s3.fetch_reference(
             self.additional_files["info_db"],
             self.ref_dir_local,

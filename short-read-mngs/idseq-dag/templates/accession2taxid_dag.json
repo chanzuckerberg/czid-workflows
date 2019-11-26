@@ -24,12 +24,14 @@
     "nt_loc_out": [
       "nt_loc.sqlite3",
       "nt_info.sqlite3",
-      "nt_loc.db"
+      "nt_loc.db",
+      "nt_info.db"
     ],
     "nr_loc_out": [
       "nr_loc.sqlite3",
       "nr_info.sqlite3",
-      "nr_loc.db"
+      "nr_loc.db",
+      "nr_info.db"
     ],
     "lz4_out": [
       "accession2taxid.sqlite3.lz4",
@@ -39,9 +41,11 @@
       "nt_loc.sqlite3.lz4",
       "nt_info.sqlite3.lz4",
       "nt_loc.db.lz4",
+      "nt_info.db.lz4",
       "nr_loc.sqlite3.lz4",
       "nr_info.sqlite3.lz4",
-      "nr_loc.db.lz4"
+      "nr_loc.db.lz4",
+      "nr_info.db.lz4"
     ]
   },
   "steps": [
