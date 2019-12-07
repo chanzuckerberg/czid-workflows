@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 from idseq_dag import __version__
 
 setup(name='idseq_dag',
@@ -8,7 +8,8 @@ setup(name='idseq_dag',
       author='IdSeq Team @ Chan Zuckerberg Initiative',
       author_email='idseqhelp@chanzuckerberg.com',
       license='MIT',
-      packages=['idseq_dag'],
+      packages=find_packages(exclude=["tests.*", "tests"]),
+      package_data={'idseq_dag': ['scripts/fastq-fasta-line-validation.awk']},
       install_requires=['pytz'],
       tests_require=["coverage", "flake8", "wheel"],
       dependency_links=[],
