@@ -99,10 +99,11 @@ class BlastCandidate:
             r["length"] = 1
         r["pident"] = sum(hsp["pident"] * hsp["length"] for hsp in self.optimal_cover) / r["length"]
         r["bitscore"] = sum(hsp["bitscore"] for hsp in self.optimal_cover)
-        r["qstart"] = min(hsp["qstart"] for hsp in self.optimal_cover)
-        r["qend"] = max(hsp["qend"] for hsp in self.optimal_cover)
-        r["sstart"] = min(hsp["sstart"] for hsp in self.optimal_cover)
-        r["send"] = max(hsp["send"] for hsp in self.optimal_cover)
+        # min(min(... and max(max(... below because, depending on strand, qstart and qend may be reversed
+        r["qstart"] = min(min(hsp["qstart"], hsp["qend"]) for hsp in self.optimal_cover)
+        r["qend"] = max(max(hsp["qstart"], hsp["qend"]) for hsp in self.optimal_cover)
+        r["sstart"] = min(min(hsp["sstart"], hsp["send"]) for hsp in self.optimal_cover)
+        r["send"] = max(max(hsp["sstart"], hsp["send"]) for hsp in self.optimal_cover)
         # add these two
         r["qcov"] = r["length"] / r["qlen"]
         r["hsp_count"] = len(self.optimal_cover)
