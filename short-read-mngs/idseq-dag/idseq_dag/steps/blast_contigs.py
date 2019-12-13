@@ -339,7 +339,7 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
                     blast_type,
                     "-out",
                     blast_index_path
-                ]
+                ],
             )
         )
         command.execute(
@@ -360,7 +360,13 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
                     5000,
                     "-num_threads",
                     16
-                ]
+                ],
+                # We can only pass BATCH_SIZE as an env var.  The default is 100,000 for blastn;  10,000 for blastp.
+                # Blast concatenates input queries until they exceed this size, then runs them together, for efficiency.
+                # Unfortunately if too many short and low complexity queries are in the input, this can expand too
+                # much the memory required.  We have found empirically 10,000 to be a better default.  It is also the
+                # value used as default for remote blast.
+                env=dict(os.environ, BATCH_SIZE="10000")
             )
         )
         # further processing of getting the top m8 entry for each contig.
