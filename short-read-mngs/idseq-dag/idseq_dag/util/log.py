@@ -21,7 +21,7 @@ def configure_logger(log_file=None):
     for s in ['boto3', 'botocore', 's3transfer', 'urlib3']:
         logging.getLogger(s).setLevel(logging.WARNING)
 
-    logger = logging.getLogger()
+    logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
 
     if log_file:
@@ -53,7 +53,7 @@ def write(message: str = None, warning: bool = False, flush: bool = True,
     flush(boolean): Optional (default true). Flush stdout after logging.
     '''
     with print_lock:
-        logger = logging.getLogger()
+        logger = logging.getLogger(__name__)
         if warning:
             logger.warning(msg=message, extra={"obj_data": obj_data})
         elif debug:
