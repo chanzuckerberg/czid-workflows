@@ -93,8 +93,8 @@ class PipelineStepRunStar(PipelineStep):
     # Note that these attributes cannot be set in the __init__ method because required
     # file path information only becomes available once the wait_for_input_files() has run.
 
-    def __init__(self, *args):
-        super().__init__(*args)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.sequence_input_files = None
         self.validated_input_counts_file = None
 
