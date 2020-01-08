@@ -59,7 +59,9 @@ class PipelineStepRunStar(PipelineStep):
     --alignTranscriptsPerReadNmax 100000
     ```
 
-    This step also computes insert size metrics for Paired End DNA samples from Human hosts.
+    This step also computes insert size metrics for Paired End samples.
+    It always computes them for DNA samples and computes them for RNA samples
+    if we have a gtf file for the host genome.
     These metrics are computed by the Broad Institute's Picard toolkit.
 
     To compute these metrics the STAR command is slightly modified, replacing this option:
@@ -68,18 +70,26 @@ class PipelineStepRunStar(PipelineStep):
     --outSAMmode None
     ```
 
-    With these options:
+    With these options (for DNA):
 
     ```
     --outSAMtype BAM Unsorted
     --outSAMmode NoQS
     ```
 
+    Or these options (for RNA):
+
+    ```
+    --outSAMtype BAM Unsorted
+    --outSAMmode NoQS
+    --quantMode TranscriptomeSAM GeneCounts
+    ```
+
     Then Picard is run on the resulting output BAM file:
 
     ```
     java -jar picard.jar CollectInsertSizeMetrics
-        I=Aligned.out.bam
+        I={output bam file}
         O=picard_insert_metrics.txt
         H=insert_size_histogram.pdf
     ```
@@ -98,17 +108,7 @@ class PipelineStepRunStar(PipelineStep):
         self.sequence_input_files = None
         self.validated_input_counts_file = None
 
-        # Compute insert size metrics if all of the following are true:
-        #  - Host is Human
-        #  - Nucleotide Type is DNA
-        #  - Paired End Reads
-        #  - Recieved an output histogram file or output metrics file destination
-
-        host_genome = self.additional_attributes.get("host_genome", "")
-        host_human = host_genome.lower() == "human"
-
-        nucleotide_type = self.additional_attributes.get("nucleotide_type", "")
-        dna_type = nucleotide_type.lower() == "dna"
+        nucleotide_type = self.additional_attributes.get("nucleotide_type", "").lower()
 
         paired = len(self.input_files[0]) == 3
 
@@ -116,10 +116,22 @@ class PipelineStepRunStar(PipelineStep):
         self.output_histogram_file = self.additional_attributes.get("output_histogram_file")
         requested_insert_size_metrics_output = bool(self.output_metrics_file or self.output_histogram_file)
 
-        self.should_collect_insert_size_metrics = host_human and \
-            dna_type and \
-            paired and \
-            requested_insert_size_metrics_output
+        # Check if the STAR genome was generated with a gtf file
+        #  This file will be in the same s3 directory, it is needed to prevent overestimation
+        #  of insert size for RNA because genomic alignments of RNA may cross introns.
+        star_genome_dir = os.path.dirname(self.additional_files.get("star_genome", ""))
+        has_gtf = s3.check_s3_presence_for_pattern(star_genome_dir, r"\.gtf$")
+
+        self.collect_insert_size_metrics_for = None
+        # If we have paired end reads and metrics output files were requested
+        #   try to compute insert size metrics
+        if paired and requested_insert_size_metrics_output:
+            # Compute for RNA if host genome has a gtf file
+            if nucleotide_type == "rna" and has_gtf:
+                self.collect_insert_size_metrics_for = nucleotide_type
+            # Always compute for DNA
+            elif nucleotide_type == "dna":
+                self.collect_insert_size_metrics_for = nucleotide_type
 
     def run(self):
         """Run STAR to filter out host reads."""
@@ -151,9 +163,9 @@ class PipelineStepRunStar(PipelineStep):
 
         # Don't compute insert size metrics if the STAR index has more than one part
         #   Logic for combining BAM output from STAR or insert size metrics not implemented
-        if self.should_collect_insert_size_metrics and num_parts != 1:
+        if self.collect_insert_size_metrics_for and num_parts != 1:
             log.write("Insert size metrics were expected to be collected for sample but were not because the STAR index has more than one part")
-        self.should_collect_insert_size_metrics &= num_parts == 1
+            self.collect_insert_size_metrics_for = None
 
         # Run STAR on each partition and save the unmapped read info
         unmapped = input_files
@@ -168,7 +180,7 @@ class PipelineStepRunStar(PipelineStep):
             tmp = f"{scratch_dir}/star-part-{part_idx}"
             genome_part = f"{genome_dir}/part-{part_idx}"
             count_genes = part_idx == 0
-            self.run_star_part(tmp, genome_part, unmapped, count_genes, use_starlong, self.should_collect_insert_size_metrics)
+            self.run_star_part(tmp, genome_part, unmapped, count_genes, use_starlong)
 
             unmapped, too_discrepant = PipelineStepRunStar.sync_pairs(
                 PipelineStepRunStar.unmapped_files_in(tmp, num_inputs))
@@ -190,13 +202,17 @@ class PipelineStepRunStar(PipelineStep):
                     command.move_file(gene_count_file, moved)
                     self.additional_files_to_upload.append(moved)
 
-                if self.should_collect_insert_size_metrics:
-                    # STAR names the output BAM file Aligned.out.bam, this doesn't appear to be configurable
-                    bam_path = os.path.join(tmp, "Aligned.out.bam")
+                # STAR names the output BAM file Aligned.out.bam without TranscriptomeSAM and
+                #  Aligned.toTranscriptome.out.bam with  TranscriptomeSAM, this doesn't
+                #  appear to be configurable
+                is_dna = self.collect_insert_size_metrics_for == "dna"
+                bam_filename = "Aligned.out.bam" if is_dna else "Aligned.toTranscriptome.out.bam"
+                if self.collect_insert_size_metrics_for:
+                    bam_path = os.path.join(tmp, bam_filename)
                     metrics_output_path = os.path.join(tmp, self.output_metrics_file)
                     histogram_output_path = os.path.join(tmp, self.output_histogram_file)
 
-                    # If this file wasn't generated but self.should_collect_insert_size_metrics is True
+                    # If this file wasn't generated but self.collect_insert_size_metrics_for has a value
                     #   something unexpected has gone wrong
                     assert(os.path.isfile(bam_path)), \
                         "Expected STAR to generate Aligned.out.bam but it was not found"
@@ -249,8 +265,7 @@ class PipelineStepRunStar(PipelineStep):
                       genome_dir,
                       input_files,
                       count_genes,
-                      use_starlong,
-                      generate_output_bam):
+                      use_starlong):
         command.make_dirs(output_dir)
 
         cpus = str(multiprocessing.cpu_count())
@@ -268,10 +283,24 @@ class PipelineStepRunStar(PipelineStep):
             '--readFilesIn', *input_files
         ]
 
-        if generate_output_bam:
-            params += ['--outSAMtype', 'BAM', 'Unsorted', '--outSAMmode', 'NoQS', ]
+        if self.collect_insert_size_metrics_for == "rna":
+            params += [
+                '--outSAMtype', 'BAM', 'Unsorted',
+                '--outSAMmode', 'NoQS',
+                # Based on experimentation we always want --quantMode TranscriptomeSAM GeneCounts
+                #   for RNA to collect transcriptome-specific results to compute insert size metrics on
+                #   https://czi.quip.com/4niiAhiJsFNx/2019-11-15-CollectInsertSizeMetrics-for-RNA
+                '--quantMode', 'TranscriptomeSAM', 'GeneCounts',
+            ]
         else:
-            params += ['--outSAMmode', 'None']
+            if self.collect_insert_size_metrics_for == "dna":
+                params += ['--outSAMtype', 'BAM', 'Unsorted', '--outSAMmode', 'NoQS', ]
+            else:
+                params += ['--outSAMmode', 'None']
+
+            count_file = f"{genome_dir}/sjdbList.fromGTF.out.tab"
+            if count_genes and os.path.isfile(count_file):
+                params += ['--quantMode', 'GeneCounts']
 
         if use_starlong:
             params += [
@@ -280,10 +309,6 @@ class PipelineStepRunStar(PipelineStep):
                 '--seedPerWindowNmax', '1000',
                 '--alignTranscriptsPerReadNmax', '100000',
                 '--alignTranscriptsPerWindowNmax', '10000']
-        count_file = f"{genome_dir}/sjdbList.fromGTF.out.tab"
-
-        if count_genes and os.path.isfile(count_file):
-            params += ['--quantMode', 'GeneCounts']
 
         command.execute(
             command_patterns.SingleCommand(

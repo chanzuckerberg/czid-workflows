@@ -3,6 +3,7 @@ import subprocess
 import os
 import multiprocessing
 import errno
+import re
 from urllib.parse import urlparse
 import traceback
 import boto3
@@ -80,6 +81,39 @@ def check_s3_presence(s3_path, allow_zero_byte_files=True):
     with botolock:
         rate_limit_boto()
         return _check_s3_presence(s3_path, allow_zero_byte_files)
+
+
+def _list_s3_keys(s3_path_prefix):
+    """Returns an iterator of s3 keys prefixed by s3_path_prefix."""
+    with log.log_context(context_name="s3.list_s3_objects", values={'s3_path_prefix': s3_path_prefix}, log_context_mode=log.LogContextMode.EXEC_LOG_EVENT):
+        parsed_url = urlparse(s3_path_prefix, allow_fragments=False)
+        bucket = parsed_url.netloc
+        prefix = parsed_url.path.lstrip('/')
+        client = boto3.client('s3')
+        paginator = client.get_paginator('list_objects')
+        for response in paginator.paginate(Bucket=bucket, Prefix=prefix):
+            for item in response['Contents']:
+                yield item['Key']
+
+
+def list_s3_keys(s3_path_prefix):
+    with botolock:
+        rate_limit_boto()
+        return _list_s3_keys(s3_path_prefix)
+
+
+# Something similar to this exist's in s3's REST API
+#  the --query flag, but it doesn't support full regexes and
+#  doesn't appear to be in the python API
+def check_s3_presence_for_pattern(s3_path_prefix, pattern):
+    """
+    Returns True if s3 contains any keys in s3 that start with the s3 path
+    prefix match the pattern.
+    """
+    for key in list_s3_keys(s3_path_prefix):
+        if re.search(pattern, key):
+            return True
+    return False
 
 
 def check_s3_presence_for_file_list(s3_dir, file_list, allow_zero_byte_files=True):
