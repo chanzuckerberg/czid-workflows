@@ -1,16 +1,34 @@
 ''' Generate Coverage Statistics '''
 import json
 import os
+from multiprocessing import cpu_count
+
 import pysam
-import functools
-from multiprocessing import Pool
 
 from idseq_dag.engine.pipeline_step import PipelineStep
 import idseq_dag.util.command as command
+from idseq_dag.util.command import run_in_subprocess, LongRunningCodeSection
 import idseq_dag.util.command_patterns as command_patterns
-import idseq_dag.util.log as log
-from idseq_dag.util.sequence import chunks
+from idseq_dag.util.thread_with_result import mt_map
+
+
 MIN_CONTIG_FILE_SIZE = 50
+
+
+COVERAGE_STATS_SCHEMA = {
+    "contig_name": str,
+    "avg": float,
+    "min": int,
+    "max": int,
+    "p25": int,
+    "p50": int,
+    "p75": int,
+    "avg2xcnt": int,
+    "cnt0": int,
+    "cnt1": int,
+    "cnt2": int
+}
+
 
 class PipelineStepGenerateCoverageStats(PipelineStep):
     ''' Generate Coverage Statistics from Assembly Output '''
@@ -48,85 +66,110 @@ class PipelineStepGenerateCoverageStats(PipelineStep):
             )
         )
         # run coverage info
-        contig2coverage = self.calc_contig2coverage(bam_file)
-
-        with open(coverage_json, 'w') as csf:
-            json.dump(contig2coverage, csf)
-
-        with open(coverage_summary_csv, 'w') as csc:
-            csc.write("contig_name,avg,min,max,p25,p50,p75,avg2xcnt,cnt0,cnt1,cnt2\n")
-            for contig, stats in contig2coverage.items():
-                output_row = [
-                    contig, stats['avg'], stats['p0'], stats['p100'],
-                    stats['p25'], stats['p50'], stats['p75'],
-                    stats['avg2xcnt'], stats['cnt0'], stats['cnt1'], stats['cnt2']
-                ]
-                output_str = ','.join(str(e) for e in output_row)
-                csc.write(output_str + "\n")
+        output_csv, output_json = self.calc_contig2coverage(bam_file)
+        os.rename(output_csv, coverage_summary_csv)
+        os.rename(output_json, coverage_json)
 
     @staticmethod
-    def _process_contig_names(bam_file, contig_names):
-        contig2coverage = {}
-        if len(contig_names) > 0:
-            with log.log_context(f"calc_contig2coverage_chunk", {"bam_file": bam_file, "from": contig_names[0], "to": contig_names[-1]}):
-                with pysam.AlignmentFile(bam_file, "rb") as f:
-                    for c in contig_names:
-                        coverage = []
-                        for pileup_column in f.pileup(contig=c):
-                            coverage.append(pileup_column.get_num_aligned())
-                        sorted_coverage = sorted(coverage)
-                        contig_len = len(coverage)
-                        if contig_len <= 0:
-                            continue
-
-                        avg = sum(coverage) / contig_len
-                        avg2xcnt = 0
-                        cnt0 = 0
-                        cnt1 = 0
-                        cnt2 = 0
-                        for t in coverage:
-                            if t > 2 * avg:
-                                avg2xcnt += 1
-                            if t == 0:
-                                cnt0 += 1
-                            elif t == 1:
-                                cnt1 += 1
-                            elif t == 2:
-                                cnt2 += 1
-
-                        contig2coverage[c] = {
-                            "coverage": coverage,
-                            "avg": avg,
-                            "p0": sorted_coverage[0],
-                            "p100": sorted_coverage[-1],
-                            "p25": sorted_coverage[int(0.25 * contig_len)],
-                            "p50": sorted_coverage[int(0.5 * contig_len)],
-                            "p75": sorted_coverage[int(0.75 * contig_len)],
-                            "avg2xcnt": avg2xcnt / contig_len,
-                            "cnt0": cnt0 / contig_len,
-                            "cnt1": cnt1 / contig_len,
-                            "cnt2": cnt2 / contig_len
-                        }
-        return contig2coverage
+    def _process_contig(input_bam, output_csv, output_json, contig_name):
+        pileup = input_bam.pileup(contig=contig_name)
+        coverage = [pileup_column.get_num_aligned() for pileup_column in pileup]
+        if not coverage:
+            return False
+        contig_len = len(coverage)
+        avg = sum(coverage) / contig_len
+        avg2xcnt = 0
+        cnt0 = 0
+        cnt1 = 0
+        cnt2 = 0
+        for t in coverage:
+            if t > 2 * avg:
+                avg2xcnt += 1
+            if t == 0:
+                cnt0 += 1
+            elif t == 1:
+                cnt1 += 1
+            elif t == 2:
+                cnt2 += 1
+        sorted_coverage = sorted(coverage)
+        stats = {
+            "coverage": coverage,
+            "avg": avg,
+            "p0": sorted_coverage[0],
+            "p100": sorted_coverage[-1],
+            "p25": sorted_coverage[int(0.25 * contig_len)],
+            "p50": sorted_coverage[int(0.5 * contig_len)],
+            "p75": sorted_coverage[int(0.75 * contig_len)],
+            "avg2xcnt": avg2xcnt / contig_len,
+            "cnt0": cnt0 / contig_len,
+            "cnt1": cnt1 / contig_len,
+            "cnt2": cnt2 / contig_len
+        }
+        output_json.write(json.dumps(contig_name) + ": ")
+        output_json.write(json.dumps(stats))
+        output_json.write(", ")
+        stats["contig_name"] = contig_name
+        stats["min"] = stats.pop("p0")
+        stats["max"] = stats.pop("p100")
+        output_csv.write(",".join(str(stats[col]) for col in COVERAGE_STATS_SCHEMA))
+        output_csv.write("\n")
+        return True
 
     @staticmethod
-    def calc_contig2coverage(bam_file):
-        CHUNK_SIZE = 200
-        with pysam.AlignmentFile(bam_file, "rb") as f:
-            all_references = f.references
-            with log.log_context("calc_contig2coverage", {"bam_file": bam_file, "all_references_count": len(all_references)}):
-                chunked_references = chunks(f.references, CHUNK_SIZE)
-                fn = functools.partial(PipelineStepGenerateCoverageStats._process_contig_names, bam_file)
-                with Pool() as pool:
-                    chunk_results = pool.map(fn, chunked_references)
-        contig2coverage = {}
-        for chunk_result in chunk_results:
-            # check if there are duplicated keys
-            for key in chunk_result.keys():
-                if key in contig2coverage:
-                    raise Exception(f"Key {key} already present in contig2coverage")
-            contig2coverage.update(chunk_result)
-        return contig2coverage
+    def calc_contig2coverage(bam_filename):
+        # PySAM pileup is CPU-intenstive.  Each CPU core is assigned a slice of the input bam file on which to perform pileup.  The slice contigs are selected by slice_idx modulo num_slices.  Each slice gets its own pair of temporary output files, one in CSV format and one in JSON.  In the end, these slice outputs are concatenated.  This is a similar pattern to run_lzw.
+        num_physical_cpu = (cpu_count() + 1) // 2
+        num_slices = num_physical_cpu
+        output_csv_filenames = [f"tmp_slice_{num_slices}_{slice}.csv" for slice in range(num_slices + 1)]
+        output_json_filenames = [f"tmp_slice_{num_slices}_{slice}.json" for slice in range(num_slices + 1)]
+        for fn in output_csv_filenames + output_json_filenames:
+            if os.path.exists(fn):
+                os.remove(fn)
+
+        @run_in_subprocess
+        def compute_slice(slice_idx):
+            with open(output_csv_filenames[slice_idx], "w") as output_csv, \
+                 open(output_json_filenames[slice_idx], "w") as output_json, \
+                 pysam.AlignmentFile(bam_filename, "rb") as input_bam:  # noqa: E126
+                for contig_idx, contig_name in enumerate(input_bam.references):
+                    if contig_idx % num_slices == slice_idx:
+                        PipelineStepGenerateCoverageStats._process_contig(input_bam, output_csv, output_json, contig_name)
+
+        # Compute pileup for each slice
+        with LongRunningCodeSection("PipelineStepGenerateCoverageStats.calc_contig2coverage.mt_map"):
+            mt_map(compute_slice, range(num_slices))
+        # Output CSV headers
+        with open(output_csv_filenames[-1], "w") as ocsv:
+            ocsv.write(",".join(COVERAGE_STATS_SCHEMA))
+            ocsv.write("\n")
+        # Output JSON dict open paren
+        with open(output_json_filenames[-1], "w") as ojson:
+            ojson.write("{")
+        # Collate CSV slices
+        command.execute(
+            command_patterns.ShellScriptCommand(
+                script=r'''cat "${individual_slice_outputs[@]}" >> "${collated_csv}";''',  # note >> for appending
+                named_args={
+                    'collated_csv': output_csv_filenames[-1],
+                    'individual_slice_outputs': output_csv_filenames[:-1]
+                }
+            )
+        )
+        for tfn in output_csv_filenames[:-1]:
+            os.remove(tfn)
+        # Collate JSON slices, replacing final ", " with "}"
+        command.execute(
+            command_patterns.ShellScriptCommand(
+                script=r'''cat "${individual_slice_outputs[@]}" | sed 's=, $=}=' >> "${collated_json}";''',  # note >> for appending
+                named_args={
+                    'collated_json': output_json_filenames[-1],
+                    'individual_slice_outputs': output_json_filenames[:-1]
+                }
+            )
+        )
+        for tfn in output_json_filenames[:-1]:
+            os.remove(tfn)
+        return (output_csv_filenames[-1], output_json_filenames[-1])
 
     def count_reads(self):
         ''' Count reads '''

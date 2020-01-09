@@ -171,23 +171,15 @@ def run_in_subprocess(target):
 
     @wraps(target)
     def wrapper(*args, **kwargs):
-        original_caller = log.get_caller_info(3)
-
-        def subprocess_scope(*args, **kwargs):
-            with log.log_context("subprocess_scope", {"target": target.__qualname__, "original_caller": original_caller}):
-                target(*args, **kwargs)
-
-        # holding this lock during fork reduces deadlock dangers related to file locking within CPython
-        # it's magic, but seems to help, and is the least painful of workarounds
-        with log.print_lock:
-            p = multiprocessing.Process(target=subprocess_scope, args=args, kwargs=kwargs)
-            p.start()
-
-        p.join()
-        if p.exitcode != 0:
-            raise RuntimeError("Failed {} on {}, {}".format(
-                target.__name__, args, kwargs))
-
+        with log.log_context("subprocess_scope", {"target": target.__qualname__, "original_caller": log.get_caller_info(3)}):  # TODO: Remove excess logging.
+            # holding this lock during fork reduces deadlock dangers related to file locking within CPython
+            # it's magic, but seems to help, and is the least painful of workarounds
+            with log.print_lock:
+                p = multiprocessing.Process(target=target, args=args, kwargs=kwargs)
+                p.start()
+            p.join()
+            if p.exitcode != 0:
+                raise RuntimeError(f"Failed {target.__qualname__} with code {p.exitcode} on {list(args)}, {kwargs}")  # singleton list prints prettier than singleton tuple
     return wrapper
 
 
@@ -426,3 +418,26 @@ def get_resource_filename(root_relative_path, package='idseq_dag'):
             /app/idseq_dag/scripts/fastq-fasta-line-validation.awk
     '''
     return pkg_resources.resource_filename(package, root_relative_path)
+
+
+class LongRunningCodeSection(Updater):
+    """
+    Make sure we print something periodically while a long section of code is running.
+    """
+    lock = TraceLock("LongRunningCodeSection", multiprocessing.RLock())
+    count = multiprocessing.Value('i', 0)
+
+    def __init__(self, name, update_period=15):
+        super(LongRunningCodeSection, self).__init__(
+            update_period, self.print_update)
+        with LongRunningCodeSection.lock:
+            self.id = LongRunningCodeSection.count.value
+            LongRunningCodeSection.count.value += 1
+        self.name = name
+
+    def print_update(self, t_elapsed):
+        """Log an update after every polling period to indicate the code section is
+        still active.
+        """
+        log.write("LongRunningCodeSection %d (%s) still running after %3.1f seconds." %
+                  (self.id, self.name, t_elapsed))
