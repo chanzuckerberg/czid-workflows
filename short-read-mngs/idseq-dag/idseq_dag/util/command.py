@@ -171,15 +171,12 @@ def run_in_subprocess(target):
 
     @wraps(target)
     def wrapper(*args, **kwargs):
-        with log.log_context("subprocess_scope", {"target": target.__qualname__, "original_caller": log.get_caller_info(3)}):  # TODO: Remove excess logging.
-            # holding this lock during fork reduces deadlock dangers related to file locking within CPython
-            # it's magic, but seems to help, and is the least painful of workarounds
-            with log.print_lock:
-                p = multiprocessing.Process(target=target, args=args, kwargs=kwargs)
-                p.start()
-            p.join()
-            if p.exitcode != 0:
-                raise RuntimeError(f"Failed {target.__qualname__} with code {p.exitcode} on {list(args)}, {kwargs}")  # singleton list prints prettier than singleton tuple
+        with log.print_lock:
+            p = multiprocessing.Process(target=target, args=args, kwargs=kwargs)
+            p.start()
+        p.join()
+        if p.exitcode != 0:
+            raise RuntimeError(f"Failed {target.__qualname__} with code {p.exitcode} on {list(args)}, {kwargs}")  # singleton list prints prettier than singleton tuple
     return wrapper
 
 
