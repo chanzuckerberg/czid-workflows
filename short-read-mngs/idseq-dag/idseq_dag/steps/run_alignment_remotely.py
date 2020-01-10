@@ -24,8 +24,9 @@ CORRECT_NUMBER_OF_OUTPUT_COLUMNS = 12
 CHUNK_MAX_TRIES = 3
 
 # Please override this with gsnap_chunk_timeout or rapsearch_chunk_timeout in DAG json.
-# Default 60 minutes is several sigmas beyond the pale and indicates the data has to be QC-ed better.
-DEFAULT_CHUNK_TIMEOUT = 60 * 60
+# Default is several sigmas beyond the pale and indicates the data has to be QC-ed better.
+# Note(2020-01-10): Raised to 3 hrs to mitigate Rapsearch chunk timeouts after recent index update.
+DEFAULT_CHUNK_TIMEOUT = 60 * 60 * 3
 
 class PipelineStepRunAlignmentRemotely(PipelineStep):
     """ Runs gsnap/rapsearch2 remotely.
