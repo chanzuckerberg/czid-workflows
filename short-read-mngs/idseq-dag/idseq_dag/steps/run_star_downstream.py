@@ -8,6 +8,9 @@ class PipelineStepRunStarDownstream(PipelineStepRunStar):
         --> first file is a count json; remaining files are sanitized sequence files which we don't need
             because we use the files from (1)
     """
+    def __init__(self, *args, **kwargs):
+        # Don't collect insert size metrics at this stage
+        super().__init__(*args, disable_insert_size_metrics=True, **kwargs)
 
     def run(self):
         self.sequence_input_files = self.input_files_local[0][:2]

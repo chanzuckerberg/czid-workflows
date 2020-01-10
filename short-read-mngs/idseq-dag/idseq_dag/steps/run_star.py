@@ -61,7 +61,7 @@ class PipelineStepRunStar(PipelineStep):
 
     This step also computes insert size metrics for Paired End samples.
     It always computes them for DNA samples and computes them for RNA samples
-    if we have a gtf file for the host genome.
+    if we have an organism specific gtf file for the host genome.
     These metrics are computed by the Broad Institute's Picard toolkit.
 
     To compute these metrics the STAR command is slightly modified, replacing this option:
@@ -103,32 +103,35 @@ class PipelineStepRunStar(PipelineStep):
     # Note that these attributes cannot be set in the __init__ method because required
     # file path information only becomes available once the wait_for_input_files() has run.
 
-    def __init__(self, *args, **kwargs):
+    # disable_insert_size_metrics is used to disable insert size metrics for run_star_downstream.py
+    def __init__(self, *args, disable_insert_size_metrics=False, **kwargs):
         super().__init__(*args, **kwargs)
         self.sequence_input_files = None
         self.validated_input_counts_file = None
 
         nucleotide_type = self.additional_attributes.get("nucleotide_type", "").lower()
-
         paired = len(self.input_files[0]) == 3
 
         self.output_metrics_file = self.additional_attributes.get("output_metrics_file")
         self.output_histogram_file = self.additional_attributes.get("output_histogram_file")
         requested_insert_size_metrics_output = bool(self.output_metrics_file or self.output_histogram_file)
 
-        # Check if the STAR genome was generated with a gtf file
-        #  This file will be in the same s3 directory, it is needed to prevent overestimation
-        #  of insert size for RNA because genomic alignments of RNA may cross introns.
-        star_genome_dir = os.path.dirname(self.additional_files.get("star_genome", ""))
-        has_gtf = s3.check_s3_presence_for_pattern(star_genome_dir, r"\.gtf$")
-
         self.collect_insert_size_metrics_for = None
         # If we have paired end reads and metrics output files were requested
         #   try to compute insert size metrics
-        if paired and requested_insert_size_metrics_output:
-            # Compute for RNA if host genome has a gtf file
-            if nucleotide_type == "rna" and has_gtf:
-                self.collect_insert_size_metrics_for = nucleotide_type
+        if (not disable_insert_size_metrics) and paired and requested_insert_size_metrics_output:
+            # Compute for RNA if host genome has an organism specific gtf file
+            if nucleotide_type == "rna":
+                # Check if the STAR genome was generated with an organism specific gtf file
+                #  This file will be in the same s3 directory, it is needed to prevent overestimation
+                #  of insert size for RNA because genomic alignments of RNA may cross introns.
+                #  The ERCC.gtf file is not sufficient for this purpose. An organism specific gtf
+                #  file will have a name other than ERCC.gtf. The organism specific gtf files
+                #  come from the RefSeq Database.
+                star_genome_dir = os.path.dirname(self.additional_files.get("star_genome", ""))
+                has_gtf = s3.check_s3_presence_for_pattern(star_genome_dir, r"(?<!/ERCC)\.gtf$")
+                if has_gtf:
+                    self.collect_insert_size_metrics_for = nucleotide_type
             # Always compute for DNA
             elif nucleotide_type == "dna":
                 self.collect_insert_size_metrics_for = nucleotide_type
