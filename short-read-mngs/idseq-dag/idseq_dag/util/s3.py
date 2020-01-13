@@ -28,8 +28,8 @@ IOSTREAM_UPLOADS = multiprocessing.Semaphore(MAX_CONCURRENT_UPLOAD_OPERATIONS)
 
 config = {
     # Configured in idseq_dag.engine.pipeline_flow.PipelineFlow
-    "REF_DIR": "ref",
-    # "REF_FETCH_LOG_DIR": "fetch_log"
+    "REF_DIR": None,
+    "PURGE_SENTINEL": None
 }
 
 def split_identifiers(s3_path):
@@ -153,11 +153,17 @@ def refreshed_credentials(credentials_mutex=multiprocessing.RLock(), credentials
 
 def find_oldest_reference(refdir):
     try:
-        ls = subprocess.run(f"ls -t {refdir} | tail -1", shell=True, executable="/bin/bash", check=True, capture_output=True)
+        # To understand this ls command, please see the path forming explained in fetch_from_s3 when is_reference=True.
+        ls = subprocess.run(f"ls -td {refdir}/*/* | tail -1", shell=True, executable="/bin/bash", check=True, capture_output=True)
     except:
         # This happens when there are no reference files to delete.
         return None
-    return ls.stdout.decode('utf-8').strip()
+    result = ls.stdout.decode('utf-8').strip()
+    assert config["PURGE_SENTINEL"] != None
+    if result == config["PURGE_SENTINEL"]:
+        log.write("WARNING:  Encountered purge sentinel before freeing sufficient space.  Job may run out of space.")
+        return None
+    return result
 
 
 def need_more_space(refdir):
@@ -179,7 +185,7 @@ def really_make_space():
         if not lru:
             log.write("WARNING:  Too little available space on instance, and could not find any reference downloads to delete.")
             break
-        command.remove_rf(os.path.join(refdir, lru))
+        command.remove_rf(lru)
 
 
 def make_space(done={}, mutex=TraceLock("make_space", multiprocessing.RLock())):  # pylint: disable=dangerous-default-value
@@ -233,19 +239,35 @@ def fetch_from_s3(src,  # pylint: disable=dangerous-default-value
                   allow_s3mi=DEFAULT_ALLOW_S3MI,
                   okay_if_missing=False,
                   is_reference=False,
+                  touch_only=False,
                   mutex=TraceLock("fetch_from_s3", multiprocessing.RLock()),
                   locks={}):
     """Fetch a file from S3 if needed, using either s3mi or aws cp.
 
     IT IS NOT SAFE TO CALL THIS FUNCTION FROM MULTIPLE PROCESSES.
     It is totally fine to call it from multiple threads (it is designed for that).
+
+    When is_reference=True, "dst" must be an existing directory.
+
+    If src does not exist or there is a failure fetching it, the function returns None,
+    without raising an exception.  If the download is successful, it returns the path
+    to the downloaded file or folder.  If the download already exists, it is touched
+    to update its timestamp.
+
+    When touch_only=True, if the destination does not already exist, the function
+    simply returns None (as if the download failed).  If the destination does exist,
+    it is touched as usual.  This is useful in implementing an LRU cache policy.
+
+    An exception is raised only if there is a coding error or equivalent problem,
+    not if src simply doesn't exist.
     """
     # Do not be mislead by the multiprocessing.RLock() above -- that just means it won't deadlock
     # if called from multiple processes but does not mean the behaivior will be correct.  It will
     # be incorrect, because the locks dict (cointaining per-file locks) cannot be shared across
     # processes, the way it can be shared across threads.
 
-    make_space()  # this only does anything the first time
+    if is_reference:
+        assert config["REF_DIR"], "The is_reference code path becomes available only after initializing gloabal config['REF_DIR']"
 
     if os.path.exists(dst) and os.path.isdir(dst):
         dirname, basename = os.path.split(src)
@@ -267,6 +289,8 @@ def fetch_from_s3(src,  # pylint: disable=dangerous-default-value
             dst = os.path.join(dst, dirname, basename)
         else:
             dst = os.path.join(dst, basename)
+    else:
+        assert not is_reference, f"When fetching references, dst must be an existing directory: {dst}"
 
     unzip = ""
     if auto_unzip:
@@ -289,11 +313,18 @@ def fetch_from_s3(src,  # pylint: disable=dangerous-default-value
             locks[abspath] = TraceLock(f"fetch_from_s3: {abspath}", multiprocessing.RLock())
         destination_lock = locks[abspath]
 
+    # shouldn't happen and makes it impossible to ensure that any dst that exists is complete and correct.
+    assert tmp_dst != dst, f"Problematic use of fetch_from_s3 with tmp_dst==dst=='{dst}'"
+
     with destination_lock:
         # This check is a bit imperfect when untarring... unless you follow the discipline that
         # all contents of file foo.tar are under directory foo/... (which we do follow in IDseq)
         if os.path.exists(dst):
+            command.touch(dst)
             return dst
+
+        if touch_only:
+            return None
 
         for (kind, ddir) in [("destinaiton", destdir), ("temporary download", tmp_destdir)]:
             try:
@@ -301,10 +332,10 @@ def fetch_from_s3(src,  # pylint: disable=dangerous-default-value
                     command.make_dirs(ddir)
             except OSError as e:
                 # It's okay if the parent directory already exists, but all other
-                # errors are fatal.
+                # errors fail the download.
                 if e.errno != errno.EEXIST:
                     log.write(f"Error in creating {kind} directory.")
-                    raise
+                    return None
 
         with IOSTREAM:
             try:
@@ -334,11 +365,10 @@ def fetch_from_s3(src,  # pylint: disable=dangerous-default-value
 
                 named_args.update({'src': src})
 
-                if os.path.exists(tmp_dst):
-                    command.remove_rf(tmp_dst)
-
                 try_cli = not allow_s3mi
                 if allow_s3mi:
+                    if os.path.exists(tmp_dst):
+                        command.remove_rf(tmp_dst)
                     try:
                         command.execute(
                             command_patterns.ShellScriptCommand(
@@ -357,6 +387,8 @@ def fetch_from_s3(src,  # pylint: disable=dangerous-default-value
                         else:
                             raise
                 if try_cli:
+                    if os.path.exists(tmp_dst):
+                        command.remove_rf(tmp_dst)
                     if okay_if_missing:
                         script = r'aws s3 cp --quiet "${src}" - ' + command_params
                     else:
@@ -368,11 +400,16 @@ def fetch_from_s3(src,  # pylint: disable=dangerous-default-value
                             env=dict(os.environ, **refreshed_credentials())
                         )
                     )
-                if tmp_dst != dst:
-                    # Move staged download into final location.
-                    command.move_file(tmp_dst, dst)
+                # Move staged download into final location.  Leave this last, so it only happens if no exception has occurred.
+                # By this point we have already asserted that tmp_dst != dst.
+                command.rename(tmp_dst, dst)
                 return dst
-            except subprocess.CalledProcessError:
+            except BaseException as e:  # Deliberately super broad to make doubly certain that dst will be removed if there has been any exception
+                if os.path.exists(dst):
+                    command.remove_rf(dst)
+                if not isinstance(e, subprocess.CalledProcessError):
+                    # Coding error of some sort.  Best not hide it.
+                    raise
                 if okay_if_missing:
                     # We presume.
                     log.write(
@@ -382,25 +419,24 @@ def fetch_from_s3(src,  # pylint: disable=dangerous-default-value
                     log.write(
                         "Failed to fetch file from S3."
                     )
-                if os.path.exists(dst):
-                    command.remove_rf(dst)
-                if os.path.exists(tmp_dst):
-                    command.remove_rf(tmp_dst)
                 return None
             finally:
                 if allow_s3mi:
                     S3MI_SEM.release()
+                if os.path.exists(tmp_dst):  # by this point we have asserted that tmp_dst != dst (and that assert may have failed, but so be it)
+                    command.remove_rf(tmp_dst)
 
 def fetch_reference(src,  # pylint: disable=dangerous-default-value
                     dst,
                     auto_unzip=True,
                     auto_untar=True,
-                    allow_s3mi=DEFAULT_ALLOW_S3MI):
+                    allow_s3mi=DEFAULT_ALLOW_S3MI,
+                    touch_only=False):
     '''
         This function behaves like fetch_from_s3 in most cases, with one excetpion:
 
             *  When auto_unzip=True, src is NOT a compressed file and NOT a tar file, and a compressed
-               version of src exists in s3, this function downloads and uncompresses it.
+               version of src exists in s3, and touch_only=False, this function downloads and uncompresses it.
 
         This function behaves identically to fetch_from_s3 when:
 
@@ -412,6 +448,8 @@ def fetch_reference(src,  # pylint: disable=dangerous-default-value
 
             * auto_unzip=True, src is NOT a compressed file, and no compressed version of src exists in s3, or
 
+            * touch_only=True
+
         We generally try to keep all our references in S3 either lz4-compressed or tar'ed, because this
         guards against corruption errors that sometimes occur during download.  If we accidentally
         download a corrupt file, it would fail to unlz4 or to untar, and we would retry the download.
@@ -419,7 +457,7 @@ def fetch_reference(src,  # pylint: disable=dangerous-default-value
         We trust "aws s3 cp" to do its own integrity checking, so we only prefer the lz4 version of a file
         if we are allowed to use s3mi.
     '''
-    if auto_unzip and not src.endswith(".tar") and not any(src.endswith(zext) for zext in ZIP_EXTENSIONS):
+    if not touch_only and auto_unzip and not src.endswith(".tar") and not any(src.endswith(zext) for zext in ZIP_EXTENSIONS):
         # Try to guess which compressed version of the file exists in S3;  then download and decompress it.
         for zext in REFERENCE_AUTOGUESS_ZIP_EXTENSIONS:
             result = fetch_from_s3(src + zext,
@@ -428,7 +466,8 @@ def fetch_reference(src,  # pylint: disable=dangerous-default-value
                                    auto_untar=auto_untar,
                                    allow_s3mi=allow_s3mi,
                                    okay_if_missing=True,  # It's okay if missing a compressed version.
-                                   is_reference=True)
+                                   is_reference=True,
+                                   touch_only=touch_only)
             if result:
                 return result
 
@@ -438,7 +477,8 @@ def fetch_reference(src,  # pylint: disable=dangerous-default-value
                          auto_untar=auto_untar,
                          allow_s3mi=allow_s3mi,
                          okay_if_missing=False,  # It's NOT okay if missing on the last attempt.
-                         is_reference=True)
+                         is_reference=True,
+                         touch_only=touch_only)
 
 
 def fetch_byterange(first_byte, last_byte, bucket, key, output_file):

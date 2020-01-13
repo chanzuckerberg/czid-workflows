@@ -5,14 +5,12 @@ import sys
 import os
 import threading
 import time
-import datetime
 import glob as _glob
 import shutil
-import shlex
-import pkg_resources
+import pathlib
 from functools import wraps
-import pytz
-from typing import List, Union, Dict, Any
+from typing import Union
+import pkg_resources
 import idseq_dag.util.log as log
 from idseq_dag.util.trace_lock import TraceLock
 import idseq_dag.util.command_patterns as command_patterns
@@ -315,6 +313,16 @@ def copy_file(src: str, dst: str):
 def move_file(src: str, dst: str):
     with log.log_context(context_name='command.move_file', values={'src': src, 'dest': dst}, log_context_mode=log.LogContextMode.EXEC_LOG_EVENT):
         shutil.move(src, dst)
+
+
+def rename(src: str, dst: str):
+    with log.log_context(context_name='command.rename', values={'src': src, 'dest': dst}, log_context_mode=log.LogContextMode.EXEC_LOG_EVENT):
+        os.rename(src, dst)
+
+
+def touch(path, exist_ok=True):
+    with log.log_context(context_name='command.touch', values={'path': path}, log_context_mode=log.LogContextMode.EXEC_LOG_EVENT):
+        pathlib.Path(path).touch(exist_ok=exist_ok)
 
 
 def remove_file(file_path: str):
