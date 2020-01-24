@@ -4,10 +4,12 @@ import os
 import multiprocessing
 import errno
 import re
+import json
 from urllib.parse import urlparse
 import traceback
 import boto3
-import botocore
+import botocore.exceptions
+import botocore.session
 from idseq_dag.util.trace_lock import TraceLock
 import idseq_dag.util.command_patterns as command_patterns
 
@@ -83,23 +85,28 @@ def check_s3_presence(s3_path, allow_zero_byte_files=True):
         return _check_s3_presence(s3_path, allow_zero_byte_files)
 
 
-def _list_s3_keys(s3_path_prefix):
-    """Returns an iterator of s3 keys prefixed by s3_path_prefix."""
+def list_s3_keys(s3_path_prefix):
+    """Returns a list of s3 keys prefixed by s3_path_prefix."""
     with log.log_context(context_name="s3.list_s3_objects", values={'s3_path_prefix': s3_path_prefix}, log_context_mode=log.LogContextMode.EXEC_LOG_EVENT):
         parsed_url = urlparse(s3_path_prefix, allow_fragments=False)
         bucket = parsed_url.netloc
         prefix = parsed_url.path.lstrip('/')
-        client = boto3.client('s3')
-        paginator = client.get_paginator('list_objects')
-        for response in paginator.paginate(Bucket=bucket, Prefix=prefix):
-            for item in response['Contents']:
-                yield item['Key']
-
-
-def list_s3_keys(s3_path_prefix):
-    with botolock:
-        rate_limit_boto()
-        return _list_s3_keys(s3_path_prefix)
+        # Use the AWS CLI instead of boto for thread safety
+        raw_response = command.execute(
+            command_patterns.SingleCommand(
+                cmd="aws",
+                args=[
+                    "s3api",
+                    "list-objects-v2",
+                    "--bucket", bucket,
+                    "--prefix", prefix,
+                ],
+                env=dict(os.environ, **refreshed_credentials()),
+            ),
+            capture_stdout=True,
+        )
+        parsed_response = json.loads(raw_response)
+        return [item['Key'] for item in parsed_response['Contents']]
 
 
 # Something similar to this exist's in s3's REST API
