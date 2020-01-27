@@ -150,6 +150,11 @@ RUN mv picard.jar /usr/local/bin/
 RUN printf '#!/bin/bash\njava -jar /usr/local/bin/picard.jar "$@"\n' > /usr/local/bin/picard
 RUN chmod +x /usr/local/bin/picard
 
+# Install s3parcp
+WORKDIR /tmp
+RUN curl -L https://github.com/chanzuckerberg/s3parcp/releases/download/v0.0.13-alpha/s3parcp_0.0.13-alpha_Linux_x86_64.tar.gz | tar zx
+RUN mv s3parcp /usr/local/bin
+
 # Cleanup
 RUN rm -rf /tmp/*
 

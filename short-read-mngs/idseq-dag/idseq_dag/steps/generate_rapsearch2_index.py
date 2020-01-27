@@ -6,6 +6,10 @@ import idseq_dag.util.command as command
 import idseq_dag.util.command_patterns as command_patterns
 
 class PipelineStepGenerateRapsearch2Index(PipelineStep):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.upload_results_with_checksum = True
+
     ''' Generate   RAPSearch index from NR '''
     def run(self):
         """

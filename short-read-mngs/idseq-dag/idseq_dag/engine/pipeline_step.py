@@ -60,6 +60,7 @@ class PipelineStep(object):
         self.should_count_reads = False
 
         self.input_file_error = None
+        self.upload_results_with_checksum = False
 
     @abstractmethod
     def run(self):
@@ -95,7 +96,7 @@ class PipelineStep(object):
         for f in files_to_upload:
             # upload to S3 - TODO(Boris): parallelize the following with better calls
             s3_path = self.s3_path(f)
-            idseq_dag.util.s3.upload_with_retries(f, s3_path)
+            idseq_dag.util.s3.upload_with_retries(f, s3_path, checksum=self.upload_results_with_checksum)
         for f in self.additional_folders_to_upload:
             idseq_dag.util.s3.upload_folder_with_retries(f, self.s3_path(f))
         self.status = StepStatus.UPLOADED

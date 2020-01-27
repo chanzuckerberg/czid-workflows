@@ -506,22 +506,35 @@ def fetch_byterange(first_byte, last_byte, bucket, key, output_file):
 
 
 @command.retry
-def upload_with_retries(from_f, to_f):
+def upload_with_retries(from_f, to_f, checksum=False):
     with IOSTREAM_UPLOADS:
         with IOSTREAM:
-            command.execute(
-                command_patterns.SingleCommand(
-                    cmd="aws",
-                    args=[
-                        "s3",
-                        "cp",
-                        "--only-show-errors",
-                        from_f,
-                        to_f
-                    ],
-                    env=dict(os.environ, **refreshed_credentials())
+            if checksum:
+                command.execute(
+                    command_patterns.SingleCommand(
+                        cmd="s3parcp",
+                        args=[
+                            "--checksum",
+                            from_f,
+                            to_f
+                        ],
+                        env=dict(os.environ, **refreshed_credentials())
+                    )
                 )
-            )
+            else:
+                command.execute(
+                    command_patterns.SingleCommand(
+                        cmd="aws",
+                        args=[
+                            "s3",
+                            "cp",
+                            "--only-show-errors",
+                            from_f,
+                            to_f
+                        ],
+                        env=dict(os.environ, **refreshed_credentials())
+                    )
+                )
 
 
 @command.retry
