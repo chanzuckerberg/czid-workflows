@@ -1,15 +1,16 @@
-from multiprocessing import cpu_count
-from typing import Iterator
-import os
-from idseq_dag.engine.pipeline_step import PipelineStep, InputFileErrors
 import idseq_dag.util.command as command
 import idseq_dag.util.command_patterns as command_patterns
-from idseq_dag.util.command import run_in_subprocess
-import idseq_dag.util.log as log
 import idseq_dag.util.count as count
 import idseq_dag.util.fasta as fasta
-from idseq_dag.util.thread_with_result import mt_map
+import idseq_dag.util.log as log
 import math
+import os
+
+from idseq_dag.engine.pipeline_step import InputFileErrors, PipelineStep, StepStatus
+from idseq_dag.util.command import run_in_subprocess
+from idseq_dag.util.thread_with_result import mt_map
+from multiprocessing import cpu_count
+from typing import Iterator
 
 
 class PipelineStepRunLZW(PipelineStep):
@@ -46,7 +47,7 @@ class PipelineStepRunLZW(PipelineStep):
         output_fas = self.output_files_local()
         cutoff_scores = self.additional_attributes["thresholds"]
         threshold_readlength = self.additional_attributes.get("threshold_readlength", 150)
-        PipelineStepRunLZW.generate_lzw_filtered(input_fas, output_fas, cutoff_scores, threshold_readlength)
+        self.generate_lzw_filtered(input_fas, output_fas, cutoff_scores, threshold_readlength)
 
     def count_reads(self):
         self.should_count_reads = True
@@ -143,8 +144,7 @@ class PipelineStepRunLZW(PipelineStep):
             os.remove(tfn)
         return coalesced_score_file
 
-    @staticmethod
-    def generate_lzw_filtered(fasta_files, output_files, cutoff_scores, threshold_readlength):
+    def generate_lzw_filtered(self, fasta_files, output_files, cutoff_scores, threshold_readlength):
         assert len(fasta_files) == len(output_files)
 
         cutoff_scores.sort(reverse=True)  # Make sure cutoff is from high to low
@@ -207,7 +207,9 @@ class PipelineStepRunLZW(PipelineStep):
                 break
 
         if kept_count == 0:
-            raise RuntimeError("All the reads are filtered by LZW with lowest cutoff: %f" % cutoff_frac)
+            self.input_file_error = InputFileErrors.INSUFFICIENT_READS
+            self.status = StepStatus.INVALID_INPUT
+            return
 
         kept_ratio = float(kept_count) / float(total_reads)
         msg = "LZW filter: cutoff_frac: %f, total reads: %d, filtered reads: %d, " \
