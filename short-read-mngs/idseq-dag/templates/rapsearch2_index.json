@@ -5,12 +5,8 @@
       "nr"
     ],
     "nr_index": [
-       "nr_rapsearch",
-       "nr_rapsearch.info"
-    ],
-    "nr_index_lz4": [
-      "nr_rapsearch.lz4",
-      "nr_rapsearch.info.lz4"
+      "nr_rapsearch",
+      "nr_rapsearch.info"
     ]
   },
   "steps": [
