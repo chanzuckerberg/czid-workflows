@@ -118,16 +118,16 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
         chunk_size = int(self.additional_attributes["chunk_size"])
         index_dir_suffix = self.additional_attributes.get("index_dir_suffix")
         remote_username = "ec2-user"
-        remote_home_dir = f"/home/{remote_username}"
+        remote_home_dir = os.path.join("/home", remote_username)
         if service == "gsnap":
-            remote_index_dir = f"{remote_home_dir}/share"
+            remote_index_dir = os.path.join(remote_home_dir, "share")
         elif service == "rapsearch2":
-            remote_index_dir = f"{remote_home_dir}/references/nr_rapsearch"
+            remote_index_dir = os.path.join(remote_home_dir, "references", "nr_rapsearch")
 
         if index_dir_suffix:
             remote_index_dir = os.path.join(remote_index_dir, index_dir_suffix)
 
-        remote_work_dir = f"{remote_home_dir}/batch-pipeline-workdir/{sample_name}"
+        sample_remote_work_dir = os.path.join(remote_home_dir, "batch-pipeline-workdir", sample_name)
 
         # Split files into chunks for performance
         part_suffix, input_chunks = self.chunk_input(input_fas, chunk_size)
@@ -144,13 +144,14 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
             for n, chunk_input_files in randomized:
                 self.chunks_in_flight.acquire()
                 self.check_for_errors(mutex, chunk_output_files, input_chunks, service)
+                chunk_remote_work_dir = f"{sample_remote_work_dir}-chunk-{n}"
                 t = threading.Thread(
                     target=PipelineStepRunAlignmentRemotely.run_chunk_wrapper,
                     args=[
                         self.chunks_in_flight, chunk_output_files, n, mutex, self.run_chunk,
                         [
                             part_suffix, remote_home_dir, remote_index_dir,
-                            remote_work_dir, remote_username, chunk_input_files,
+                            chunk_remote_work_dir, remote_username, chunk_input_files,
                             key_path, service, True
                         ]
                     ])
@@ -360,6 +361,16 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
             )
         )
 
+    @command.retry
+    def __delete_remote_dir(self, remote_dir, key_path, remote_username, instance_ip):
+        """
+        Delete a directory on a remote machine
+        This needs to happen while we are holding the machine reservation,
+        i.e., inside the "with ASGInstnace" context.
+        """
+        rm_command = f"rm -rf {remote_dir}"
+        command.execute(command.remote(rm_command, key_path, remote_username, instance_ip))
+
     def run_chunk(self, part_suffix, remote_home_dir, remote_index_dir, remote_work_dir,
                   remote_username, input_files, key_path, service, lazy_run):
         """Dispatch a chunk to worker machines for distributed GSNAP or RAPSearch
@@ -381,7 +392,10 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
 
         download_input_from_s3 = " ; ".join(map(aws_cp_operation, input_files))
 
-        base_str = "mkdir -p {remote_work_dir} ; {download_input_from_s3} ; "
+        # Clean up remote work directory before running
+        #   This ensures that files from a failed previous run that may still be on the instance
+        #   are removed so they don't corrupt the current run
+        base_str = "rm -rf {remote_work_dir} ; mkdir -p {remote_work_dir} ; {download_input_from_s3} ; "
         environment = self.additional_attributes["environment"]
 
         # See step class docstrings for more parameter details.
@@ -480,6 +494,7 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
                         # for it, and it says nothing about whether the alignment succeeded or not.
                         if chunk_status != None:
                             chunk_status_tracker(service).note_outcome(instance_ip, chunk_id, elapsed, chunk_status, try_number)
+                        self.__delete_remote_dir(remote_work_dir, key_path, remote_username, instance_ip)
 
             # Upload to s3
             with self.iostream_upload:  # Limit concurrent uploads so as not to stall the pipeline.
