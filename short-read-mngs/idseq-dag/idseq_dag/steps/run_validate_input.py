@@ -69,8 +69,7 @@ class PipelineStepRunValidateInput(PipelineStep):
                                 }
                             )
                         )
-                        command.remove_file(input_file)
-                        command.move_file(tmp_file, input_file)
+                        input_files[i] = tmp_file
                     except:
                         raise RuntimeError(f"Invalid fastq/fasta file")
 
