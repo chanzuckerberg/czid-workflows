@@ -1,14 +1,15 @@
-import json
-import os
-import threading
-import time
 import datetime
-from abc import abstractmethod
-from enum import Enum, IntEnum
-import pytz
 import idseq_dag.util.command as command
 import idseq_dag.util.log as log
 import idseq_dag.util.s3
+import json
+import os
+import pytz
+import threading
+import time
+
+from abc import abstractmethod
+from enum import Enum, IntEnum
 
 class StepStatus(IntEnum):
     INITIALIZED = 0

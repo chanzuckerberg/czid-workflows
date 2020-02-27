@@ -232,6 +232,9 @@ Version numbers for this repo take the form X.Y.Z.
 - We increase X for a paradigm shift in how the pipeline is conceived. Example: adding a de-novo assembly step and then reassigning hits based on the assembled contigs.
 Changes to X or Y force recomputation of all results when a sample is rerun using idseq-web. Changes to Z do not force recomputation when the sample is rerun - the pipeline will lazily reuse existing outputs in AWS S3.
 
+- 3.19.1
+  - Upload additional cdhitdup output.
+
 - 3.19.0
   - Compute insert size metrics for humans only
 
