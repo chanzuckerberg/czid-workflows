@@ -31,7 +31,7 @@ class PipelineStepGenerateRapsearch2Index(PipelineStep):
                 ]
             )
         )
-        self.additional_files_to_upload.append(output_nr_info_file)
+        self.additional_output_files_hidden.append(output_nr_info_file)
 
     def count_reads(self):
         ''' Count reads '''

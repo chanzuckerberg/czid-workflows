@@ -219,7 +219,7 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
             with open(contig2lineage_json, 'w') as c2lf:
                 json.dump(contig2lineage, c2lf)
 
-        self.additional_files_to_upload.append(contig2lineage_json)
+        self.additional_output_files_hidden.append(contig2lineage_json)
 
     @staticmethod
     def run_blast(db_type, blast_m8, *args):

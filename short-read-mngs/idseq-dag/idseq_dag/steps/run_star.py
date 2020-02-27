@@ -59,9 +59,7 @@ class PipelineStepRunStar(PipelineStep):
     --alignTranscriptsPerReadNmax 100000
     ```
 
-    This step also computes insert size metrics for Paired End samples.
-    It always computes them for DNA samples and computes them for RNA samples
-    if we have an organism specific gtf file for the host genome.
+    This step also computes insert size metrics for Paired End samples from human hosts.
     These metrics are computed by the Broad Institute's Picard toolkit.
 
     To compute these metrics the STAR command is slightly modified, replacing this option:
@@ -109,32 +107,31 @@ class PipelineStepRunStar(PipelineStep):
         self.sequence_input_files = None
         self.validated_input_counts_file = None
 
+        host = self.additional_attributes.get("host_genome", "").lower()
+        host_is_human = host == "human"
+
         nucleotide_type = self.additional_attributes.get("nucleotide_type", "").lower()
         paired = len(self.input_files[0]) == 3
 
         self.output_metrics_file = self.additional_attributes.get("output_metrics_file")
+        if self.output_metrics_file:
+            self.output_metrics_file = os.path.join(self.output_dir_local, self.output_metrics_file)
         self.output_histogram_file = self.additional_attributes.get("output_histogram_file")
+        if self.output_histogram_file:
+            self.output_histogram_file = os.path.join(self.output_dir_local, self.output_histogram_file)
         requested_insert_size_metrics_output = bool(self.output_metrics_file or self.output_histogram_file)
 
         self.collect_insert_size_metrics_for = None
-        # If we have paired end reads and metrics output files were requested
+        # If we have paired end reads, a human host genome, and metrics output files were requested
         #   try to compute insert size metrics
-        if (not disable_insert_size_metrics) and paired and requested_insert_size_metrics_output:
+        if (not disable_insert_size_metrics) and host_is_human and paired and requested_insert_size_metrics_output:
             # Compute for RNA if host genome has an organism specific gtf file
-            if nucleotide_type == "rna":
-                # Check if the STAR genome was generated with an organism specific gtf file
-                #  This file will be in the same s3 directory, it is needed to prevent overestimation
-                #  of insert size for RNA because genomic alignments of RNA may cross introns.
-                #  The ERCC.gtf file is not sufficient for this purpose. An organism specific gtf
-                #  file will have a name other than ERCC.gtf. The organism specific gtf files
-                #  come from the RefSeq Database.
-                star_genome_dir = os.path.dirname(self.additional_files.get("star_genome", ""))
-                has_gtf = s3.check_s3_presence_for_pattern(star_genome_dir, r"(?<!/ERCC)\.gtf$")
-                if has_gtf:
-                    self.collect_insert_size_metrics_for = nucleotide_type
-            # Always compute for DNA
-            elif nucleotide_type == "dna":
-                self.collect_insert_size_metrics_for = nucleotide_type
+            self.collect_insert_size_metrics_for = nucleotide_type
+            # Flag that we need to generate these two files
+            if self.output_metrics_file:
+                self.additional_output_files_visible.append(self.output_metrics_file)
+            if self.output_histogram_file:
+                self.additional_output_files_visible.append(self.output_histogram_file)
 
     def run(self):
         """Run STAR to filter out host reads."""
@@ -203,7 +200,7 @@ class PipelineStepRunStar(PipelineStep):
                     moved = os.path.join(self.output_dir_local,
                                          output_gene_file)
                     command.move_file(gene_count_file, moved)
-                    self.additional_files_to_upload.append(moved)
+                    self.additional_output_files_hidden.append(moved)
 
                 # STAR names the output BAM file Aligned.out.bam without TranscriptomeSAM and
                 #  Aligned.toTranscriptome.out.bam with  TranscriptomeSAM, this doesn't
@@ -212,28 +209,12 @@ class PipelineStepRunStar(PipelineStep):
                 bam_filename = "Aligned.out.bam" if is_dna else "Aligned.toTranscriptome.out.bam"
                 if self.collect_insert_size_metrics_for:
                     bam_path = os.path.join(tmp, bam_filename)
-                    metrics_output_path = os.path.join(tmp, self.output_metrics_file)
-                    histogram_output_path = os.path.join(tmp, self.output_histogram_file)
 
                     # If this file wasn't generated but self.collect_insert_size_metrics_for has a value
                     #   something unexpected has gone wrong
                     assert(os.path.isfile(bam_path)), \
                         "Expected STAR to generate Aligned.out.bam but it was not found"
-                    self.collect_insert_size_metrics(tmp, bam_path, metrics_output_path, histogram_output_path)
-
-                    if self.output_metrics_file:
-                        assert(os.path.isfile(metrics_output_path)), \
-                            f"Expected picard to generate metrics output file at: {metrics_output_path}"
-                        output_path = os.path.join(self.output_dir_local, self.output_metrics_file)
-                        command.move_file(metrics_output_path, output_path)
-                        self.additional_files_to_upload.append(output_path)
-
-                    if self.output_histogram_file:
-                        assert(os.path.isfile(histogram_output_path)), \
-                            f"Expected picard to generate histogram output file at: {histogram_output_path}"
-                        output_path = os.path.join(self.output_dir_local, self.output_histogram_file)
-                        command.move_file(histogram_output_path, output_path)
-                        self.additional_files_to_upload.append(output_path)
+                    self.collect_insert_size_metrics(tmp, bam_path, self.output_metrics_file, self.output_histogram_file)
 
         # Cleanup
         for src, dst in zip(unmapped, output_files_local):
@@ -320,6 +301,86 @@ class PipelineStepRunStar(PipelineStep):
                 args=params
             )
         )
+
+    def step_description(self, require_docstrings=False):
+        outSAMmode = "--outSAMmode None"
+
+        if self.collect_insert_size_metrics_for == 'dna':
+            outSAMmode = """--outSAMtype BAM Unsorted
+                --outSAMmode NoQS"""
+
+        if self.collect_insert_size_metrics_for == 'rna':
+            outSAMmode = """--outSAMtype BAM Unsorted
+                --outSAMmode NoQS
+                --quantMode TranscriptomeSAM GeneCounts"""
+
+        description = f"""
+            Implements the step for running STAR.
+
+            The STAR aligner is used for rapid first-pass host filtration.
+            Unmapped reads are passed to the subsequent step. The current implementation of STAR,
+            will fail to remove host sequences that map to multiple regions, thus these are filtered
+            out by a subsequent host filtration step using Bowtie2.
+
+            Different parameters are required for alignment of short vs long reads using STAR.
+            Therefore, based on the initial input validation, the appropriate parameters are selected.
+
+            If short reads:
+            ```
+            STAR
+            --outFilterMultimapNmax 99999
+            --outFilterScoreMinOverLread 0.5
+            --outFilterMatchNminOverLread 0.5
+            --outReadsUnmapped Fastx
+            --outFilterMismatchNmax 999
+            {outSAMmode}
+            --clip3pNbases 0
+            --runThreadN {{cpus}}
+            --genomeDir {{genome_dir}}"
+            --readFilesIn {{input files}}
+            ```
+
+            If long reads (specifically if there are more than 1 reads with length greater than
+            READ_LEN_CUTOFF_HIGH, as determined during input validation step):
+            ```
+            STARlong
+            --outFilterMultimapNmax 99999
+            --outFilterScoreMinOverLread 0.5
+            --outFilterMatchNminOverLread 0.5
+            --outReadsUnmapped Fastx
+            --outFilterMismatchNmax 999
+            {outSAMmode}
+            --clip3pNbases 0
+            --runThreadN {{cpus}}
+            --genomeDir {{genome_dir}}
+            --readFilesIn {{input files}}
+            --seedSearchStartLmax 20
+            --seedPerReadNmax 100000
+            --seedPerWindowNmax 1000
+            --alignTranscriptsPerReadNmax 100000
+            ```
+
+            STAR documentation can be found [here](https://github.com/alexdobin/STAR/blob/master/doc/STARmanual.pdf)
+        """
+
+        if self.collect_insert_size_metrics_for:
+            description += """
+                This step also computes insert size metrics for Paired End samples from human hosts.
+                These metrics are computed by the Broad Institute's Picard toolkit.
+
+                Picard is run on the output BAM file obtained from running STAR:
+
+                ```
+                java -jar picard.jar CollectInsertSizeMetrics
+                    I={output bam file}
+                    O=picard_insert_metrics.txt
+                    H=insert_size_histogram.pdf
+                ```
+
+                Picard documentation can be found [here](https://broadinstitute.github.io/picard/)
+            """
+
+        return description
 
     @staticmethod
     def handle_outstanding_read(r0, r0id, outstanding_r0, outstanding_r1, of0,

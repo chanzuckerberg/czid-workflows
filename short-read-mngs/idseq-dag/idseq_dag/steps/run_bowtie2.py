@@ -48,7 +48,7 @@ class PipelineStepRunBowtie2(PipelineStep):
         output_sam_file = os.path.join(
             self.output_dir_local,
             self.additional_attributes["output_sam_file"])
-        self.additional_files_to_upload.append(output_sam_file)
+        self.additional_output_files_hidden.append(output_sam_file)
         # The file structure looks like
         # "bowtie2_genome/GRCh38.primary_assembly.genome.3.bt2"
         genome_basename = command.glob(f"{genome_dir}/*.bt2*", max_results=1)[0]

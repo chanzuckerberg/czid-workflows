@@ -69,7 +69,7 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
             with open(upload_file, 'w') as uf:
                 json.dump(coverage_viz_data[accession_id], uf)
 
-        self.additional_folders_to_upload.append(coverage_viz_dir)
+        self.additional_output_folders_hidden.append(coverage_viz_dir)
 
     @staticmethod
     def prepare_data(input_files_local, info_dict, min_contig_size, num_accessions_per_taxon):

@@ -52,9 +52,19 @@ class PipelineStep(object):
         self.exec_thread = None
         self.upload_thread = None
         self.input_files_local = []
-        self.additional_files_to_upload = []
-        self.optional_files_to_upload = []
-        self.additional_folders_to_upload = []
+
+        # Extra output files for internal use, not visible to users
+        #   Automatically uploaded to s3
+        self.additional_output_files_hidden = []
+        # Extra output files available to users
+        #   Automatically uploaded to s3 and
+        #   added to status_dict with key "additional_output"
+        self.additional_output_files_visible = []
+        # Extra output folders, not visible to users
+        #   Currently all extra output folders are hidden
+        #   Automatically uploaded to s3
+        self.additional_output_folders_hidden = []
+
         self.counts_dict = {}
         self.should_terminate = False
         self.should_count_reads = False
@@ -79,7 +89,7 @@ class PipelineStep(object):
             count_file_name = "%s/%s.count" % (self.output_dir_local, self.name)
             with open(count_file_name, 'w') as count_file:
                 json.dump(self.counts_dict, count_file)
-            self.additional_files_to_upload.append(count_file_name)
+            self.additional_output_files_hidden.append(count_file_name)
 
     def output_files_local(self):
         ''' Get list of output files on local folder '''
@@ -92,12 +102,12 @@ class PipelineStep(object):
 
     def uploading_results(self):
         ''' Upload output files to s3 '''
-        files_to_upload = self.output_files_local() + self.additional_files_to_upload + [f for f in self.optional_files_to_upload if os.path.isfile(f)]
+        files_to_upload = self.output_files_local() + self.additional_output_files_hidden + self.additional_output_files_visible
         for f in files_to_upload:
             # upload to S3 - TODO(Boris): parallelize the following with better calls
             s3_path = self.s3_path(f)
             idseq_dag.util.s3.upload_with_retries(f, s3_path, checksum=self.upload_results_with_checksum)
-        for f in self.additional_folders_to_upload:
+        for f in self.additional_output_folders_hidden:
             idseq_dag.util.s3.upload_folder_with_retries(f, self.s3_path(f))
         self.status = StepStatus.UPLOADED
         self.update_status_json_file("uploaded")
@@ -117,6 +127,9 @@ class PipelineStep(object):
             self.status_dict["error"] = self.input_file_error.name
         if status == "uploaded":
             self.status_dict["end_time"] = time.time()
+
+        self.status_dict["additional_output"] = \
+            [self.relative_path(f) for f in self.additional_output_files_visible]
 
         # Then, update file by reading the json, modifying, and overwriting.
         with self.step_status_lock:
@@ -238,10 +251,11 @@ class PipelineStep(object):
         self.exec_thread = threading.Thread(target=self.thread_run)
         self.exec_thread.start()
 
+    def relative_path(self, local_path):
+        return os.path.relpath(local_path, self.output_dir_local)
+
     def s3_path(self, local_path):
-        relative_path = os.path.relpath(local_path, self.output_dir_local)
-        s3_path = os.path.join(self.output_dir_s3, relative_path)
-        return s3_path
+        return os.path.join(self.output_dir_s3, self.relative_path(local_path))
 
     def step_description(self, require_docstrings=False):
         ''' Retrieves description for the given step.

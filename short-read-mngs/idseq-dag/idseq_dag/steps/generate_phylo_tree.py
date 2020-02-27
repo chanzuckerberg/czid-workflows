@@ -129,7 +129,9 @@ class PipelineStepGeneratePhyloTree(PipelineStep):
                 "-annotate",
                 os.path.basename(annotated_genome_input)
             ])
-            self.optional_files_to_upload.append(f"{ksnp_output_dir}/SNPs_all_annotated")
+            snps_all_annotated = f"{ksnp_output_dir}/SNPs_all_annotated"
+            if os.path.isfile(snps_all_annotated):
+                self.optional_files_to_upload.append(snps_all_annotated)
 
         # Produce VCF file with respect to first reference genome in annotated_genome_input:
         if os.path.isfile(annotated_genome_input):
@@ -150,13 +152,13 @@ class PipelineStepGeneratePhyloTree(PipelineStep):
         if ksnp_vcf_file:
             target_vcf_file = f"{ksnp_output_dir}/variants_reference1.vcf"
             self.name_samples_vcf(ksnp_vcf_file[0], target_vcf_file)
-            self.additional_files_to_upload.append(target_vcf_file)
+            self.additional_output_files_hidden.append(target_vcf_file)
 
         # Upload all kSNP3 output files for potential future reference
         supplementary_files = [f for f in glob.glob(f"{ksnp_output_dir}/*")
                                if os.path.isfile(f) and
-                               f not in self.additional_files_to_upload + self.optional_files_to_upload]
-        self.additional_files_to_upload.extend(supplementary_files)
+                               f not in self.additional_output_files_hidden + self.optional_files_to_upload]
+        self.additional_output_files_hidden.extend(supplementary_files)
 
     def count_reads(self):
         pass

@@ -46,7 +46,7 @@ class PipelineStepBuildCustomBlastIndex(PipelineStep):
             # Download with wget
             db_file = os.path.join(self.output_dir_local, os.path.basename(file_source))
             urllib.request.urlretrieve(file_source, db_file)
-            self.additional_files_to_upload.append(db_file)
+            self.additional_output_files_hidden.append(db_file)
 
         # Build blast index
         if db_file.endswith(".bz2"):

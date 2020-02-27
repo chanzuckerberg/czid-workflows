@@ -91,7 +91,7 @@
       "s3_dir":  "s3://idseq-database/alignment_data/<NCBI_DATE>", "count_reads": 0
     },
     "nr_input": {
-      "s3_dir":  "s3://idseq-database/alignment_data/<NCBI_DATE>", "count_reads": 0
+      "s3_dir":  "s3://idseq-database/alignment_data/<NCBI_DATE>", "count_reads": 0 
     }
   }
 }

@@ -239,7 +239,7 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
                     fn = align_viz_name("species", species_id)
                     with open(fn, 'w') as out_f:
                         json.dump(species_dict, out_f)
-        self.additional_folders_to_upload.append(output_json_dir)
+        self.additional_output_folders_hidden.append(output_json_dir)
 
     @staticmethod
     def parse_reads(annotated_fasta, db_type):

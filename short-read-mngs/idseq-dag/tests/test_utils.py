@@ -92,10 +92,10 @@ def run_step_and_match_outputs(step_class,
     expected_files = [os.path.join(test_bundle, f) for f in step.output_files]
     actual_files = step.output_files_local()
 
-    if step.additional_files_to_upload:
-        actual_files += step.additional_files_to_upload
+    if step.additional_output_files_hidden:
+        actual_files += step.additional_output_files_hidden
 
-        for f in step.additional_files_to_upload:
+        for f in step.additional_output_files_hidden:
             basename = os.path.basename(f)
             # Handle sub-folders like "align_viz"
             if subfolder and subfolder in f:

@@ -43,7 +43,7 @@ class PipelineStepRunGsnapFilter(PipelineStep):
         output_fas = self.output_files_local()
         output_sam_file = os.path.join(self.output_dir_local,
                                        self.additional_attributes["output_sam_file"])
-        self.additional_files_to_upload.append(output_sam_file)
+        self.additional_output_files_hidden.append(output_sam_file)
 
         genome_dir = fetch_reference(self.additional_files["gsnap_genome"],
                                      self.ref_dir_local,
