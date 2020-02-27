@@ -67,7 +67,7 @@ class PipelineStepRunCDHitDup(PipelineStep):
         clstr_file = output_fas + '.clstr'  # clusters
         clstr_file2 = output_fas + '2.clstr'  # chimeric clusters
         if os.path.isfile(clstr_file) and os.path.isfile(clstr_file2):
-            self.additional_files_to_upload += [clstr_file, clstr_file2]
+            self.additional_output_files_visible += [clstr_file, clstr_file2]
         else:
             log.write(
                 f"WARNING: Files not found: {clstr_file} and {clstr_file2}")
