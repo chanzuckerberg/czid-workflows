@@ -124,7 +124,7 @@ class PipelineStepRunStar(PipelineStep):
         self.collect_insert_size_metrics_for = None
         # If we have paired end reads, a human host genome, and metrics output files were requested
         #   try to compute insert size metrics
-        if (not disable_insert_size_metrics) and host_is_human and paired and requested_insert_size_metrics_output:
+        if (not disable_insert_size_metrics) and nucleotide_type and host_is_human and paired and requested_insert_size_metrics_output:
             # Compute for RNA if host genome has an organism specific gtf file
             self.collect_insert_size_metrics_for = nucleotide_type
             # Flag that we need to generate these two files
