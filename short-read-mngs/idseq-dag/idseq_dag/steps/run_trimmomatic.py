@@ -57,7 +57,7 @@ class PipelineStepRunTrimmomatic(PipelineStep):
     CTGTCTCTTATACACATCTCCGAGCCCACGAGAC
     ```
 
-    __note:__ the output reads at this step include full-length reads that have no adapter,
+    Note: The output reads at this step include full-length reads that have no adapter,
     plus reads where the adapter has been identified and lopped off, leaving a shorter read
     (but not shorter than 35nt). In cases where the insert size is small, resulting in adapter
     read-through, R2 will be a direct reverse complement of R1; the "true" parameter enables

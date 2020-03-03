@@ -127,11 +127,6 @@ class PipelineStepRunStar(PipelineStep):
         if (not disable_insert_size_metrics) and nucleotide_type and host_is_human and paired and requested_insert_size_metrics_output:
             # Compute for RNA if host genome has an organism specific gtf file
             self.collect_insert_size_metrics_for = nucleotide_type
-            # Flag that we need to generate these two files
-            if self.output_metrics_file:
-                self.additional_output_files_visible.append(self.output_metrics_file)
-            if self.output_histogram_file:
-                self.additional_output_files_visible.append(self.output_histogram_file)
 
     def run(self):
         """Run STAR to filter out host reads."""
@@ -214,7 +209,20 @@ class PipelineStepRunStar(PipelineStep):
                     #   something unexpected has gone wrong
                     assert(os.path.isfile(bam_path)), \
                         "Expected STAR to generate Aligned.out.bam but it was not found"
-                    self.collect_insert_size_metrics(tmp, bam_path, self.output_metrics_file, self.output_histogram_file)
+                    try:
+                        self.collect_insert_size_metrics(tmp, bam_path, self.output_metrics_file, self.output_histogram_file)
+                        if os.path.exists(self.output_metrics_file):
+                            self.additional_output_files_visible.append(self.output_metrics_file)
+                        else:
+                            message = "expected picard to generate a metrics file but none was found"
+                            log.write(message=message, warning=True)
+                        if os.path.exists(self.output_histogram_file):
+                            self.additional_output_files_visible.append(self.output_histogram_file)
+                        else:
+                            message = "expected picard to generate a histogram file but none was found"
+                            log.write(message=message, warning=True)
+                    except Exception as e:
+                        log.write(message=f"encountered error while running picard: {type(e).__name__}: {e}", warning=True)
 
         # Cleanup
         for src, dst in zip(unmapped, output_files_local):
@@ -314,9 +322,16 @@ class PipelineStepRunStar(PipelineStep):
                 --outSAMmode NoQS
                 --quantMode TranscriptomeSAM GeneCounts"""
 
-        description = f"""
-            Implements the step for running STAR.
+        description = """
+            Implements the step for Host Subtraction.
+        """
 
+        if self.collect_insert_size_metrics_for:
+            description += """
+                **Host Subtraction**
+            """
+
+        description += f"""
             The STAR aligner is used for rapid first-pass host filtration.
             Unmapped reads are passed to the subsequent step. The current implementation of STAR,
             will fail to remove host sequences that map to multiple regions, thus these are filtered
@@ -365,6 +380,8 @@ class PipelineStepRunStar(PipelineStep):
 
         if self.collect_insert_size_metrics_for:
             description += """
+                **Insert Metrics**
+
                 This step also computes insert size metrics for Paired End samples from human hosts.
                 These metrics are computed by the Broad Institute's Picard toolkit.
 
