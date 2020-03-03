@@ -322,9 +322,7 @@ class PipelineStepRunStar(PipelineStep):
                 --outSAMmode NoQS
                 --quantMode TranscriptomeSAM GeneCounts"""
 
-        description = """
-            Implements the step for Host Subtraction.
-        """
+        description = ""
 
         if self.collect_insert_size_metrics_for:
             description += """
@@ -332,6 +330,8 @@ class PipelineStepRunStar(PipelineStep):
             """
 
         description += f"""
+            Implements the step for Host Subtraction.
+
             The STAR aligner is used for rapid first-pass host filtration.
             Unmapped reads are passed to the subsequent step. The current implementation of STAR,
             will fail to remove host sequences that map to multiple regions, thus these are filtered
