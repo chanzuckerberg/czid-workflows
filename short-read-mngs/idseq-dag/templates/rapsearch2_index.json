@@ -7,6 +7,10 @@
     "nr_index": [
       "nr_rapsearch",
       "nr_rapsearch.info"
+    ],
+    "lz4_out": [
+      "nr_rapsearch.lz4",
+      "nr_rapsearch.info.lz4"
     ]
   },
   "steps": [
@@ -15,6 +19,14 @@
       "out": "nr_index",
       "class": "PipelineStepGenerateRapsearch2Index",
       "module": "idseq_dag.steps.generate_rapsearch2_index",
+      "additional_files": {},
+      "additional_attributes": {}
+    },
+    {
+      "in": ["nr_index"],
+      "out": "lz4_out",
+      "class": "PipelineStepGenerateLZ4",
+      "module": "idseq_dag.steps.generate_lz4",
       "additional_files": {},
       "additional_attributes": {}
     }
