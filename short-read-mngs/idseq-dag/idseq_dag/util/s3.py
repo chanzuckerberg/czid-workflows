@@ -509,49 +509,32 @@ def fetch_byterange(first_byte, last_byte, bucket, key, output_file):
 def upload_with_retries(from_f, to_f, checksum=False):
     with IOSTREAM_UPLOADS:
         with IOSTREAM:
+            args = []
             if checksum:
-                command.execute(
-                    command_patterns.SingleCommand(
-                        cmd="s3parcp",
-                        args=[
-                            "--checksum",
-                            from_f,
-                            to_f
-                        ],
-                        env=dict(os.environ, **refreshed_credentials())
-                    )
-                )
-            else:
-                command.execute(
-                    command_patterns.SingleCommand(
-                        cmd="aws",
-                        args=[
-                            "s3",
-                            "cp",
-                            "--only-show-errors",
-                            from_f,
-                            to_f
-                        ],
-                        env=dict(os.environ, **refreshed_credentials())
-                    )
-                )
-
-
-@command.retry
-def upload_folder_with_retries(from_f, to_f):
-    with IOSTREAM_UPLOADS:
-        with IOSTREAM:
+                args.append("--checksum")
+            args.append(from_f)
+            args.append(to_f)
             command.execute(
                 command_patterns.SingleCommand(
-                    cmd="aws",
-                    args=[
-                        "s3",
-                        "cp",
-                        "--only-show-errors",
-                        "--recursive",
-                        os.path.join(from_f, ""),
-                        os.path.join(to_f, "")
-                    ],
-                    # env=dict(os.environ, **refreshed_credentials())   For recursive uploads, which could open additional connections many minutes after start, cached credentials may expire before the command is done opening connections for subfolder files.  Do not cache.
+                    cmd="s3parcp",
+                    args=args,
+                    env=dict(os.environ, **refreshed_credentials())
+                )
+            )
+
+@command.retry
+def upload_folder_with_retries(from_f, to_f, checksum=False):
+    with IOSTREAM_UPLOADS:
+        with IOSTREAM:
+            args = ["--recursive"]
+            if checksum:
+                args.append("--checksum")
+            args.append(os.path.join(from_f, ""))
+            args.append(os.path.join(to_f, ""))
+            command.execute(
+                command_patterns.SingleCommand(
+                    cmd="s3parcp",
+                    args=args,
+                    env=dict(os.environ, **refreshed_credentials())
                 )
             )

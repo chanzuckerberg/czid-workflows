@@ -232,6 +232,13 @@ Version numbers for this repo take the form X.Y.Z.
 - We increase X for a paradigm shift in how the pipeline is conceived. Example: adding a de-novo assembly step and then reassigning hits based on the assembled contigs.
 Changes to X or Y force recomputation of all results when a sample is rerun using idseq-web. Changes to Z do not force recomputation when the sample is rerun - the pipeline will lazily reuse existing outputs in AWS S3.
 
+- 3.20.1
+  - Update s3parcp
+  - Switch uploads to s3parcp
+  - Support uploading directories with checksum metadata
+  - Standardize gsnap and rapsearch index location
+  - Update gsnap index generation to upload the raw index directory in addition to a tarball
+
 - 3.20.0
   - Add a custom taxon whitelist mode. Fix taxon blacklist reference downloads.
 

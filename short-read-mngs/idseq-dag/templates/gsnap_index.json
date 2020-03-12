@@ -5,22 +5,27 @@
       "nt"
     ],
     "nt_index_tar": [
-       "nt_k16.tar"
+      "nt_k16.tar"
     ]
   },
   "steps": [
     {
-      "in": ["nt_db"],
+      "in": [
+        "nt_db"
+      ],
       "out": "nt_index_tar",
       "class": "PipelineStepGenerateGsnapIndex",
       "module": "idseq_dag.steps.generate_gsnap_index",
       "additional_files": {},
-      "additional_attributes": {"k": 16}
+      "additional_attributes": {
+        "k": 16
+      }
     }
   ],
   "given_targets": {
     "nt_db": {
-      "s3_dir":  "s3://idseq-database/ncbi-sources/<NCBI_DATE>", "count_reads": 0
+      "s3_dir": "s3://idseq-database/ncbi-sources/<NCBI_DATE>",
+      "count_reads": 0
     }
   }
 }

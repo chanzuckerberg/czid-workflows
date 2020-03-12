@@ -127,10 +127,7 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
         index_dir_suffix = self.additional_attributes.get("index_dir_suffix")
         remote_username = "ec2-user"
         remote_home_dir = os.path.join("/home", remote_username)
-        if service == "gsnap":
-            remote_index_dir = os.path.join(remote_home_dir, "share")
-        elif service == "rapsearch2":
-            remote_index_dir = os.path.join(remote_home_dir, "references", "nr_rapsearch")
+        remote_index_dir = os.path.join(remote_home_dir, "references")
 
         if index_dir_suffix:
             remote_index_dir = os.path.join(remote_index_dir, index_dir_suffix)

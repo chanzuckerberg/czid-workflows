@@ -109,7 +109,7 @@ class PipelineStep(object):
             s3_path = self.s3_path(f)
             idseq_dag.util.s3.upload_with_retries(f, s3_path, checksum=self.upload_results_with_checksum)
         for f in self.additional_output_folders_hidden:
-            idseq_dag.util.s3.upload_folder_with_retries(f, self.s3_path(f))
+            idseq_dag.util.s3.upload_folder_with_retries(f, self.s3_path(f), checksum=self.upload_results_with_checksum)
         self.status = StepStatus.UPLOADED
         self.update_status_json_file("uploaded")
 

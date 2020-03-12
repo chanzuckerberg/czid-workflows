@@ -153,7 +153,7 @@ RUN chmod +x /usr/local/bin/picard
 
 # Install s3parcp
 WORKDIR /tmp
-RUN curl -L https://github.com/chanzuckerberg/s3parcp/releases/download/v0.0.13-alpha/s3parcp_0.0.13-alpha_Linux_x86_64.tar.gz | tar zx
+RUN curl -L https://github.com/chanzuckerberg/s3parcp/releases/download/v0.1.2-alpha/s3parcp_0.1.2-alpha_Linux_x86_64.tar.gz | tar zx
 RUN mv s3parcp /usr/local/bin
 
 # Cleanup
