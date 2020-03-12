@@ -207,7 +207,7 @@ def read_file_into_set(file_name):
 
 @command.run_in_subprocess
 def call_hits_m8(input_m8, lineage_map_path, accession2taxid_dict_path,
-                 output_m8, output_summary, min_alignment_length, taxon_blacklist=None):
+                 output_m8, output_summary, min_alignment_length, taxon_blacklist=None, taxon_whitelist=None):
     """
     Determine the optimal taxon assignment for each read from the alignment
     results. When a read aligns to multiple distinct references, we need to
@@ -270,16 +270,19 @@ def call_hits_m8(input_m8, lineage_map_path, accession2taxid_dict_path,
     with open_file_db_by_extension(lineage_map_path, IdSeqDictValue.VALUE_TYPE_ARRAY) as lineage_map, \
          open_file_db_by_extension(accession2taxid_dict_path) as accession2taxid_dict:  # noqa
         _call_hits_m8_work(input_m8, lineage_map, accession2taxid_dict,
-                           output_m8, output_summary, min_alignment_length, taxon_blacklist)
+                           output_m8, output_summary, min_alignment_length, taxon_blacklist, taxon_whitelist)
 
 def _call_hits_m8_work(input_m8, lineage_map, accession2taxid_dict,
-                       output_m8, output_summary, min_alignment_length, taxon_blacklist):
-    # Helper functions
+                       output_m8, output_summary, min_alignment_length, taxon_blacklist, taxon_whitelist):
     lineage_cache = {}
     blacklist_taxids = set()
     if taxon_blacklist:
         blacklist_taxids = read_file_into_set(taxon_blacklist)
+    whitelist_taxids = set()
+    if taxon_whitelist:
+        whitelist_taxids = read_file_into_set(taxon_whitelist)
 
+    # Helper functions
     def get_lineage(accession_id):
         """Find the lineage of the accession ID and utilize a cache for
         performance by reducing random IOPS, ameliorating a key performance
@@ -298,6 +301,16 @@ def _call_hits_m8_work(input_m8, lineage_map, accession2taxid_dict,
         each taxonomy level.  Ignore accessions from the blacklist.
         """
         lineage_taxids = get_lineage(accession_id)
+        if taxon_whitelist:
+            # Skip this accession_id if none of its lineage taxids are in the
+            # whitelist set.
+            whitelisted = False
+            for taxid in lineage_taxids:
+                if taxid in whitelist_taxids:
+                    whitelisted = True
+                    break
+            if not whitelisted:
+                return
         for taxid in lineage_taxids:
             if taxid in blacklist_taxids:
                 return
