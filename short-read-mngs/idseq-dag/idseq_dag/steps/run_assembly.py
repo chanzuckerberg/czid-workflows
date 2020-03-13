@@ -7,6 +7,10 @@ from idseq_dag.engine.pipeline_step import PipelineStep
 import idseq_dag.util.command as command
 import idseq_dag.util.command_patterns as command_patterns
 
+from idseq_dag.util.m8 import MIN_CONTIG_SIZE
+from idseq_dag.util.count import get_read_cluster_size, load_cdhit_cluster_sizes, READ_COUNTING_MODE, ReadCountingMode
+
+
 class PipelineStepRunAssembly(PipelineStep):
     """ To obtain longer contigs for improved sensitivity in mapping, short reads must be
     de novo assembled using SPADES.
@@ -57,17 +61,20 @@ class PipelineStepRunAssembly(PipelineStep):
         if len(self.input_files_local[0]) >= 2:
             input_fasta = self.input_files_local[0][0]
             input_fasta2 = self.input_files_local[0][1]
+        cdhitdup_cluster_sizes_path, = self.input_files_local[1]
+        assert cdhitdup_cluster_sizes_path.endswith(".tsv"), self.input_files_local[1]
 
         assembled_contig, assembled_scaffold, bowtie_sam, contig_stats = self.output_files_local()
         read2contig = {}
         memory = self.additional_attributes.get('memory', 100)
-        self.assemble(input_fasta, input_fasta2, bowtie_fasta, assembled_contig, assembled_scaffold,
+        self.assemble(input_fasta, input_fasta2, bowtie_fasta, cdhitdup_cluster_sizes_path, assembled_contig, assembled_scaffold,
                       bowtie_sam, contig_stats, read2contig, int(memory))
 
     @staticmethod
     def assemble(input_fasta,
                  input_fasta2,
                  bowtie_fasta,  # fasta file for running bowtie against contigs
+                 cdhitdup_cluster_sizes_path,
                  assembled_contig,
                  assembled_scaffold,
                  bowtie_sam,
@@ -121,7 +128,7 @@ class PipelineStepRunAssembly(PipelineStep):
             command.move_file(assembled_scaffold_tmp, assembled_scaffold)
 
             PipelineStepRunAssembly.generate_read_to_contig_mapping(assembled_contig, bowtie_fasta,
-                                                                    read2contig, bowtie_sam, contig_stats)
+                                                                    read2contig, cdhitdup_cluster_sizes_path, bowtie_sam, contig_stats)
         except:
             # Assembly failed. create dummy output files
             command.write_text_to_file(';ASSEMBLY FAILED', assembled_contig)
@@ -135,6 +142,7 @@ class PipelineStepRunAssembly(PipelineStep):
     def generate_read_to_contig_mapping(assembled_contig,
                                         fasta_file,
                                         read2contig,
+                                        cdhitdup_cluster_sizes_path,
                                         output_bowtie_sam,
                                         output_contig_stats):
         ''' read -> contig mapping through bowtie2 alignment '''
@@ -161,13 +169,15 @@ class PipelineStepRunAssembly(PipelineStep):
                 }
             )
         )
-        contig_stats = defaultdict(int)
-        PipelineStepRunAssembly.generate_info_from_sam(output_bowtie_sam, read2contig, contig_stats)
+        contig_stats = PipelineStepRunAssembly.generate_info_from_sam(output_bowtie_sam, read2contig, cdhitdup_cluster_sizes_path)
         with open(output_contig_stats, 'w') as ocf:
             json.dump(contig_stats, ocf)
 
     @staticmethod
-    def generate_info_from_sam(bowtie_sam_file, read2contig, contig_stats):
+    def generate_info_from_sam(bowtie_sam_file, read2contig, cdhitdup_cluster_sizes_path):
+        contig_stats = defaultdict(int)
+        contig_unique_counts = defaultdict(int)
+        cdhit_cluster_sizes = load_cdhit_cluster_sizes(cdhitdup_cluster_sizes_path)
         with open(bowtie_sam_file, "r", encoding='utf-8') as samf:
             for line in samf:
                 if line[0] == '@':
@@ -175,9 +185,16 @@ class PipelineStepRunAssembly(PipelineStep):
                 fields = line.split("\t")
                 read = fields[0]
                 contig = fields[2]
-                contig_stats[contig] += 1
+                contig_stats[contig] += get_read_cluster_size(cdhit_cluster_sizes, read)  # these are non-unique read counts now
+                contig_unique_counts[contig] += 1
                 if contig != '*':
                     read2contig[read] = contig
+        for contig, unique_count in contig_unique_counts.items():  # TODO can't we just filter those out after spades, IN ONE PLACE
+            if unique_count < MIN_CONTIG_SIZE:
+                del contig_stats[contig]
+            elif READ_COUNTING_MODE == ReadCountingMode.COUNT_UNIQUE:
+                contig_stats[contig] = unique_count
+        return contig_stats
 
     def count_reads(self):
         ''' count reads '''

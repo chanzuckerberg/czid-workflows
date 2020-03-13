@@ -11,6 +11,8 @@ import idseq_dag.util.m8 as m8
 import idseq_dag.util.log as log
 
 from idseq_dag.steps.run_assembly import PipelineStepRunAssembly
+from idseq_dag.util.m8 import MIN_CONTIG_SIZE, NT_MIN_ALIGNMENT_LEN
+from idseq_dag.util.count import get_read_cluster_size, load_cdhit_cluster_sizes, READ_COUNTING_MODE, ReadCountingMode, DAG_SURGERY_HACKS_FOR_READ_COUNTING
 
 MIN_REF_FASTA_SIZE = 25
 MIN_ASSEMBLED_CONTIG_SIZE = 25
@@ -18,11 +20,6 @@ MIN_ASSEMBLED_CONTIG_SIZE = 25
 # When composing a query cover from non-overlapping fragments, consider fragments
 # that overlap less than this fraction to be disjoint.
 NT_MIN_OVERLAP_FRACTION = 0.1
-
-# NT alginments with shorter length are associated with a high rate of false positives.
-# NR doesn't have this problem because Rapsearch contains an equivalent filter.
-# Nevertheless, it may be useful to re-filter blastx results.
-NT_MIN_ALIGNMENT_LEN = 36
 
 # Ignore NT local alignments (in blastn) with sequence similarity below 80%.
 #
@@ -159,11 +156,25 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
             3. blast assembled contigs to the index
             4. update the summary
         '''
-        (_align_m8, deduped_m8, hit_summary, orig_counts) = self.input_files_local[0]
+        _align_m8, deduped_m8, hit_summary, orig_counts = self.input_files_local[0]
         assembled_contig, _assembled_scaffold, bowtie_sam, _contig_stats = self.input_files_local[1]
-        reference_fasta = self.input_files_local[2][0]
+        reference_fasta, = self.input_files_local[2]
+        cdhit_cluster_sizes_path, = self.input_files_local[3]
 
-        (blast_m8, refined_m8, refined_hit_summary, refined_counts, contig_summary_json, blast_top_m8) = self.output_files_local()
+        blast_m8, refined_m8, refined_hit_summary, refined_counts, contig_summary_json, blast_top_m8 = self.output_files_local()
+        assert refined_counts.endswith(".json"), self.output_files_local()
+
+        # TODO:  After webapp deployment of this feature, remove else case (only counts with dcr will be produced).
+        if refined_counts.endswith("_with_dcr.json"):
+            refined_counts_compat = None
+            refined_counts_with_dcr = refined_counts
+        else:
+            assert DAG_SURGERY_HACKS_FOR_READ_COUNTING
+            refined_counts_compat = refined_counts
+            refined_counts_base = refined_counts.rsplit(".", 1)[0]
+            refined_counts_with_dcr = refined_counts_base + "_with_dcr.json"
+            self.additional_output_files_visible.append(refined_counts_with_dcr)
+
         db_type = self.additional_attributes["db_type"]
         if os.path.getsize(assembled_contig) < MIN_ASSEMBLED_CONTIG_SIZE or \
            os.path.getsize(reference_fasta) < MIN_REF_FASTA_SIZE:
@@ -180,8 +191,7 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
         (read_dict, accession_dict, _selected_genera) = m8.summarize_hits(hit_summary)
         PipelineStepBlastContigs.run_blast(db_type, blast_m8, assembled_contig, reference_fasta, blast_top_m8)
         read2contig = {}
-        contig_stats = defaultdict(int)
-        PipelineStepRunAssembly.generate_info_from_sam(bowtie_sam, read2contig, contig_stats)
+        PipelineStepRunAssembly.generate_info_from_sam(bowtie_sam, read2contig, cdhit_cluster_sizes_path)
 
         (updated_read_dict, read2blastm8, contig2lineage, added_reads) = self.update_read_dict(
             read2contig, blast_top_m8, read_dict, accession_dict, db_type)
@@ -203,11 +213,11 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
             with log.log_context("PipelineStepBlastContigs", {"substep": "generate_taxon_count_json_from_m8", "db_type": db_type, "refined_counts": refined_counts}):
                 m8.generate_taxon_count_json_from_m8(refined_m8, refined_hit_summary,
                                                      evalue_type, db_type.upper(),
-                                                     lineage_db, deuterostome_db, refined_counts)
+                                                     lineage_db, deuterostome_db, cdhit_cluster_sizes_path, refined_counts_with_dcr, refined_counts_compat)
 
         # generate contig stats at genus/species level
         with log.log_context("PipelineStepBlastContigs", {"substep": "generate_taxon_summary"}):
-            contig_taxon_summary = self.generate_taxon_summary(read2contig, contig2lineage, updated_read_dict, added_reads, db_type)
+            contig_taxon_summary = self.generate_taxon_summary(read2contig, contig2lineage, updated_read_dict, added_reads, db_type, cdhit_cluster_sizes_path)
 
         with log.log_context("PipelineStepBlastContigs", {"substep": "generate_taxon_summary_json", "contig_summary_json": contig_summary_json}):
             with open(contig_summary_json, 'w') as contig_outf:
@@ -231,30 +241,60 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
             PipelineStepBlastContigs.run_blast_nr(blast_index_path, blast_m8, *args)
 
     @staticmethod
-    def generate_taxon_summary(read2contig, contig2lineage, read_dict, added_reads_dict, db_type):
+    def generate_taxon_summary(read2contig, contig2lineage, read_dict, added_reads_dict, db_type, cdhit_cluster_sizes_path):
         # Return an array with
         # { taxid: , tax_level:, contig_counts: { 'contig_name': <count>, .... } }
-        genus_summary = defaultdict(lambda: defaultdict(int))
-        species_summary = defaultdict(lambda: defaultdict(int))
+        cdhit_cluster_sizes = load_cdhit_cluster_sizes(cdhit_cluster_sizes_path)
+
+        def new_summary():
+            return defaultdict(lambda: defaultdict(lambda: [0, 0]))
+
+        genus_summary = new_summary()
+        species_summary = new_summary()
+
+        def record_read(species_taxid, genus_taxid, contig, read_id):
+            cluster_size = get_read_cluster_size(cdhit_cluster_sizes, read_id)
+
+            def increment(counters):
+                counters[0] += 1
+                counters[1] += cluster_size
+
+            increment(species_summary[species_taxid][contig])
+            increment(genus_summary[genus_taxid][contig])
+
         for read_id, read_info in read_dict.items():
-            contig = read2contig.get(read_id)
-            if contig and contig != '*' and contig2lineage.get(contig):
-                # It's possible a contig doesn't blast to anything
-                species_taxid, genus_taxid, _family_taxid = contig2lineage[contig]
-                species_summary[species_taxid][contig] += 1
-                genus_summary[genus_taxid][contig] += 1
+            contig = read2contig.get(read_id, '*')
+            lineage = contig2lineage.get(contig)
+            if contig != '*' and lineage:
+                species_taxid, genus_taxid, _family_taxid = lineage
             else:
-                # not mapping to a contig
+                # not mapping to a contig, or missing contig lineage
                 species_taxid, genus_taxid = read_info[4:6]
-                species_summary[species_taxid]['*'] += 1
-                genus_summary[genus_taxid]['*'] += 1
+                contig = '*'
+            record_read(species_taxid, genus_taxid, contig, read_id)
 
         for read_id, read_info in added_reads_dict.items():
             contig = read2contig[read_id]
             species_taxid, genus_taxid, _family_taxid = contig2lineage[contig]
-            species_summary[species_taxid][contig] += 1
-            genus_summary[genus_taxid][contig] += 1
-        # constructing the array for output
+            record_read(species_taxid, genus_taxid, contig, read_id)
+
+        # Filter out contigs that contain too few unique reads.
+        # This used to happen in db_loader in idseq-web.  Any code left there that still appears to
+        # do this filtering is effectively a no-op and the filtering cannot be done there because
+        # the non-unique read counts are no longer output by the pipeline.
+        for summary in [species_summary, genus_summary]:
+            for taxid in list(summary.keys()):
+                contig_counts = summary[taxid]
+                for contig in list(contig_counts.keys()):
+                    unique_count, nonunique_count = contig_counts[contig]
+                    if unique_count < MIN_CONTIG_SIZE:
+                        del contig_counts[contig]
+                    else:
+                        contig_counts[contig] = nonunique_count if READ_COUNTING_MODE == ReadCountingMode.COUNT_ALL else unique_count
+                if not contig_counts:
+                    del summary[taxid]
+
+        # construct the array for output
         output_array = []
         for idx, summary in enumerate([species_summary, genus_summary]):
             tax_level = idx + 1
@@ -262,6 +302,7 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
                 entry = {'taxid': taxid, 'tax_level': tax_level,
                          'count_type': db_type.upper(), 'contig_counts': contig_counts}
                 output_array.append(entry)
+
         return output_array
 
     @staticmethod

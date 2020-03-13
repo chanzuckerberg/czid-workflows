@@ -1,7 +1,6 @@
 import json
 from idseq_dag.engine.pipeline_step import PipelineStep
-import idseq_dag.util.command as command
-import idseq_dag.util.count as count
+from idseq_dag.util.count import DAG_SURGERY_HACKS_FOR_READ_COUNTING
 
 class PipelineStepCombineTaxonCounts(PipelineStep):
     '''
@@ -13,6 +12,16 @@ class PipelineStepCombineTaxonCounts(PipelineStep):
             input_files.append(target[3])
         output_file = self.output_files_local()[0]
         self.combine_counts(input_files, output_file)
+
+        # TODO:  Remove this hack as soon as the webapp has been updated so that
+        # the regular inputs and outputs of this step are "_with_dcr.json".
+        with_dcr = all(input_f.endswith("_with_dcr.json") for input_f in input_files)
+        if not with_dcr:
+            assert DAG_SURGERY_HACKS_FOR_READ_COUNTING
+            input_files = [input_f.replace(".json", "_with_dcr.json") for input_f in input_files]
+            output_file = output_file.replace(".json", "_with_dcr.json")
+            self.combine_counts(input_files, output_file)
+            self.additional_output_files_visible.append(output_file)
 
     def count_reads(self):
         pass
