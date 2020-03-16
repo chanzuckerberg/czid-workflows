@@ -31,7 +31,7 @@ def synchronized_iterator(fasta_files: List[str]) -> Iterator[Tuple[Read, ...]]:
     unpaired or paired-end reads."""
     return zip(*map(iterator, fasta_files))
 
-def count_reads(fasta_files: List[str]) -> int:
+def _count_reads(fasta_files: List[str]) -> int:
     return sum(1 for _ in synchronized_iterator(fasta_files))
 
 def input_file_type(input_file):
@@ -72,4 +72,4 @@ def multilinefa2singlelinefa(input_fasta, output_fasta):
 
 if __name__ == "__main__":
     # Count reads.  Run with fasta filenames as args.  Just for testing.
-    print(count_reads(sys.argv[1:]))
+    print(_count_reads(sys.argv[1:]))

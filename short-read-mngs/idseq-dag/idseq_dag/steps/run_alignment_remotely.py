@@ -18,6 +18,9 @@ import idseq_dag.util.m8 as m8
 from idseq_dag.util.s3 import fetch_from_s3, fetch_reference
 from idseq_dag.util.trace_lock import TraceLock
 
+from idseq_dag.util.m8 import NT_MIN_ALIGNMENT_LEN
+from idseq_dag.util.count import DAG_SURGERY_HACKS_FOR_READ_COUNTING
+
 MAX_CONCURRENT_CHUNK_UPLOADS = 4
 DEFAULT_BLACKLIST_S3 = 's3://idseq-database/taxonomy/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/taxon_blacklist.txt'
 DEFAULT_WHITELIST_S3 = 's3://idseq-database/taxonomy/2020-02-10/respiratory_taxon_whitelist.txt'
@@ -69,8 +72,30 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
     Rapsearch2 documentation is available [here](http://omics.informatics.indiana.edu/mg/RAPSearch2/).
     """
 
+    @staticmethod
+    def _service_inputs(host_filter_outputs):
+        # Destructuring-bind for host filter outputs.
+        # The host filter outputs either 1 file for unpaired reads, let's call it R1;
+        # or, 3 files for paired-end reads, which can be succinctly described
+        # as [R1, R2, R1/1 + R2/2].  All are usually named gsnap_filter_*.
+        try:
+            # Unpaired?
+            gsnap_filter_1, = host_filter_outputs
+            return {
+                "gsnap": [gsnap_filter_1],
+                "rapsearch2": [gsnap_filter_1]
+            }
+        except:
+            # Paired!
+            gsnap_filter_1, gsnap_filter_2, gsnap_filter_merged = host_filter_outputs
+            return {
+                "gsnap": [gsnap_filter_1, gsnap_filter_2],
+                "rapsearch2": [gsnap_filter_merged]
+            }
+
     def validate_input_files(self):
-        if not count.files_have_min_reads(self.input_files_local[0][0:2], 1):
+        # first two files are gsnap_filter_1.fa and gsnap_filter_2.fa
+        if not count.files_have_min_reads(self.input_files_local[0][:-1], 1):
             self.input_file_error = InputFileErrors.INSUFFICIENT_READS
 
     def __init__(self, *args, **kwrds):
@@ -86,13 +111,25 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
 
     def run(self):
         ''' Run alignmment remotely '''
-        input_fas = self.get_input_fas()
-        [output_m8, deduped_output_m8, output_hitsummary, output_counts_json] = self.output_files_local()
-        service = self.additional_attributes["service"]
-        assert service in ("gsnap", "rapsearch2")
-        min_alignment_length = 36 if service == 'gsnap' else 0  # alignments < 36-NT are false positives
 
-        self.run_remotely(input_fas, output_m8, service)
+        service_inputs = PipelineStepRunAlignmentRemotely._service_inputs(self.input_files_local[0])
+        cdhit_cluster_sizes_path, = self.input_files_local[1]
+        output_m8, deduped_output_m8, output_hitsummary, output_counts_json = self.output_files_local()
+        assert output_counts_json.endswith(".json"), self.output_files_local()
+
+        # TODO:  Remove else case after feature deployed to idseq-web (all counts will be with dcr then).
+        if output_counts_json.endswith("_with_dcr.json"):
+            output_counts_json_compat = None
+            output_counts_with_dcr_json = output_counts_json
+        else:
+            assert DAG_SURGERY_HACKS_FOR_READ_COUNTING
+            output_counts_json_compat = output_counts_json
+            output_counts_base = output_counts_json.rsplit(".", 1)[0]
+            output_counts_with_dcr_json = output_counts_base + "_with_dcr.json"
+            self.additional_output_files_visible.append(output_counts_with_dcr_json)
+
+        service = self.additional_attributes["service"]
+        self.run_remotely(service_inputs[service], output_m8, service)
 
         # get database
         lineage_db = fetch_reference(self.additional_files["lineage_db"], self.ref_dir_local)
@@ -106,6 +143,7 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
             whitelist_s3_file = self.additional_attributes.get('taxon_whitelist', DEFAULT_WHITELIST_S3)
             taxon_whitelist = fetch_reference(whitelist_s3_file, self.ref_dir_local)
 
+        min_alignment_length = NT_MIN_ALIGNMENT_LEN if service == 'gsnap' else 0
         m8.call_hits_m8(output_m8, lineage_db, accession2taxid_db,
                         deduped_output_m8, output_hitsummary, min_alignment_length, taxon_blacklist, taxon_whitelist)
 
@@ -118,7 +156,7 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
                                               self.ref_dir_local, allow_s3mi=True)
         m8.generate_taxon_count_json_from_m8(
             deduped_output_m8, output_hitsummary, evalue_type, db_type,
-            lineage_db, deuterostome_db, output_counts_json)
+            lineage_db, deuterostome_db, cdhit_cluster_sizes_path, output_counts_with_dcr_json, output_counts_json_compat)
 
     def run_remotely(self, input_fas, output_m8, service):
         key_path = self.fetch_key(os.environ['KEY_PATH_S3'])
@@ -178,17 +216,6 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
         assert None not in chunk_output_files
         # Concatenate the pieces and upload results
         self.concatenate_files(chunk_output_files, output_m8)
-
-    def get_input_fas(self):
-        service = self.additional_attributes["service"]
-        if len(self.input_files_local[0]) == 1:
-            return self.input_files_local[0]
-        if len(self.input_files_local[0]) == 3:
-            if service == 'gsnap':
-                return self.input_files_local[0][0:2]
-            if service == 'rapsearch2':
-                return [self.input_files_local[0][2]]
-        return None
 
     def fetch_key(self, key_path_s3):
         key_path = fetch_from_s3(key_path_s3, self.output_dir_local)

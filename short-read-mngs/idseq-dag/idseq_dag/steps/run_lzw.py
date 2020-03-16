@@ -1,19 +1,20 @@
+import math
+import os
+from multiprocessing import cpu_count
+from typing import Iterator
+
 import idseq_dag.util.command as command
 import idseq_dag.util.command_patterns as command_patterns
 import idseq_dag.util.count as count
 import idseq_dag.util.fasta as fasta
 import idseq_dag.util.log as log
-import math
-import os
 
-from idseq_dag.engine.pipeline_step import InputFileErrors, PipelineStep, StepStatus
+from idseq_dag.engine.pipeline_step import InputFileErrors, PipelineCountingStep, StepStatus
 from idseq_dag.util.command import run_in_subprocess
 from idseq_dag.util.thread_with_result import mt_map
-from multiprocessing import cpu_count
-from typing import Iterator
 
 
-class PipelineStepRunLZW(PipelineStep):
+class PipelineStepRunLZW(PipelineCountingStep):
     """ Remove low-complexity reads to mitigate challenges in aligning repetitive sequences.
 
     LZW refers to the Lempel-Ziv-Welch (LZW) algorithm, which provides loss-less data compression.
@@ -38,20 +39,19 @@ class PipelineStepRunLZW(PipelineStep):
 
     NUM_SLICES = min(MAX_SUBPROCS, REAL_CORES)
 
+    def input_fas(self):
+        return self.input_files_local[0][:-2]  # the last two inputs are not fasta (they contain clustering information)
+
     def validate_input_files(self):
-        if not count.files_have_min_reads(self.input_files_local[0], 1):
+        if not count.files_have_min_reads(self.input_fas(), 1):
             self.input_file_error = InputFileErrors.INSUFFICIENT_READS
 
     def run(self):
-        input_fas = self.input_files_local[0]
+        input_fas = self.input_fas()
         output_fas = self.output_files_local()
         cutoff_scores = self.additional_attributes["thresholds"]
         threshold_readlength = self.additional_attributes.get("threshold_readlength", 150)
         self.generate_lzw_filtered(input_fas, output_fas, cutoff_scores, threshold_readlength)
-
-    def count_reads(self):
-        self.should_count_reads = True
-        self.counts_dict[self.name] = count.reads_in_group(self.output_files_local()[0:2])
 
     # predict LZW score from sequence length based on model fit to mean LZW score across mean lengths
     # Across a total of 63 samples with varying read legths, the average read length and LZW compression

@@ -1,15 +1,19 @@
 import datetime
+import json
+import os
+import threading
+import time
+from abc import abstractmethod
+from enum import Enum, IntEnum
+
+import pytz
+
 import idseq_dag.util.command as command
 import idseq_dag.util.log as log
 import idseq_dag.util.s3
-import json
-import os
-import pytz
-import threading
-import time
+import idseq_dag.util.count as count
 
-from abc import abstractmethod
-from enum import Enum, IntEnum
+from idseq_dag.util.count import load_cdhit_cluster_sizes
 
 class StepStatus(IntEnum):
     INITIALIZED = 0
@@ -25,6 +29,7 @@ class InputFileErrors(Enum):
 
 class InvalidInputFileError(Exception):
     def __init__(self, json):
+        super().__init__()
         self.json = json
 
 class PipelineStep(object):
@@ -277,3 +282,38 @@ class PipelineStep(object):
         By default, show link to idseq-dag documentation.
         '''
         return {"IDseq Docs": "https://github.com/chanzuckerberg/idseq-dag/wiki"}
+
+
+class PipelineCountingStep(PipelineStep):
+
+    """PipelineStep that counts nonunique reads based on back-calculation from cluster sizes
+TSV file emitted by `PipelineStepRunCDHitDup`. Only steps that follow cd-hit-dup are eligible
+for this, and not all of them (not all steps count their outputs)."""
+
+    def input_cluster_sizes_path(self):
+        # The last last input to PipelineCountingStep is cluster_sizes.tsv
+        tsv = self.input_files_local[-1][-1]
+        assert tsv.endswith(".tsv"), str(self.input_files_local)
+        return tsv
+
+    def _count_reads_work(self, cluster_key, counter_name, fasta_files):
+        # Count reads including duplicates (expanding cd-hit-dup clusters).
+        self.should_count_reads = True
+        self.counts_dict[counter_name] = count.reads_in_group(
+            file_group=fasta_files,
+            cluster_sizes=load_cdhit_cluster_sizes(self.input_cluster_sizes_path()),
+            cluster_key=cluster_key)
+
+    def count_reads(self):
+        # Steps which decorate their read IDs must override this function to specify
+        # a cluster_key that inverses the read ID decorator so that the original
+        # cluster sizes can be looked up.
+        self._count_reads_work(
+            cluster_key=lambda x: x,
+            counter_name=self.name,
+            fasta_files=self.output_files_local()[0:2]
+        )
+
+    @abstractmethod
+    def run(self):
+        ''' implement what is actually being run in this step '''
