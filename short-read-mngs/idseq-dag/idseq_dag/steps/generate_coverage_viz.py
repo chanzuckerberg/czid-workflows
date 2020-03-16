@@ -11,7 +11,6 @@ import idseq_dag.util.s3 as s3
 
 from idseq_dag.engine.pipeline_step import PipelineStep
 from idseq_dag.util.dict import IdSeqDictValue, open_file_db_by_extension
-from idseq_dag.util.m8 import MIN_CONTIG_SIZE
 
 # These constants can be overridden with the additional_attributes dict:
 # The maximum number of bins to divide the accession length into when computing coverage.
@@ -20,6 +19,8 @@ MAX_NUM_BINS_COVERAGE = 500
 # For each taxon, we show all accessions with a contig (even if there are more than num_accessions_per_taxon of them).
 # We then add accessions with only reads until we reach num_accessions_per_taxon.
 NUM_ACCESSIONS_PER_TAXON = 10
+# The minimum read count for a valid contig. We ignore contigs below this read count.
+MIN_CONTIG_SIZE = 4
 
 class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract-method
     """Pipeline step to generate JSON files for coverage viz to

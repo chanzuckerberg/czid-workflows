@@ -1,5 +1,5 @@
 import os
-from idseq_dag.engine.pipeline_step import PipelineCountingStep, InputFileErrors
+from idseq_dag.engine.pipeline_step import PipelineStep, InputFileErrors
 import idseq_dag.util.command as command
 import idseq_dag.util.command_patterns as command_patterns
 import idseq_dag.util.convert as convert
@@ -8,7 +8,7 @@ import idseq_dag.util.count as count
 from idseq_dag.util.s3 import fetch_reference
 
 
-class PipelineStepRunGsnapFilter(PipelineCountingStep):
+class PipelineStepRunGsnapFilter(PipelineStep):
     """ Regardless of specified “host” organism, it is essential to remove all potentially-human
     sequences for privacy reasons. Thus, a final GSNAP alignment is performed against the human
     genome for samples from all host types.
@@ -34,15 +34,12 @@ class PipelineStepRunGsnapFilter(PipelineCountingStep):
     """
     # Two input FASTAs means paired reads.
 
-    def input_fas(self):
-        return self.input_files_local[0][0:2]
-
     def validate_input_files(self):
-        if not count.files_have_min_reads(self.input_fas(), 1):
+        if not count.files_have_min_reads(self.input_files_local[0][0:2], 1):
             self.input_file_error = InputFileErrors.INSUFFICIENT_READS
 
     def run(self):
-        input_fas = self.input_fas()
+        input_fas = self.input_files_local[0][0:2]
         output_fas = self.output_files_local()
         output_sam_file = os.path.join(self.output_dir_local,
                                        self.additional_attributes["output_sam_file"])
@@ -77,3 +74,7 @@ class PipelineStepRunGsnapFilter(PipelineCountingStep):
         else:
             convert.generate_unmapped_singles_from_sam(
                 output_sam_file, output_fas[0])
+
+    def count_reads(self):
+        self.should_count_reads = True
+        self.counts_dict[self.name] = count.reads_in_group(self.output_files_local()[0:2])

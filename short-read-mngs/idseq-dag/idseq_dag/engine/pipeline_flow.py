@@ -14,7 +14,6 @@ import idseq_dag.util.log as log
 import idseq_dag.util.count as count
 from idseq_dag.util.trace_lock import TraceLock
 from idseq_dag.engine.pipeline_step import PipelineStep, InvalidInputFileError
-from idseq_dag.util.count import DAG_SURGERY_HACKS_FOR_READ_COUNTING
 
 DEFAULT_OUTPUT_DIR_LOCAL = '/mnt/idseq/results/%d' % os.getpid()
 DEFAULT_REF_DIR_LOCAL = '/mnt/idseq/ref'
@@ -80,25 +79,6 @@ class PipelineFlow(object):
           "given_targets": input files that are given
         '''
         dag = json.loads(open(dag_json).read())
-
-        # hack -- add some targets here to support cd-hit-dup work
-        if DAG_SURGERY_HACKS_FOR_READ_COUNTING:
-            cdhitdup_cluster_sizes_path = "cdhitdup_cluster_sizes.tsv"
-            cdhitdup_cluster_sizes_target = "cdhitdup_cluster_sizes"
-            if dag["name"] in ("postprocess", "non_host_alignment"):
-                if cdhitdup_cluster_sizes_target not in dag["targets"]:
-                    dag["targets"][cdhitdup_cluster_sizes_target] = [
-                        cdhitdup_cluster_sizes_path
-                    ]
-                if cdhitdup_cluster_sizes_target not in dag["given_targets"]:
-                    dag["given_targets"][cdhitdup_cluster_sizes_target] = {
-                        "s3_dir": dag["given_targets"]["host_filter_out"]["s3_dir"]
-                    }
-            if dag["name"] == "host_filter":
-                for fff in ["dedup1.fa.clstr", cdhitdup_cluster_sizes_path]:
-                    if fff not in dag["targets"]["cdhitdup_out"]:
-                        dag["targets"]["cdhitdup_out"].append(fff)
-
         log.log_event("pipeline_flow.dag_json_loaded", values={"file": dag_json, "contents": dag})
         output_dir = dag["output_dir_s3"]  # noqa
         targets = dag["targets"]
@@ -107,15 +87,6 @@ class PipelineFlow(object):
         dag['name'] = dag.get("name", _get_name_from_path(dag_json))
         covered_targets = set()
         for s in steps:
-            if DAG_SURGERY_HACKS_FOR_READ_COUNTING:
-                # hack -- augment post-host-filtering step that need to consume cluster sizes output of cdhitdup (but no other outputs)
-                if s["class"] in ("PipelineStepBlastContigs", "PipelineStepRunAlignmentRemotely", "PipelineStepRunAssembly", "PipelineStepGenerateAnnotatedFasta"):
-                    if cdhitdup_cluster_sizes_target not in s["in"]:
-                        s["in"].append(cdhitdup_cluster_sizes_target)
-                # hack -- host filtering steps consume cdhitdup_out
-                if s["class"] in ("PipelineStepRunLZW", "PipelineStepRunBowtie2", "PipelineStepRunGsnapFilter", "PipelineStepRunSubsample"):
-                    if "cdhitdup_out" not in s["in"]:
-                        s["in"].append("cdhitdup_out")
             # validate each step in/out are valid targets
             for itarget in s["in"]:
                 if itarget not in targets:

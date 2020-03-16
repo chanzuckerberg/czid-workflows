@@ -29,7 +29,7 @@ class PipelineStepPrepareTaxonFasta(PipelineStep):
             partial_fasta_files.append(local_file)
         self.fasta_union(partial_fasta_files, output_file)
         for fasta in partial_fasta_files + [output_file]:
-            print(f"{count.reads(fasta)} unique reads in {fasta}")
+            print(f"{count.reads(fasta)} reads in {fasta}")
 
         # Trim Illumina adapters
         # TODO: consider moving this to the beginning of the main pipeline

@@ -232,12 +232,6 @@ Version numbers for this repo take the form X.Y.Z.
 - We increase X for a paradigm shift in how the pipeline is conceived. Example: adding a de-novo assembly step and then reassigning hits based on the assembled contigs.
 Changes to X or Y force recomputation of all results when a sample is rerun using idseq-web. Changes to Z do not force recomputation when the sample is rerun - the pipeline will lazily reuse existing outputs in AWS S3.
 
-- 3.21.0
-  - work around cdhitdup bug affecting unpaired reads that sometimes discards half the unique reads in an unpaired sample
-  - set stage for 4.0 release by changing cdhit identity threshold to 100%
-  - emit new files taxon_count_with_dcr.json, cdhit_cluster_sizes.tsv, dedup1.clstr
-  - compute ReadCountingMode.COUNT_ALL but still emit COUNT_UNIQUE
-
 - 3.20.1
   - Update s3parcp
   - Switch uploads to s3parcp

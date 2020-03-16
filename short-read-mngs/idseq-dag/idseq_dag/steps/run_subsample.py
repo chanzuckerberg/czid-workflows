@@ -1,12 +1,12 @@
 import random
 
-from idseq_dag.engine.pipeline_step import PipelineCountingStep, InputFileErrors
+from idseq_dag.engine.pipeline_step import PipelineStep, InputFileErrors
 import idseq_dag.util.command as command
 import idseq_dag.util.command_patterns as command_patterns
 import idseq_dag.util.log as log
 import idseq_dag.util.count as count
 
-class PipelineStepRunSubsample(PipelineCountingStep):
+class PipelineStepRunSubsample(PipelineStep):
     """
     Randomly subsample 1 million fragments.
 
@@ -17,29 +17,27 @@ class PipelineStepRunSubsample(PipelineCountingStep):
     1 million total fragments (1 million single-end reads or 2 million paired-end reads).
     """
 
-    def input_fas(self):
-        return self.input_files_local[0]
-
     def validate_input_files(self):
-        if not count.files_have_min_reads(self.input_fas(), 1):
+        if not count.files_have_min_reads(self.input_files_local[0][0:2], 1):
             self.input_file_error = InputFileErrors.INSUFFICIENT_READS
 
     def run(self):
         ''' Invoking subsampling '''
-        input_fas = self.input_fas()
+        input_fas = self.input_files_local[0]
         output_fas = self.output_files_local()
         max_fragments = self.additional_attributes["max_fragments"]
         PipelineStepRunSubsample.subsample_fastas(input_fas, output_fas, max_fragments)
 
     def count_reads(self):
-        # First count the unique reads, to determine if subsampling has occurred.
+        self.should_count_reads = True
         files_to_count = self.output_files_local()[0:2]
-        unique_read_count = count.reads_in_group(files_to_count)
-        max_unique_read_count = len(files_to_count) * self.additional_attributes["max_fragments"]
-        if unique_read_count == max_unique_read_count:
+        read_count = count.reads_in_group(files_to_count)
+        self.counts_dict[self.name] = read_count
+        # If the read count is exactly equal to the maximum allowed number,
+        # infer that subsampling occurred:
+        max_read_count = len(files_to_count) * self.additional_attributes["max_fragments"]
+        if read_count == max_read_count:
             self.counts_dict["subsampled"] = 1
-        # Then count non-unique reads as required for the step.
-        return super().count_reads()
 
     @staticmethod
     def subsample_fastas(input_fas, output_fas, max_fragments):
