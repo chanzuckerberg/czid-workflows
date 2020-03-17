@@ -113,7 +113,7 @@ class PipelineFlow(object):
                     if cdhitdup_cluster_sizes_target not in s["in"]:
                         s["in"].append(cdhitdup_cluster_sizes_target)
                 # hack -- host filtering steps consume cdhitdup_out
-                if s["class"] in ("PipelineStepRunLZW", "PipelineStepRunBowtie2", "PipelineStepRunGsnapFilter", "PipelineStepRunSubsample"):
+                if s["class"] in ("PipelineStepRunLZW", "PipelineStepRunStarDownstream", "PipelineStepRunBowtie2", "PipelineStepRunGsnapFilter", "PipelineStepRunSubsample"):
                     if "cdhitdup_out" not in s["in"]:
                         s["in"].append("cdhitdup_out")
             # validate each step in/out are valid targets
