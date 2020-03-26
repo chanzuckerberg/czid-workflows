@@ -1,19 +1,21 @@
+import idseq_dag.util.command as command
+import idseq_dag.util.command_patterns as command_patterns
+import idseq_dag.util.log as log
+import idseq_dag.util.m8 as m8
+import idseq_dag.util.s3 as s3
 import json
-import os
 import multiprocessing
+import os
+
 from collections import defaultdict
 from idseq_dag.engine.pipeline_step import PipelineStep
 from idseq_dag.util.trace_lock import TraceLock
-import idseq_dag.util.command as command
-import idseq_dag.util.command_patterns as command_patterns
-import idseq_dag.util.s3 as s3
-import idseq_dag.util.m8 as m8
-import idseq_dag.util.log as log
 
 from idseq_dag.steps.run_assembly import PipelineStepRunAssembly
-from idseq_dag.util.m8 import MIN_CONTIG_SIZE, NT_MIN_ALIGNMENT_LEN
-from idseq_dag.util.count import get_read_cluster_size, load_cdhit_cluster_sizes, READ_COUNTING_MODE, ReadCountingMode, DAG_SURGERY_HACKS_FOR_READ_COUNTING
+from idseq_dag.util.count import READ_COUNTING_MODE, ReadCountingMode, get_read_cluster_size, load_cdhit_cluster_sizes
 from idseq_dag.util.lineage import DEFAULT_BLACKLIST_S3, DEFAULT_WHITELIST_S3
+from idseq_dag.util.m8 import MIN_CONTIG_SIZE, NT_MIN_ALIGNMENT_LEN
+
 
 MIN_REF_FASTA_SIZE = 25
 MIN_ASSEMBLED_CONTIG_SIZE = 25
@@ -157,30 +159,20 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
             3. blast assembled contigs to the index
             4. update the summary
         '''
-        _align_m8, deduped_m8, hit_summary, orig_counts = self.input_files_local[0]
+        _align_m8, deduped_m8, hit_summary, orig_counts_with_dcr = self.input_files_local[0]
         assembled_contig, _assembled_scaffold, bowtie_sam, _contig_stats = self.input_files_local[1]
         reference_fasta, = self.input_files_local[2]
         cdhit_cluster_sizes_path, = self.input_files_local[3]
 
-        blast_m8, refined_m8, refined_hit_summary, refined_counts, contig_summary_json, blast_top_m8 = self.output_files_local()
-        assert refined_counts.endswith(".json"), self.output_files_local()
+        blast_m8, refined_m8, refined_hit_summary, refined_counts_with_dcr, contig_summary_json, blast_top_m8 = self.output_files_local()
+
+        assert refined_counts_with_dcr.endswith("with_dcr.json"), self.output_files_local()
+        assert orig_counts_with_dcr.endswith("with_dcr.json"), self.output_files_local()
 
         db_type = self.additional_attributes["db_type"]
         no_assembled_results = (
             os.path.getsize(assembled_contig) < MIN_ASSEMBLED_CONTIG_SIZE or
             os.path.getsize(reference_fasta) < MIN_REF_FASTA_SIZE)
-
-        # TODO:  After webapp deployment of this feature, remove else case (only counts with dcr will be produced).
-        if refined_counts.endswith("_with_dcr.json"):
-            refined_counts_compat = None
-            refined_counts_with_dcr = refined_counts
-        else:
-            assert DAG_SURGERY_HACKS_FOR_READ_COUNTING
-            refined_counts_compat = refined_counts
-            refined_counts_base = refined_counts.rsplit(".", 1)[0]
-            refined_counts_with_dcr = refined_counts_base + "_with_dcr.json"
-            if not no_assembled_results:
-                self.additional_output_files_visible.append(refined_counts_with_dcr)
 
         if no_assembled_results:
             # No assembled results or refseq fasta available.
@@ -189,7 +181,7 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
             command.write_text_to_file(' ', blast_top_m8)
             command.copy_file(deduped_m8, refined_m8)
             command.copy_file(hit_summary, refined_hit_summary)
-            command.copy_file(orig_counts, refined_counts)
+            command.copy_file(orig_counts_with_dcr, refined_counts_with_dcr)
             command.write_text_to_file('[]', contig_summary_json)
             return  # return in the middle of the function
 
@@ -225,11 +217,11 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
 
         evalue_type = 'raw'
         with TraceLock("PipelineStepBlastContigs-CYA", PipelineStepBlastContigs.cya_lock, debug=False):
-            with log.log_context("PipelineStepBlastContigs", {"substep": "generate_taxon_count_json_from_m8", "db_type": db_type, "refined_counts": refined_counts}):
+            with log.log_context("PipelineStepBlastContigs", {"substep": "generate_taxon_count_json_from_m8", "db_type": db_type, "refined_counts": refined_counts_with_dcr}):
                 m8.generate_taxon_count_json_from_m8(refined_m8, refined_hit_summary,
                                                      evalue_type, db_type.upper(),
                                                      lineage_db, deuterostome_db, taxon_whitelist, taxon_blacklist,
-                                                     cdhit_cluster_sizes_path, refined_counts_with_dcr, refined_counts_compat)
+                                                     cdhit_cluster_sizes_path, refined_counts_with_dcr)
 
         # generate contig stats at genus/species level
         with log.log_context("PipelineStepBlastContigs", {"substep": "generate_taxon_summary"}):

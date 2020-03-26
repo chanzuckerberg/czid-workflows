@@ -232,6 +232,9 @@ Version numbers for this repo take the form X.Y.Z.
 - We increase X for a paradigm shift in how the pipeline is conceived. Example: adding a de-novo assembly step and then reassigning hits based on the assembled contigs.
 Changes to X or Y force recomputation of all results when a sample is rerun using idseq-web. Changes to Z do not force recomputation when the sample is rerun - the pipeline will lazily reuse existing outputs in AWS S3.
 
+- 4.1.1
+  - Removed `DAG_SURGERY_HACKS_FOR_READ_COUNTING` and related code.
+
 - 4.1.0
   - Fix the behavior of blacklist and whitelist so that they are applied during compilation of taxon counts and not during identification of candidate accessions. This means that the pipeline now finds the global best taxon match for each read/contig first and only then excludes blacklisted/non-whitelisted taxa from the resulting counts. Previously, it was artifically restricting the search space by applying the blacklist and whitelist to candidate taxa upfront, thus reporting non-optimal matches for affected reads/contigs.
 

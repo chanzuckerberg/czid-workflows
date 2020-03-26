@@ -16,11 +16,6 @@ class ReadCountingMode(Enum):
 PIPELINE_MAJOR_VERSION = int(__version__.split(".", 1)[0])
 READ_COUNTING_MODE = ReadCountingMode.COUNT_ALL if PIPELINE_MAJOR_VERSION >= 4 else ReadCountingMode.COUNT_UNIQUE
 
-# Change this to False and delete all code guarded by it, after the
-# webapp change to emit the correct DAG has been deployed.  This is
-# part of the deployment process for ReadCountingMode.
-DAG_SURGERY_HACKS_FOR_READ_COUNTING = True
-
 def _count_reads_via_wc(local_file_path, max_reads):
     '''
     Count reads in a local file based on file format inferred from extension,

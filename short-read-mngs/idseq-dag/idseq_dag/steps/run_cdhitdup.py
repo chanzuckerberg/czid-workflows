@@ -4,11 +4,11 @@ import idseq_dag.util.count as count
 import idseq_dag.util.fasta as fasta
 
 from idseq_dag.engine.pipeline_step import InputFileErrors, PipelineStep
-from idseq_dag.util.count import save_cdhit_cluster_sizes, DAG_SURGERY_HACKS_FOR_READ_COUNTING
+from idseq_dag.util.count import save_cdhit_cluster_sizes
 
 
 class PipelineStepRunCDHitDup(PipelineStep):  # Deliberately not PipelineCountingStep
-    """ Removes duplicate reads.
+    """Identifies duplicate reads.
 
     ```
     cd-hit-dup
@@ -77,11 +77,6 @@ class PipelineStepRunCDHitDup(PipelineStep):  # Deliberately not PipelineCountin
             )
         )
         PipelineStepRunCDHitDup._emit_cluster_sizes(cdhit_cluster_sizes_path, cdhit_clusters_path, output_fas[0])
-
-        # TODO: When the matching idseq-web request is deployed, remove this line, because those would
-        # then become bona-fide outputs of the step and thus would not need to be added here.
-        if DAG_SURGERY_HACKS_FOR_READ_COUNTING:
-            self.additional_output_files_visible.extend([cdhit_clusters_path, cdhit_cluster_sizes_path])
 
     @staticmethod
     def _emit_cluster_sizes(cdhit_cluster_sizes_path, cdhit_clusters_path, deduped_fasta_path):

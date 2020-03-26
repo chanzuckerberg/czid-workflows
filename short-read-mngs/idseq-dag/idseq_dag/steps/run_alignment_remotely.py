@@ -1,26 +1,26 @@
-import os
-import threading
-import shutil
-import random
-import traceback
 import multiprocessing
-import time
+import os
+import random
 import shlex
+import shutil
+import threading
+import time
+import traceback
 
-from idseq_dag.engine.pipeline_step import PipelineStep, InputFileErrors
+from idseq_dag.engine.pipeline_step import InputFileErrors, PipelineStep
 
 import idseq_dag.util.command as command
 import idseq_dag.util.command_patterns as command_patterns
 import idseq_dag.util.count as count
-from idseq_dag.util.server import ASGInstance, ChunkStatus, chunk_status_tracker
 import idseq_dag.util.log as log
 import idseq_dag.util.m8 as m8
+
 from idseq_dag.util.s3 import fetch_from_s3, fetch_reference
+from idseq_dag.util.server import ASGInstance, ChunkStatus, chunk_status_tracker
 from idseq_dag.util.trace_lock import TraceLock
 
-from idseq_dag.util.m8 import NT_MIN_ALIGNMENT_LEN
-from idseq_dag.util.count import DAG_SURGERY_HACKS_FOR_READ_COUNTING
 from idseq_dag.util.lineage import DEFAULT_BLACKLIST_S3, DEFAULT_WHITELIST_S3
+from idseq_dag.util.m8 import NT_MIN_ALIGNMENT_LEN
 
 MAX_CONCURRENT_CHUNK_UPLOADS = 4
 CORRECT_NUMBER_OF_OUTPUT_COLUMNS = 12
@@ -113,19 +113,8 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
 
         service_inputs = PipelineStepRunAlignmentRemotely._service_inputs(self.input_files_local[0])
         cdhit_cluster_sizes_path, = self.input_files_local[1]
-        output_m8, deduped_output_m8, output_hitsummary, output_counts_json = self.output_files_local()
-        assert output_counts_json.endswith(".json"), self.output_files_local()
-
-        # TODO:  Remove else case after feature deployed to idseq-web (all counts will be with dcr then).
-        if output_counts_json.endswith("_with_dcr.json"):
-            output_counts_json_compat = None
-            output_counts_with_dcr_json = output_counts_json
-        else:
-            assert DAG_SURGERY_HACKS_FOR_READ_COUNTING
-            output_counts_json_compat = output_counts_json
-            output_counts_base = output_counts_json.rsplit(".", 1)[0]
-            output_counts_with_dcr_json = output_counts_base + "_with_dcr.json"
-            self.additional_output_files_visible.append(output_counts_with_dcr_json)
+        output_m8, deduped_output_m8, output_hitsummary, output_counts_with_dcr_json = self.output_files_local()
+        assert output_counts_with_dcr_json.endswith("_with_dcr.json"), self.output_files_local()
 
         service = self.additional_attributes["service"]
         self.run_remotely(service_inputs[service], output_m8, service)
@@ -156,7 +145,8 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
 
         m8.generate_taxon_count_json_from_m8(
             deduped_output_m8, output_hitsummary, evalue_type, db_type,
-            lineage_db, deuterostome_db, taxon_whitelist, taxon_blacklist, cdhit_cluster_sizes_path, output_counts_with_dcr_json, output_counts_json_compat)
+            lineage_db, deuterostome_db, taxon_whitelist, taxon_blacklist, cdhit_cluster_sizes_path,
+            output_counts_with_dcr_json)
 
     def run_remotely(self, input_fas, output_m8, service):
         key_path = self.fetch_key(os.environ['KEY_PATH_S3'])

@@ -1,16 +1,17 @@
-import os
 import json
 import math
+import os
 import random
-from collections import defaultdict
+
 from collections import Counter
+from collections import defaultdict
 
 import idseq_dag.util.command as command
-import idseq_dag.util.log as log
 import idseq_dag.util.lineage as lineage
+import idseq_dag.util.log as log
 
+from idseq_dag.util.count import READ_COUNTING_MODE, ReadCountingMode, get_read_cluster_size, load_cdhit_cluster_sizes
 from idseq_dag.util.dict import IdSeqDictValue, open_file_db_by_extension
-from idseq_dag.util.count import get_read_cluster_size, load_cdhit_cluster_sizes, READ_COUNTING_MODE, ReadCountingMode
 
 # NT alginments with shorter length are associated with a high rate of false positives.
 # NR doesn't have this problem because Rapsearch contains an equivalent filter.
@@ -426,7 +427,8 @@ def _call_hits_m8_work(input_m8, lineage_map, accession2taxid_dict,
 @command.run_in_subprocess
 def generate_taxon_count_json_from_m8(
         m8_file, hit_level_file, e_value_type, count_type, lineage_map_path,
-        deuterostome_path, taxon_whitelist_path, taxon_blacklist_path, cdhit_cluster_sizes_path, output_json_file, output_json_file_compat=None):
+        deuterostome_path, taxon_whitelist_path, taxon_blacklist_path,
+        cdhit_cluster_sizes_path, output_json_file):
     # Parse through hit file and m8 input file and format a JSON file with
     # our desired attributes, including aggregated statistics.
 
@@ -599,16 +601,5 @@ def generate_taxon_count_json_from_m8(
 
     with log.log_context("generate_taxon_count_json_from_m8", {"substep": "json_dump", "output_json_file": output_json_file}):
         with open(output_json_file, 'w') as outf:
-            json.dump(output_dict, outf)
-            outf.flush()
-
-    # Now drop the "dcr" and "[non]unique_count" keys to emit a json file that is compatible
-    # with the older webapp.
-    if output_json_file_compat:
-        for tca in taxon_counts_attributes:
-            del tca["dcr"]
-            del tca["unique_count"]
-            del tca["nonunique_count"]
-        with open(output_json_file_compat, 'w') as outf:
             json.dump(output_dict, outf)
             outf.flush()
