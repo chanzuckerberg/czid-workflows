@@ -13,6 +13,7 @@ import idseq_dag.util.log as log
 from idseq_dag.steps.run_assembly import PipelineStepRunAssembly
 from idseq_dag.util.m8 import MIN_CONTIG_SIZE, NT_MIN_ALIGNMENT_LEN
 from idseq_dag.util.count import get_read_cluster_size, load_cdhit_cluster_sizes, READ_COUNTING_MODE, ReadCountingMode, DAG_SURGERY_HACKS_FOR_READ_COUNTING
+from idseq_dag.util.lineage import DEFAULT_BLACKLIST_S3, DEFAULT_WHITELIST_S3
 
 MIN_REF_FASTA_SIZE = 25
 MIN_ASSEMBLED_CONTIG_SIZE = 25
@@ -208,16 +209,27 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
             self.additional_files["lineage_db"],
             self.ref_dir_local,
             allow_s3mi=False)  # Too small to waste s3mi
+
         deuterostome_db = None
-        evalue_type = 'raw'
         if self.additional_files.get("deuterostome_db"):
             deuterostome_db = s3.fetch_reference(self.additional_files["deuterostome_db"],
                                                  self.ref_dir_local, allow_s3mi=False)  # Too small for s3mi
+
+        blacklist_s3_file = self.additional_attributes.get('taxon_blacklist', DEFAULT_BLACKLIST_S3)
+        taxon_blacklist = s3.fetch_reference(blacklist_s3_file, self.ref_dir_local)
+
+        taxon_whitelist = None
+        if self.additional_attributes.get("use_taxon_whitelist"):
+            taxon_whitelist = s3.fetch_reference(self.additional_files.get("taxon_whitelist", DEFAULT_WHITELIST_S3),
+                                                 self.ref_dir_local)
+
+        evalue_type = 'raw'
         with TraceLock("PipelineStepBlastContigs-CYA", PipelineStepBlastContigs.cya_lock, debug=False):
             with log.log_context("PipelineStepBlastContigs", {"substep": "generate_taxon_count_json_from_m8", "db_type": db_type, "refined_counts": refined_counts}):
                 m8.generate_taxon_count_json_from_m8(refined_m8, refined_hit_summary,
                                                      evalue_type, db_type.upper(),
-                                                     lineage_db, deuterostome_db, cdhit_cluster_sizes_path, refined_counts_with_dcr, refined_counts_compat)
+                                                     lineage_db, deuterostome_db, taxon_whitelist, taxon_blacklist,
+                                                     cdhit_cluster_sizes_path, refined_counts_with_dcr, refined_counts_compat)
 
         # generate contig stats at genus/species level
         with log.log_context("PipelineStepBlastContigs", {"substep": "generate_taxon_summary"}):

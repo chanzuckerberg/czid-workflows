@@ -4,6 +4,9 @@ NULL_GENUS_ID = -200
 NULL_FAMILY_ID = -300
 NULL_LINEAGE = (str(NULL_SPECIES_ID), str(NULL_GENUS_ID), str(NULL_FAMILY_ID))
 
+DEFAULT_BLACKLIST_S3 = 's3://idseq-database/taxonomy/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/taxon_blacklist.txt'
+DEFAULT_WHITELIST_S3 = 's3://idseq-database/taxonomy/2020-02-10/respiratory_taxon_whitelist.txt'
+
 # Notes for lineage and taxonomy ID functions:
 #
 # A hit will normally have (positive) NCBI taxon IDs at all levels of the
