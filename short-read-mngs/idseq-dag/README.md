@@ -232,6 +232,8 @@ Version numbers for this repo take the form X.Y.Z.
 - We increase X for a paradigm shift in how the pipeline is conceived. Example: adding a de-novo assembly step and then reassigning hits based on the assembled contigs.
 Changes to X or Y force recomputation of all results when a sample is rerun using idseq-web. Changes to Z do not force recomputation when the sample is rerun - the pipeline will lazily reuse existing outputs in AWS S3.
 
+When releasing a new version, please add a Git tag of the form `vX.Y.Z`.
+
 - 4.1.1
   - Removed `DAG_SURGERY_HACKS_FOR_READ_COUNTING` and related code.
 
