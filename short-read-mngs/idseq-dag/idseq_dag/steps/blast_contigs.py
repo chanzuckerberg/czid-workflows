@@ -225,7 +225,16 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
 
         # generate contig stats at genus/species level
         with log.log_context("PipelineStepBlastContigs", {"substep": "generate_taxon_summary"}):
-            contig_taxon_summary = self.generate_taxon_summary(read2contig, contig2lineage, updated_read_dict, added_reads, db_type, cdhit_cluster_sizes_path)
+            contig_taxon_summary = self.generate_taxon_summary(
+                read2contig,
+                contig2lineage,
+                updated_read_dict,
+                added_reads,
+                db_type,
+                cdhit_cluster_sizes_path,
+                # same filter as applied in generate_taxon_count_json_from_m8
+                m8.build_should_keep_filter(deuterostome_db, taxon_whitelist, taxon_blacklist)
+            )
 
         with log.log_context("PipelineStepBlastContigs", {"substep": "generate_taxon_summary_json", "contig_summary_json": contig_summary_json}):
             with open(contig_summary_json, 'w') as contig_outf:
@@ -249,7 +258,15 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
             PipelineStepBlastContigs.run_blast_nr(blast_index_path, blast_m8, *args)
 
     @staticmethod
-    def generate_taxon_summary(read2contig, contig2lineage, read_dict, added_reads_dict, db_type, cdhit_cluster_sizes_path):
+    def generate_taxon_summary(
+        read2contig,
+        contig2lineage,
+        read_dict,
+        added_reads_dict,
+        db_type,
+        cdhit_cluster_sizes_path,
+        should_keep
+    ):
         # Return an array with
         # { taxid: , tax_level:, contig_counts: { 'contig_name': <count>, .... } }
         cdhit_cluster_sizes = load_cdhit_cluster_sizes(cdhit_cluster_sizes_path)
@@ -279,12 +296,14 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
                 # not mapping to a contig, or missing contig lineage
                 species_taxid, genus_taxid = read_info[4:6]
                 contig = '*'
-            record_read(species_taxid, genus_taxid, contig, read_id)
+            if should_keep((species_taxid, genus_taxid)):
+                record_read(species_taxid, genus_taxid, contig, read_id)
 
         for read_id, read_info in added_reads_dict.items():
             contig = read2contig[read_id]
             species_taxid, genus_taxid, _family_taxid = contig2lineage[contig]
-            record_read(species_taxid, genus_taxid, contig, read_id)
+            if should_keep((species_taxid, genus_taxid)):
+                record_read(species_taxid, genus_taxid, contig, read_id)
 
         # Filter out contigs that contain too few unique reads.
         # This used to happen in db_loader in idseq-web.  Any code left there that still appears to

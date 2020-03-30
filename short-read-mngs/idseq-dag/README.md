@@ -234,6 +234,9 @@ Changes to X or Y force recomputation of all results when a sample is rerun usin
 
 When releasing a new version, please add a Git tag of the form `vX.Y.Z`.
 
+- 4.2.0
+ - Apply deuterostome, blacklist, whitelist and human filters to contigs.
+
 - 4.1.1
   - Removed `DAG_SURGERY_HACKS_FOR_READ_COUNTING` and related code.
 

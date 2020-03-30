@@ -4,9 +4,10 @@
 # Version
 - [ ] I have increased the appropriate version number in https://github.com/chanzuckerberg/idseq-dag/blob/master/idseq_dag/__init__.py. Guidelines here: https://github.com/chanzuckerberg/idseq-dag/blob/pr-template/README.md#release-notes
 - [ ] I have added release notes for my new version to https://github.com/chanzuckerberg/idseq-dag/blob/master/README.md#release-notes
+- [ ] I will push a git tag after merging in the form `vX.Y.Z`
 
 # Tests
-- [ ] I have verified in IDseq staging that the pipeline still completes successfully:
+- [ ] I have verified that the pipeline still completes successfully:
     - [ ] for single-end inputs
     - [ ] for paired-end inputs
     - [ ] for FASTQ inputs

@@ -76,7 +76,8 @@ def parse_tsv(path, schema, expect_headers=False, raw_lines=False):
             try:
                 row = raw_line.rstrip("\n").split("\t")
                 assert len(row) == len(schema)
-                row_dict = {cname: ctype(vstr) for vstr, (cname, ctype) in zip(row, schema_items)}
+                row_dict = {cname: ctype(vstr) for vstr,
+                            (cname, ctype) in zip(row, schema_items)}
             except:
                 msg = f"{path}:{line_number + 1}:  Parse error.  Input does not conform to schema: {schema}"
                 log.write(msg, warning=True)
@@ -95,9 +96,11 @@ def unparse_tsv(path, schema, rows_generator):
 
 
 def log_corrupt(m8_file, line):
-    msg = m8_file + " is corrupt at line:\n" + line + "\n----> delete it and its corrupt ancestors before restarting run"
+    msg = m8_file + " is corrupt at line:\n" + line + \
+        "\n----> delete it and its corrupt ancestors before restarting run"
     log.write(msg)
     return msg
+
 
 def summarize_hits(hit_summary_file, min_reads_per_genus=0):
     ''' Parse the hit summary file from alignment and get the relevant into'''
@@ -115,7 +118,8 @@ def summarize_hits(hit_summary_file, min_reads_per_genus=0):
             total_reads += 1
             if accession_id == 'None' or accession_id == "":
                 continue
-            accession_dict[accession_id] = (species_taxid, genus_taxid, family_taxid)
+            accession_dict[accession_id] = (
+                species_taxid, genus_taxid, family_taxid)
             if int(genus_taxid) > 0:
                 genus_read_counts[genus_taxid] += 1
                 genus_species[genus_taxid].add(species_taxid)
@@ -209,11 +213,13 @@ def iterate_m8(m8_file, min_alignment_length=0, debug_caller=None, logging_inter
             line_count, m8_file, debug_caller)
         log.write(msg)
 
+
 def read_file_into_set(file_name):
     with open(file_name, 'r') as f:
         S = set(x.rstrip() for x in f)
         S.discard('')
     return S
+
 
 @command.run_in_subprocess
 def call_hits_m8(input_m8, lineage_map_path, accession2taxid_dict_path,
@@ -282,6 +288,7 @@ def call_hits_m8(input_m8, lineage_map_path, accession2taxid_dict_path,
         _call_hits_m8_work(input_m8, lineage_map, accession2taxid_dict,
                            output_m8, output_summary, min_alignment_length)
 
+
 def _call_hits_m8_work(input_m8, lineage_map, accession2taxid_dict,
                        output_m8, output_summary, min_alignment_length):
     lineage_cache = {}
@@ -312,7 +319,8 @@ def _call_hits_m8_work(input_m8, lineage_map, accession2taxid_dict,
                 # provided by other accessions. This occurs a lot and
                 # handling it in this way seems to work well.
                 continue
-            accession_list = hits[level].get(taxid_at_level, []) + [accession_id]
+            accession_list = hits[level].get(
+                taxid_at_level, []) + [accession_id]
             hits[level][taxid_at_level] = accession_list
 
     def most_frequent_accession(accession_list):
@@ -343,7 +351,8 @@ def _call_hits_m8_work(input_m8, lineage_map, accession2taxid_dict,
             selected_taxid = taxid_candidates[0]
             if len(taxid_candidates) > 1:
                 selected_taxid = random.sample(taxid_candidates, 1)[0]
-            accession_id = most_frequent_accession(species_level_hits[selected_taxid])
+            accession_id = most_frequent_accession(
+                species_level_hits[selected_taxid])
             return 1, selected_taxid, accession_id
         return -1, "-1", None
 
@@ -417,7 +426,8 @@ def _call_hits_m8_work(input_m8, lineage_map, accession2taxid_dict,
                     genus_taxid = -1
                     family_taxid = -1
                     if best_accession_id != None:
-                        (species_taxid, genus_taxid, family_taxid) = get_lineage(best_accession_id)
+                        (species_taxid, genus_taxid, family_taxid) = get_lineage(
+                            best_accession_id)
 
                     msg = f"{read_id}\t{hit_level}\t{taxid}\t{best_accession_id}"
                     msg += f"\t{species_taxid}\t{genus_taxid}\t{family_taxid}\n"
@@ -434,37 +444,8 @@ def generate_taxon_count_json_from_m8(
 
     cdhit_cluster_sizes = load_cdhit_cluster_sizes(cdhit_cluster_sizes_path)
 
-    taxids_to_remove = set()
-
-    if taxon_blacklist_path:
-        with log.log_context("generate_taxon_count_json_from_m8", {"substep": "read_blacklist_into_set"}):
-            taxids_to_remove.update(read_file_into_set(taxon_blacklist_path))
-
-    if deuterostome_path:
-        with log.log_context("generate_taxon_count_json_from_m8", {"substep": "read_file_into_set"}):
-            taxids_to_remove.update(read_file_into_set(deuterostome_path))
-
-    if taxon_whitelist_path:
-        with log.log_context("generate_taxon_count_json_from_m8", {"substep": "read_whitelist_into_set"}):
-            taxids_to_keep = read_file_into_set(taxon_whitelist_path)
-
-    def is_blacklisted(hits):
-        for taxid in hits:
-            if int(taxid) >= 0 and taxid in taxids_to_remove:
-                return True
-        return False
-
-    def is_whitelisted(hits):
-        if not taxon_whitelist_path:
-            return True
-        for taxid in hits:
-            if int(taxid) >= 0 and taxid in taxids_to_keep:
-                return True
-        return False
-
-    def should_keep(hits):
-        return is_whitelisted(hits) and not is_blacklisted(hits)
-
+    should_keep = build_should_keep_filter(
+        deuterostome_path, taxon_whitelist_path, taxon_blacklist_path)
     # Setup
     aggregation = {}
     with open(hit_level_file, 'r', encoding='utf-8') as hit_f, \
@@ -523,7 +504,8 @@ def generate_taxon_count_json_from_m8(
 
                 # Retrieve the taxon lineage and mark meaningless calls with fake
                 # taxids.
-                hit_taxids_all_levels = lineage_map.get(hit_taxid, lineage.NULL_LINEAGE)
+                hit_taxids_all_levels = lineage_map.get(
+                    hit_taxid, lineage.NULL_LINEAGE)
                 cleaned_hit_taxids_all_levels = lineage.validate_taxid_lineage(
                     hit_taxids_all_levels, hit_taxid, hit_level)
                 assert num_ranks == len(cleaned_hit_taxids_all_levels)
@@ -542,7 +524,8 @@ def generate_taxon_count_json_from_m8(
                                 'sum_e_value': 0.0
                             }
                             aggregation[agg_key] = agg_bucket
-                        agg_bucket['nonunique_count'] += get_read_cluster_size(cdhit_cluster_sizes, read_id)
+                        agg_bucket['nonunique_count'] += get_read_cluster_size(
+                            cdhit_cluster_sizes, read_id)
                         agg_bucket['unique_count'] += 1
                         agg_bucket['sum_percent_identity'] += percent_identity
                         agg_bucket['sum_alignment_length'] += alignment_length
@@ -599,7 +582,51 @@ def generate_taxon_count_json_from_m8(
             }
         }
 
-    with log.log_context("generate_taxon_count_json_from_m8", {"substep": "json_dump", "output_json_file": output_json_file}):
+    with log.log_context(
+        "generate_taxon_count_json_from_m8",
+        {"substep": "json_dump", "output_json_file": output_json_file}
+    ):
         with open(output_json_file, 'w') as outf:
             json.dump(output_dict, outf)
             outf.flush()
+
+
+def build_should_keep_filter(
+    deuterostome_path,
+    taxon_whitelist_path,
+    taxon_blacklist_path
+):
+
+    # See also HOMO_SAPIENS_TAX_IDS in idseq-web
+    taxids_to_remove = set(['9605', '9606'])
+
+    if taxon_blacklist_path:
+        with log.log_context("generate_taxon_count_json_from_m8", {"substep": "read_blacklist_into_set"}):
+            taxids_to_remove.update(read_file_into_set(taxon_blacklist_path))
+
+    if deuterostome_path:
+        with log.log_context("generate_taxon_count_json_from_m8", {"substep": "read_file_into_set"}):
+            taxids_to_remove.update(read_file_into_set(deuterostome_path))
+
+    if taxon_whitelist_path:
+        with log.log_context("generate_taxon_count_json_from_m8", {"substep": "read_whitelist_into_set"}):
+            taxids_to_keep = read_file_into_set(taxon_whitelist_path)
+
+    def is_blacklisted(hits):
+        for taxid in hits:
+            if int(taxid) >= 0 and taxid in taxids_to_remove:
+                return True
+        return False
+
+    def is_whitelisted(hits):
+        if not taxon_whitelist_path:
+            return True
+        for taxid in hits:
+            if int(taxid) >= 0 and taxid in taxids_to_keep:
+                return True
+        return False
+
+    def should_keep(hits):
+        return is_whitelisted(hits) and not is_blacklisted(hits)
+
+    return should_keep
