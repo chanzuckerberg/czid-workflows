@@ -10,7 +10,7 @@ class PipelineStepGenerateRapsearch2Index(PipelineStep):
         super().__init__(*args, **kwargs)
         self.upload_results_with_checksum = True
 
-    ''' Generate   RAPSearch index from NR '''
+    ''' Generate   RAPSearch2 index from NR '''
     def run(self):
         """
           Generate Rapsearch2 index. To be called from idseq-infra

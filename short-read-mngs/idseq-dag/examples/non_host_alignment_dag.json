@@ -61,15 +61,7 @@
 
       },
       "additional_attributes": {
-        "service": "gsnap",
-        "chunks_in_flight": 32,
-        "chunk_size": 15000,
-        "max_concurrent": 3,
-        "environment": "staging",
-        "max_interval_between_describe_instances": 900,
-        "job_tag_prefix": "RunningIDseqBatchJob_",
-        "job_tag_refresh_seconds": 600,
-        "draining_tag": "draining",
+        "alignment_algorithm": "gsnap",
         "index_dir_suffix": "2018-04-01"
       }
     },
@@ -86,15 +78,7 @@
 
       },
       "additional_attributes": {
-        "service": "rapsearch2",
-        "chunks_in_flight": 32,
-        "chunk_size": 10000,
-        "max_concurrent": 6,
-        "environment": "staging",
-        "max_interval_between_describe_instances": 900,
-        "job_tag_prefix": "RunningIDseqBatchJob_",
-        "job_tag_refresh_seconds": 600,
-        "draining_tag": "draining",
+        "alignment_algorithm": "rapsearch2",
         "index_dir_suffix": "2018-04-01"
       }
     },

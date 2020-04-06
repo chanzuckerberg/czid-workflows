@@ -48,12 +48,12 @@
     {
       "in" : ["gsnap_filter_out"], "out": "gsnap_out", "class": "PipelineStepRunGsnap",
       "additional_files": {},
-      "additional_attributes": {"chunk_size": 10000, "cluster": "prod"}
+      "additional_attributes": {}
     },
     {
       "in" : ["gsnap_filter_out"], "out": "rapsearch2_out", "class": "PipelineStepRunRapsearch2",
       "additional_files": {},
-      "additional_attributes": {"chunk_size": 5000, "cluster": "prod"}
+      "additional_attributes": {}
     },
     {
       "in" : ["gsnap_out", "rapsearch2_out"], "out": "taxon_count_out",
