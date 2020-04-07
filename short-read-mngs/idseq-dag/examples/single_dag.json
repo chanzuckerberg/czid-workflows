@@ -162,7 +162,9 @@
         "deuterostome_db":"s3://idseq-database/taxonomy/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/deuterostome_taxids.txt"
       },
       "additional_attributes": {
-        "alignment_algorithm": "gsnap",
+        "service": "gsnap", "chunks_in_flight": 32,
+        "chunk_size": 15000, "max_concurrent": 3,
+        "environment": "prod",
         "index_dir_suffix": "2018-04-01"
         }
     },
@@ -178,7 +180,9 @@
         "deuterostome_db":"s3://idseq-database/taxonomy/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/deuterostome_taxids.txt"
       },
       "additional_attributes": {
-        "alignment_algorithm": "rapsearch2",
+        "service": "rapsearch2", "chunks_in_flight": 32,
+        "chunk_size": 10000, "max_concurrent": 6,
+        "environment": "prod",
         "index_dir_suffix": "2018-04-01"
         }
     },

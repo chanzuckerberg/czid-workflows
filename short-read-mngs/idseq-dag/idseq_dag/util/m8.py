@@ -14,13 +14,13 @@ from idseq_dag.util.count import READ_COUNTING_MODE, ReadCountingMode, get_read_
 from idseq_dag.util.dict import IdSeqDictValue, open_file_db_by_extension
 
 # NT alginments with shorter length are associated with a high rate of false positives.
-# NR doesn't have this problem because Rapsearch2 contains an equivalent filter.
+# NR doesn't have this problem because Rapsearch contains an equivalent filter.
 # Nevertheless, it may be useful to re-filter blastx results.
 NT_MIN_ALIGNMENT_LEN = 36
 
 # blastn output format 6 as documented in
 # http://www.metagenomics.wiki/tools/blast/blastn-output-format-6
-# it's also the format of our GSNAP and RAPSEARCH2 output
+# it's also the format of our GSNAP and RAPSEARCH output
 BLAST_OUTPUT_SCHEMA = {
     "qseqid": str,
     "sseqid": str,
@@ -186,7 +186,7 @@ def iterate_m8(m8_file, min_alignment_length=0, debug_caller=None, logging_inter
             # the min_alignment_length filter is passed to require a minimum .m8 length
             # note:
             #    - this is already taken care of for RAPSEARCH2 .m8 files via the -l parameter
-            #    - the -l parameter used in rapsearch2 is shorter due to shorter overall alignment lengths
+            #    - the -l parameter used in rapsearch is shorter due to shorter overall alignment lengths
             #      produced by RAPSEARCH2
             ###
             if alignment_length < min_alignment_length:
@@ -407,7 +407,7 @@ def _call_hits_m8_work(input_m8, lineage_map, accession2taxid_dict,
 
             # TODO: Consider all hits within a fixed margin of the best e-value.
             # This change may need to be accompanied by a change to
-            # GSNAP/RAPSearch2 parameters.
+            # GSNAP/RAPSearch parameters.
             for read_id, accession_id, _percent_id, _alignment_length, e_value, _bitscore, line in iterate_m8(
                     input_m8, min_alignment_length, "call_hits_m8_emit_deduped_and_summarized_hits"):
                 if read_id in emitted:

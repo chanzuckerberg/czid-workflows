@@ -108,7 +108,11 @@ The following is an example dag for generating alignment output for idseq. The *
 
       },
       "additional_attributes": {
-        "alignment_algorithm": "gsnap",
+        "service": "gsnap",
+        "chunks_in_flight": 32,
+        "chunk_size": 15000,
+        "max_concurrent": 3,
+        "environment": "prod"
       }
     },
     {
@@ -124,7 +128,11 @@ The following is an example dag for generating alignment output for idseq. The *
 
       },
       "additional_attributes": {
-        "alignment_algorithm": "rapsearch2",
+        "service": "rapsearch2",
+        "chunks_in_flight": 32,
+        "chunk_size": 10000,
+        "max_concurrent": 6,
+        "environment": "prod"
       }
     },
     {
@@ -225,9 +233,6 @@ Version numbers for this repo take the form X.Y.Z.
 Changes to X or Y force recomputation of all results when a sample is rerun using idseq-web. Changes to Z do not force recomputation when the sample is rerun - the pipeline will lazily reuse existing outputs in AWS S3.
 
 When releasing a new version, please add a Git tag of the form `vX.Y.Z`.
-
-- 4.2.1
-  - Switch RunAlignmentRemotely to distribute alignment chunks use AWS Batch instead of custom Autoscaling Group Logic logic
 
 - 4.2.0
  - Apply deuterostome, blacklist, whitelist and human filters to contigs.
