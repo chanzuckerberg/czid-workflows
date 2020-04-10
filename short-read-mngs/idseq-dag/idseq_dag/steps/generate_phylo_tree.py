@@ -31,7 +31,8 @@ class PipelineStepGeneratePhyloTree(PipelineStep):
         local_taxon_fasta_files = [f for input_item in self.input_files_local for f in input_item]
         taxid = self.additional_attributes["taxid"]
         reference_taxids = self.additional_attributes.get("reference_taxids", [taxid])  # Note: will only produce a result if species-level or below
-        superkingdom_name = self.additional_attributes.get("superkingdom_name")
+        # During phylo tree creation, if the taxon is in an unknown superkingdom then the k selected from k_config is supposed to be from the key None.
+        superkingdom_name = self.additional_attributes.get("superkingdom_name") if self.additional_attributes.get("superkingdom_name") != '' else None
 
         # knsp3 has a command (MakeKSNP3infile) for making a ksnp3-compatible input file from a directory of fasta files.
         # Before we can use the command, we symlink all fasta files to a dedicated directory.
