@@ -39,6 +39,17 @@ class PipelineStepRunValidateInput(PipelineStep):
                 if splited_input_file_ext == '.gz':
                     input_files[i] = splited_input_file_name
                     try:
+                        # test if a valid gzip file
+                        command.execute(
+                            command_patterns.SingleCommand(
+                                cmd="gzip",
+                                args=[
+                                    "-t",
+                                    input_file
+                                ]
+                            )
+                        )
+                        # then decompress it
                         command.execute(
                             command_patterns.ShellScriptCommand(
                                 script=r'''gzip -dc "${input_file}" | cut -c -"$[max_line_length+1]" | head -n "${num_lines}" | awk -f "${awk_script_file}" -v max_line_length="${max_line_length}" > "${output_file}";''',

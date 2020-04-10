@@ -226,6 +226,9 @@ Changes to X or Y force recomputation of all results when a sample is rerun usin
 
 When releasing a new version, please add a Git tag of the form `vX.Y.Z`.
 
+- 4.2.3
+  - Validate input step now properly rejects invalid gzip files.
+
 - 4.2.2
   - Fix bug in phylo tree creation for organisms with an unknown superkingdom.
 
