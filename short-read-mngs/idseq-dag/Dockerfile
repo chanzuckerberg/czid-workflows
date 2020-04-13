@@ -70,7 +70,7 @@ WORKDIR /tmp
 
 # For aegea
 RUN apt-get install -y python3-pip cython python3.7-dev
-RUN pip3 install awscli-cwlogs==1.4.0 keymaker==0.2.1 boto3==1.12.27 awscli==1.11.44 dynamoq==0.0.5 tractorbeam==0.1.3
+RUN pip3 install awscli-cwlogs==1.4.0 keymaker==0.2.1 boto3==1.12.39 awscli==1.11.44 dynamoq==0.0.5 tractorbeam==0.1.3
 # Avoid cython error in 0.15.4
 RUN pip3 install pysam==0.15.3 biopython
 #RUN echo iptables-persistent iptables-persistent/autosave_v4 boolean true | debconf-set-selections
