@@ -226,6 +226,9 @@ Changes to X or Y force recomputation of all results when a sample is rerun usin
 
 When releasing a new version, please add a Git tag of the form `vX.Y.Z`.
 
+- 4.3.0
+  - Generate betacoronavirus fastq files for user download if use_taxon_whitelist is specified in the DAG.
+
 - 4.2.4
   - Update RunAlignmentRemotely to name batch jobs with the chunk id, project id, and sample id
   - Update RunAlignmentRemotely to download results using boto3 rather than fetch_from_s3
@@ -240,7 +243,7 @@ When releasing a new version, please add a Git tag of the form `vX.Y.Z`.
   - Switch RunAlignmentRemotely to distribute alignment chunks use AWS Batch instead of custom Autoscaling Group Logic logic
 
 - 4.2.0
- - Apply deuterostome, blacklist, whitelist and human filters to contigs.
+  - Apply deuterostome, blacklist, whitelist and human filters to contigs.
 
 - 4.1.1
   - Removed `DAG_SURGERY_HACKS_FOR_READ_COUNTING` and related code.

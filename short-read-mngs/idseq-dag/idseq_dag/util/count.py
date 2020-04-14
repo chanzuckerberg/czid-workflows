@@ -7,6 +7,7 @@ import idseq_dag.util.command_patterns as command_patterns
 import idseq_dag.util.fasta as fasta
 from idseq_dag import __version__
 
+
 class ReadCountingMode(Enum):
     COUNT_UNIQUE = "COUNT UNIQUE READS"
     COUNT_ALL = "COUNT ALL READS"
@@ -15,6 +16,7 @@ class ReadCountingMode(Enum):
 # Feel free to delete the support for COUNT_UNIQUE after pipeline 4.0 has been released and well accepted.
 PIPELINE_MAJOR_VERSION = int(__version__.split(".", 1)[0])
 READ_COUNTING_MODE = ReadCountingMode.COUNT_ALL if PIPELINE_MAJOR_VERSION >= 4 else ReadCountingMode.COUNT_UNIQUE
+
 
 def _count_reads_via_wc(local_file_path, max_reads):
     '''
@@ -51,6 +53,7 @@ def _count_reads_via_wc(local_file_path, max_reads):
     line_count = int(cmd_output.strip().split(' ')[0])
     return _lines2reads(line_count, file_format)
 
+
 def _lines2reads(line_count, file_format):
     '''
     Convert line count to read count based on file format.
@@ -74,6 +77,7 @@ def _lines2reads(line_count, file_format):
         read_count = line_count
     return read_count
 
+
 def _reads2lines(read_count, file_format):
     '''
     Convert read count to line count based on file format.
@@ -87,6 +91,7 @@ def _reads2lines(read_count, file_format):
         line_count = 2 * read_count
     return line_count
 
+
 def files_have_min_reads(input_files, min_reads):
     """ Checks whether fa/fasta/fq/fastq have the minimum number of reads.
     Pipeline steps can use this method for input validation.
@@ -96,6 +101,7 @@ def files_have_min_reads(input_files, min_reads):
         if num_reads < min_reads:
             return False
     return True
+
 
 def _count_reads_expanding_duplicates(local_file_path, cluster_sizes, cluster_key):
     # See documentation for reads_in_group use case with cluster_sizes, below.
@@ -125,14 +131,17 @@ def _count_reads_expanding_duplicates(local_file_path, cluster_sizes, cluster_ke
         nonunique_count += get_read_cluster_size(cluster_sizes, cluster_key(read_id))
     return unique_count, nonunique_count
 
+
 def get_read_cluster_size(cdhit_cluster_sizes, read_id):
     suffix = None
     cluster_size = cdhit_cluster_sizes.get(read_id)
     if cluster_size == None:
         prefix, suffix = read_id[:-2], read_id[-2:]
         cluster_size = cdhit_cluster_sizes.get(prefix)
-    assert cluster_size != None and suffix in (None, "/1", "/2"), f"Read ID not found in cdhit_cluster_sizes dict: {read_id}"
+    assert cluster_size != None and suffix in (
+        None, "/1", "/2"), f"Read ID not found in cdhit_cluster_sizes dict: {read_id}"
     return cluster_size
+
 
 def _load_cdhit_cluster_sizes_work(filename):
     cdhit_cluster_sizes = {}
@@ -149,19 +158,27 @@ def _load_cdhit_cluster_sizes_work(filename):
 _CDHIT_CLUSTER_SIZES_CACHE = {}
 _CDHIT_CLUSTER_SIZES_LOCK = multiprocessing.RLock()
 
+
 def load_cdhit_cluster_sizes(filename):
     with _CDHIT_CLUSTER_SIZES_LOCK:
         if filename not in _CDHIT_CLUSTER_SIZES_CACHE:
             _CDHIT_CLUSTER_SIZES_CACHE[filename] = _load_cdhit_cluster_sizes_work(filename)
         return _CDHIT_CLUSTER_SIZES_CACHE[filename]
 
-def save_cdhit_cluster_sizes(filename, cdhit_cluster_sizes):
+
+def save_cdhit_cluster_sizes(filename, cdhit_clusters):
     with _CDHIT_CLUSTER_SIZES_LOCK:
-        _CDHIT_CLUSTER_SIZES_CACHE[filename] = cdhit_cluster_sizes
+        _CDHIT_CLUSTER_SIZES_CACHE[filename] = {}
     with open(filename, "w") as tsv:
-        for read_id, cluster_size in cdhit_cluster_sizes.items():
-            assert cluster_size != None, f"If this happened, probably dedup1.fa output of cdhit contains reads that are not mentioned in dedup1.fa.clstr.  Perhaps set cluster_size=1 for those reads but also follow up with cdhit.  Read id: {read_id}"
+        for read_id, clusters in cdhit_clusters.items():
+            cluster_size = clusters[0]
+            assert cluster_size != None, f"""If this happened, probably
+            dedup1.fa output of cdhit contains reads that are not mentioned in
+            dedup1.fa.clstr.  Perhaps set cluster_size=1 for those reads but
+            also follow up with cdhit.  Read id: {read_id}"""
             tsv.write(f"{cluster_size}\t{read_id}\n")
+            _CDHIT_CLUSTER_SIZES_CACHE[filename][read_id] = cluster_size
+
 
 def reads(local_file_path):
     '''
@@ -169,6 +186,7 @@ def reads(local_file_path):
     Implemented via wc, so very fast.
     '''
     return _count_reads_via_wc(local_file_path, max_reads=None)
+
 
 def reads_in_group(file_group, max_fragments=None, cluster_sizes=None, cluster_key=None):
     '''
@@ -229,7 +247,8 @@ def reads_in_group(file_group, max_fragments=None, cluster_sizes=None, cluster_k
     assert None in (max_fragments, cluster_sizes), "Truncating to max_fragments is not supported at the same time as expanding cluster_sizes.  Consider setting max_fragments=None."
     assert (cluster_sizes == None) == (cluster_key == None), "Please specify cluster_key when using cluster_sizes."
     first_file = file_group[0]
-    unique_fast = _count_reads_via_wc(first_file, max_fragments)  # This is so fast, just do it always as a sanity check.
+    # This is so fast, just do it always as a sanity check.
+    unique_fast = _count_reads_via_wc(first_file, max_fragments)
     if cluster_sizes:
         # Run this even if ReadCountingMode.COUNT_UNIQUE to get it well tested before release.  Dark launch.
         unique, nonunique = _count_reads_expanding_duplicates(first_file, cluster_sizes, cluster_key)
