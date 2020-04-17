@@ -236,7 +236,7 @@ class PipelineStepRunSRST2(PipelineStep):
                 # because there were typos in allele names in ARGannot_r2.fasta that caused mismatches with argannot_genome.bed.
                 # Log an error. The following line will crash the pipeline step, which is intended.
                 # We prefer failing the pipeline step to showing incorrect or missing data while failing silently to the user.
-                log.write(f"[Datadog] AmrAlleleMismatchError: {row.allele} (from ARGannot_r2.fasta) could not be found in argannot_genome.bed")
+                log.write(f"AmrAlleleMismatchError: {row.allele} (from ARGannot_r2.fasta) could not be found in argannot_genome.bed")
 
             reads_for_allele = rpm_df[rpm_df["allele"] == row.allele]["reads"].values[0]
             total_reads_list.append(reads_for_allele)
