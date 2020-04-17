@@ -226,6 +226,9 @@ Changes to X or Y force recomputation of all results when a sample is rerun usin
 
 When releasing a new version, please add a Git tag of the form `vX.Y.Z`.
 
+- 4.3.1
+  - Add compatibility for idseq-web environment name 'production'
+
 - 4.3.0
   - Generate betacoronavirus fastq files for user download if use_taxon_whitelist is specified in the DAG.
 

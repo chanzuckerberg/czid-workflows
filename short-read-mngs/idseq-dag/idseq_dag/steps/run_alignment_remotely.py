@@ -374,6 +374,9 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
 
         # TODO: (tmorse) remove compat hack https://jira.czi.team/browse/IDSEQ-2568
         deployment_environment = os.environ.get("DEPLOYMENT_ENVIRONMENT", self.additional_attributes.get("environment"))
+        # TODO: (tmorse) remove compat hack https://jira.czi.team/browse/IDSEQ-2568
+        if deployment_environment == "production":
+            deployment_environment = "prod"
         priority_name = os.environ.get("PRIORITY_NAME", "normal")
         provisioning_model = os.environ.get("PROVISIONING_MODEL", "EC2")
 
