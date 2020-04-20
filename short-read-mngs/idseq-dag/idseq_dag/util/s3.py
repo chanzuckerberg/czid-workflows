@@ -85,6 +85,24 @@ def check_s3_presence(s3_path, allow_zero_byte_files=True):
         return _check_s3_presence(s3_path, allow_zero_byte_files)
 
 
+def get_s3_object_by_path(s3_path):
+    parsed_url = urlparse(s3_path, allow_fragments=False)
+    bucket = parsed_url.netloc
+    key = parsed_url.path.lstrip('/')
+    try:
+        o = boto3.resource('s3').Object(
+            bucket,
+            key
+        )
+        return o.get()['Body'].read()
+    except botocore.exceptions.ClientError as e:
+        if e.response['Error']['Code'] == "404" or e.response['Error']['Code'] == 'NoSuchKey':
+            return None
+        else:
+            # raise all others
+            raise
+
+
 def list_s3_keys(s3_path_prefix):
     """Returns a list of s3 keys prefixed by s3_path_prefix."""
     with log.log_context(context_name="s3.list_s3_objects", values={'s3_path_prefix': s3_path_prefix}, log_context_mode=log.LogContextMode.EXEC_LOG_EVENT):

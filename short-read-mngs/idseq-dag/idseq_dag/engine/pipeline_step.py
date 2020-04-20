@@ -3,6 +3,7 @@ import json
 import os
 import threading
 import time
+import traceback
 from abc import abstractmethod
 from enum import Enum, IntEnum
 
@@ -119,7 +120,6 @@ class PipelineStep(object):
         self.update_status_json_file("uploaded")
 
     def update_status_json_file(self, status):
-        log.write(f"Updating status file for step {self.name} with status {status}")
         # First, update own status dictionary
         if "description" not in self.status_dict:
             self.status_dict["description"] = self.step_description()
@@ -139,12 +139,23 @@ class PipelineStep(object):
 
         # Then, update file by reading the json, modifying, and overwriting.
         with self.step_status_lock:
-            with open(self.step_status_local, 'r') as status_file:
-                status = json.load(status_file)
-            status.update({self.name: self.status_dict})
-            with open(self.step_status_local, 'w') as status_file:
-                json.dump(status, status_file)
-            idseq_dag.util.s3.upload_with_retries(self.step_status_local, self.output_dir_s3 + "/")
+            # for the new SFN pipeline:
+            # * this lock is no longer relevant since each step is containerized
+            # * we have a race condition between steps loading and re-writing the file
+            status_file_basename = os.path.basename(self.step_status_local)
+            status_file_s3_path = f"{self.output_dir_s3}/{status_file_basename}"
+            try:
+                stage_status = json.loads(idseq_dag.util.s3.get_s3_object_by_path(status_file_s3_path) or "{}")
+                stage_status.update({self.name: self.status_dict})
+                with open(self.step_status_local, 'w') as status_file:
+                    json.dump(stage_status, status_file)
+                idseq_dag.util.s3.upload_with_retries(self.step_status_local, self.output_dir_s3 + "/")
+            except:
+                # if something fails, we prefer not raising an exception to not affect the rest of the pipeline
+                # these updates are non-critical functions and *should* be replaced by a new event bus soon
+                # so, we only log the message for later debug
+                log.write(f"Exception updating status. Traceback: {traceback.format_exc()}", warning=True)
+                return
 
     @staticmethod
     def done_file(filename):

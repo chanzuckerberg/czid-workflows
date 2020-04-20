@@ -226,6 +226,9 @@ Changes to X or Y force recomputation of all results when a sample is rerun usin
 
 When releasing a new version, please add a Git tag of the form `vX.Y.Z`.
 
+- 4.3.3
+  - Update pipeline stage status directly on s3 file for compatibility with SFN pipeline.
+
 - 4.3.2
   - Clean up log statement for AMR bug.
 
