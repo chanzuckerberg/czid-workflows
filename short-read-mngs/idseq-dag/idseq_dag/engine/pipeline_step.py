@@ -16,6 +16,7 @@ import idseq_dag.util.count as count
 
 from idseq_dag.util.count import load_cdhit_cluster_sizes
 
+
 class StepStatus(IntEnum):
     INITIALIZED = 0
     STARTED = 1  # step.start() called
@@ -23,18 +24,28 @@ class StepStatus(IntEnum):
     UPLOADED = 3  # all results uploaded to s3
     INVALID_INPUT = 4  # an error occurred when validating the input file
 
+
 class InputFileErrors(Enum):
     ''' This error will be used by the front-end to display a user-friendly error message '''
     INSUFFICIENT_READS = "INSUFFICIENT_READS"
     BROKEN_PAIRS = "BROKEN_PAIRS"
+
 
 class InvalidInputFileError(Exception):
     def __init__(self, json):
         super().__init__()
         self.json = json
 
+
+class InvalidOutputFileError(Exception):
+    def __init__(self, json):
+        super().__init__()
+        self.json = json
+
+
 class PipelineStep(object):
     ''' Each Pipeline Run Step i.e. run_star, run_bowtie2, etc '''
+
     def __init__(self, name, input_files, output_files,
                  output_dir_local, output_dir_s3, ref_dir_local,
                  additional_files, additional_attributes,
@@ -71,6 +82,9 @@ class PipelineStep(object):
         #   Currently all extra output folders are hidden
         #   Automatically uploaded to s3
         self.additional_output_folders_hidden = []
+
+        # This exists only to check for filename collisions.
+        self._files_seen = set()
 
         self.counts_dict = {}
         self.should_terminate = False
@@ -111,6 +125,14 @@ class PipelineStep(object):
         ''' Upload output files to s3 '''
         files_to_upload = self.output_files_local() + self.additional_output_files_hidden + self.additional_output_files_visible
         for f in files_to_upload:
+            if f in self._files_seen:
+                raise InvalidOutputFileError({
+                    "error": "Filename conflict: {} already exists in {}".format(f, self._files_seen),
+                    "step": self.name
+                })
+            else:
+                self._files_seen.add(f)
+
             # upload to S3 - TODO(Boris): parallelize the following with better calls
             s3_path = self.s3_path(f)
             idseq_dag.util.s3.upload_with_retries(f, s3_path, checksum=self.upload_results_with_checksum)
@@ -167,6 +189,14 @@ class PipelineStep(object):
         for fl in self.input_files:
             flist = []
             for f in fl:
+                if f in self._files_seen:
+                    raise InvalidInputFileError({
+                        "error": "Filename conflict: {} already exists in {}".format(f, self._files_seen),
+                        "step": self.name
+                    })
+                else:
+                    self._files_seen.add(f)
+
                 local_file = os.path.join(self.output_dir_local, f)
                 while True:
                     if os.path.exists(local_file) and os.path.exists(self.done_file(local_file)):
