@@ -53,6 +53,9 @@ def download_from_s3(session, src, dest):
             return False
         raise e
 
+class BatchJobFailed(Exception):
+    pass
+
 class PipelineStepRunAlignmentRemotely(PipelineStep):
     """ Runs gsnap/rapsearch2 remotely.
 
@@ -176,10 +179,10 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
         # Split files into chunks for performance
         chunk_size = GSNAP_CHUNK_SIZE if self.alignment_algorithm == "gsnap" else RAPSEARCH_CHUNK_SIZE
         part_suffix, input_chunks = self.chunk_input(input_fas, chunk_size)
-        chunk_count = len(input_chunks)
+        self.chunk_count = len(input_chunks)
 
         # Process chunks
-        chunk_output_files = [None] * chunk_count
+        chunk_output_files = [None] * self.chunk_count
         chunk_threads = []
         mutex = TraceLock("run_remotely", threading.RLock())
         # Randomize execution order for performance
@@ -195,7 +198,7 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
                     args=[
                         self.chunks_in_flight_semaphore, chunk_output_files, n, mutex, self.run_chunk,
                         [
-                            part_suffix, chunk_input_files, chunk_count, True
+                            part_suffix, chunk_input_files, True
                         ]
                     ])
                 t.start()
@@ -348,73 +351,32 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
             else:
                 raise e
 
-    def _log_alignment_batch_job_status(self, job_id, chunk_id, status):
+    def _log_alignment_batch_job_status(self, job_id, job_queue, job_definition, chunk_id, status):
         log.log_event('alignment_batch_job_status', values={
             'job_id': job_id,
             'chunk_id': chunk_id,
+            'job_queue': job_queue,
+            'job_definition': job_definition,
             'status': status,
             'alignment_algorithm': self.alignment_algorithm,
         })
 
-    def run_chunk(self, part_suffix, input_files, chunk_count, lazy_run):
-        """
-        Dispatch a chunk to worker machines for distributed GSNAP or RAPSearch
-        group machines and handle their execution.
-        """
-
-        chunk_id = int(input_files[0].split(part_suffix)[-1])
-        multihit_basename = f"multihit-{self.alignment_algorithm}-out{part_suffix}{chunk_id}.m8"
-        multihit_local_outfile = os.path.join(self.chunks_result_dir_local, multihit_basename)
-        multihit_s3_outfile = os.path.join(self.chunks_result_dir_s3, multihit_basename)
-
-        session = boto3.session.Session()
-        if lazy_run and download_from_s3(session, multihit_s3_outfile, multihit_local_outfile):
-            log.write(f"finished alignment for chunk {chunk_id} with {self.alignment_algorithm} by lazily fetching last result")
-            return multihit_local_outfile
-
-        # TODO: (tmorse) remove compat hack https://jira.czi.team/browse/IDSEQ-2568
-        deployment_environment = os.environ.get("DEPLOYMENT_ENVIRONMENT", self.additional_attributes.get("environment"))
-        # TODO: (tmorse) remove compat hack https://jira.czi.team/browse/IDSEQ-2568
-        if deployment_environment == "production":
-            deployment_environment = "prod"
-        priority_name = os.environ.get("PRIORITY_NAME", "normal")
-        provisioning_model = os.environ.get("PROVISIONING_MODEL", "EC2")
-
-        index_dir_suffix = self.additional_attributes["index_dir_suffix"]
-
-        pattern = r's3://.+/samples/([0-9]+)/([0-9]+)/'
-        m = re.match(pattern, self.chunks_result_dir_s3)
-        if m:
-            project_id, sample_id = m.group(1), m.group(2)
-        else:
-            project_id, sample_id = '0', '0'
-        job_name = f"idseq-{deployment_environment}-{self.alignment_algorithm}-project-{project_id}-sample-{sample_id}-part-{chunk_id}"
-        job_queue = f"idseq-{deployment_environment}-{self.alignment_algorithm}-{provisioning_model}-{index_dir_suffix}-{priority_name}"
-        job_definition = f"idseq-{deployment_environment}-{self.alignment_algorithm}"
-
-        environment = [{
-            'name': f"INPUT_PATH_{i}",
-            'value': os.path.join(self.chunks_result_dir_s3, input_file),
-        } for i, input_file in enumerate(input_files)] + [{
-            'name': "OUTPUT_PATH",
-            'value': multihit_s3_outfile,
-        }]
-
+    def _run_batch_job(self, session, job_name, job_queue, job_definition, environment, chunk_id, retries):
         client = session.client("batch")
         response = client.submit_job(
             jobName=job_name,
             jobQueue=job_queue,
             jobDefinition=job_definition,
             containerOverrides={"environment": environment},
-            retryStrategy={"attempts": CHUNK_MAX_ATTEMPTS},
+            retryStrategy={"attempts": retries},
             timeout={"attemptDurationSeconds": CHUNK_ATTEMPT_TIMEOUT}
         )
         job_id = response["jobId"]
-        self._log_alignment_batch_job_status(job_id, chunk_id, 'SUBMITTED')
+        self._log_alignment_batch_job_status(job_id, job_queue, job_definition, chunk_id, 'SUBMITTED')
 
-        total_timeout = CHUNK_MAX_ATTEMPTS * CHUNK_ATTEMPT_TIMEOUT
+        total_timeout = retries * CHUNK_ATTEMPT_TIMEOUT
         end_time = time.time() + total_timeout
-        chunks_in_flight = min(chunk_count, MAX_CHUNKS_IN_FLIGHT)  # use min in case we have fewer chunks than the maximum
+        chunks_in_flight = min(self.chunk_count, MAX_CHUNKS_IN_FLIGHT)  # use min in case we have fewer chunks than the maximum
         mean_delay = chunks_in_flight  # ~1 chunk per second to avoid throttling,
         delay = mean_delay + random.randint(-mean_delay // 2, mean_delay // 2)  # Add some noise to de-synchronize chunks
         status = "SUBMITTED"
@@ -431,26 +393,110 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
                     raise e
 
             if status == "SUCCEEDED":
-                self._log_alignment_batch_job_status(job_id, chunk_id, status)
+                self._log_alignment_batch_job_status(job_id, job_queue, job_definition, chunk_id, status)
                 break
             if status == "FAILED":
                 log.log_event("alignment_batch_job_failed", values={'job_id': job_id, 'chunk_id': chunk_id, 'alignment_algorithm': self.alignment_algorithm})
-                self._log_alignment_batch_job_status(job_id, chunk_id, status)
-                raise Exception("chunk alignment failed")
+                self._log_alignment_batch_job_status(job_id, job_queue, job_definition, chunk_id, status)
+                raise BatchJobFailed("chunk alignment failed")
             time.sleep(delay)
         else:
-            self._log_alignment_batch_job_status(job_id, chunk_id, 'TIMEOUT')
+            self._log_alignment_batch_job_status(job_id, job_queue, job_definition, chunk_id, 'TIMEOUT')
             raise Exception("chunk timed out but never entered the FAILED state")
+
+        return job_id
+
+    def run_chunk(self, part_suffix, input_files, lazy_run):
+        """
+        Dispatch a chunk to worker machines for distributed GSNAP or RAPSearch
+        group machines and handle their execution.
+        """
+
+        chunk_id = int(input_files[0].split(part_suffix)[-1])
+        multihit_basename = f"multihit-{self.alignment_algorithm}-out{part_suffix}{chunk_id}.m8"
+        multihit_local_outfile = os.path.join(self.chunks_result_dir_local, multihit_basename)
+        multihit_s3_outfile = os.path.join(self.chunks_result_dir_s3, multihit_basename)
+
+        session = boto3.session.Session()
+        if lazy_run and download_from_s3(session, multihit_s3_outfile, multihit_local_outfile):
+            log.write(f"finished alignment for chunk {chunk_id} with {self.alignment_algorithm} by lazily fetching last result")
+            return multihit_local_outfile
+
+        deployment_environment = os.environ["DEPLOYMENT_ENVIRONMENT"]
+        # TODO: (tmorse) remove compat hack https://jira.czi.team/browse/IDSEQ-2568
+        if deployment_environment == "production":
+            deployment_environment = "prod"
+        priority_name = os.environ.get("PRIORITY_NAME", "normal")
+
+        index_dir_suffix = self.additional_attributes["index_dir_suffix"]
+
+        pattern = r's3://.+/samples/([0-9]+)/([0-9]+)/'
+        m = re.match(pattern, self.chunks_result_dir_s3)
+        if m:
+            project_id, sample_id = m.group(1), m.group(2)
+        else:
+            project_id, sample_id = '0', '0'
+
+        provisioning_model = 'SPOT'
+
+        # TODO: parameterize these https://jira.czi.team/browse/IDSEQ-2673
+        job_name = f"idseq-{deployment_environment}-{self.alignment_algorithm}-project-{project_id}-sample-{sample_id}-part-{chunk_id}"
+        job_queue = f"idseq-{deployment_environment}-{self.alignment_algorithm}-{provisioning_model}-{index_dir_suffix}-{priority_name}"
+        job_definition = f"idseq-{deployment_environment}-{self.alignment_algorithm}"
+
+        environment = [{
+            'name': f"INPUT_PATH_{i}",
+            'value': os.path.join(self.chunks_result_dir_s3, input_file),
+        } for i, input_file in enumerate(input_files)] + [{
+            'name': "OUTPUT_PATH",
+            'value': multihit_s3_outfile,
+        }]
+
+        try:
+            job_id = self._run_batch_job(
+                session=session,
+                job_name=job_name,
+                job_queue=job_queue,
+                job_definition=job_definition,
+                environment=environment,
+                chunk_id=chunk_id,
+                retries=2
+            )
+        except BatchJobFailed:
+            provisioning_model = 'EC2'
+            # TODO: parameterize this https://jira.czi.team/browse/IDSEQ-2673
+            job_queue = f"idseq-{deployment_environment}-{self.alignment_algorithm}-{provisioning_model}-{index_dir_suffix}-{priority_name}"
+            job_id = self._run_batch_job(
+                session=session,
+                job_name=job_name,
+                job_queue=job_queue,
+                job_definition=job_definition,
+                environment=environment,
+                chunk_id=chunk_id,
+                retries=1
+            )
 
         for _ in range(12):
             if download_from_s3(session, multihit_s3_outfile, multihit_local_outfile):
                 break
             time.sleep(10)
         else:
-            log.log_event("chunk_result_missing_in_s3", values={'job_id': job_id, 'chunk_id': chunk_id, 'alignment_algorithm': self.alignment_algorithm})
+            log.log_event("chunk_result_missing_in_s3", values={
+                'job_id': job_id,
+                'chunk_id': chunk_id,
+                'job_queue': job_queue,
+                'job_definition': job_definition,
+                'alignment_algorithm': self.alignment_algorithm,
+            })
             raise Exception("Chunk result is missing from s3")
 
-        log.log_event("alignment_batch_chunk_result_downloaded", values={'job_id': job_id, 'chunk_id': chunk_id, 'alignment_algorithm': self.alignment_algorithm})
+        log.log_event("alignment_batch_chunk_result_downloaded", values={
+            'job_id': job_id,
+            'chunk_id': chunk_id,
+            'job_queue': job_queue,
+            'job_definition': job_definition,
+            'alignment_algorithm': self.alignment_algorithm,
+        })
 
         return multihit_local_outfile
 

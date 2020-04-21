@@ -1,2 +1,2 @@
 ''' idseq_dag '''
-__version__ = "4.3.5"
+__version__ = "4.3.6"
