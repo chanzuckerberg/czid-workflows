@@ -356,36 +356,35 @@ def _call_hits_m8_work(input_m8, lineage_map, accession2taxid_dict,
             return 1, selected_taxid, accession_id
         return -1, "-1", None
 
-    # Read input_m8 and group hits by read id
-    m8 = defaultdict(list)
-    for read_id, accession_id, _percent_id, _alignment_length, e_value, _bitscore, _line in iterate_m8(
-            input_m8, min_alignment_length, "call_hits_m8_initial_scan"):
-        m8[read_id].append((accession_id, e_value))
-
     # Deduplicate m8 and summarize hits
     summary = {}
     count = 0
     LOG_INCREMENT = 50000
-    log.write("Starting to summarize hits for {} read ids from {}.".format(
-        len(m8), input_m8))
-    for read_id, accessions in m8.items():
+    log.write("Starting to summarize hits from {}.".format(input_m8))
+    for read_id, accession_id, _percent_id, _alignment_length, e_value, _bitscore, _line in iterate_m8(
+            input_m8, min_alignment_length, "call_hits_m8_scan"):
         # The Expect value (E) is a parameter that describes the number of
         # hits one can 'expect' to see by chance when searching a database of
         # a particular size. It decreases exponentially as the Score (S) of
         # the match increases. Essentially, the E value describes the random
         # background noise. https://blast.ncbi.nlm.nih.gov/Blast.cgi?CMD=Web
         # &PAGE_TYPE=BlastDocs&DOC_TYPE=FAQ
-        my_best_evalue = min(acc[1] for acc in accessions)
-        hits = [{}, {}, {}]
-        for accession_id, e_value in accessions:
-            if e_value == my_best_evalue:
-                accumulate(hits, accession_id)
-        summary[read_id] = my_best_evalue, call_hit_level_v2(hits)
+        my_best_evalue, hits, _ = summary.get(read_id, (float("inf"), [{}, {}, {}], None))
+        if my_best_evalue > e_value:
+            # If we find a new better e value we want to start accumulation over
+            hits = [{}, {}, {}]
+            accumulate(hits, accession_id)
+            my_best_evalue = e_value
+        elif my_best_evalue == e_value:
+            # If we find another accession with the same e value we want to accumulate it
+            accumulate(hits, accession_id)
+        summary[read_id] = my_best_evalue, hits, call_hit_level_v2(hits)
         count += 1
         if count % LOG_INCREMENT == 0:
             msg = "Summarized hits for {} read ids from {}, and counting.".format(
                 count, input_m8)
             log.write(msg)
+
     log.write("Summarized hits for all {} read ids from {}.".format(
         count, input_m8))
 
@@ -414,8 +413,8 @@ def _call_hits_m8_work(input_m8, lineage_map, accession2taxid_dict,
                     continue
 
                 # Read the fields from the summary level info
-                best_e_value, (hit_level, taxid,
-                               best_accession_id) = summary[read_id]
+                best_e_value, _, (hit_level, taxid,
+                                  best_accession_id) = summary[read_id]
                 if best_e_value == e_value and best_accession_id in (
                         None, accession_id):
                     # Read out the hit with the best value that provides the
