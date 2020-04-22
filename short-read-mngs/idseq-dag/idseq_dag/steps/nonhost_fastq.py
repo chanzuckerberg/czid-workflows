@@ -15,12 +15,13 @@ class PipelineStepNonhostFastq(PipelineStep):
     # Works for both FASTA and FASTQ, although non-host FASTQ is more useful.
     def run(self) -> None:
         self.run_with_tax_ids(None, None)
-        if self.additional_attributes.get("use_taxon_whitelist"):
-            betacoronaviruses = {
-                2697049,  # SARS-CoV2
-                694002,  # betacoronavirus genus
-            }
-            self.run_with_tax_ids(betacoronaviruses, "betacoronavirus")
+        # TODO: (gdingle): Generate taxon-specific downloads in idseq-web at
+        # time of download. See https://jira.czi.team/browse/IDSEQ-2599.
+        betacoronaviruses = {
+            2697049,  # SARS-CoV2
+            694002,  # betacoronavirus genus
+        }
+        self.run_with_tax_ids(betacoronaviruses, "betacoronavirus")
 
     def run_with_tax_ids(
         self,
@@ -43,10 +44,9 @@ class PipelineStepNonhostFastq(PipelineStep):
         nonhost_fasta = self.input_files_local[1][0]
 
         clusters_dict = None
-        if READ_COUNTING_MODE == ReadCountingMode.COUNT_ALL \
-                and self.additional_attributes.get("use_taxon_whitelist"):
+        if READ_COUNTING_MODE == ReadCountingMode.COUNT_ALL and tax_ids:
             # TODO: (gdingle): Show all duplicate reads, not just if
-            # use_taxon_whitelist. See https://jira.czi.team/browse/IDSEQ-2598.
+            # taxids. See https://jira.czi.team/browse/IDSEQ-2598.
             # NOTE: this will load the set of all original read headers, which
             # could be several GBs in the worst case.
             clusters_dict = parse_clusters_file(
