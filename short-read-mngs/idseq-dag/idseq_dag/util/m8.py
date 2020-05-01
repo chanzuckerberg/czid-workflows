@@ -11,7 +11,7 @@ import idseq_dag.util.lineage as lineage
 import idseq_dag.util.log as log
 
 from idseq_dag.util.count import READ_COUNTING_MODE, ReadCountingMode, get_read_cluster_size, load_cdhit_cluster_sizes
-from idseq_dag.util.dict import IdSeqDictValue, open_file_db_by_extension
+from idseq_dag.util.dict import open_file_db_by_extension
 
 # NT alginments with shorter length are associated with a high rate of false positives.
 # NR doesn't have this problem because Rapsearch2 contains an equivalent filter.
@@ -283,7 +283,7 @@ def call_hits_m8(input_m8, lineage_map_path, accession2taxid_dict_path,
         * http://www.metagenomics.wiki/tools/blast/blastn-output-format-6
         * http://www.metagenomics.wiki/tools/blast/evalue
     """
-    with open_file_db_by_extension(lineage_map_path, IdSeqDictValue.VALUE_TYPE_ARRAY) as lineage_map, \
+    with open_file_db_by_extension(lineage_map_path) as lineage_map, \
          open_file_db_by_extension(accession2taxid_dict_path) as accession2taxid_dict:  # noqa
         _call_hits_m8_work(input_m8, lineage_map, accession2taxid_dict,
                            output_m8, output_summary, min_alignment_length)
@@ -449,7 +449,7 @@ def generate_taxon_count_json_from_m8(
     aggregation = {}
     with open(hit_level_file, 'r', encoding='utf-8') as hit_f, \
          open(m8_file, 'r', encoding='utf-8') as m8_f, \
-         open_file_db_by_extension(lineage_map_path, IdSeqDictValue.VALUE_TYPE_ARRAY) as lineage_map:  # noqa
+         open_file_db_by_extension(lineage_map_path) as lineage_map:  # noqa
         # Lines in m8_file and hit_level_file correspond (same read_id)
         hit_line = hit_f.readline()
         m8_line = m8_f.readline()

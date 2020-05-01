@@ -10,7 +10,7 @@ import idseq_dag.util.m8 as m8
 import idseq_dag.util.s3 as s3
 
 from idseq_dag.engine.pipeline_step import PipelineStep
-from idseq_dag.util.dict import IdSeqDictValue, open_file_db_by_extension
+from idseq_dag.util.dict import open_file_db_by_extension
 from idseq_dag.util.m8 import MIN_CONTIG_SIZE
 
 # These constants can be overridden with the additional_attributes dict:
@@ -40,7 +40,7 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
             self.additional_files["info_db"],
             self.ref_dir_local,
             allow_s3mi=True)
-        with open_file_db_by_extension(info_db, IdSeqDictValue.VALUE_TYPE_ARRAY) as info_dict:
+        with open_file_db_by_extension(info_db) as info_dict:
             # Extract data from input files.
             (taxon_data, accession_data, contig_data, read_data) = self.prepare_data(
                 self.input_files_local, info_dict, min_contig_size, num_accessions_per_taxon

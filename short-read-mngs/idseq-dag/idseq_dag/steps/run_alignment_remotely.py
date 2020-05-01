@@ -423,9 +423,6 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
             return multihit_local_outfile
 
         deployment_environment = os.environ["DEPLOYMENT_ENVIRONMENT"]
-        # TODO: (tmorse) remove compat hack https://jira.czi.team/browse/IDSEQ-2568
-        if deployment_environment == "production":
-            deployment_environment = "prod"
         priority_name = os.environ.get("PRIORITY_NAME", "normal")
 
         index_dir_suffix = self.additional_attributes["index_dir_suffix"]

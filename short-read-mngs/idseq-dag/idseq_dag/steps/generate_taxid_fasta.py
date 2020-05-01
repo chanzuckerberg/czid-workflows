@@ -2,7 +2,7 @@ from idseq_dag.engine.pipeline_step import PipelineStep
 import idseq_dag.util.lineage as lineage
 import idseq_dag.util.s3 as s3
 
-from idseq_dag.util.dict import IdSeqDictValue, open_file_db_by_extension
+from idseq_dag.util.dict import open_file_db_by_extension
 
 
 class PipelineStepGenerateTaxidFasta(PipelineStep):
@@ -33,7 +33,7 @@ class PipelineStepGenerateTaxidFasta(PipelineStep):
 
         with open(input_fa_name, 'rb') as input_fa, \
              open(self.output_files_local()[0], 'wb') as output_fa, \
-             open_file_db_by_extension(lineage_db, IdSeqDictValue.VALUE_TYPE_ARRAY) as lineage_map:  # noqa
+             open_file_db_by_extension(lineage_db) as lineage_map:  # noqa
             seq_name = input_fa.readline()
             seq_data = input_fa.readline()
             while len(seq_name) > 0 and len(seq_data) > 0:

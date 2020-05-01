@@ -15,7 +15,7 @@ import idseq_dag.util.s3 as s3
 import idseq_dag.util.log as log
 import idseq_dag.util.convert as convert
 
-from idseq_dag.util.dict import IdSeqDictValue, open_file_db_by_extension
+from idseq_dag.util.dict import open_file_db_by_extension
 
 class PipelineStepGeneratePhyloTree(PipelineStep):
     '''
@@ -318,7 +318,7 @@ class PipelineStepGeneratePhyloTree(PipelineStep):
 
         # Make map of accession to sequence file
         accession2info = dict((acc, {}) for acc in accessions)
-        with open_file_db_by_extension(nt_loc_db, IdSeqDictValue.VALUE_TYPE_ARRAY) as nt_loc_dict:
+        with open_file_db_by_extension(nt_loc_db) as nt_loc_dict:
             PipelineStepGenerateAlignmentViz.get_sequences_by_accession_list_from_s3(
                 accession2info, nt_loc_dict, nt_db)
 

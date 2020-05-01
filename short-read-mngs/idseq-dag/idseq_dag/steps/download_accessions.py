@@ -3,7 +3,7 @@ from idseq_dag.engine.pipeline_step import PipelineStep
 import idseq_dag.util.s3 as s3
 import idseq_dag.util.m8 as m8
 
-from idseq_dag.util.dict import IdSeqDictValue, open_file_db_by_extension
+from idseq_dag.util.dict import open_file_db_by_extension
 
 MAX_ACCESSION_SEQUENCE_LEN = 100000000
 ALLOW_S3MI = False  # Allow s3mi only if running on an instance with enough RAM to fit NT and NR together...
@@ -23,7 +23,7 @@ class PipelineStepDownloadAccessions(PipelineStep):
         db_s3_path = self.additional_attributes["db"]
         # db_type = self.additional_attributes["db_type"]
         (_read_dict, accession_dict, _selected_genera) = m8.summarize_hits(hit_summary)
-        with open_file_db_by_extension(loc_db, IdSeqDictValue.VALUE_TYPE_ARRAY) as loc_dict:
+        with open_file_db_by_extension(loc_db) as loc_dict:
             db_path = s3.fetch_reference(
                 db_s3_path,
                 self.ref_dir_local,
