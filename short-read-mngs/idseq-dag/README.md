@@ -226,6 +226,9 @@ Changes to X or Y force recomputation of all results when a sample is rerun usin
 
 When releasing a new version, please add a Git tag of the form `vX.Y.Z`.
 
+- 4.4
+  - When assigning contigs to their best-matching accessions, prioritize the accession that has the most best matches across all contigs when resolving ties.
+
 - 4.3.8
   - Increase gsnap and rapsearch2 chunk size by 4x to reduce the number of batch jobs generated
   - Decreased alignment max chunks in flight from 32 to 16 to better balance chunk execution between large and small jobs

@@ -1,0 +1,60 @@
+{
+    "name": "blast_contigs",
+    "output_dir_s3": "s3://idseq-samples-test/markazhang/blast_contigs_test_nt",
+    "targets": {
+      "gsnap_out": [
+        "gsnap.m8",
+        "gsnap.deduped.m8",
+        "gsnap.hitsummary.tab",
+        "gsnap_counts_with_dcr.json"
+      ],
+      "assembly_out": [
+        "contigs.fasta",
+        "scaffolds.fasta",
+        "read-contig.sam",
+        "contig_stats.json",
+        "gsnap.blast.m8"
+      ],
+      "gsnap_accessions_out": [
+        "nt.refseq.fasta"
+      ],
+      "cdhitdup_cluster_sizes": [
+        "cdhitdup_cluster_sizes.tsv"
+      ],
+      "refined_gsnap_out": [
+        "gsnap.reassigned.m8",
+        "gsnap.hitsummary2.tab",
+        "refined_gsnap_counts_with_dcr.json",
+        "gsnap_contig_summary.json",
+        "gsnap.blast.top.m8"
+      ]
+    },
+    "steps": [
+      {
+        "in": ["gsnap_out", "assembly_out", "gsnap_accessions_out", "cdhitdup_cluster_sizes"],
+        "out": "refined_gsnap_out",
+        "class": "PipelineStepBlastContigs",
+        "module": "idseq_dag.steps.blast_contigs",
+        "additional_files": {
+            "lineage_db": "s3://idseq-database/taxonomy/2020-02-10/taxid-lineages.db"
+        },
+        "additional_attributes": {
+            "db_type": "nt"
+        }
+      }
+    ],
+    "given_targets": {
+      "gsnap_out": {
+        "s3_dir": "s3://idseq-samples-prod/samples/150/46136/results/4.2"
+      },
+      "assembly_out": {
+        "s3_dir": "s3://idseq-samples-prod/samples/150/46136/postprocess/4.2/assembly"
+      },
+      "gsnap_accessions_out": {
+        "s3_dir": "s3://idseq-samples-prod/samples/150/46136/postprocess/4.2/assembly"
+      },
+      "cdhitdup_cluster_sizes": {
+        "s3_dir": "s3://idseq-samples-prod/samples/150/46136/results/4.2"
+      }
+    }
+}
