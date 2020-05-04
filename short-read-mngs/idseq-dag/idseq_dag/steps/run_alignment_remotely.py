@@ -28,11 +28,11 @@ from idseq_dag.util.trace_lock import TraceLock
 from idseq_dag.util.lineage import DEFAULT_BLACKLIST_S3, DEFAULT_WHITELIST_S3
 from idseq_dag.util.m8 import NT_MIN_ALIGNMENT_LEN
 
-MAX_CHUNKS_IN_FLIGHT = 32
+MAX_CHUNKS_IN_FLIGHT = 16
 CHUNK_MAX_ATTEMPTS = 3
 CHUNK_ATTEMPT_TIMEOUT = 60 * 60 * 3  # 3 hours
-GSNAP_CHUNK_SIZE = 60000
-RAPSEARCH_CHUNK_SIZE = 80000
+GSNAP_CHUNK_SIZE = 240000
+RAPSEARCH_CHUNK_SIZE = 320000
 
 
 def get_batch_job_desc_bucket():
