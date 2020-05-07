@@ -195,12 +195,20 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
                 self.check_for_errors(mutex, chunk_output_files, input_chunks, self.alignment_algorithm)
                 t = threading.Thread(
                     target=PipelineStepRunAlignmentRemotely.run_chunk_wrapper,
-                    args=[
-                        self.chunks_in_flight_semaphore, chunk_output_files, n, mutex, self.run_chunk,
-                        [
-                            part_suffix, chunk_input_files, True
-                        ]
-                    ])
+                    kwargs={
+                        'chunks_in_flight_semaphore': self.chunks_in_flight_semaphore,
+                        'chunk_output_files': chunk_output_files,
+                        'n': n,
+                        'mutex': mutex,
+                        'target': self.run_chunk,
+                        'kwargs': {
+                            'part_suffix': part_suffix,
+                            'input_files': chunk_input_files,
+                            # This must be disabled because cdhit dup requires chunks to be computed based on
+                            #  current input, which is non-deterministic between runs.
+                            'lazy_run': False,
+                        },
+                    })
                 t.start()
                 chunk_threads.append(t)
 
@@ -324,10 +332,10 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
                             shutil.copyfileobj(fd, outf)
 
     @staticmethod
-    def run_chunk_wrapper(chunks_in_flight_semaphore, chunk_output_files, n, mutex, target, args):
+    def run_chunk_wrapper(chunks_in_flight_semaphore, chunk_output_files, n, mutex, target, kwargs):
         result = "error"
         try:
-            result = target(*args)
+            result = target(**kwargs)
         except:
             with mutex:
                 log.write(traceback.format_exc())
