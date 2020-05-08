@@ -64,12 +64,12 @@ class PipelineStepRunBowtie2(PipelineCountingStep):
             '--very-sensitive-local', '-S', output_sam_file
         ]
 
-        seed = self.additional_attributes.get("random_seed")
-        if seed:
-            bowtie2_params.extend(['--seed', str(seed)])
-        else:
-            # Seed option won't work with -p threading option.
-            bowtie2_params.extend(['-p', str(multiprocessing.cpu_count())])
+        # FIXME: https://jira.czi.team/browse/IDSEQ-2738
+        #  We want to move towards a general randomness solution in which
+        #  all randomness is seeded based on the content of the original input.
+        #  This is currently introducing non-determinism and hard coding
+        #  an arbitrary seed here shouldn't impact correctness.
+        bowtie2_params.extend(['--seed', '4'])  # chosen by fair dice role, guaranteed to be random
 
         if len(input_fas) == 2:
             bowtie2_params.extend(['-1', input_fas[0], '-2', input_fas[1]])

@@ -204,9 +204,7 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
                         'kwargs': {
                             'part_suffix': part_suffix,
                             'input_files': chunk_input_files,
-                            # This must be disabled because cdhit dup requires chunks to be computed based on
-                            #  current input, which is non-deterministic between runs.
-                            'lazy_run': False,
+                            'lazy_run': True,
                         },
                     })
                 t.start()

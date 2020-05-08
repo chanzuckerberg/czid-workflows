@@ -335,6 +335,14 @@ def _call_hits_m8_work(input_m8, lineage_map, accession2taxid_dict,
                 return level + 1, taxid, accession_id
         return -1, "-1", None
 
+    # FIXME: https://jira.czi.team/browse/IDSEQ-2738
+    #  We want to move towards a general randomness solution in which
+    #  all randomness is seeded based on the content of the original input.
+    #  This is currently introducing non-determinism and hard coding
+    #  an arbitrary seed here shouldn't impact correctness. This is only used
+    #  to break ties.
+    randgen = random.Random(x=4)  # chosen by fair dice role, guaranteed to be random
+
     def call_hit_level_v2(hits):
         ''' Always call hit at the species level with the taxid with most matches '''
         species_level_hits = hits[0]
@@ -350,7 +358,7 @@ def _call_hits_m8_work(input_m8, lineage_map, accession2taxid_dict,
         if max_match > 0:
             selected_taxid = taxid_candidates[0]
             if len(taxid_candidates) > 1:
-                selected_taxid = random.sample(taxid_candidates, 1)[0]
+                selected_taxid = randgen.sample(taxid_candidates, 1)[0]
             accession_id = most_frequent_accession(
                 species_level_hits[selected_taxid])
             return 1, selected_taxid, accession_id

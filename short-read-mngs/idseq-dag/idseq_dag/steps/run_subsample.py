@@ -1,4 +1,5 @@
 import random
+import hashlib
 
 from idseq_dag.engine.pipeline_step import PipelineCountingStep, InputFileErrors
 import idseq_dag.util.command as command
@@ -65,7 +66,14 @@ class PipelineStepRunSubsample(PipelineCountingStep):
             return
 
         # total_records > max_fragments, sample
-        randgen = random.Random(x=hash(input_fas[0]))
+        m = hashlib.md5()
+        # FIXME: https://jira.czi.team/browse/IDSEQ-2738
+        #   Currently input_fas[0] is always the same string so this is equivalent to a hard-coded seed
+        #   This is being left here because we want to move towards seeding all RNG based on a hash of the
+        #   input file contents and we want to communicate that intent. We may want to use cr32c checksums
+        #   for performance reasons.
+        m.update(input_fas[0].encode())
+        randgen = random.Random(x=m.digest())
         records_to_keep = randgen.sample(range(total_records), max_fragments)
         PipelineStepRunSubsample.subset(input_fas[0], output_fas[0], records_to_keep)
         if paired:

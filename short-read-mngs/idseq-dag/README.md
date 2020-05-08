@@ -226,6 +226,10 @@ Changes to X or Y force recomputation of all results when a sample is rerun usin
 
 When releasing a new version, please add a Git tag of the form `vX.Y.Z`.
 
+- 4.4.2
+  - Make the pipeline deterministic with hard coded seeded pseudo random number generation
+  - Re-enable reusing previous chunks when re-running alignment.
+
 - 4.4.1
   - Disable reusing previous chunks when re-running alignment. This was casing an error because the input to this step is non-determinsitic and cdhitdup requires all reads from the input to be present in the `cdhit_cluster_sizes` file.
 
