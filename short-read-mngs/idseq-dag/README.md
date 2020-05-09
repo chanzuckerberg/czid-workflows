@@ -226,6 +226,9 @@ Changes to X or Y force recomputation of all results when a sample is rerun usin
 
 When releasing a new version, please add a Git tag of the form `vX.Y.Z`.
 
+- 4.5.0
+  - Include non-unique reads in non-host fastqs for download.
+
 - 4.4.2
   - Make the pipeline deterministic with hard coded seeded pseudo random number generation
   - Re-enable reusing previous chunks when re-running alignment.

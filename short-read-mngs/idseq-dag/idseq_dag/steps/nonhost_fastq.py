@@ -14,19 +14,29 @@ class PipelineStepNonhostFastq(PipelineStep):
     # Either one or two input read files can be supplied.
     # Works for both FASTA and FASTQ, although non-host FASTQ is more useful.
     def run(self) -> None:
-        self.run_with_tax_ids(None, None)
+        clusters_dict = None
+        if READ_COUNTING_MODE == ReadCountingMode.COUNT_ALL:
+            # NOTE: this will load the set of all original read headers, which
+            # could be several GBs in the worst case.
+            clusters_dict = parse_clusters_file(
+                self.input_files_local[2][0],
+                self.input_files_local[3][0]
+            )
+
+        self.run_with_tax_ids(None, None, clusters_dict)
         # TODO: (gdingle): Generate taxon-specific downloads in idseq-web at
         # time of download. See https://jira.czi.team/browse/IDSEQ-2599.
         betacoronaviruses = {
             2697049,  # SARS-CoV2
             694002,  # betacoronavirus genus
         }
-        self.run_with_tax_ids(betacoronaviruses, "betacoronavirus")
+        self.run_with_tax_ids(betacoronaviruses, "betacoronavirus", clusters_dict)
 
     def run_with_tax_ids(
         self,
         tax_ids: Optional[Set[int]],
-        filename: Optional[str]
+        filename: Optional[str],
+        clusters_dict: Dict[str, Tuple] = None,
     ) -> None:
         assert (tax_ids and filename) or not (
             tax_ids or filename), 'Must be supplied with tax_ids and filename or neither'
@@ -42,17 +52,6 @@ class PipelineStepNonhostFastq(PipelineStep):
         fastqs = self.input_files_local[0]
 
         nonhost_fasta = self.input_files_local[1][0]
-
-        clusters_dict = None
-        if READ_COUNTING_MODE == ReadCountingMode.COUNT_ALL and tax_ids:
-            # TODO: (gdingle): Show all duplicate reads, not just if
-            # taxids. See https://jira.czi.team/browse/IDSEQ-2598.
-            # NOTE: this will load the set of all original read headers, which
-            # could be several GBs in the worst case.
-            clusters_dict = parse_clusters_file(
-                self.input_files_local[2][0],
-                self.input_files_local[3][0]
-            )
 
         if filename is None:
             output_fastqs = self.output_files_local()
@@ -142,7 +141,7 @@ class PipelineStepNonhostFastq(PipelineStep):
         clusters_dict: Dict[str, Tuple] = None,
         tax_ids: Set[int] = None
     ):
-        # This var is only needed when use_taxon_whitelist, because tax_id
+        # This var is only needed when tax_ids, because tax_id
         # may match only on one half of a read pair. In that case, we still
         # want to include both.
         seen = set()
@@ -154,13 +153,12 @@ class PipelineStepNonhostFastq(PipelineStep):
                 if line[0] != ">":
                     continue
                 read_index, header, annot_tax_ids = PipelineStepNonhostFastq.extract_header_from_line(line)
+                other_headers = clusters_dict[header][1:] if clusters_dict else []
                 if tax_ids:
                     if tax_ids.intersection(annot_tax_ids) and (header not in seen):
                         output_file_0.write(header + "\n")
                         output_file_1.write(header + "\n")
                         seen.add(header)
-                        assert clusters_dict is not None
-                        other_headers = clusters_dict[header][1:]
                         for other_header in other_headers:
                             output_file_0.write(other_header + "\n")
                             output_file_1.write(other_header + "\n")
@@ -169,10 +167,10 @@ class PipelineStepNonhostFastq(PipelineStep):
                             seen.add(other_header)
                     continue
                 else:
-                    # TODO: (gdingle): Show all duplicate reads, not just if
-                    # use_taxon_whitelist. See https://jira.czi.team/browse/IDSEQ-2598.
                     output_file = output_file_0 if read_index == 0 else output_file_1
                     output_file.write(header + "\n")
+                    for other_header in other_headers:
+                        output_file.write(other_header + "\n")
                     continue
 
     @staticmethod
