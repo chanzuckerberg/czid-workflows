@@ -183,6 +183,7 @@ def retry(operation, MAX_TRIES=3):
     # Note the use of a separate random generator for retries so transient
     # errors won't perturb other random streams used in the application.
     invocation = [0]  # a python trick, without which the nested function would not increment a counter defined in the parent
+
     @wraps(operation)
     def wrapped_operation(*args, **kwargs):
         randgen = None
@@ -239,7 +240,7 @@ def execute(command: Union[command_patterns.CommandPattern, str],
     """
     if not isinstance(command, command_patterns.CommandPattern):
         # log warning if using legacy format
-        log.write(warning=True, message=f"Command parameter is using legacy type str. Use idseq_dag.util.command_patterns.", obj_data={"cmd": command, "type": type(command)})
+        log.write(warning=True, message="Command parameter is using legacy type str. Use idseq_dag.util.command_patterns.", obj_data={"cmd": command, "type": type(command)})
         cmd = command_patterns.ShellScriptCommand(script=command, args=[])
     else:
         cmd = command

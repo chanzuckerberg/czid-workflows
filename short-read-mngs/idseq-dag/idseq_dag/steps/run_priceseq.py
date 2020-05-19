@@ -70,8 +70,7 @@ class PipelineStepRunPriceSeq(PipelineStep):
                     break
 
             if convert_and_rerun:
-                log.write(f"0 reads left after PriceSeqFilter, \
-                            converting input to FASTA and re-running")
+                log.write("0 reads left after PriceSeqFilter, converting input to FASTA and re-running")
                 step = "FASTQ to FASTA conversion"
                 log.write(f"Starting {step}...")
                 convert_out = [

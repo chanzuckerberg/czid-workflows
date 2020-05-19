@@ -63,7 +63,7 @@ class PipelineStepRunValidateInput(PipelineStep):
                             )
                         )
                     except:
-                        raise RuntimeError(f"Invalid fastq/fasta/gzip file")
+                        raise RuntimeError("Invalid fastq/fasta/gzip file")
                 else:
                     # Validate and truncate the input file to keep behavior consistent with gz input files
                     try:
@@ -82,7 +82,7 @@ class PipelineStepRunValidateInput(PipelineStep):
                         )
                         input_files[i] = tmp_file
                     except:
-                        raise RuntimeError(f"Invalid fastq/fasta file")
+                        raise RuntimeError("Invalid fastq/fasta file")
 
             # keep a dictionary of the distribution of read lengths in the files
             self.summary_dict = {vc.BUCKET_TOO_SHORT: 0,
@@ -104,7 +104,7 @@ class PipelineStepRunValidateInput(PipelineStep):
                 all_fragments.append(num_fragments)
 
             if len(all_fragments) == 2 and abs(all_fragments[1] - all_fragments[0]) > 1000:
-                raise RuntimeError(f"Paired input files need to contain the same number of reads")
+                raise RuntimeError("Paired input files need to contain the same number of reads")
 
             with open(summary_file, 'w') as summary_f:
                 json.dump(self.summary_dict, summary_f)

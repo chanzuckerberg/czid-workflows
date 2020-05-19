@@ -226,6 +226,9 @@ Changes to X or Y force recomputation of all results when a sample is rerun usin
 
 When releasing a new version, please add a Git tag of the form `vX.Y.Z`.
 
+- 4.7.0
+  - Add a step-level entry point CLI.
+
 - 4.6.0
   - Include non-unique reads in unidentified fastas for download.
 
