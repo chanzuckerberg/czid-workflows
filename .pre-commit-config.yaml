@@ -1,0 +1,10 @@
+repos:
+- repo: local
+  hooks:
+  - id: miniwdl-check
+    name: miniwdl check
+    language: system
+    files: ".+\\.wdl"
+    verbose: true
+    entry: miniwdl
+    args: [check]

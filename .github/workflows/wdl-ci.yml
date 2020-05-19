@@ -9,6 +9,19 @@ env:
   DEBIAN_FRONTEND: noninteractive
 
 jobs:
+  check:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+      - name: dependencies
+        run: |
+          sudo apt-get -qq update
+          sudo apt-get -qq install shellcheck
+          pip install miniwdl
+      - uses: pre-commit/action@v1.1.0
+        with:
+          extra_args: --all-files
   linters:
     runs-on: ubuntu-18.04
     steps:
