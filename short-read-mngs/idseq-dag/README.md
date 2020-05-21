@@ -226,6 +226,9 @@ Changes to X or Y force recomputation of all results when a sample is rerun usin
 
 When releasing a new version, please add a Git tag of the form `vX.Y.Z`.
 
+- 4.7.1
+  - Fix occasional error in unidentified.fa counting.
+
 - 4.7.0
   - Add a step-level entry point CLI.
 

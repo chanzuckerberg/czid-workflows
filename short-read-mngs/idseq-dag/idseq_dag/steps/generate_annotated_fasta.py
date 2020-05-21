@@ -1,3 +1,5 @@
+from os.path import basename, dirname, join
+
 import idseq_dag.util.fasta as fasta
 import idseq_dag.util.m8 as m8
 
@@ -19,6 +21,12 @@ class PipelineStepGenerateAnnotatedFasta(PipelineCountingStep):
     def _unidentified_fasta(self):
         return self.output_files_local()[1]
 
+    def _unique_unidentified_fasta(self):
+        return join(
+            dirname(self._unidentified_fasta()),
+            'unique_' + basename(self._unidentified_fasta())
+        )
+
     def run(self):
         merged_fasta = self.input_files_local[0][-1]
         gsnap_m8 = self.input_files_local[1][1]
@@ -36,15 +44,25 @@ class PipelineStepGenerateAnnotatedFasta(PipelineCountingStep):
 
         annotated_fasta = self._annotated_fasta()
         unidentified_fasta = self._unidentified_fasta()
+        unique_unidentified_fasta = self._unique_unidentified_fasta()
         self.annotate_fasta_with_accessions(merged_fasta, gsnap_m8, rapsearch2_m8, annotated_fasta)
-        self.generate_unidentified_fasta(annotated_fasta, unidentified_fasta, clusters_dict)
+        self.generate_unidentified_fasta(
+            annotated_fasta,
+            unidentified_fasta,
+            clusters_dict,
+            unique_unidentified_fasta
+        )
+        if clusters_dict:
+            self.additional_output_files_visible.append(unique_unidentified_fasta)
 
     def count_reads(self):
         # The webapp expects this count to be called "unidentified_fasta"
+        # To keep backwards compatibility, we use unique reads. See
+        # generate_unidentified_fasta.
         super()._count_reads_work(
             cluster_key=PipelineStepGenerateAnnotatedFasta.old_read_name,
             counter_name="unidentified_fasta",
-            fasta_files=[self._unidentified_fasta()]
+            fasta_files=[self._unique_unidentified_fasta()]
         )
 
     @staticmethod
@@ -82,11 +100,20 @@ class PipelineStepGenerateAnnotatedFasta(PipelineCountingStep):
         # in order to identify all duplicate reads for this read_id.
         return new_read_name.split(":", 4)[-1]
 
-    def generate_unidentified_fasta(self, input_fa, output_fa, clusters_dict=None):
+    def generate_unidentified_fasta(
+        self,
+        input_fa,
+        output_fa,
+        clusters_dict=None,
+        unique_output_fa=None
+    ):
         """
         Generates files with all unmapped reads. If COUNT_ALL, which was added
         in v4, then include non-unique reads extracted upstream by cdhitdup.
+
+        unique_output_fa exists primarily for counting. See count_reads above.
         """
+        unique_output_file = open(unique_output_fa, "w") if clusters_dict else None
         with open(output_fa, "w") as output_file:
             for read in fasta.iterator(input_fa):
                 if not read.header.startswith(UNMAPPED_HEADER_PREFIX):
@@ -94,6 +121,9 @@ class PipelineStepGenerateAnnotatedFasta(PipelineCountingStep):
 
                 output_file.write(read.header + "\n")
                 output_file.write(read.sequence + "\n")
+                if unique_output_file:
+                    unique_output_file.write(read.header + "\n")
+                    unique_output_file.write(read.sequence + "\n")
 
                 if clusters_dict:
                     # get inner part of header like
