@@ -12,8 +12,7 @@
         "contigs.fasta",
         "scaffolds.fasta",
         "read-contig.sam",
-        "contig_stats.json",
-        "gsnap.blast.m8"
+        "contig_stats.json"
       ],
       "gsnap_accessions_out": [
         "nt.refseq.fasta"
@@ -22,6 +21,7 @@
         "cdhitdup_cluster_sizes.tsv"
       ],
       "refined_gsnap_out": [
+        "gsnap.blast.m8",
         "gsnap.reassigned.m8",
         "gsnap.hitsummary2.tab",
         "refined_gsnap_counts_with_dcr.json",
@@ -45,16 +45,16 @@
     ],
     "given_targets": {
       "gsnap_out": {
-        "s3_dir": "s3://idseq-samples-prod/samples/150/46136/results/4.2"
+        "s3_dir": "s3://idseq-samples-staging/samples/496/18284/results/idseq-staging-main-1/wdl-1/dag-4.6"
       },
       "assembly_out": {
-        "s3_dir": "s3://idseq-samples-prod/samples/150/46136/postprocess/4.2/assembly"
+        "s3_dir": "s3://idseq-samples-staging/samples/496/18284/results/idseq-staging-main-1/wdl-1/dag-4.6"
       },
       "gsnap_accessions_out": {
-        "s3_dir": "s3://idseq-samples-prod/samples/150/46136/postprocess/4.2/assembly"
+        "s3_dir": "s3://idseq-samples-staging/samples/496/18284/results/idseq-staging-main-1/wdl-1/dag-4.6"
       },
       "cdhitdup_cluster_sizes": {
-        "s3_dir": "s3://idseq-samples-prod/samples/150/46136/results/4.2"
+        "s3_dir": "s3://idseq-samples-staging/samples/496/18284/results/idseq-staging-main-1/wdl-1/dag-4.6"
       }
     }
 }

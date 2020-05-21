@@ -394,7 +394,8 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
                     consolidated_dict[read_id] += [contig_id, accession, species_taxid, genus_taxid, family_taxid]
                     consolidated_dict[read_id][2] = species_taxid
                 else:
-                    added_reads[read_id] = [read_id, "1", species_taxid, accession, species_taxid, genus_taxid, family_taxid, contig_id, accession, species_taxid, genus_taxid, family_taxid, 'from_assembly']
+                    added_reads[read_id] = [read_id, "1", species_taxid, accession, species_taxid, genus_taxid,
+                                            family_taxid, contig_id, accession, species_taxid, genus_taxid, family_taxid, 'from_assembly']
             if m8_line:
                 read2blastm8[read_id] = m8_line
         return (consolidated_dict, read2blastm8, contig2lineage, added_reads)

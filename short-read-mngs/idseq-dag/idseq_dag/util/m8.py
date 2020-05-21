@@ -472,10 +472,8 @@ def generate_taxon_count_json_from_m8(
                 read_id = hit_line_columns[0]
                 hit_level = hit_line_columns[1]
                 hit_taxid = hit_line_columns[2]
-                if int(hit_level) < 0:  # Skip negative levels and continue
-                    hit_line = hit_f.readline()
-                    m8_line = m8_f.readline()
-                    continue
+                if int(hit_level) < 0:
+                    log.write('int(hit_level) < 0', debug=True)
 
                 # m8 files correspond to BLAST tabular output format 6:
                 # Columns: read_id | _ref_id | percent_identity | alignment_length...
