@@ -226,6 +226,9 @@ Changes to X or Y force recomputation of all results when a sample is rerun usin
 
 When releasing a new version, please add a Git tag of the form `vX.Y.Z`.
 
+- 4.9.0
+  - Update NCBI index databases to those downloaded on 2020-04-20.
+
 - 4.8.0
   - Fix counting of reads that have a tax ID but do not have an accession to ensure all reads mapped to taxa only by assembly are counted in r value.
 
