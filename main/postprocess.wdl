@@ -7,14 +7,12 @@ task RunAssembly {
     String deployment_env
     String dag_branch
     String s3_wd_uri
-    File host_filter_out_gsnap_filter_1_fa
-    File host_filter_out_gsnap_filter_2_fa
-    File host_filter_out_gsnap_filter_merged_fa
+    Array[File] host_filter_out_gsnap_filter_fa
     File cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv
   }
   command<<<
   export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
-  if ! [[ -z "~{dag_branch}" ]]; then
+  if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
   fi
   set -x
@@ -22,7 +20,7 @@ task RunAssembly {
     --step-module idseq_dag.steps.run_assembly \
     --step-class PipelineStepRunAssembly \
     --step-name assembly_out \
-    --input-files '[["~{host_filter_out_gsnap_filter_1_fa}", "~{host_filter_out_gsnap_filter_2_fa}", "~{host_filter_out_gsnap_filter_merged_fa}"], ["~{cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv}"]]' \
+    --input-files '[["~{sep='","' host_filter_out_gsnap_filter_fa}"], ["~{cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv}"]]' \
     --output-files '["assembly/contigs.fasta", "assembly/scaffolds.fasta", "assembly/read-contig.sam", "assembly/contig_stats.json"]' \
     --output-dir-s3 '~{s3_wd_uri}' \
     --additional-files '{}' \
@@ -54,7 +52,7 @@ task GenerateCoverageStats {
   }
   command<<<
   export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
-  if ! [[ -z "~{dag_branch}" ]]; then
+  if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
   fi
   set -x
@@ -89,10 +87,13 @@ task DownloadAccessions_gsnap_accessions_out {
     File gsnap_out_gsnap_deduped_m8
     File gsnap_out_gsnap_hitsummary_tab
     File gsnap_out_gsnap_counts_with_dcr_json
+    String nt_db
+    String nt_loc_db
+    String lineage_db
   }
   command<<<
   export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
-  if ! [[ -z "~{dag_branch}" ]]; then
+  if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
   fi
   set -x
@@ -103,8 +104,8 @@ task DownloadAccessions_gsnap_accessions_out {
     --input-files '[["~{gsnap_out_gsnap_m8}", "~{gsnap_out_gsnap_deduped_m8}", "~{gsnap_out_gsnap_hitsummary_tab}", "~{gsnap_out_gsnap_counts_with_dcr_json}"]]' \
     --output-files '["assembly/nt.refseq.fasta"]' \
     --output-dir-s3 '~{s3_wd_uri}' \
-    --additional-files '{"lineage_db": "s3://idseq-database/taxonomy/2020-02-10/taxid-lineages.db", "loc_db": "s3://idseq-database/alignment_data/2020-02-10/nt_loc.db", "db": "s3://idseq-database/alignment_data/2020-02-10/nt"}' \
-    --additional-attributes '{"db": "s3://idseq-database/alignment_data/2020-02-10/nt", "db_type": "nt"}'
+    --additional-files '{"lineage_db": "~{lineage_db}", "loc_db": "~{nt_loc_db}", "db": "~{nt_db}"}' \
+    --additional-attributes '{"db": "~{nt_db}", "db_type": "nt"}'
   >>>
   output {
     File assembly_nt_refseq_fasta = "assembly/nt.refseq.fasta"
@@ -126,10 +127,13 @@ task DownloadAccessions_rapsearch2_accessions_out {
     File rapsearch2_out_rapsearch2_deduped_m8
     File rapsearch2_out_rapsearch2_hitsummary_tab
     File rapsearch2_out_rapsearch2_counts_with_dcr_json
+    String lineage_db
+    String nr_loc_db
+    String nr_db
   }
   command<<<
   export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
-  if ! [[ -z "~{dag_branch}" ]]; then
+  if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
   fi
   set -x
@@ -140,8 +144,8 @@ task DownloadAccessions_rapsearch2_accessions_out {
     --input-files '[["~{rapsearch2_out_rapsearch2_m8}", "~{rapsearch2_out_rapsearch2_deduped_m8}", "~{rapsearch2_out_rapsearch2_hitsummary_tab}", "~{rapsearch2_out_rapsearch2_counts_with_dcr_json}"]]' \
     --output-files '["assembly/nr.refseq.fasta"]' \
     --output-dir-s3 '~{s3_wd_uri}' \
-    --additional-files '{"lineage_db": "s3://idseq-database/taxonomy/2020-02-10/taxid-lineages.db", "loc_db": "s3://idseq-database/alignment_data/2020-02-10/nr_loc.db", "db": "s3://idseq-database/alignment_data/2020-02-10/nr"}' \
-    --additional-attributes '{"db": "s3://idseq-database/alignment_data/2020-02-10/nr", "db_type": "nr"}'
+    --additional-files '{"lineage_db": "~{lineage_db}", "loc_db": "~{nr_loc_db}", "db": "~{nr_db}"}' \
+    --additional-attributes '{"db": "~{nr_db}", "db_type": "nr"}'
   >>>
   output {
     File assembly_nr_refseq_fasta = "assembly/nr.refseq.fasta"
@@ -169,10 +173,14 @@ task BlastContigs_refined_gsnap_out {
     File assembly_contig_stats_json
     File assembly_nt_refseq_fasta
     File cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv
+    String lineage_db
+    String taxon_blacklist
+    String? deuterostome_db
+    Boolean use_taxon_whitelist
   }
   command<<<
   export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
-  if ! [[ -z "~{dag_branch}" ]]; then
+  if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
   fi
   set -x
@@ -183,8 +191,8 @@ task BlastContigs_refined_gsnap_out {
     --input-files '[["~{gsnap_out_gsnap_m8}", "~{gsnap_out_gsnap_deduped_m8}", "~{gsnap_out_gsnap_hitsummary_tab}", "~{gsnap_out_gsnap_counts_with_dcr_json}"], ["~{assembly_contigs_fasta}", "~{assembly_scaffolds_fasta}", "~{assembly_read_contig_sam}", "~{assembly_contig_stats_json}"], ["~{assembly_nt_refseq_fasta}"], ["~{cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv}"]]' \
     --output-files '["assembly/gsnap.blast.m8", "assembly/gsnap.reassigned.m8", "assembly/gsnap.hitsummary2.tab", "assembly/refined_gsnap_counts_with_dcr.json", "assembly/gsnap_contig_summary.json", "assembly/gsnap.blast.top.m8"]' \
     --output-dir-s3 '~{s3_wd_uri}' \
-    --additional-files '{"lineage_db": "s3://idseq-database/taxonomy/2020-02-10/taxid-lineages.db", "taxon_blacklist": "s3://idseq-database/taxonomy/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/taxon_blacklist.txt"}' \
-    --additional-attributes '{"db_type": "nt"}'
+    --additional-files '{"lineage_db": "~{lineage_db}", "taxon_blacklist": "~{taxon_blacklist}", "deuterostome_db": "~{deuterostome_db}"}' \
+    --additional-attributes '{"db_type": "nt", "use_taxon_whitelist": "~{use_taxon_whitelist}"}'
   >>>
   output {
     File assembly_gsnap_blast_m8 = "assembly/gsnap.blast.m8"
@@ -217,10 +225,13 @@ task BlastContigs_refined_rapsearch2_out {
     File assembly_contig_stats_json
     File assembly_nr_refseq_fasta
     File cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv
+    String lineage_db
+    String taxon_blacklist
+    Boolean use_taxon_whitelist
   }
   command<<<
   export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
-  if ! [[ -z "~{dag_branch}" ]]; then
+  if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
   fi
   set -x
@@ -231,8 +242,8 @@ task BlastContigs_refined_rapsearch2_out {
     --input-files '[["~{rapsearch2_out_rapsearch2_m8}", "~{rapsearch2_out_rapsearch2_deduped_m8}", "~{rapsearch2_out_rapsearch2_hitsummary_tab}", "~{rapsearch2_out_rapsearch2_counts_with_dcr_json}"], ["~{assembly_contigs_fasta}", "~{assembly_scaffolds_fasta}", "~{assembly_read_contig_sam}", "~{assembly_contig_stats_json}"], ["~{assembly_nr_refseq_fasta}"], ["~{cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv}"]]' \
     --output-files '["assembly/rapsearch2.blast.m8", "assembly/rapsearch2.reassigned.m8", "assembly/rapsearch2.hitsummary2.tab", "assembly/refined_rapsearch2_counts_with_dcr.json", "assembly/rapsearch2_contig_summary.json", "assembly/rapsearch2.blast.top.m8"]' \
     --output-dir-s3 '~{s3_wd_uri}' \
-    --additional-files '{"lineage_db": "s3://idseq-database/taxonomy/2020-02-10/taxid-lineages.db", "taxon_blacklist": "s3://idseq-database/taxonomy/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/taxon_blacklist.txt"}' \
-    --additional-attributes '{"db_type": "nr"}'
+    --additional-files '{"lineage_db": "~{lineage_db}", "taxon_blacklist": "~{taxon_blacklist}"}' \
+    --additional-attributes '{"db_type": "nr", "use_taxon_whitelist": "~{use_taxon_whitelist}"}'
   >>>
   output {
     File assembly_rapsearch2_blast_m8 = "assembly/rapsearch2.blast.m8"
@@ -270,7 +281,7 @@ task CombineTaxonCounts {
   }
   command<<<
   export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
-  if ! [[ -z "~{dag_branch}" ]]; then
+  if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
   fi
   set -x
@@ -315,7 +326,7 @@ task CombineJson {
   }
   command<<<
   export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
-  if ! [[ -z "~{dag_branch}" ]]; then
+  if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
   fi
   set -x
@@ -345,9 +356,7 @@ task GenerateAnnotatedFasta {
     String deployment_env
     String dag_branch
     String s3_wd_uri
-    File host_filter_out_gsnap_filter_1_fa
-    File host_filter_out_gsnap_filter_2_fa
-    File host_filter_out_gsnap_filter_merged_fa
+    Array[File] host_filter_out_gsnap_filter_fa
     File assembly_gsnap_blast_m8
     File assembly_gsnap_reassigned_m8
     File assembly_gsnap_hitsummary2_tab
@@ -366,7 +375,7 @@ task GenerateAnnotatedFasta {
   }
   command<<<
   export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
-  if ! [[ -z "~{dag_branch}" ]]; then
+  if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
   fi
   set -x
@@ -374,7 +383,7 @@ task GenerateAnnotatedFasta {
     --step-module idseq_dag.steps.generate_annotated_fasta \
     --step-class PipelineStepGenerateAnnotatedFasta \
     --step-name refined_annotated_out \
-    --input-files '[["~{host_filter_out_gsnap_filter_1_fa}", "~{host_filter_out_gsnap_filter_2_fa}", "~{host_filter_out_gsnap_filter_merged_fa}"], ["~{assembly_gsnap_blast_m8}", "~{assembly_gsnap_reassigned_m8}", "~{assembly_gsnap_hitsummary2_tab}", "~{assembly_refined_gsnap_counts_with_dcr_json}", "~{assembly_gsnap_contig_summary_json}", "~{assembly_gsnap_blast_top_m8}"], ["~{assembly_rapsearch2_blast_m8}", "~{assembly_rapsearch2_reassigned_m8}", "~{assembly_rapsearch2_hitsummary2_tab}", "~{assembly_refined_rapsearch2_counts_with_dcr_json}", "~{assembly_rapsearch2_contig_summary_json}", "~{assembly_rapsearch2_blast_top_m8}"], ["~{cdhitdup_out_dedup1_fa_clstr}", "~{cdhitdup_out_dedup1_fa}"], ["~{cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv}"]]' \
+    --input-files '[["~{sep='","' host_filter_out_gsnap_filter_fa}"], ["~{assembly_gsnap_blast_m8}", "~{assembly_gsnap_reassigned_m8}", "~{assembly_gsnap_hitsummary2_tab}", "~{assembly_refined_gsnap_counts_with_dcr_json}", "~{assembly_gsnap_contig_summary_json}", "~{assembly_gsnap_blast_top_m8}"], ["~{assembly_rapsearch2_blast_m8}", "~{assembly_rapsearch2_reassigned_m8}", "~{assembly_rapsearch2_hitsummary2_tab}", "~{assembly_refined_rapsearch2_counts_with_dcr_json}", "~{assembly_rapsearch2_contig_summary_json}", "~{assembly_rapsearch2_blast_top_m8}"], ["~{cdhitdup_out_dedup1_fa_clstr}", "~{cdhitdup_out_dedup1_fa}"], ["~{cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv}"]]' \
     --output-files '["assembly/refined_annotated_merged.fa", "assembly/refined_unidentified.fa"]' \
     --output-dir-s3 '~{s3_wd_uri}' \
     --additional-files '{}' \
@@ -411,10 +420,11 @@ task GenerateTaxidFasta {
     File assembly_refined_rapsearch2_counts_with_dcr_json
     File assembly_rapsearch2_contig_summary_json
     File assembly_rapsearch2_blast_top_m8
+    String lineage_db
   }
   command<<<
   export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
-  if ! [[ -z "~{dag_branch}" ]]; then
+  if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
   fi
   set -x
@@ -425,7 +435,7 @@ task GenerateTaxidFasta {
     --input-files '[["~{assembly_refined_annotated_merged_fa}", "~{assembly_refined_unidentified_fa}"], ["~{assembly_gsnap_blast_m8}", "~{assembly_gsnap_reassigned_m8}", "~{assembly_gsnap_hitsummary2_tab}", "~{assembly_refined_gsnap_counts_with_dcr_json}", "~{assembly_gsnap_contig_summary_json}", "~{assembly_gsnap_blast_top_m8}"], ["~{assembly_rapsearch2_blast_m8}", "~{assembly_rapsearch2_reassigned_m8}", "~{assembly_rapsearch2_hitsummary2_tab}", "~{assembly_refined_rapsearch2_counts_with_dcr_json}", "~{assembly_rapsearch2_contig_summary_json}", "~{assembly_rapsearch2_blast_top_m8}"]]' \
     --output-files '["assembly/refined_taxid_annot.fasta"]' \
     --output-dir-s3 '~{s3_wd_uri}' \
-    --additional-files '{"lineage_db": "s3://idseq-database/taxonomy/2020-02-10/taxid-lineages.db"}' \
+    --additional-files '{"lineage_db": "~{lineage_db}"}' \
     --additional-attributes '{}'
   >>>
   output {
@@ -448,7 +458,7 @@ task GenerateTaxidLocator {
   }
   command<<<
   export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
-  if ! [[ -z "~{dag_branch}" ]]; then
+  if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
   fi
   set -x
@@ -491,8 +501,8 @@ workflow idseq_postprocess {
     String dag_branch
     String s3_wd_uri
     File host_filter_out_gsnap_filter_1_fa
-    File host_filter_out_gsnap_filter_2_fa
-    File host_filter_out_gsnap_filter_merged_fa
+    File? host_filter_out_gsnap_filter_2_fa
+    File? host_filter_out_gsnap_filter_merged_fa
     File gsnap_out_gsnap_m8
     File gsnap_out_gsnap_deduped_m8
     File gsnap_out_gsnap_hitsummary_tab
@@ -504,6 +514,14 @@ workflow idseq_postprocess {
     File cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv
     File cdhitdup_out_dedup1_fa_clstr
     File cdhitdup_out_dedup1_fa
+    String nt_db
+    String nt_loc_db
+    String nr_db
+    String nr_loc_db
+    String lineage_db
+    String taxon_blacklist
+    String? deuterostome_db
+    Boolean use_taxon_whitelist
   }
 
   call RunAssembly {
@@ -513,9 +531,7 @@ workflow idseq_postprocess {
       deployment_env = deployment_env,
       dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
-      host_filter_out_gsnap_filter_1_fa = host_filter_out_gsnap_filter_1_fa,
-      host_filter_out_gsnap_filter_2_fa = host_filter_out_gsnap_filter_2_fa,
-      host_filter_out_gsnap_filter_merged_fa = host_filter_out_gsnap_filter_merged_fa,
+      host_filter_out_gsnap_filter_fa = select_all([host_filter_out_gsnap_filter_1_fa, host_filter_out_gsnap_filter_2_fa, host_filter_out_gsnap_filter_merged_fa]),
       cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv = cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv
   }
 
@@ -542,7 +558,10 @@ workflow idseq_postprocess {
       gsnap_out_gsnap_m8 = gsnap_out_gsnap_m8,
       gsnap_out_gsnap_deduped_m8 = gsnap_out_gsnap_deduped_m8,
       gsnap_out_gsnap_hitsummary_tab = gsnap_out_gsnap_hitsummary_tab,
-      gsnap_out_gsnap_counts_with_dcr_json = gsnap_out_gsnap_counts_with_dcr_json
+      gsnap_out_gsnap_counts_with_dcr_json = gsnap_out_gsnap_counts_with_dcr_json,
+      nt_db = nt_db,
+      nt_loc_db = nt_loc_db,
+      lineage_db = lineage_db
   }
 
   call DownloadAccessions_rapsearch2_accessions_out {
@@ -555,7 +574,10 @@ workflow idseq_postprocess {
       rapsearch2_out_rapsearch2_m8 = rapsearch2_out_rapsearch2_m8,
       rapsearch2_out_rapsearch2_deduped_m8 = rapsearch2_out_rapsearch2_deduped_m8,
       rapsearch2_out_rapsearch2_hitsummary_tab = rapsearch2_out_rapsearch2_hitsummary_tab,
-      rapsearch2_out_rapsearch2_counts_with_dcr_json = rapsearch2_out_rapsearch2_counts_with_dcr_json
+      rapsearch2_out_rapsearch2_counts_with_dcr_json = rapsearch2_out_rapsearch2_counts_with_dcr_json,
+      nr_db = nr_db,
+      nr_loc_db = nr_loc_db,
+      lineage_db = lineage_db
   }
 
   call BlastContigs_refined_gsnap_out {
@@ -574,7 +596,11 @@ workflow idseq_postprocess {
       assembly_read_contig_sam = RunAssembly.assembly_read_contig_sam,
       assembly_contig_stats_json = RunAssembly.assembly_contig_stats_json,
       assembly_nt_refseq_fasta = DownloadAccessions_gsnap_accessions_out.assembly_nt_refseq_fasta,
-      cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv = cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv
+      cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv = cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv,
+      lineage_db = lineage_db,
+      taxon_blacklist = taxon_blacklist,
+      deuterostome_db = deuterostome_db,
+      use_taxon_whitelist = use_taxon_whitelist
   }
 
   call BlastContigs_refined_rapsearch2_out {
@@ -593,7 +619,10 @@ workflow idseq_postprocess {
       assembly_read_contig_sam = RunAssembly.assembly_read_contig_sam,
       assembly_contig_stats_json = RunAssembly.assembly_contig_stats_json,
       assembly_nr_refseq_fasta = DownloadAccessions_rapsearch2_accessions_out.assembly_nr_refseq_fasta,
-      cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv = cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv
+      cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv = cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv,
+      lineage_db = lineage_db,
+      taxon_blacklist = taxon_blacklist,
+      use_taxon_whitelist = use_taxon_whitelist
   }
 
   call CombineTaxonCounts {
@@ -645,9 +674,7 @@ workflow idseq_postprocess {
       deployment_env = deployment_env,
       dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
-      host_filter_out_gsnap_filter_1_fa = host_filter_out_gsnap_filter_1_fa,
-      host_filter_out_gsnap_filter_2_fa = host_filter_out_gsnap_filter_2_fa,
-      host_filter_out_gsnap_filter_merged_fa = host_filter_out_gsnap_filter_merged_fa,
+      host_filter_out_gsnap_filter_fa = select_all([host_filter_out_gsnap_filter_1_fa, host_filter_out_gsnap_filter_2_fa, host_filter_out_gsnap_filter_merged_fa]),
       assembly_gsnap_blast_m8 = BlastContigs_refined_gsnap_out.assembly_gsnap_blast_m8,
       assembly_gsnap_reassigned_m8 = BlastContigs_refined_gsnap_out.assembly_gsnap_reassigned_m8,
       assembly_gsnap_hitsummary2_tab = BlastContigs_refined_gsnap_out.assembly_gsnap_hitsummary2_tab,
@@ -685,7 +712,8 @@ workflow idseq_postprocess {
       assembly_rapsearch2_hitsummary2_tab = BlastContigs_refined_rapsearch2_out.assembly_rapsearch2_hitsummary2_tab,
       assembly_refined_rapsearch2_counts_with_dcr_json = BlastContigs_refined_rapsearch2_out.assembly_refined_rapsearch2_counts_with_dcr_json,
       assembly_rapsearch2_contig_summary_json = BlastContigs_refined_rapsearch2_out.assembly_rapsearch2_contig_summary_json,
-      assembly_rapsearch2_blast_top_m8 = BlastContigs_refined_rapsearch2_out.assembly_rapsearch2_blast_top_m8
+      assembly_rapsearch2_blast_top_m8 = BlastContigs_refined_rapsearch2_out.assembly_rapsearch2_blast_top_m8,
+      lineage_db = lineage_db
   }
 
   call GenerateTaxidLocator {
