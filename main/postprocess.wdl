@@ -192,7 +192,7 @@ task BlastContigs_refined_gsnap_out {
     --output-files '["assembly/gsnap.blast.m8", "assembly/gsnap.reassigned.m8", "assembly/gsnap.hitsummary2.tab", "assembly/refined_gsnap_counts_with_dcr.json", "assembly/gsnap_contig_summary.json", "assembly/gsnap.blast.top.m8"]' \
     --output-dir-s3 '~{s3_wd_uri}' \
     --additional-files '{"lineage_db": "~{lineage_db}", "taxon_blacklist": "~{taxon_blacklist}", "deuterostome_db": "~{deuterostome_db}"}' \
-    --additional-attributes '{"db_type": "nt", "use_taxon_whitelist": "~{use_taxon_whitelist}"}'
+    --additional-attributes '{"db_type": "nt", "use_taxon_whitelist": ~{use_taxon_whitelist}}'
   >>>
   output {
     File assembly_gsnap_blast_m8 = "assembly/gsnap.blast.m8"
@@ -243,7 +243,7 @@ task BlastContigs_refined_rapsearch2_out {
     --output-files '["assembly/rapsearch2.blast.m8", "assembly/rapsearch2.reassigned.m8", "assembly/rapsearch2.hitsummary2.tab", "assembly/refined_rapsearch2_counts_with_dcr.json", "assembly/rapsearch2_contig_summary.json", "assembly/rapsearch2.blast.top.m8"]' \
     --output-dir-s3 '~{s3_wd_uri}' \
     --additional-files '{"lineage_db": "~{lineage_db}", "taxon_blacklist": "~{taxon_blacklist}"}' \
-    --additional-attributes '{"db_type": "nr", "use_taxon_whitelist": "~{use_taxon_whitelist}"}'
+    --additional-attributes '{"db_type": "nr", "use_taxon_whitelist": ~{use_taxon_whitelist}}'
   >>>
   output {
     File assembly_rapsearch2_blast_m8 = "assembly/rapsearch2.blast.m8"
