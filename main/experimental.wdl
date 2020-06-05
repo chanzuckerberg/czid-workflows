@@ -13,10 +13,10 @@ task GenerateTaxidFasta {
   }
   command<<<
   export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
+  set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
   fi
-  set -x
   idseq-dag-run-step --workflow-name experimental \
     --step-module idseq_dag.steps.generate_taxid_fasta \
     --step-class PipelineStepGenerateTaxidFasta \
@@ -47,10 +47,10 @@ task GenerateTaxidLocator {
   }
   command<<<
   export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
+  set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
   fi
-  set -x
   idseq-dag-run-step --workflow-name experimental \
     --step-module idseq_dag.steps.generate_taxid_locator \
     --step-class PipelineStepGenerateTaxidLocator \
@@ -108,10 +108,10 @@ task GenerateAlignmentViz {
   }
   command<<<
   export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
+  set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
   fi
-  set -x
   idseq-dag-run-step --workflow-name experimental \
     --step-module idseq_dag.steps.generate_alignment_viz \
     --step-class PipelineStepGenerateAlignmentViz \
@@ -144,10 +144,10 @@ task RunSRST2 {
   }
   command<<<
   export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
+  set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
   fi
-  set -x
   idseq-dag-run-step --workflow-name experimental \
     --step-module idseq_dag.steps.run_srst2 \
     --step-class PipelineStepRunSRST2 \
@@ -190,10 +190,10 @@ task GenerateCoverageViz {
   }
   command<<<
   export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
+  set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
   fi
-  set -x
   idseq-dag-run-step --workflow-name experimental \
     --step-module idseq_dag.steps.generate_coverage_viz \
     --step-class PipelineStepGenerateCoverageViz \
@@ -229,10 +229,10 @@ task NonhostFastq {
   }
   command<<<
   export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
+  set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
   fi
-  set -x
   idseq-dag-run-step --workflow-name experimental \
     --step-module idseq_dag.steps.nonhost_fastq \
     --step-class PipelineStepNonhostFastq \

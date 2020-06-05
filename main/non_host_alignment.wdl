@@ -18,10 +18,10 @@ task RunAlignmentRemotely_gsnap_out {
   }
   command<<<
   export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
+  set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
   fi
-  set -x
   idseq-dag-run-step --workflow-name non_host_alignment \
     --step-module idseq_dag.steps.run_alignment_remotely \
     --step-class PipelineStepRunAlignmentRemotely \
@@ -61,10 +61,10 @@ task RunAlignmentRemotely_rapsearch2_out {
   }
   command<<<
   export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
+  set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
   fi
-  set -x
   idseq-dag-run-step --workflow-name non_host_alignment \
     --step-module idseq_dag.steps.run_alignment_remotely \
     --step-class PipelineStepRunAlignmentRemotely \
@@ -105,10 +105,10 @@ task CombineTaxonCounts {
   }
   command<<<
   export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
+  set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
   fi
-  set -x
   idseq-dag-run-step --workflow-name non_host_alignment \
     --step-module idseq_dag.steps.combine_taxon_counts \
     --step-class PipelineStepCombineTaxonCounts \
@@ -150,10 +150,10 @@ task GenerateAnnotatedFasta {
   }
   command<<<
   export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
+  set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
   fi
-  set -x
   idseq-dag-run-step --workflow-name non_host_alignment \
     --step-module idseq_dag.steps.generate_annotated_fasta \
     --step-class PipelineStepGenerateAnnotatedFasta \

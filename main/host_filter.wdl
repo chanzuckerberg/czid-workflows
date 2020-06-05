@@ -13,10 +13,10 @@ task RunValidateInput {
   }
   command<<<
   export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
+  set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
   fi
-  set -x
   idseq-dag-run-step --workflow-name host_filter \
     --step-module idseq_dag.steps.run_validate_input \
     --step-class PipelineStepRunValidateInput \
@@ -54,10 +54,10 @@ task RunStar {
   }
   command<<<
   export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
+  set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
   fi
-  set -x
   idseq-dag-run-step --workflow-name host_filter \
     --step-module idseq_dag.steps.run_star \
     --step-class PipelineStepRunStar \
@@ -93,10 +93,10 @@ task RunTrimmomatic {
   }
   command<<<
   export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
+  set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
   fi
-  set -x
   idseq-dag-run-step --workflow-name host_filter \
     --step-module idseq_dag.steps.run_trimmomatic \
     --step-class PipelineStepRunTrimmomatic \
@@ -128,10 +128,10 @@ task RunPriceSeq {
   }
   command<<<
   export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
+  set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
   fi
-  set -x
   idseq-dag-run-step --workflow-name host_filter \
     --step-module idseq_dag.steps.run_priceseq \
     --step-class PipelineStepRunPriceSeq \
@@ -163,10 +163,10 @@ task RunCDHitDup {
   }
   command<<<
   export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
+  set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
   fi
-  set -x
   idseq-dag-run-step --workflow-name host_filter \
     --step-module idseq_dag.steps.run_cdhitdup \
     --step-class PipelineStepRunCDHitDup \
@@ -202,10 +202,10 @@ task RunLZW {
   }
   command<<<
   export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
+  set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
   fi
-  set -x
   idseq-dag-run-step --workflow-name host_filter \
     --step-module idseq_dag.steps.run_lzw \
     --step-class PipelineStepRunLZW \
@@ -241,10 +241,10 @@ task RunBowtie2_bowtie2_out {
   }
   command<<<
   export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
+  set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
   fi
-  set -x
   idseq-dag-run-step --workflow-name host_filter \
     --step-module idseq_dag.steps.run_bowtie2 \
     --step-class PipelineStepRunBowtie2 \
@@ -281,10 +281,10 @@ task RunSubsample {
   }
   command<<<
   export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
+  set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
   fi
-  set -x
   idseq-dag-run-step --workflow-name host_filter \
     --step-module idseq_dag.steps.run_subsample \
     --step-class PipelineStepRunSubsample \
@@ -323,10 +323,10 @@ task RunStarDownstream {
   }
   command<<<
   export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
+  set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
   fi
-  set -x
   idseq-dag-run-step --workflow-name host_filter \
     --step-module idseq_dag.steps.run_star_downstream \
     --step-class PipelineStepRunStarDownstream \
@@ -362,10 +362,10 @@ task RunBowtie2_bowtie2_human_out {
   }
   command<<<
   export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
+  set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
   fi
-  set -x
   idseq-dag-run-step --workflow-name host_filter \
     --step-module idseq_dag.steps.run_bowtie2 \
     --step-class PipelineStepRunBowtie2 \
@@ -401,10 +401,10 @@ task RunGsnapFilter {
   }
   command<<<
   export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
+  set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
   fi
-  set -x
   idseq-dag-run-step --workflow-name host_filter \
     --step-module idseq_dag.steps.run_gsnap_filter \
     --step-class PipelineStepRunGsnapFilter \
