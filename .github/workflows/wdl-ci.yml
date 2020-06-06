@@ -25,6 +25,5 @@ jobs:
           virtualenv --python=python3.6 .venv
           source .venv/bin/activate
           pip install -r requirements-dev.txt
-      - uses: pre-commit/action@v1.1.0
-        with:
-          extra_args: --all-files
+      - name: pre-commit
+        run: pre-commit run --all-files
