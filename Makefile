@@ -1,5 +1,5 @@
 lint:
-	find . -name '*.wdl' | xargs miniwdl check
+	pre-commit run --all-files
 
 publish:
 	scripts/publish.sh
