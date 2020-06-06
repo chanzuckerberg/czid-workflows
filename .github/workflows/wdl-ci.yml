@@ -9,34 +9,22 @@ env:
   DEBIAN_FRONTEND: noninteractive
 
 jobs:
-  check:
-    runs-on: ubuntu-18.04
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
-      - name: dependencies
-        run: |
-          sudo apt-get -qq update
-          sudo apt-get -qq install shellcheck
-          pip install miniwdl
-      - uses: pre-commit/action@v1.1.0
-        with:
-          extra_args: --all-files
   linters:
     runs-on: ubuntu-18.04
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v2
       - uses: actions/cache@v1
         with:
           path: ~/.cache
           key: ${{runner.os}}-cache
-      - name: Run linters
+      - name: dependencies
         run: |
           source /etc/profile
           sudo apt-get -qq update
-          sudo apt-get -qq install --yes jq moreutils gettext make virtualenv zip unzip httpie git shellcheck ruby
+          sudo apt-get -qq install --yes jq moreutils make virtualenv zip unzip httpie git shellcheck
           virtualenv --python=python3.6 .venv
           source .venv/bin/activate
           pip install -r requirements-dev.txt
-          make lint
+      - uses: pre-commit/action@v1.1.0
+        with:
+          extra_args: --all-files
