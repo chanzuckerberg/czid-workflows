@@ -7,6 +7,7 @@ env:
   LC_ALL: C.UTF-8
   LANG: C.UTF-8
   DEBIAN_FRONTEND: noninteractive
+  DEBS: jq moreutils make virtualenv zip unzip httpie git shellcheck
 
 jobs:
   linters:
@@ -21,7 +22,7 @@ jobs:
         run: |
           source /etc/profile
           sudo apt-get -qq update
-          sudo apt-get -qq install --yes jq moreutils make virtualenv zip unzip httpie git shellcheck
+          sudo apt-get -qq install --yes $DEBS
           virtualenv --python=python3.6 .venv
           source .venv/bin/activate
           pip install -r requirements-dev.txt
@@ -29,3 +30,23 @@ jobs:
         run: |
           source .venv/bin/activate
           make lint
+  tests:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v1
+        with:
+          path: ~/.cache
+          key: ${{runner.os}}-cache
+      - name: dependencies
+        run: |
+          source /etc/profile
+          sudo apt-get -qq update
+          sudo apt-get -qq install --yes $DEBS
+          virtualenv --python=python3.6 .venv
+          source .venv/bin/activate
+          pip install -r requirements-dev.txt
+      - name: tests
+        run: |
+          source .venv/bin/activate
+          make test

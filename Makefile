@@ -6,3 +6,5 @@ publish:
 
 test:
 	prove -v tests/*.t
+
+.PHONY: lint publish test
