@@ -25,7 +25,7 @@ jobs:
           virtualenv --python=python3.6 .venv
           source .venv/bin/activate
           pip install -r requirements-dev.txt
-      - name: pre-commit
+      - name: linters
         run: |
           source .venv/bin/activate
-          pre-commit run --all-files
+          make lint

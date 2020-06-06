@@ -1,3 +1,6 @@
+lint:
+	pre-commit run --all-files
+
 publish:
 	scripts/publish.sh
 
