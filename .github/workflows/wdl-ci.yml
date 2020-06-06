@@ -26,4 +26,6 @@ jobs:
           source .venv/bin/activate
           pip install -r requirements-dev.txt
       - name: pre-commit
-        run: pre-commit run --all-files
+        run: |
+          source .venv/bin/activate
+          pre-commit run --all-files
