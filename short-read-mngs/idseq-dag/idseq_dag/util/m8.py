@@ -18,6 +18,10 @@ from idseq_dag.util.dict import open_file_db_by_extension
 # Nevertheless, it may be useful to re-filter blastx results.
 NT_MIN_ALIGNMENT_LEN = 36
 
+# Alignments with e-values greater than 1 are low-quality alignments and associated with
+# a high rate of false-positives. These should be filtered at all alignment steps.
+MAX_EVALUE_THRESHOLD = 1
+
 # blastn output format 6 as documented in
 # http://www.metagenomics.wiki/tools/blast/blastn-output-format-6
 # it's also the format of our GSNAP and RAPSEARCH2 output
@@ -190,6 +194,14 @@ def iterate_m8(m8_file, min_alignment_length=0, debug_caller=None, logging_inter
             #      produced by RAPSEARCH2
             ###
             if alignment_length < min_alignment_length:
+                continue
+
+            # *** E-value Filter ***
+            # Alignments with e-value > 1 are low-quality and associated with false-positives in
+            # all alignments steps (NT and NR). When the e-value is greater than 1, ignore the
+            # alignment
+            ###
+            if e_value > MAX_EVALUE_THRESHOLD:
                 continue
 
             if debug_caller and line_count % logging_interval == 0:

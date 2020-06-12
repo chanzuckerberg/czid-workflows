@@ -14,7 +14,7 @@ from idseq_dag.util.trace_lock import TraceLock
 from idseq_dag.steps.run_assembly import PipelineStepRunAssembly
 from idseq_dag.util.count import READ_COUNTING_MODE, ReadCountingMode, get_read_cluster_size, load_cdhit_cluster_sizes
 from idseq_dag.util.lineage import DEFAULT_BLACKLIST_S3, DEFAULT_WHITELIST_S3
-from idseq_dag.util.m8 import MIN_CONTIG_SIZE, NT_MIN_ALIGNMENT_LEN
+from idseq_dag.util.m8 import MIN_CONTIG_SIZE, NT_MIN_ALIGNMENT_LEN, MAX_EVALUE_THRESHOLD
 
 
 MIN_REF_FASTA_SIZE = 25
@@ -406,6 +406,7 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
         blast_command = 'blastn'
         min_alignment_length = NT_MIN_ALIGNMENT_LEN
         min_pident = NT_MIN_PIDENT
+        max_evalue = MAX_EVALUE_THRESHOLD
         command.execute(
             command_patterns.SingleCommand(
                 cmd="makeblastdb",
@@ -447,12 +448,13 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
             )
         )
         # further processing of getting the top m8 entry for each contig.
-        PipelineStepBlastContigs.get_top_m8_nt(blast_m8, blast_top_m8, min_alignment_length, min_pident)
+        PipelineStepBlastContigs.get_top_m8_nt(blast_m8, blast_top_m8, min_alignment_length, min_pident, max_evalue)
 
     @staticmethod
     def run_blast_nr(blast_index_path, blast_m8, assembled_contig, reference_fasta, blast_top_m8):
         blast_type = 'prot'
         blast_command = 'blastx'
+        max_evalue = MAX_EVALUE_THRESHOLD
         command.execute(
             command_patterns.SingleCommand(
                 cmd="makeblastdb",
@@ -486,21 +488,23 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
             )
         )
         # further processing of getting the top m8 entry for each contig.
-        PipelineStepBlastContigs.get_top_m8_nr(blast_m8, blast_top_m8)
+        PipelineStepBlastContigs.get_top_m8_nr(blast_m8, blast_top_m8, max_evalue)
 
     @staticmethod
-    def get_top_m8_nr(blast_output, blast_top_m8):
+    def get_top_m8_nr(blast_output, blast_top_m8, max_evalue):
         ''' Get top m8 file entry for each contig from blast_output and output to blast_top_m8 '''
         m8.unparse_tsv(blast_top_m8, m8.BLAST_OUTPUT_SCHEMA,
-                       PipelineStepBlastContigs.optimal_hit_for_each_query_nr(blast_output))
+                       PipelineStepBlastContigs.optimal_hit_for_each_query_nr(blast_output, max_evalue))
 
     @staticmethod
-    def optimal_hit_for_each_query_nr(blast_output):
+    def optimal_hit_for_each_query_nr(blast_output, max_evalue):
         contigs_to_best_alignments = defaultdict(list)
         accession_counts = defaultdict(lambda: 0)
 
         # For each contig, get the alignments that have the best total score (may be multiple if there are ties).
         for alignment in m8.parse_tsv(blast_output, m8.BLAST_OUTPUT_SCHEMA):
+            if alignment["evalue"] > max_evalue:
+                continue
             query = alignment["qseqid"]
             best_alignments = contigs_to_best_alignments[query]
 
@@ -526,7 +530,7 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
             yield optimal_alignment
 
     @staticmethod
-    def filter_and_group_hits_by_query(blast_output, min_alignment_length, min_pident):
+    def filter_and_group_hits_by_query(blast_output, min_alignment_length, min_pident, max_evalue):
         # Filter and group results by query, yielding one result group at a time.
         # A result group consists of all hits for a query, grouped by subject.
         # Please see comment in get_top_m8_nt for more context.
@@ -539,6 +543,8 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
             if hsp["length"] < min_alignment_length:
                 continue
             if hsp["pident"] < min_pident:
+                continue
+            if hsp["evalue"] > max_evalue:
                 continue
             query, subject = hsp["qseqid"], hsp["sseqid"]
             if query != current_query:
@@ -554,12 +560,12 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
 
     @staticmethod
     # An iterator that, for contig, yields to optimal hit for the contig in the nt blast_output.
-    def optimal_hit_for_each_query_nt(blast_output, min_alignment_length, min_pident):
+    def optimal_hit_for_each_query_nt(blast_output, min_alignment_length, min_pident, max_evalue):
         contigs_to_blast_candidates = {}
         accession_counts = defaultdict(lambda: 0)
 
         # For each contig, get the collection of blast candidates that have the best total score (may be multiple if there are ties).
-        for query_hits in PipelineStepBlastContigs.filter_and_group_hits_by_query(blast_output, min_alignment_length, min_pident):
+        for query_hits in PipelineStepBlastContigs.filter_and_group_hits_by_query(blast_output, min_alignment_length, min_pident, max_evalue):
             best_hits = []
             for _subject, hit_fragments in query_hits.items():
                 # For NT, we take a special approach where we try to find a subset of disjoint HSPs
@@ -591,7 +597,7 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
             yield optimal_hit.summary()
 
     @staticmethod
-    def get_top_m8_nt(blast_output, blast_top_m8, min_alignment_length, min_pident):
+    def get_top_m8_nt(blast_output, blast_top_m8, min_alignment_length, min_pident, max_evalue):
         '''
         For each contig Q (query) and reference S (subject), extend the highest-scoring
         fragment alignment of Q to S with other *non-overlapping* fragments as far as
@@ -613,4 +619,4 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
 
         # Output the optimal hit for each query.
         m8.unparse_tsv(blast_top_m8, m8.RERANKED_BLAST_OUTPUT_NT_SCHEMA,
-                       PipelineStepBlastContigs.optimal_hit_for_each_query_nt(blast_output, min_alignment_length, min_pident))
+                       PipelineStepBlastContigs.optimal_hit_for_each_query_nt(blast_output, min_alignment_length, min_pident, max_evalue))
