@@ -3,8 +3,6 @@ version 1.0
 task RunValidateInput {
   input {
     String docker_image_id
-    String aws_region
-    String deployment_env
     String dag_branch
     String s3_wd_uri
     Array[File] fastqs
@@ -12,7 +10,6 @@ task RunValidateInput {
     String file_ext
   }
   command<<<
-  export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
   set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
@@ -42,8 +39,6 @@ task RunValidateInput {
 task RunStar {
   input {
     String docker_image_id
-    String aws_region
-    String deployment_env
     String dag_branch
     String s3_wd_uri
     File validate_input_summary_json
@@ -53,7 +48,6 @@ task RunStar {
     String host_genome
   }
   command<<<
-  export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
   set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
@@ -84,15 +78,12 @@ task RunStar {
 task RunTrimmomatic {
   input {
     String docker_image_id
-    String aws_region
-    String deployment_env
     String dag_branch
     String s3_wd_uri
     Array[File] unmapped_fastq
     String adapter_fasta
   }
   command<<<
-  export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
   set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
@@ -120,14 +111,11 @@ task RunTrimmomatic {
 task RunPriceSeq {
   input {
     String docker_image_id
-    String aws_region
-    String deployment_env
     String dag_branch
     String s3_wd_uri
     Array[File] trimmomatic_fastq
   }
   command<<<
-  export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
   set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
@@ -155,14 +143,11 @@ task RunPriceSeq {
 task RunCDHitDup {
   input {
     String docker_image_id
-    String aws_region
-    String deployment_env
     String dag_branch
     String s3_wd_uri
     Array[File] priceseq_fa
   }
   command<<<
-  export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
   set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
@@ -192,8 +177,6 @@ task RunCDHitDup {
 task RunLZW {
   input {
     String docker_image_id
-    String aws_region
-    String deployment_env
     String dag_branch
     String s3_wd_uri
     Array[File] dedup_fa
@@ -201,7 +184,6 @@ task RunLZW {
     File cdhitdup_cluster_sizes_tsv
   }
   command<<<
-  export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
   set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
@@ -229,8 +211,6 @@ task RunLZW {
 task RunBowtie2_bowtie2_out {
   input {
     String docker_image_id
-    String aws_region
-    String deployment_env
     String dag_branch
     String s3_wd_uri
     Array[File] lzw_fa
@@ -240,7 +220,6 @@ task RunBowtie2_bowtie2_out {
     String bowtie2_genome
   }
   command<<<
-  export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
   set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
@@ -269,8 +248,6 @@ task RunBowtie2_bowtie2_out {
 task RunSubsample {
   input {
     String docker_image_id
-    String aws_region
-    String deployment_env
     String dag_branch
     String s3_wd_uri
     Array[File] bowtie2_fa
@@ -280,7 +257,6 @@ task RunSubsample {
     Int max_subsample_fragments
   }
   command<<<
-  export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
   set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
@@ -309,8 +285,6 @@ task RunSubsample {
 task RunStarDownstream {
   input {
     String docker_image_id
-    String aws_region
-    String deployment_env
     String dag_branch
     String s3_wd_uri
     Array[File] subsampled_fa
@@ -322,7 +296,6 @@ task RunStarDownstream {
     String human_star_genome
   }
   command<<<
-  export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
   set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
@@ -350,8 +323,6 @@ task RunStarDownstream {
 task RunBowtie2_bowtie2_human_out {
   input {
     String docker_image_id
-    String aws_region
-    String deployment_env
     String dag_branch
     String s3_wd_uri
     Array[File] unmapped_human_fa
@@ -361,7 +332,6 @@ task RunBowtie2_bowtie2_human_out {
     String human_bowtie2_genome
   }
   command<<<
-  export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
   set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
@@ -390,8 +360,6 @@ task RunBowtie2_bowtie2_human_out {
 task RunGsnapFilter {
   input {
     String docker_image_id
-    String aws_region
-    String deployment_env
     String dag_branch
     String s3_wd_uri
     Array[File] subsampled_fa
@@ -400,7 +368,6 @@ task RunGsnapFilter {
     File cdhitdup_cluster_sizes_tsv
   }
   command<<<
-  export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
   set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
@@ -429,9 +396,7 @@ task RunGsnapFilter {
 workflow idseq_host_filter {
   input {
     String docker_image_id
-    String aws_region
-    String deployment_env
-    String dag_branch
+    String dag_branch = ""
     String s3_wd_uri
     File fastqs_0
     File? fastqs_1
@@ -450,8 +415,6 @@ workflow idseq_host_filter {
   call RunValidateInput {
     input:
       docker_image_id = docker_image_id,
-      aws_region = aws_region,
-      deployment_env = deployment_env,
       dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       fastqs = select_all([fastqs_0, fastqs_1]),
@@ -462,8 +425,6 @@ workflow idseq_host_filter {
   call RunStar {
     input:
       docker_image_id = docker_image_id,
-      aws_region = aws_region,
-      deployment_env = deployment_env,
       dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       validate_input_summary_json = RunValidateInput.validate_input_summary_json,
@@ -476,8 +437,6 @@ workflow idseq_host_filter {
   call RunTrimmomatic {
     input:
       docker_image_id = docker_image_id,
-      aws_region = aws_region,
-      deployment_env = deployment_env,
       dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       unmapped_fastq = select_all([RunStar.unmapped1_fastq, RunStar.unmapped2_fastq]),
@@ -487,8 +446,6 @@ workflow idseq_host_filter {
   call RunPriceSeq {
     input:
       docker_image_id = docker_image_id,
-      aws_region = aws_region,
-      deployment_env = deployment_env,
       dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       trimmomatic_fastq = select_all([RunTrimmomatic.trimmomatic1_fastq, RunTrimmomatic.trimmomatic2_fastq])
@@ -497,8 +454,6 @@ workflow idseq_host_filter {
   call RunCDHitDup {
     input:
       docker_image_id = docker_image_id,
-      aws_region = aws_region,
-      deployment_env = deployment_env,
       dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       priceseq_fa = select_all([RunPriceSeq.priceseq1_fa, RunPriceSeq.priceseq2_fa])
@@ -507,8 +462,6 @@ workflow idseq_host_filter {
   call RunLZW {
     input:
       docker_image_id = docker_image_id,
-      aws_region = aws_region,
-      deployment_env = deployment_env,
       dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       dedup_fa = select_all([RunCDHitDup.dedup1_fa, RunCDHitDup.dedup2_fa]),
@@ -519,8 +472,6 @@ workflow idseq_host_filter {
   call RunBowtie2_bowtie2_out {
     input:
       docker_image_id = docker_image_id,
-      aws_region = aws_region,
-      deployment_env = deployment_env,
       dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       lzw_fa = select_all([RunLZW.lzw1_fa, RunLZW.lzw2_fa]),
@@ -533,8 +484,6 @@ workflow idseq_host_filter {
   call RunSubsample {
     input:
       docker_image_id = docker_image_id,
-      aws_region = aws_region,
-      deployment_env = deployment_env,
       dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       bowtie2_fa = select_all([RunBowtie2_bowtie2_out.bowtie2_1_fa, RunBowtie2_bowtie2_out.bowtie2_2_fa, RunBowtie2_bowtie2_out.bowtie2_merged_fa]),
@@ -548,8 +497,6 @@ workflow idseq_host_filter {
     call RunStarDownstream {
       input:
         docker_image_id = docker_image_id,
-        aws_region = aws_region,
-        deployment_env = deployment_env,
         dag_branch = dag_branch,
         s3_wd_uri = s3_wd_uri,
         subsampled_fa = select_all([RunSubsample.subsampled_1_fa, RunSubsample.subsampled_2_fa, RunSubsample.subsampled_merged_fa]),
@@ -564,8 +511,6 @@ workflow idseq_host_filter {
     call RunBowtie2_bowtie2_human_out {
       input:
         docker_image_id = docker_image_id,
-        aws_region = aws_region,
-        deployment_env = deployment_env,
         dag_branch = dag_branch,
         s3_wd_uri = s3_wd_uri,
         unmapped_human_fa = select_all([RunStarDownstream.unmapped_human_1_fa, RunStarDownstream.unmapped_human_2_fa]),
@@ -583,8 +528,6 @@ workflow idseq_host_filter {
   call RunGsnapFilter {
     input:
       docker_image_id = docker_image_id,
-      aws_region = aws_region,
-      deployment_env = deployment_env,
       dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       subsampled_fa = gsnap_filter_input,

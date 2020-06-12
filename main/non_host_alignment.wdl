@@ -3,8 +3,6 @@ version 1.0
 task RunAlignmentRemotely_gsnap_out {
   input {
     String docker_image_id
-    String aws_region
-    String deployment_env
     String dag_branch
     String s3_wd_uri
     Array[File] host_filter_out_gsnap_filter_fa
@@ -12,12 +10,12 @@ task RunAlignmentRemotely_gsnap_out {
     String lineage_db
     String accession2taxid_db
     String taxon_blacklist
-    String? deuterostome_db
+    String deuterostome_db
     String index_dir_suffix
+    Boolean use_deuterostome_filter
     Boolean use_taxon_whitelist
   }
   command<<<
-  export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
   set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
@@ -29,7 +27,7 @@ task RunAlignmentRemotely_gsnap_out {
     --input-files '[["~{sep='","' host_filter_out_gsnap_filter_fa}"], ["~{cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv}"]]' \
     --output-files '["gsnap.m8", "gsnap.deduped.m8", "gsnap.hitsummary.tab", "gsnap_counts_with_dcr.json"]' \
     --output-dir-s3 '~{s3_wd_uri}' \
-    --additional-files '{"lineage_db": "~{lineage_db}", "accession2taxid_db": "~{accession2taxid_db}", "taxon_blacklist": "~{taxon_blacklist}", "deuterostome_db": "~{deuterostome_db}"}' \
+    --additional-files '{"lineage_db": "~{lineage_db}", "accession2taxid_db": "~{accession2taxid_db}", "taxon_blacklist": "~{taxon_blacklist}", "deuterostome_db": "~{if use_deuterostome_filter then '~{deuterostome_db}' else ''}"}' \
     --additional-attributes '{"alignment_algorithm": "gsnap", "index_dir_suffix": "~{index_dir_suffix}", "use_taxon_whitelist": ~{use_taxon_whitelist}}'
   >>>
   output {
@@ -47,8 +45,6 @@ task RunAlignmentRemotely_gsnap_out {
 task RunAlignmentRemotely_rapsearch2_out {
   input {
     String docker_image_id
-    String aws_region
-    String deployment_env
     String dag_branch
     String s3_wd_uri
     Array[File] host_filter_out_gsnap_filter_fa
@@ -60,7 +56,6 @@ task RunAlignmentRemotely_rapsearch2_out {
     Boolean use_taxon_whitelist
   }
   command<<<
-  export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
   set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
@@ -90,8 +85,6 @@ task RunAlignmentRemotely_rapsearch2_out {
 task CombineTaxonCounts {
   input {
     String docker_image_id
-    String aws_region
-    String deployment_env
     String dag_branch
     String s3_wd_uri
     File gsnap_m8
@@ -104,7 +97,6 @@ task CombineTaxonCounts {
     File rapsearch2_counts_with_dcr_json
   }
   command<<<
-  export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
   set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
@@ -131,8 +123,6 @@ task CombineTaxonCounts {
 task GenerateAnnotatedFasta {
   input {
     String docker_image_id
-    String aws_region
-    String deployment_env
     String dag_branch
     String s3_wd_uri
     Array[File] host_filter_out_gsnap_filter_fa
@@ -149,7 +139,6 @@ task GenerateAnnotatedFasta {
     File cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv
   }
   command<<<
-  export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
   set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
@@ -177,9 +166,7 @@ task GenerateAnnotatedFasta {
 workflow idseq_non_host_alignment {
   input {
     String docker_image_id
-    String aws_region
-    String deployment_env
-    String dag_branch
+    String dag_branch = ""
     String s3_wd_uri
     File host_filter_out_gsnap_filter_1_fa
     File? host_filter_out_gsnap_filter_2_fa
@@ -187,19 +174,19 @@ workflow idseq_non_host_alignment {
     File cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv
     File cdhitdup_out_dedup1_fa_clstr
     File cdhitdup_out_dedup1_fa
-    String lineage_db
-    String accession2taxid_db
-    String taxon_blacklist
-    String index_dir_suffix
-    String? deuterostome_db
-    Boolean use_taxon_whitelist
+    String idseq_db_bucket = "idseq-database"
+    String index_version = "2020-04-20"
+    String lineage_db = "s3://~{idseq_db_bucket}/taxonomy/~{index_version}/taxid-lineages.db"
+    String accession2taxid_db = "s3://~{idseq_db_bucket}/alignment_data/~{index_version}/accession2taxid.db"
+    String taxon_blacklist = "s3://~{idseq_db_bucket}/taxonomy/~{index_version}/taxon_blacklist.txt"
+    String deuterostome_db = "s3://~{idseq_db_bucket}/taxonomy/~{index_version}/deuterostome_taxids.txt"
+    Boolean use_deuterostome_filter = true
+    Boolean use_taxon_whitelist = false
   }
 
   call RunAlignmentRemotely_gsnap_out {
     input:
       docker_image_id = docker_image_id,
-      aws_region = aws_region,
-      deployment_env = deployment_env,
       dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       host_filter_out_gsnap_filter_fa = select_all([host_filter_out_gsnap_filter_1_fa, host_filter_out_gsnap_filter_2_fa, host_filter_out_gsnap_filter_merged_fa]),
@@ -208,15 +195,14 @@ workflow idseq_non_host_alignment {
       accession2taxid_db = accession2taxid_db,
       taxon_blacklist = taxon_blacklist,
       deuterostome_db = deuterostome_db,
-      index_dir_suffix = index_dir_suffix,
+      index_dir_suffix = index_version,
+      use_deuterostome_filter = use_deuterostome_filter,
       use_taxon_whitelist = use_taxon_whitelist
   }
 
   call RunAlignmentRemotely_rapsearch2_out {
     input:
       docker_image_id = docker_image_id,
-      aws_region = aws_region,
-      deployment_env = deployment_env,
       dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       host_filter_out_gsnap_filter_fa = select_all([host_filter_out_gsnap_filter_1_fa, host_filter_out_gsnap_filter_2_fa, host_filter_out_gsnap_filter_merged_fa]),
@@ -224,15 +210,13 @@ workflow idseq_non_host_alignment {
       lineage_db = lineage_db,
       accession2taxid_db = accession2taxid_db,
       taxon_blacklist = taxon_blacklist,
-      index_dir_suffix = index_dir_suffix,
+      index_dir_suffix = index_version,
       use_taxon_whitelist = use_taxon_whitelist
   }
 
   call CombineTaxonCounts {
     input:
       docker_image_id = docker_image_id,
-      aws_region = aws_region,
-      deployment_env = deployment_env,
       dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       gsnap_m8 = RunAlignmentRemotely_gsnap_out.gsnap_m8,
@@ -248,8 +232,6 @@ workflow idseq_non_host_alignment {
   call GenerateAnnotatedFasta {
     input:
       docker_image_id = docker_image_id,
-      aws_region = aws_region,
-      deployment_env = deployment_env,
       dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       host_filter_out_gsnap_filter_fa = select_all([host_filter_out_gsnap_filter_1_fa, host_filter_out_gsnap_filter_2_fa, host_filter_out_gsnap_filter_merged_fa]),

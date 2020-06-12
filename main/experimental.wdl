@@ -3,8 +3,6 @@ version 1.0
 task GenerateTaxidFasta {
   input {
     String docker_image_id
-    String aws_region
-    String deployment_env
     String dag_branch
     String s3_wd_uri
     File taxid_fasta_in_annotated_merged_fa
@@ -12,7 +10,6 @@ task GenerateTaxidFasta {
     File taxid_fasta_in_rapsearch2_hitsummary_tab
   }
   command<<<
-  export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
   set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
@@ -39,14 +36,11 @@ task GenerateTaxidFasta {
 task GenerateTaxidLocator {
   input {
     String docker_image_id
-    String aws_region
-    String deployment_env
     String dag_branch
     String s3_wd_uri
     File taxid_annot_fasta
   }
   command<<<
-  export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
   set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
@@ -85,8 +79,6 @@ task GenerateTaxidLocator {
 task GenerateAlignmentViz {
   input {
     String docker_image_id
-    String aws_region
-    String deployment_env
     String dag_branch
     String s3_wd_uri
     File gsnap_m8_gsnap_deduped_m8
@@ -107,7 +99,6 @@ task GenerateAlignmentViz {
     String nt_loc_db
   }
   command<<<
-  export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
   set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
@@ -135,15 +126,12 @@ task GenerateAlignmentViz {
 task RunSRST2 {
   input {
     String docker_image_id
-    String aws_region
-    String deployment_env
     String dag_branch
     String s3_wd_uri
     Array[File] fastqs
     String file_ext
   }
   command<<<
-  export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
   set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
@@ -175,8 +163,6 @@ task RunSRST2 {
 task GenerateCoverageViz {
   input {
     String docker_image_id
-    String aws_region
-    String deployment_env
     String dag_branch
     String s3_wd_uri
     File refined_gsnap_in_gsnap_reassigned_m8
@@ -189,7 +175,6 @@ task GenerateCoverageViz {
     String nt_info_db
   }
   command<<<
-  export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
   set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
@@ -217,8 +202,6 @@ task GenerateCoverageViz {
 task NonhostFastq {
   input {
     String docker_image_id
-    String aws_region
-    String deployment_env
     String dag_branch
     String s3_wd_uri
     Array[File] fastqs
@@ -228,7 +211,6 @@ task NonhostFastq {
     Boolean use_taxon_whitelist
   }
   command<<<
-  export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
   set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
@@ -256,9 +238,7 @@ task NonhostFastq {
 workflow idseq_experimental {
   input {
     String docker_image_id
-    String aws_region
-    String deployment_env
-    String dag_branch
+    String dag_branch = ""
     String s3_wd_uri
     File taxid_fasta_in_annotated_merged_fa
     File taxid_fasta_in_gsnap_hitsummary_tab
@@ -275,18 +255,18 @@ workflow idseq_experimental {
     File nonhost_fasta_refined_taxid_annot_fasta
     File cdhitdup_clusters_dedup1_fa_clstr
     File deduped_fasta_dedup1_fa
-    String file_ext
-    String nt_db
-    String nt_loc_db
-    String nt_info_db
-    Boolean use_taxon_whitelist
+    String file_ext = "fastq"
+    String idseq_db_bucket = "idseq-database"
+    String index_version = "2020-04-20"
+    String nt_db = "s3://~{idseq_db_bucket}/ncbi-sources/~{index_version}/nt"
+    String nt_loc_db = "s3://~{idseq_db_bucket}/alignment_data/~{index_version}/nt_loc.db"
+    String nt_info_db = "s3://~{idseq_db_bucket}/alignment_data/~{index_version}/nt_info.db"
+    Boolean use_taxon_whitelist = false
   }
 
   call GenerateTaxidFasta {
     input:
       docker_image_id = docker_image_id,
-      aws_region = aws_region,
-      deployment_env = deployment_env,
       dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       taxid_fasta_in_annotated_merged_fa = taxid_fasta_in_annotated_merged_fa,
@@ -297,8 +277,6 @@ workflow idseq_experimental {
   call GenerateTaxidLocator {
     input:
       docker_image_id = docker_image_id,
-      aws_region = aws_region,
-      deployment_env = deployment_env,
       dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       taxid_annot_fasta = GenerateTaxidFasta.taxid_annot_fasta
@@ -307,8 +285,6 @@ workflow idseq_experimental {
   call GenerateAlignmentViz {
     input:
       docker_image_id = docker_image_id,
-      aws_region = aws_region,
-      deployment_env = deployment_env,
       dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       gsnap_m8_gsnap_deduped_m8 = gsnap_m8_gsnap_deduped_m8,
@@ -332,8 +308,6 @@ workflow idseq_experimental {
   call RunSRST2 {
     input:
       docker_image_id = docker_image_id,
-      aws_region = aws_region,
-      deployment_env = deployment_env,
       dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       fastqs = select_all([fastqs_0, fastqs_1]),
@@ -343,8 +317,6 @@ workflow idseq_experimental {
   call GenerateCoverageViz {
     input:
       docker_image_id = docker_image_id,
-      aws_region = aws_region,
-      deployment_env = deployment_env,
       dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       refined_gsnap_in_gsnap_reassigned_m8 = refined_gsnap_in_gsnap_reassigned_m8,
@@ -360,8 +332,6 @@ workflow idseq_experimental {
   call NonhostFastq {
     input:
       docker_image_id = docker_image_id,
-      aws_region = aws_region,
-      deployment_env = deployment_env,
       dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       fastqs = select_all([fastqs_0, fastqs_1]),

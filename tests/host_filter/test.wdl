@@ -21,8 +21,6 @@ workflow test_host_filter {
     call host_filter.RunValidateInput {
         input:
         docker_image_id     = docker_image_id,
-        aws_region          = "local",
-        deployment_env      = "local",
         dag_branch          = "",
         s3_wd_uri           = "s3://idseq-workflows-local/test_host_filter/",
         max_input_fragments = 75000000,

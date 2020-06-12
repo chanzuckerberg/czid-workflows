@@ -3,15 +3,12 @@ version 1.0
 task RunAssembly {
   input {
     String docker_image_id
-    String aws_region
-    String deployment_env
     String dag_branch
     String s3_wd_uri
     Array[File] host_filter_out_gsnap_filter_fa
     File cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv
   }
   command<<<
-  export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
   set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
@@ -41,8 +38,6 @@ task RunAssembly {
 task GenerateCoverageStats {
   input {
     String docker_image_id
-    String aws_region
-    String deployment_env
     String dag_branch
     String s3_wd_uri
     File assembly_contigs_fasta
@@ -51,7 +46,6 @@ task GenerateCoverageStats {
     File assembly_contig_stats_json
   }
   command<<<
-  export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
   set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
@@ -79,8 +73,6 @@ task GenerateCoverageStats {
 task DownloadAccessions_gsnap_accessions_out {
   input {
     String docker_image_id
-    String aws_region
-    String deployment_env
     String dag_branch
     String s3_wd_uri
     File gsnap_out_gsnap_m8
@@ -92,7 +84,6 @@ task DownloadAccessions_gsnap_accessions_out {
     String lineage_db
   }
   command<<<
-  export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
   set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
@@ -119,8 +110,6 @@ task DownloadAccessions_gsnap_accessions_out {
 task DownloadAccessions_rapsearch2_accessions_out {
   input {
     String docker_image_id
-    String aws_region
-    String deployment_env
     String dag_branch
     String s3_wd_uri
     File rapsearch2_out_rapsearch2_m8
@@ -132,7 +121,6 @@ task DownloadAccessions_rapsearch2_accessions_out {
     String nr_db
   }
   command<<<
-  export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
   set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
@@ -159,8 +147,6 @@ task DownloadAccessions_rapsearch2_accessions_out {
 task BlastContigs_refined_gsnap_out {
   input {
     String docker_image_id
-    String aws_region
-    String deployment_env
     String dag_branch
     String s3_wd_uri
     File gsnap_out_gsnap_m8
@@ -176,10 +162,10 @@ task BlastContigs_refined_gsnap_out {
     String lineage_db
     String taxon_blacklist
     String? deuterostome_db
+    Boolean use_deuterostome_filter
     Boolean use_taxon_whitelist
   }
   command<<<
-  export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
   set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
@@ -191,7 +177,7 @@ task BlastContigs_refined_gsnap_out {
     --input-files '[["~{gsnap_out_gsnap_m8}", "~{gsnap_out_gsnap_deduped_m8}", "~{gsnap_out_gsnap_hitsummary_tab}", "~{gsnap_out_gsnap_counts_with_dcr_json}"], ["~{assembly_contigs_fasta}", "~{assembly_scaffolds_fasta}", "~{assembly_read_contig_sam}", "~{assembly_contig_stats_json}"], ["~{assembly_nt_refseq_fasta}"], ["~{cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv}"]]' \
     --output-files '["assembly/gsnap.blast.m8", "assembly/gsnap.reassigned.m8", "assembly/gsnap.hitsummary2.tab", "assembly/refined_gsnap_counts_with_dcr.json", "assembly/gsnap_contig_summary.json", "assembly/gsnap.blast.top.m8"]' \
     --output-dir-s3 '~{s3_wd_uri}' \
-    --additional-files '{"lineage_db": "~{lineage_db}", "taxon_blacklist": "~{taxon_blacklist}", "deuterostome_db": "~{deuterostome_db}"}' \
+    --additional-files '{"lineage_db": "~{lineage_db}", "taxon_blacklist": "~{taxon_blacklist}", "deuterostome_db": "~{if use_deuterostome_filter then '~{deuterostome_db}' else ''}"}' \
     --additional-attributes '{"db_type": "nt", "use_taxon_whitelist": ~{use_taxon_whitelist}}'
   >>>
   output {
@@ -211,8 +197,6 @@ task BlastContigs_refined_gsnap_out {
 task BlastContigs_refined_rapsearch2_out {
   input {
     String docker_image_id
-    String aws_region
-    String deployment_env
     String dag_branch
     String s3_wd_uri
     File rapsearch2_out_rapsearch2_m8
@@ -230,7 +214,6 @@ task BlastContigs_refined_rapsearch2_out {
     Boolean use_taxon_whitelist
   }
   command<<<
-  export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
   set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
@@ -262,8 +245,6 @@ task BlastContigs_refined_rapsearch2_out {
 task CombineTaxonCounts {
   input {
     String docker_image_id
-    String aws_region
-    String deployment_env
     String dag_branch
     String s3_wd_uri
     File assembly_gsnap_blast_m8
@@ -280,7 +261,6 @@ task CombineTaxonCounts {
     File assembly_rapsearch2_blast_top_m8
   }
   command<<<
-  export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
   set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
@@ -307,8 +287,6 @@ task CombineTaxonCounts {
 task CombineJson {
   input {
     String docker_image_id
-    String aws_region
-    String deployment_env
     String dag_branch
     String s3_wd_uri
     File assembly_gsnap_blast_m8
@@ -325,7 +303,6 @@ task CombineJson {
     File assembly_rapsearch2_blast_top_m8
   }
   command<<<
-  export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
   set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
@@ -352,8 +329,6 @@ task CombineJson {
 task GenerateAnnotatedFasta {
   input {
     String docker_image_id
-    String aws_region
-    String deployment_env
     String dag_branch
     String s3_wd_uri
     Array[File] host_filter_out_gsnap_filter_fa
@@ -374,7 +349,6 @@ task GenerateAnnotatedFasta {
     File cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv
   }
   command<<<
-  export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
   set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
@@ -402,8 +376,6 @@ task GenerateAnnotatedFasta {
 task GenerateTaxidFasta {
   input {
     String docker_image_id
-    String aws_region
-    String deployment_env
     String dag_branch
     String s3_wd_uri
     File assembly_refined_annotated_merged_fa
@@ -423,7 +395,6 @@ task GenerateTaxidFasta {
     String lineage_db
   }
   command<<<
-  export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
   set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
@@ -450,14 +421,11 @@ task GenerateTaxidFasta {
 task GenerateTaxidLocator {
   input {
     String docker_image_id
-    String aws_region
-    String deployment_env
     String dag_branch
     String s3_wd_uri
     File assembly_refined_taxid_annot_fasta
   }
   command<<<
-  export AWS_DEFAULT_REGION=~{aws_region} DEPLOYMENT_ENVIRONMENT=~{deployment_env}
   set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
@@ -496,9 +464,7 @@ task GenerateTaxidLocator {
 workflow idseq_postprocess {
   input {
     String docker_image_id
-    String aws_region
-    String deployment_env
-    String dag_branch
+    String dag_branch = ""
     String s3_wd_uri
     File host_filter_out_gsnap_filter_1_fa
     File? host_filter_out_gsnap_filter_2_fa
@@ -514,21 +480,22 @@ workflow idseq_postprocess {
     File cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv
     File cdhitdup_out_dedup1_fa_clstr
     File cdhitdup_out_dedup1_fa
-    String nt_db
-    String nt_loc_db
-    String nr_db
-    String nr_loc_db
-    String lineage_db
-    String taxon_blacklist
-    String? deuterostome_db
-    Boolean use_taxon_whitelist
+    String idseq_db_bucket = "idseq-database"
+    String index_version = "2020-04-20"
+    String nt_db = "s3://~{idseq_db_bucket}/ncbi-sources/~{index_version}/nt"
+    String nt_loc_db = "s3://~{idseq_db_bucket}/ncbi-sources/~{index_version}/nt_loc.db"
+    String nr_db = "s3://~{idseq_db_bucket}/ncbi-sources/~{index_version}/nr"
+    String nr_loc_db = "s3://~{idseq_db_bucket}/ncbi-sources/~{index_version}/nr_loc.db"
+    String lineage_db = "s3://~{idseq_db_bucket}/taxonomy/~{index_version}/taxid-lineages.db"
+    String taxon_blacklist = "s3://~{idseq_db_bucket}/taxonomy/~{index_version}/taxon_blacklist.txt"
+    String deuterostome_db = "s3://~{idseq_db_bucket}/taxonomy/~{index_version}/deuterostome_taxids.txt"
+    Boolean use_deuterostome_filter = true
+    Boolean use_taxon_whitelist = false
   }
 
   call RunAssembly {
     input:
       docker_image_id = docker_image_id,
-      aws_region = aws_region,
-      deployment_env = deployment_env,
       dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       host_filter_out_gsnap_filter_fa = select_all([host_filter_out_gsnap_filter_1_fa, host_filter_out_gsnap_filter_2_fa, host_filter_out_gsnap_filter_merged_fa]),
@@ -538,8 +505,6 @@ workflow idseq_postprocess {
   call GenerateCoverageStats {
     input:
       docker_image_id = docker_image_id,
-      aws_region = aws_region,
-      deployment_env = deployment_env,
       dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       assembly_contigs_fasta = RunAssembly.assembly_contigs_fasta,
@@ -551,8 +516,6 @@ workflow idseq_postprocess {
   call DownloadAccessions_gsnap_accessions_out {
     input:
       docker_image_id = docker_image_id,
-      aws_region = aws_region,
-      deployment_env = deployment_env,
       dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       gsnap_out_gsnap_m8 = gsnap_out_gsnap_m8,
@@ -567,8 +530,6 @@ workflow idseq_postprocess {
   call DownloadAccessions_rapsearch2_accessions_out {
     input:
       docker_image_id = docker_image_id,
-      aws_region = aws_region,
-      deployment_env = deployment_env,
       dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       rapsearch2_out_rapsearch2_m8 = rapsearch2_out_rapsearch2_m8,
@@ -583,8 +544,6 @@ workflow idseq_postprocess {
   call BlastContigs_refined_gsnap_out {
     input:
       docker_image_id = docker_image_id,
-      aws_region = aws_region,
-      deployment_env = deployment_env,
       dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       gsnap_out_gsnap_m8 = gsnap_out_gsnap_m8,
@@ -600,14 +559,13 @@ workflow idseq_postprocess {
       lineage_db = lineage_db,
       taxon_blacklist = taxon_blacklist,
       deuterostome_db = deuterostome_db,
+      use_deuterostome_filter = use_deuterostome_filter,
       use_taxon_whitelist = use_taxon_whitelist
   }
 
   call BlastContigs_refined_rapsearch2_out {
     input:
       docker_image_id = docker_image_id,
-      aws_region = aws_region,
-      deployment_env = deployment_env,
       dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       rapsearch2_out_rapsearch2_m8 = rapsearch2_out_rapsearch2_m8,
@@ -628,8 +586,6 @@ workflow idseq_postprocess {
   call CombineTaxonCounts {
     input:
       docker_image_id = docker_image_id,
-      aws_region = aws_region,
-      deployment_env = deployment_env,
       dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       assembly_gsnap_blast_m8 = BlastContigs_refined_gsnap_out.assembly_gsnap_blast_m8,
@@ -649,8 +605,6 @@ workflow idseq_postprocess {
   call CombineJson {
     input:
       docker_image_id = docker_image_id,
-      aws_region = aws_region,
-      deployment_env = deployment_env,
       dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       assembly_gsnap_blast_m8 = BlastContigs_refined_gsnap_out.assembly_gsnap_blast_m8,
@@ -670,8 +624,6 @@ workflow idseq_postprocess {
   call GenerateAnnotatedFasta {
     input:
       docker_image_id = docker_image_id,
-      aws_region = aws_region,
-      deployment_env = deployment_env,
       dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       host_filter_out_gsnap_filter_fa = select_all([host_filter_out_gsnap_filter_1_fa, host_filter_out_gsnap_filter_2_fa, host_filter_out_gsnap_filter_merged_fa]),
@@ -695,8 +647,6 @@ workflow idseq_postprocess {
   call GenerateTaxidFasta {
     input:
       docker_image_id = docker_image_id,
-      aws_region = aws_region,
-      deployment_env = deployment_env,
       dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       assembly_refined_annotated_merged_fa = GenerateAnnotatedFasta.assembly_refined_annotated_merged_fa,
@@ -719,8 +669,6 @@ workflow idseq_postprocess {
   call GenerateTaxidLocator {
     input:
       docker_image_id = docker_image_id,
-      aws_region = aws_region,
-      deployment_env = deployment_env,
       dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       assembly_refined_taxid_annot_fasta = GenerateTaxidFasta.assembly_refined_taxid_annot_fasta
