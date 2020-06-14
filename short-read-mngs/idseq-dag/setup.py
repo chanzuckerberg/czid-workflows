@@ -10,7 +10,7 @@ setup(name='idseq_dag',
       license='MIT',
       packages=find_packages(exclude=["tests.*", "tests"]),
       package_data={'idseq_dag': ['scripts/fastq-fasta-line-validation.awk']},
-      install_requires=['pytz'],
+      install_requires=["pytz", "boto3"],
       tests_require=["coverage", "flake8", "wheel"],
       dependency_links=[],
       entry_points={

@@ -1,5 +1,6 @@
 import re
 import unittest
+import tempfile
 from multiprocessing import RLock
 
 
@@ -24,9 +25,9 @@ class TestDownloadAccessions(unittest.TestCase):
                 ]
             ],
             output_files=["assembly/nr.refseq.fasta"],
-            output_dir_local="/mnt/idseq/results",
+            output_dir_local=tempfile.TemporaryDirectory().name,
             output_dir_s3="s3://dummy_bucket",
-            ref_dir_local="/mnt/idseq/ref/",
+            ref_dir_local=tempfile.TemporaryDirectory().name,
             additional_files={
                 "lineage_db": "s3://idseq-database/taxonomy/2018-12-01/taxid-lineages.sqlite3",
                 "loc_db": "s3://idseq-database/alignment_data/2018-12-01/nr_loc.sqlite3"

@@ -1,12 +1,11 @@
+import gzip
 import multiprocessing
-
 from enum import Enum
+from subprocess import run, PIPE
 
-import idseq_dag.util.command as command
-import idseq_dag.util.command_patterns as command_patterns
 import idseq_dag.util.fasta as fasta
 from idseq_dag import __version__
-
+from idseq_dag.exceptions import InvalidInputFileError
 
 class ReadCountingMode(Enum):
     COUNT_UNIQUE = "COUNT UNIQUE READS"
@@ -17,79 +16,34 @@ class ReadCountingMode(Enum):
 PIPELINE_MAJOR_VERSION = int(__version__.split(".", 1)[0])
 READ_COUNTING_MODE = ReadCountingMode.COUNT_ALL if PIPELINE_MAJOR_VERSION >= 4 else ReadCountingMode.COUNT_UNIQUE
 
+GZIP_MAGIC_HEADER = b'\037\213'
 
-def _count_reads_via_wc(local_file_path, max_reads):
+def count_reads(filename):
     '''
-    Count reads in a local file based on file format inferred from extension,
-    up to a maximum of max_reads.
+    Count reads in a given FASTA or FASTQ file.
     '''
-    if local_file_path.endswith(".gz"):
-        cmd = r'''zcat "${local_file_path}"'''
-        file_format = local_file_path.split(".")[-2]
-    else:
-        cmd = r'''cat "${local_file_path}"'''
-        file_format = local_file_path.split(".")[-1]
-
-    named_args = {
-        'local_file_path': local_file_path
-    }
-
-    if max_reads:
-        max_lines = _reads2lines(max_reads, file_format)
-        assert max_lines is not None, "Could not convert max_reads to max_lines"
-        cmd += r''' | head -n "${max_lines}"'''
-        named_args.update({
-            'max_lines': max_lines
-        })
-
-    cmd += " |  wc -l"
-
-    cmd_output = command.execute_with_output(
-        command_patterns.ShellScriptCommand(
-            script=cmd,
-            named_args=named_args
-        )
-    )
-    line_count = int(cmd_output.strip().split(' ')[0])
-    return _lines2reads(line_count, file_format)
+    with open(filename, "rb") as gz_fh:
+        is_gzipped = True if gz_fh.read(2).startswith(GZIP_MAGIC_HEADER) else False
+    with gzip.open(filename) if is_gzipped else open(filename, mode="rb") as fmt_fh:
+        first_char = fmt_fh.read(1).decode()[0]
+    with open(filename, "rb") as fh:
+        if first_char == ">":
+            cmd = "grep -c '^>'"
+            if is_gzipped:
+                cmd = "gunzip | " + cmd
+            return int(run(cmd, stdin=fh, stdout=PIPE, check=True, shell=True).stdout)
+        elif first_char == "@":
+            cmd = "wc -l"
+            if is_gzipped:
+                cmd = "gunzip | " + cmd
+            num_lines = int(run(cmd, stdin=fh, stdout=PIPE, check=True, shell=True).stdout)
+            if num_lines % 4 != 0:
+                raise InvalidInputFileError("File does not follow fastq format")
+            return num_lines // 4
+        raise InvalidInputFileError("Unable to recognize file format")
 
 
-def _lines2reads(line_count, file_format):
-    '''
-    Convert line count to read count based on file format.
-    Supports fastq and SINGLE-LINE fasta formats.
-    TODO: add support for m8 files here once the relevant steps are added in the pipeline engine.
-    '''
-    read_count = None
-    if file_format in ["fq", "fastq"]:
-        # Each read consists of exactly 4 lines, by definition.
-        assert line_count % 4 == 0, "File does not follow fastq format"
-        read_count = line_count // 4
-    elif file_format in ["fa", "fasta"]:
-        # Each read consists of exactly 2 lines (identifier and sequence).
-        # ASSUMES the format is SINGLE-LINE fasta files, where each read's sequence
-        # is on a single line rather than being spread over multiple lines.
-        # This is fine for now, because we only count fasta files we generated
-        # ourselves, following the single-line format.
-        assert line_count % 2 == 0, "File does not follow single-line fasta format"
-        read_count = line_count // 2
-    else:
-        read_count = line_count
-    return read_count
-
-
-def _reads2lines(read_count, file_format):
-    '''
-    Convert read count to line count based on file format.
-    Currently supports fastq or SINGLE-LINE fasta.
-    '''
-    line_count = None
-    if file_format in ["fq", "fastq"]:
-        line_count = 4 * read_count
-    elif file_format in ["fa", "fasta"]:
-        # Assumes the format is single-line fasta rather than multiline fasta
-        line_count = 2 * read_count
-    return line_count
+reads = count_reads
 
 
 def files_have_min_reads(input_files, min_reads):
@@ -97,7 +51,7 @@ def files_have_min_reads(input_files, min_reads):
     Pipeline steps can use this method for input validation.
     """
     for input_file in input_files:
-        num_reads = _count_reads_via_wc(input_file, max_reads=min_reads)
+        num_reads = count_reads(input_file)
         if num_reads < min_reads:
             return False
     return True
@@ -180,14 +134,6 @@ def save_cdhit_cluster_sizes(filename, cdhit_clusters):
             _CDHIT_CLUSTER_SIZES_CACHE[filename][read_id] = cluster_size
 
 
-def reads(local_file_path):
-    '''
-    Count reads in given FASTA or FASTQ file.
-    Implemented via wc, so very fast.
-    '''
-    return _count_reads_via_wc(local_file_path, max_reads=None)
-
-
 def reads_in_group(file_group, max_fragments=None, cluster_sizes=None, cluster_key=None):
     '''
     OVERVIEW
@@ -248,7 +194,9 @@ def reads_in_group(file_group, max_fragments=None, cluster_sizes=None, cluster_k
     assert (cluster_sizes == None) == (cluster_key == None), "Please specify cluster_key when using cluster_sizes."
     first_file = file_group[0]
     # This is so fast, just do it always as a sanity check.
-    unique_fast = _count_reads_via_wc(first_file, max_fragments)
+    unique_fast = count_reads(first_file)
+    if max_fragments is not None:
+        unique_fast = min(unique_fast, max_fragments)
     if cluster_sizes:
         # Run this even if ReadCountingMode.COUNT_UNIQUE to get it well tested before release.  Dark launch.
         unique, nonunique = _count_reads_expanding_duplicates(first_file, cluster_sizes, cluster_key)

@@ -1,10 +1,10 @@
 SHELL=/bin/bash
 
 lint:
-	python setup.py flake8
+	python3 setup.py flake8
 
 test: lint
-	python -m unittest discover -s tests/unit -v
+	python3 -m unittest discover -s tests/unit -v
 
 install:
 	-rm -rf dist

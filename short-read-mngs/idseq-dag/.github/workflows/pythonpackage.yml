@@ -19,8 +19,11 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
+        sudo bash -c "curl -s https://idseq-prod-pipeline-public-assets-us-west-2.s3-us-west-2.amazonaws.com/PriceSource140408/PriceSeqFilter > /usr/bin/PriceSeqFilter"
+        sudo chmod +x /usr/bin/PriceSeqFilter
         python -m pip install --upgrade pip
         pip install --quiet codecov wheel flake8
+        pip install .
     - name: Test
       run: |
         make test
