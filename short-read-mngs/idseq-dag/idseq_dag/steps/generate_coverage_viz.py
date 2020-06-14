@@ -749,7 +749,7 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
                 total_covered_length += endpoint[0] - last_start_point
 
         if cur_depth != 0:
-            raise ValueError("coverage depth is %s after traversel. 0 is expected" % cur_depth)
+            raise ValueError("coverage depth is %s after traversal. 0 is expected" % cur_depth)
 
         return total_covered_length
 

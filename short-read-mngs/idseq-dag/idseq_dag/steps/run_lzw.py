@@ -8,8 +8,8 @@ import idseq_dag.util.command_patterns as command_patterns
 import idseq_dag.util.count as count
 import idseq_dag.util.fasta as fasta
 import idseq_dag.util.log as log
-
-from idseq_dag.engine.pipeline_step import InputFileErrors, PipelineCountingStep, StepStatus
+from idseq_dag.engine.pipeline_step import PipelineCountingStep
+from idseq_dag.exceptions import InsufficientReadsError
 from idseq_dag.util.command import run_in_subprocess
 from idseq_dag.util.thread_with_result import mt_map
 
@@ -44,7 +44,7 @@ class PipelineStepRunLZW(PipelineCountingStep):
 
     def validate_input_files(self):
         if not count.files_have_min_reads(self.input_fas(), 1):
-            self.input_file_error = InputFileErrors.INSUFFICIENT_READS
+            raise InsufficientReadsError("Insufficient reads")
 
     def run(self):
         input_fas = self.input_fas()
@@ -207,9 +207,7 @@ class PipelineStepRunLZW(PipelineCountingStep):
                 break
 
         if kept_count == 0:
-            self.input_file_error = InputFileErrors.INSUFFICIENT_READS
-            self.status = StepStatus.INVALID_INPUT
-            return
+            raise InsufficientReadsError("Insufficient reads after LZW filtering")
 
         kept_ratio = float(kept_count) / float(total_reads)
         msg = "LZW filter: cutoff_frac: %f, total reads: %d, filtered reads: %d, " \

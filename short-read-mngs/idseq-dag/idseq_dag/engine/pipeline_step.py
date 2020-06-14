@@ -26,12 +26,6 @@ class StepStatus(IntEnum):
     INVALID_INPUT = 4  # an error occurred when validating the input file
 
 
-class InputFileErrors(Enum):
-    ''' This error will be used by the front-end to display a user-friendly error message '''
-    INSUFFICIENT_READS = "INSUFFICIENT_READS"
-    BROKEN_PAIRS = "BROKEN_PAIRS"
-
-
 class PipelineStep(object):
     ''' Each Pipeline Run Step i.e. run_star, run_bowtie2, etc '''
 

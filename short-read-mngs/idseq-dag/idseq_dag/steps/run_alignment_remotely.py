@@ -14,8 +14,8 @@ from botocore.exceptions import ClientError
 import boto3
 import requests
 
-from idseq_dag.engine.pipeline_step import PipelineStep, InputFileErrors
-
+from idseq_dag.engine.pipeline_step import PipelineStep
+from idseq_dag.exceptions import InsufficientReadsError
 import idseq_dag.util.command as command
 import idseq_dag.util.command_patterns as command_patterns
 import idseq_dag.util.count as count
@@ -120,7 +120,7 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
     def validate_input_files(self):
         # first two files are gsnap_filter_1.fa and gsnap_filter_2.fa
         if not count.files_have_min_reads(self.input_files_local[0][:-1], 1):
-            self.input_file_error = InputFileErrors.INSUFFICIENT_READS
+            raise InsufficientReadsError("Insufficient reads")
 
     def __init__(self, *args, **kwrds):
         PipelineStep.__init__(self, *args, **kwrds)

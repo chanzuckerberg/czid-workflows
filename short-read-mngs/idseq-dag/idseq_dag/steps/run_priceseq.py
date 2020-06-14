@@ -2,7 +2,8 @@
 import os
 from subprocess import run
 
-from idseq_dag.engine.pipeline_step import PipelineStep, InputFileErrors
+from idseq_dag.engine.pipeline_step import PipelineStep
+from idseq_dag.exceptions import InsufficientReadsError
 import idseq_dag.util.log as log
 import idseq_dag.util.count as count
 import idseq_dag.util.fasta as fasta
@@ -33,7 +34,7 @@ class PipelineStepRunPriceSeq(PipelineStep):
     """
     def validate_input_files(self):
         if not count.files_have_min_reads(self.input_files_local[0][0:2], 1):
-            self.input_file_error = InputFileErrors.INSUFFICIENT_READS
+            raise InsufficientReadsError("Insufficient reads")
 
     def run(self):
         """PriceSeqFilter is used to filter input data based on quality. Two FASTQ

@@ -226,6 +226,13 @@ Changes to X or Y force recomputation of all results when a sample is rerun usin
 
 When releasing a new version, please add a Git tag of the form `vX.Y.Z`.
 
+- 4.11.0
+  - Normalize error handling by raising a specific class of exceptions when expected errors occur
+  - Simplify idseq_dag.util.count.reads() and remove invalid assumptions
+  - Add unit tests for changed components
+  - Fix unit test autodiscovery
+  - Improve portability of existing unit tests and run them in CI
+
 - 4.10.0
   - Add e-value threshold to require all internal alignments (short read and assembly-based) have e-value below threshold.
 

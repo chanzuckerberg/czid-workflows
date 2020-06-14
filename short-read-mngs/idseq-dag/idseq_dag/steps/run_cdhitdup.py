@@ -3,7 +3,8 @@ import idseq_dag.util.command_patterns as command_patterns
 import idseq_dag.util.count as count
 import idseq_dag.util.fasta as fasta
 
-from idseq_dag.engine.pipeline_step import InputFileErrors, PipelineStep
+from idseq_dag.engine.pipeline_step import PipelineStep
+from idseq_dag.exceptions import InsufficientReadsError
 from idseq_dag.util.cdhit_clusters import parse_clusters_file
 from idseq_dag.util.count import save_cdhit_cluster_sizes
 
@@ -40,7 +41,7 @@ class PipelineStepRunCDHitDup(PipelineStep):  # Deliberately not PipelineCountin
 
     def validate_input_files(self):
         if not count.files_have_min_reads(self.input_files_local[0], 2):
-            self.input_file_error = InputFileErrors.INSUFFICIENT_READS
+            raise InsufficientReadsError("Insufficient reads before CDHitDup")
 
     def run(self):
         ''' Invoking cd-hit-dup '''

@@ -106,6 +106,7 @@ def run_step():
                               max_fragments=step_instance.additional_attributes["truncate_fragments_to"])
 
         step_instance.update_status_json_file("running")
+        step_instance.validate_input_files()
         step_instance.run()
         step_instance.count_reads()
         step_instance.save_counts()

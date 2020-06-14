@@ -5,7 +5,7 @@ from subprocess import run, PIPE
 
 import idseq_dag.util.fasta as fasta
 from idseq_dag import __version__
-from idseq_dag.exceptions import InvalidInputFileError
+from idseq_dag.exceptions import InvalidFileFormatError
 
 class ReadCountingMode(Enum):
     COUNT_UNIQUE = "COUNT UNIQUE READS"
@@ -38,9 +38,9 @@ def count_reads(filename):
                 cmd = "gunzip | " + cmd
             num_lines = int(run(cmd, stdin=fh, stdout=PIPE, check=True, shell=True).stdout)
             if num_lines % 4 != 0:
-                raise InvalidInputFileError("File does not follow fastq format")
+                raise InvalidFileFormatError("File does not follow fastq format")
             return num_lines // 4
-        raise InvalidInputFileError("Unable to recognize file format")
+        raise InvalidFileFormatError("Unable to recognize file format")
 
 
 reads = count_reads
