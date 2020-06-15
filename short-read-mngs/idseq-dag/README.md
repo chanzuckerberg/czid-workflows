@@ -226,6 +226,10 @@ Changes to X or Y force recomputation of all results when a sample is rerun usin
 
 When releasing a new version, please add a Git tag of the form `vX.Y.Z`.
 
+- 4.11.1
+  - Add support for running alignment locally.
+  - Add fetch_from_s3 compatibility hack for transition to miniwdl handled downloads
+
 - 4.11.0
   - Normalize error handling by raising a specific class of exceptions when expected errors occur
   - Simplify idseq_dag.util.count.reads() and remove invalid assumptions

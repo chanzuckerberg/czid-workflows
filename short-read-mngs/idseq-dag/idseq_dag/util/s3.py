@@ -257,6 +257,7 @@ REFERENCE_AUTOGUESS_ZIP_EXTENSIONS = {
 }
 
 
+# WARNING: This will bypass download if src is a local path, see comment below for details
 def fetch_from_s3(src,  # pylint: disable=dangerous-default-value
                   dst,
                   auto_unzip=DEFAULT_AUTO_UNZIP,
@@ -286,6 +287,20 @@ def fetch_from_s3(src,  # pylint: disable=dangerous-default-value
     An exception is raised only if there is a coding error or equivalent problem,
     not if src simply doesn't exist.
     """
+    # FIXME: this is a compatibility hack so we can replace this function
+    #   We are removing ad-hoc s3 downloads from within steps and converting
+    #   additional_files to wdl inputs. These files will be transparently
+    #   downloaded by miniwdl. miniwdl will also handle the caching that
+    #   is currently done here. This hack bypasses the s3 download if the
+    #   source is already a local file, and returns the source (which is
+    #   a local file path). This way, when we change the additional_files
+    #   to inputs we can provide the local file path to the step instead
+    #   of the s3 path and seamlessly transition without a coordinated
+    #   change between idseq-dag and the idseq monorepo.
+    if not src.startswith("s3://"):
+        log.write(f"fetch_from_s3 is skipping download because source: {src} does not start with s3://")
+        return src
+
     # Do not be mislead by the multiprocessing.RLock() above -- that just means it won't deadlock
     # if called from multiple processes but does not mean the behaivior will be correct.  It will
     # be incorrect, because the locks dict (cointaining per-file locks) cannot be shared across
@@ -451,6 +466,7 @@ def fetch_from_s3(src,  # pylint: disable=dangerous-default-value
                 if os.path.exists(tmp_dst):  # by this point we have asserted that tmp_dst != dst (and that assert may have failed, but so be it)
                     command.remove_rf(tmp_dst)
 
+# WARNING: This will bypass download if src is a local path, see comment in fetch_from_s3 for details
 def fetch_reference(src,  # pylint: disable=dangerous-default-value
                     dst,
                     auto_unzip=True,
