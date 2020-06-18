@@ -36,7 +36,7 @@ try:
     error_json["cause"]["message"] = str(msg["wdl_error_message"])
     del msg["wdl_error_message"]
     error_json["cause"]["info"] = msg
-except:
+except Exception:
     error_json = None
 
 # print decorated error info, if we got that far; otherwise reprint miniwdl's original output
@@ -66,5 +66,6 @@ task test {
 }
 EOF
 examples/run_with_custom_error.py /tmp/run_with_custom_error_test.wdl fail=false --verbose
-examples/run_with_custom_error.py /tmp/run_with_custom_error_test.wdl fail=true --verbose; echo "exit status should be 42: $?"
+examples/run_with_custom_error.py /tmp/run_with_custom_error_test.wdl fail=true --verbose
+echo "exit status should be 42: $?"
 """
