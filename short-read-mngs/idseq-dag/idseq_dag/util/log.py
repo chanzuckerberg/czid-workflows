@@ -229,13 +229,6 @@ def log_context(context_name: str, values: dict = None, log_caller_info: bool = 
         raise e
 
 
-def set_up_stdout():
-    # Unbuffer stdout and redirect stderr into stdout. This helps observe logged
-    # events in realtime.
-    sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', 0)
-    os.dup2(sys.stdout.fileno(), sys.stderr.fileno())
-
-
 def default_json_serializer(obj):
     '''Default serializer that returns string <<non-sertializable: TYPE_NAME>> for that type'''
     return f"<<non-serializable: {type(obj).__qualname__}>>"
