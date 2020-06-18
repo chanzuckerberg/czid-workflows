@@ -224,22 +224,6 @@ def make_space(done={}, mutex=TraceLock("make_space", multiprocessing.RLock())):
             done['time'] = time.time()
 
 
-def install_s3mi(installed={}, mutex=TraceLock("install_s3mi", multiprocessing.RLock())):  # pylint: disable=dangerous-default-value
-    with mutex:
-        if installed:  # Mutable default value persists
-            return
-        try:
-            # This is typically a no-op.
-            command.execute(
-                "which s3mi || pip install git+git://github.com/chanzuckerberg/s3mi.git"
-            )
-            command.execute(
-                "s3mi tweak-vm || echo s3mi tweak-vm sometimes fails under docker. Continuing..."
-            )
-        finally:
-            installed['time'] = time.time()
-
-
 DEFAULT_AUTO_UNZIP = False
 DEFAULT_AUTO_UNTAR = False
 DEFAULT_ALLOW_S3MI = False
@@ -379,13 +363,6 @@ def fetch_from_s3(src,  # pylint: disable=dangerous-default-value
 
         with IOSTREAM:
             try:
-                if allow_s3mi:
-                    try:
-                        install_s3mi()
-                    except:
-                        log.write("s3mi failed to install.")
-                        allow_s3mi = False
-
                 if allow_s3mi:
                     wait_start = time.time()
                     allow_s3mi = S3MI_SEM.acquire(timeout=MAX_S3MI_WAIT)
