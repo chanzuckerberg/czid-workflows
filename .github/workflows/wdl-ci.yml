@@ -29,3 +29,28 @@ jobs:
         run: |
           source .venv/bin/activate
           make lint
+  docker-images:
+    runs-on: ubuntu-18.04
+    strategy:
+      matrix:
+        docker_dir: [main]
+    steps:
+      - uses: actions/checkout@v2
+      - name: docker login
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" \
+            | docker login docker.pkg.github.com --username $(dirname $GITHUB_REPOSITORY) --password-stdin
+      - name: docker build
+        run: |
+          TAG=$(git describe --long --tags --always --dirty)
+          IMAGE_NAME=idseq-${{ matrix.docker_dir }}-public
+          IMAGE_URI="docker.pkg.github.com/${GITHUB_REPOSITORY}/${IMAGE_NAME}"
+
+          CACHE_FROM=""; docker pull "$IMAGE_URI" && CACHE_FROM="--cache-from $IMAGE_URI"
+          docker build "${{ matrix.docker_dir }}" --tag "${IMAGE_URI}:${TAG}" $CACHE_FROM \
+            || docker build "${{ matrix.docker_dir }}" --tag "${IMAGE_URI}:${TAG}"
+          docker push "${IMAGE_URI}:${TAG}"
+          if [[ ${GITHUB_REF##*/} == "master" ]]; then
+            docker tag "${IMAGE_URI}:${TAG}" "${IMAGE_URI}:latest"
+            docker push "${IMAGE_URI}:latest"
+          fi
