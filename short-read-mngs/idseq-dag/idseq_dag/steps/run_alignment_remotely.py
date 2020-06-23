@@ -259,7 +259,7 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
                         'kwargs': {
                             'part_suffix': part_suffix,
                             'input_files': chunk_input_files,
-                            'lazy_run': True,
+                            'lazy_run': False,
                         },
                     })
                 t.start()
