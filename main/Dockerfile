@@ -54,7 +54,7 @@ RUN apt-get -q install -y \
 RUN pip3 install awscli==1.17.14 boto3==1.9.253
 RUN pip3 install miniwdl==0.7.5 miniwdl-s3parcp==0.0.5 miniwdl-s3upload==0.0.4
 RUN pip3 install https://github.com/chanzuckerberg/miniwdl-plugins/archive/f0465b0.zip#subdirectory=sfn-wdl
-RUN pip3 install https://github.com/chanzuckerberg/idseq-dag/archive/v4.11.1.tar.gz
+RUN pip3 install https://github.com/chanzuckerberg/idseq-dag/archive/v4.11.3.tar.gz
 RUN pip3 install https://github.com/chanzuckerberg/s3mi/archive/v0.8.0.tar.gz
 
 # docker.io is the largest package at 250MB+ / half of all package disk space usage.
