@@ -1,0 +1,5 @@
+{
+  "RunTrimmomatic.trimmomatic1_fastq": "expected_output_files/trimmomatic1.fastq",
+  "RunTrimmomatic.trimmomatic2_fastq": "expected_output_files/trimmomatic2.fastq",
+  "RunTrimmomatic.output_read_count": "expected_output_files/trimmomatic_out.count"
+}

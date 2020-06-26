@@ -1,0 +1,7 @@
+{
+  "RunValidateInput.validate_input_summary_json": "expected_output_files/validate_input_summary.json",
+  "RunValidateInput.valid_input1_fastq": "expected_output_files/valid_input1.fastq",
+  "RunValidateInput.valid_input2_fastq": "expected_output_files/valid_input2.fastq",
+  "RunValidateInput.output_read_count": "expected_output_files/validate_input_out.count",
+  "RunValidateInput.input_read_count": "expected_output_files/fastqs.count"
+}

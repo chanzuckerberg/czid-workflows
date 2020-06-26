@@ -5,4 +5,4 @@ publish:
 	scripts/publish.sh
 
 test:
-	prove -v tests/*.t
+	pytest -v -n 4 --tb=short --log-cli-level=11 tests/

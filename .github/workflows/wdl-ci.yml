@@ -54,3 +54,20 @@ jobs:
             docker tag "${IMAGE_URI}:${TAG}" "${IMAGE_URI}:latest"
             docker push "${IMAGE_URI}:latest"
           fi
+  wdl_tasks:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: docker login
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" \
+            | docker login docker.pkg.github.com --username $(dirname $GITHUB_REPOSITORY) --password-stdin
+      - name: tests
+        run: |
+          source /etc/profile
+          sudo apt-get -qq update
+          sudo apt-get -qq install --yes jq moreutils make virtualenv zip unzip httpie git shellcheck
+          virtualenv --python=python3.6 .venv
+          source .venv/bin/activate
+          pip install -r requirements-dev.txt
+          make test

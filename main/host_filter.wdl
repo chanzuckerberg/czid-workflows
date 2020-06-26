@@ -81,7 +81,7 @@ task RunTrimmomatic {
     String dag_branch
     String s3_wd_uri
     Array[File] unmapped_fastq
-    String adapter_fasta
+    File adapter_fasta
   }
   command<<<
   set -euxo pipefail
@@ -403,7 +403,7 @@ workflow idseq_host_filter {
     String file_ext
     String nucleotide_type
     String host_genome
-    String adapter_fasta
+    File adapter_fasta
     String star_genome
     String bowtie2_genome
     String human_star_genome
