@@ -5,6 +5,7 @@ import re
 
 from idseq_dag.engine.pipeline_step import PipelineStep
 from idseq_dag.exceptions import BrokenReadPairError
+from idseq_dag.util.fasta import sort_fastx_by_entry_id
 import idseq_dag.util.command as command
 import idseq_dag.util.command_patterns as command_patterns
 import idseq_dag.util.log as log
@@ -223,6 +224,9 @@ class PipelineStepRunStar(PipelineStep):
                     except Exception as e:
                         log.write(message=f"encountered error while running picard: {type(e).__name__}: {e}", warning=True)
 
+        # Sort unmapped files for deterministic output
+        for unmapped_file in unmapped:
+            sort_fastx_by_entry_id(unmapped_file)
         # Cleanup
         for src, dst in zip(unmapped, output_files_local):
             command.move_file(src, dst)    # Move out of scratch dir
@@ -259,6 +263,14 @@ class PipelineStepRunStar(PipelineStep):
                       use_starlong):
         command.make_dirs(output_dir)
 
+        # FIXME: https://jira.czi.team/browse/IDSEQ-2738
+        #  We want to move towards a general randomness solution in which
+        #  all randomness is seeded based on the content of the original input.
+        #  STAR takes in a rng seed and it defaults this seed to 777. It is
+        #  explicitly set here to call out this behavior so it can be updated
+        #  when we update the rest of our rng seeds.
+        rng_seed = '777'
+
         cpus = str(multiprocessing.cpu_count())
         cd = output_dir
         cmd = 'STARlong' if use_starlong else 'STAR'
@@ -270,6 +282,7 @@ class PipelineStepRunStar(PipelineStep):
             '--outFilterMismatchNmax', '999',
             '--clip3pNbases', '0',
             '--runThreadN', cpus,
+            '--runRNGseed', rng_seed,
             '--genomeDir', genome_dir,
             '--readFilesIn', *input_files
         ]

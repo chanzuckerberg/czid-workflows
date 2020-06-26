@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 from typing import Iterator, List, Tuple, NamedTuple
 import sys
+import os
+from subprocess import run
 import idseq_dag.util.command as command
 import idseq_dag.util.command_patterns as command_patterns
 
@@ -68,6 +70,28 @@ def multilinefa2singlelinefa(input_fasta, output_fasta):
             }
         )
     )
+
+
+def sort_fastx_by_entry_id(fastq_path):
+    tmp_sorted_path = fastq_path + ".sorted"
+    with open(fastq_path, 'rb') as in_file:
+        with open(tmp_sorted_path, 'wb') as out_file:
+            # Command based on this https://www.biostars.org/p/15011/#103041
+            if input_file_type(fastq_path) == 'fastq':
+                cmd = "paste -d '|' - - - - | sort -k1,1 -S 3G | tr '|' '\n'"
+            else:
+                # WARNING: does not support multiline fasta
+                cmd = "paste -d '|' - - | sort -k1,1 -S 3G | tr '|' '\n'"
+            # By default the sort utility uses a locale-based sort, this is significantly
+            #   slower than a simple byte comparison. It also produces a different
+            #   order than python's default string comparisons would which makes testing
+            #   a bit less convenient. All we care about is producing a consistent order
+            #   every time, the order itself is irrelevant, so we set LC_ALL=C to do a
+            #   simple byte comparison instead of a locale-based sort which is faster,
+            #   produces a consistent result regardless of locale, and produces the same
+            #   order python's default string comparison would.
+            run(cmd, env={'LC_ALL': 'C'}, stdin=in_file, stdout=out_file, check=True, shell=True)
+    os.rename(tmp_sorted_path, fastq_path)
 
 
 if __name__ == "__main__":
