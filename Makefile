@@ -4,5 +4,10 @@ lint:
 publish:
 	scripts/publish.sh
 
-test:
-	pytest -v -n 4 --tb=short --log-cli-level=11 tests/
+test-%:
+	pytest -v -n 4 --tb=short --log-cli-level=11 tests/$*
+
+test: test-main
+
+.PHONY: lint publish test
+
