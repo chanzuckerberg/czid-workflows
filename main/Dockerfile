@@ -102,3 +102,20 @@ RUN curl -L -o /usr/local/bin/picard.jar https://github.com/broadinstitute/picar
 # Create a single executable so we can use SingleCommand
 RUN printf '#!/bin/bash\njava -jar /usr/local/bin/picard.jar "$@"\n' > /usr/local/bin/picard
 RUN chmod +x /usr/local/bin/picard
+
+# Install rapsearch2, required for running alignment locally
+RUN apt-get install -y \
+        curl \
+        g++ \
+        # Runtime dependencies
+        # On versions higher than 1.62 compilation errors because of an overloading ambiguity with the `advance` method
+        libboost1.62-all-dev
+WORKDIR /rapsearch2/Src
+RUN curl -L  https://idseq-rapsearch2.s3-us-west-2.amazonaws.com/RAPSearch2.24_64bits.tar.gz  | tar xz -C /rapsearch2 --strip-components 1
+# Use the version of boost we installed
+RUN sed -i -e 's|^INC.*|INC := -I /usr/include/boost|' -e 's|^LIB.*|LIB :=|' Makefile
+RUN make
+ENV PATH="${PATH}:/rapsearch2/Src/"
+# Uninstall build only dependencies
+RUN apt-get purge -y curl g++
+WORKDIR / 
