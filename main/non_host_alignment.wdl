@@ -179,6 +179,7 @@ workflow idseq_non_host_alignment {
     String lineage_db = "s3://~{idseq_db_bucket}/taxonomy/~{index_version}/taxid-lineages.db"
     String accession2taxid_db = "s3://~{idseq_db_bucket}/alignment_data/~{index_version}/accession2taxid.db"
     String taxon_blacklist = "s3://~{idseq_db_bucket}/taxonomy/~{index_version}/taxon_blacklist.txt"
+    String index_dir_suffix = index_version
     String deuterostome_db = "s3://~{idseq_db_bucket}/taxonomy/~{index_version}/deuterostome_taxids.txt"
     Boolean use_deuterostome_filter = true
     Boolean use_taxon_whitelist = false
@@ -195,7 +196,7 @@ workflow idseq_non_host_alignment {
       accession2taxid_db = accession2taxid_db,
       taxon_blacklist = taxon_blacklist,
       deuterostome_db = deuterostome_db,
-      index_dir_suffix = index_version,
+      index_dir_suffix = index_dir_suffix,
       use_deuterostome_filter = use_deuterostome_filter,
       use_taxon_whitelist = use_taxon_whitelist
   }
@@ -210,7 +211,7 @@ workflow idseq_non_host_alignment {
       lineage_db = lineage_db,
       accession2taxid_db = accession2taxid_db,
       taxon_blacklist = taxon_blacklist,
-      index_dir_suffix = index_version,
+      index_dir_suffix = index_dir_suffix,
       use_taxon_whitelist = use_taxon_whitelist
   }
 
