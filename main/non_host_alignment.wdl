@@ -156,6 +156,7 @@ task GenerateAnnotatedFasta {
   output {
     File annotated_merged_fa = "annotated_merged.fa"
     File unidentified_fa = "unidentified.fa"
+    File unique_unidentified_fa = "unique_unidentified.fa"
     File? output_read_count = "annotated_out.count"
   }
   runtime {
@@ -264,6 +265,7 @@ workflow idseq_non_host_alignment {
     File? taxon_count_out_count = CombineTaxonCounts.output_read_count
     File annotated_out_annotated_merged_fa = GenerateAnnotatedFasta.annotated_merged_fa
     File annotated_out_unidentified_fa = GenerateAnnotatedFasta.unidentified_fa
+    File annotated_out_unique_unidentified_fa = GenerateAnnotatedFasta.unique_unidentified_fa
     File? annotated_out_count = GenerateAnnotatedFasta.output_read_count
   }
 }
