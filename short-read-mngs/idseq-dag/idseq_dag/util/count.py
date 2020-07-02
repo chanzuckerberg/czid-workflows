@@ -25,7 +25,10 @@ def count_reads(filename):
     with open(filename, "rb") as gz_fh:
         is_gzipped = True if gz_fh.read(2).startswith(GZIP_MAGIC_HEADER) else False
     with gzip.open(filename) if is_gzipped else open(filename, mode="rb") as fmt_fh:
-        first_char = fmt_fh.read(1).decode()[0]
+        chunk = fmt_fh.read(1)
+        if len(chunk) == 0:
+            return 0
+        first_char = chunk.decode()[0]
     with open(filename, "rb") as fh:
         if first_char == ">":
             cmd = "grep -c '^>'"

@@ -18,6 +18,8 @@ class TestCountReads(unittest.TestCase):
             self.assertEqual(count_reads(filename), expect_reads[filename])
 
         with tempfile.NamedTemporaryFile() as tf:
+            self.assertEqual(count_reads(tf.name), 0)
+
             tf.write(b"test")
             tf.flush()
             with self.assertRaises(InvalidInputFileError):
