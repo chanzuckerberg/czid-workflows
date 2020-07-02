@@ -117,5 +117,5 @@ RUN sed -i -e 's|^INC.*|INC := -I /usr/include/boost|' -e 's|^LIB.*|LIB :=|' Mak
 RUN make
 ENV PATH="${PATH}:/rapsearch2/Src/"
 # Uninstall build only dependencies
-RUN apt-get purge -y curl g++
+RUN apt-get purge -y g++
 WORKDIR / 
