@@ -50,7 +50,7 @@ jobs:
           docker build "${{ matrix.workflow_dir }}" --tag "${IMAGE_URI}:${TAG}" $CACHE_FROM \
             || docker build "${{ matrix.workflow_dir }}" --tag "${IMAGE_URI}:${TAG}"
           docker push "${IMAGE_URI}:${TAG}"
-          if [[ ${GITHUB_REF##*/} == "master" ]]; then
+          if [[ ${GITHUB_REF##*/} == "main" ]]; then
             docker tag "${IMAGE_URI}:${TAG}" "${IMAGE_URI}:latest"
             docker push "${IMAGE_URI}:latest"
           fi
