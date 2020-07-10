@@ -8,6 +8,7 @@ import time
 import traceback
 import json
 import re
+from subprocess import run, PIPE
 from urllib.parse import urlparse
 from botocore.exceptions import ClientError
 
@@ -187,48 +188,8 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
             output_counts_with_dcr_json)
 
     def run_locally(self, index_path, input_fas, output_m8):
-        if self.alignment_algorithm == "gsnap":
-            genome_name = self.additional_attributes["genome_name"]  # ex. nt_k16
-            # Code duplication, these flags (except for threads) are
-            #   kept in sync with those in the job definition here:
-            #   https://github.com/chanzuckerberg/idseq/blob/master/workflows/terraform/modules/alignment-batch/batch_job_container_properties.json.tpl
-            cmd = command_patterns.ShellScriptCommand(
-                script=" ".join(["gsnapl",
-                                 "-A", "m8",
-                                 "--batch=0",
-                                 "--use-shared-memory=0",
-                                 "--gmap-mode=none",
-                                 "--npaths=100",
-                                 "--ordered",
-                                 # Threads
-                                 "-t", "4",
-                                 "--max-mismatches=40",
-                                 "-D", index_path,
-                                 "-d", genome_name,
-                                 ] + input_fas + [
-                                ">", output_m8,
-                                ])
-            )
-        else:
-            # Code duplication, these flags (except for threads) are
-            #   kept in sync with those in the job definition here:
-            #   https://github.com/chanzuckerberg/idseq/blob/master/workflows/terraform/modules/alignment-batch/batch_job_container_properties.json.tpl
-            cmd = command_patterns.SingleCommand(
-                cmd="rapsearch",
-                args=[
-                    "-d", index_path,
-                    "-e", "-6",
-                    "-l", "10",
-                    "-a", "T",
-                    "-b", "0",
-                    "-v", "50",
-                    # Threads
-                    "-z", "4",
-                    "-q"] + input_fas + [
-                    "-o", output_m8
-                ]
-            )
-        command.execute(cmd)
+        command = self._get_command(index_path, input_fas, output_m8, threads=multiprocessing.cpu_count())
+        command.execute(command_patterns.SingleCommand(cmd=command[0], args=command[1:]))
 
     def run_remotely(self, input_fas, output_m8):
         # Split files into chunks for performance
@@ -422,13 +383,16 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
             'alignment_algorithm': self.alignment_algorithm,
         })
 
-    def _run_batch_job(self, session, job_name, job_queue, job_definition, environment, chunk_id, retries):
+    def _run_batch_job(self, session, job_name, job_queue, job_definition, command, environment, chunk_id, retries):
         client = session.client("batch")
         response = client.submit_job(
             jobName=job_name,
             jobQueue=job_queue,
             jobDefinition=job_definition,
-            containerOverrides={"environment": environment},
+            containerOverrides={
+                "command": command,
+                "environment": environment,
+            },
             retryStrategy={"attempts": retries},
             timeout={"attemptDurationSeconds": CHUNK_ATTEMPT_TIMEOUT}
         )
@@ -466,6 +430,49 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
             raise Exception("chunk timed out but never entered the FAILED state")
 
         return job_id
+
+    def _validate_chunk_output(self, chunk_output_filename):
+        cmd = "awk '{print NF}' | sort -nu | head -n 1"
+        if self.alignment_algorithm == "rapsearch2":
+            cmd = "grep -v '^#' | " + cmd
+        with open(chunk_output_filename, "rb") as f:
+            line_count_str = run(cmd, stdin=f, stdout=PIPE, check=True, shell=True).stdout
+        if line_count_str:
+            line_count = int(line_count_str)
+            log.write(f"smallest number of columns observed in any line in output file {chunk_output_filename} was {line_count}")
+            assert line_count == 12, "output file {chunk_output_filename} was not a valid m8 file"
+        else:
+            log.write(f"no hits in output file {chunk_output_filename}")
+
+    def _get_command(self, index_path, input_paths, output_path, threads=None):
+        if not threads:
+            threads = 48 if self.alignment_algorithm == "gsnap" else 24
+        if self.alignment_algorithm == "gsnap":
+            genome_name = self.additional_attributes.get("genome_name", "nt_k16")
+            return ["gsnapl",
+                    "-A", "m8",
+                    "--batch=0",
+                    "--use-shared-memory=0",
+                    "--gmap-mode=none",
+                    "--npaths=100",
+                    "--ordered",
+                    "-t", str(threads),
+                    "--max-mismatches=40",
+                    "-D", index_path,
+                    "-d", genome_name,
+                    "-o", output_path,
+                    ] + input_paths
+        else:
+            return ["rapsearch",
+                    "-d", index_path,
+                    "-e", "-6",
+                    "-l", "10",
+                    "-a", "T",
+                    "-b", "0",
+                    "-v", "50",
+                    "-z", str(threads),
+                    "-o", output_path,
+                    "-q"] + input_paths
 
     def run_chunk(self, part_suffix, input_files, lazy_run):
         """
@@ -510,12 +517,16 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
             'value': multihit_s3_outfile,
         }]
 
+        input_paths = [f"local_input_{i}" for i, _ in enumerate(input_files)]
+        command = self._get_command("/references/reference", input_paths, "local_output")
+
         try:
             job_id = self._run_batch_job(
                 session=session,
                 job_name=job_name,
                 job_queue=job_queue,
                 job_definition=job_definition,
+                command=command,
                 environment=environment,
                 chunk_id=chunk_id,
                 retries=2
@@ -529,6 +540,7 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
                 job_name=job_name,
                 job_queue=job_queue,
                 job_definition=job_definition,
+                command=command,
                 environment=environment,
                 chunk_id=chunk_id,
                 retries=1
@@ -556,6 +568,7 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
             'alignment_algorithm': self.alignment_algorithm,
         })
 
+        self._validate_chunk_output(multihit_local_outfile)
         return multihit_local_outfile
 
     def step_description(self, require_docstrings=False):

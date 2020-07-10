@@ -226,6 +226,10 @@ Changes to X or Y force recomputation of all results when a sample is rerun usin
 
 When releasing a new version, please add a Git tag of the form `vX.Y.Z`.
 
+
+- 4.11.5
+  - Unify remote and local non host alignment commands
+
 - 4.11.4
   - Correctly count reads in empty file
 
