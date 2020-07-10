@@ -283,7 +283,26 @@ def fetch_from_s3(src,  # pylint: disable=dangerous-default-value
     #   change between idseq-dag and the idseq monorepo.
     if not src.startswith("s3://"):
         log.write(f"fetch_from_s3 is skipping download because source: {src} does not start with s3://")
-        return (src if os.path.isfile(src) else None)
+        if not os.path.isfile(src):
+            return None
+        if auto_untar and src.endswith(".tar"):
+            dst = src[:-4]
+            if not os.path.isdir(dst):
+                command.make_dirs(dst + ".untarring")
+                script = 'tar xvf "${src}" -C "${tmp_destdir}"'
+                named_args = {
+                    "src": src,
+                    "tmp_destdir": dst + ".untarring"
+                }
+                command.execute(
+                    command_patterns.ShellScriptCommand(
+                        script=script,
+                        named_args=named_args
+                    )
+                )
+                command.rename(dst + ".untarring/" + os.path.basename(dst), dst)
+            return dst
+        return src
 
     # Do not be mislead by the multiprocessing.RLock() above -- that just means it won't deadlock
     # if called from multiple processes but does not mean the behaivior will be correct.  It will
