@@ -2,7 +2,7 @@ import json
 import os
 
 from idseq_dag.engine.pipeline_step import PipelineStep
-from idseq_dag.exceptions import InvalidFileFormatError
+from idseq_dag.exceptions import InvalidFileFormatError, InsufficientReadsError
 import idseq_dag.util.command as command
 import idseq_dag.util.command_patterns as command_patterns
 import idseq_dag.util.count as count
@@ -139,6 +139,8 @@ class PipelineStepRunValidateInput(PipelineStep):
 
                 identifier_l = input_f.readline()
                 if len(identifier_l) == 0:  # EOF
+                    if num_fragments == 1:
+                        raise InsufficientReadsError("The input file contains 0 reads")
                     break
 
                 read_l = input_f.readline()

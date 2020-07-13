@@ -10,7 +10,7 @@ fasta_filename = os.path.join(os.path.dirname(__file__), "fixtures", "reads.fast
 fastq_filename = os.path.join(os.path.dirname(__file__), "fixtures", "reads.fastq")
 
 @unittest.skipIf(os.uname().sysname != "Linux", "Skipping test on incompatible platform")
-class TestCountReads(unittest.TestCase):
+class TestPriceSeq(unittest.TestCase):
     def run_priceseqfilter(self, **args):
         with tempfile.TemporaryDirectory() as td, tempfile.NamedTemporaryFile(suffix="." + args["file_type"]) as tf:
             args["out_files"] = [tf.name] * len(args["in_files"])
