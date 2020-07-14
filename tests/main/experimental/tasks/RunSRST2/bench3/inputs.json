@@ -1,0 +1,10 @@
+{
+  "docker_image_id": "732052188396.dkr.ecr.us-east-2.amazonaws.com/idseq-main:sha-9c23348d87d042ba",
+  "dag_branch": "",
+  "s3_wd_uri": "s3://DUMMY_BKT/",
+  "fastqs": [
+    "input_files/norg_6__nacc_27__uniform_weight_per_organism__hiseq_reads__v6__R1.fastq.gz",
+    "input_files/norg_6__nacc_27__uniform_weight_per_organism__hiseq_reads__v6__R2.fastq.gz"
+  ],
+  "file_ext": "fastq"
+}

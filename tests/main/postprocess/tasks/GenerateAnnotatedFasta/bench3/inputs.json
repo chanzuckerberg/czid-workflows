@@ -1,0 +1,25 @@
+{
+  "docker_image_id": "732052188396.dkr.ecr.us-east-2.amazonaws.com/idseq-main:sha-9c23348d87d042ba",
+  "dag_branch": "",
+  "s3_wd_uri": "s3://DUMMY_BKT/",
+  "host_filter_out_gsnap_filter_fa": [
+    "input_files/gsnap_filter_1.fa",
+    "input_files/gsnap_filter_2.fa",
+    "input_files/gsnap_filter_merged.fa"
+  ],
+  "assembly_gsnap_blast_m8": "input_files/gsnap.blast.m8",
+  "assembly_gsnap_reassigned_m8": "input_files/gsnap.reassigned.m8",
+  "assembly_gsnap_hitsummary2_tab": "input_files/gsnap.hitsummary2.tab",
+  "assembly_refined_gsnap_counts_with_dcr_json": "input_files/refined_gsnap_counts_with_dcr.json",
+  "assembly_gsnap_contig_summary_json": "input_files/gsnap_contig_summary.json",
+  "assembly_gsnap_blast_top_m8": "input_files/gsnap.blast.top.m8",
+  "assembly_rapsearch2_blast_m8": "input_files/rapsearch2.blast.m8",
+  "assembly_rapsearch2_reassigned_m8": "input_files/rapsearch2.reassigned.m8",
+  "assembly_rapsearch2_hitsummary2_tab": "input_files/rapsearch2.hitsummary2.tab",
+  "assembly_refined_rapsearch2_counts_with_dcr_json": "input_files/refined_rapsearch2_counts_with_dcr.json",
+  "assembly_rapsearch2_contig_summary_json": "input_files/rapsearch2_contig_summary.json",
+  "assembly_rapsearch2_blast_top_m8": "input_files/rapsearch2.blast.top.m8",
+  "cdhitdup_out_dedup1_fa_clstr": "input_files/dedup1.fa.clstr",
+  "cdhitdup_out_dedup1_fa": "input_files/dedup1.fa",
+  "cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv": "input_files/cdhitdup_cluster_sizes.tsv"
+}

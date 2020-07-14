@@ -1,0 +1,21 @@
+{
+  "docker_image_id": "732052188396.dkr.ecr.us-east-2.amazonaws.com/idseq-main:sha-9c23348d87d042ba",
+  "dag_branch": "",
+  "s3_wd_uri": "s3://DUMMY_BKT/",
+  "gsnap_m8_gsnap_deduped_m8": "input_files/gsnap.deduped.m8",
+  "taxid_annot_sorted_nt_fasta": "input_files/taxid_annot_sorted_nt.fasta",
+  "taxid_locations_nt_json": "input_files/taxid_locations_nt.json",
+  "taxid_annot_sorted_nr_fasta": "input_files/taxid_annot_sorted_nr.fasta",
+  "taxid_locations_nr_json": "input_files/taxid_locations_nr.json",
+  "taxid_annot_sorted_genus_nt_fasta": "input_files/taxid_annot_sorted_genus_nt.fasta",
+  "taxid_locations_genus_nt_json": "input_files/taxid_locations_genus_nt.json",
+  "taxid_annot_sorted_genus_nr_fasta": "input_files/taxid_annot_sorted_genus_nr.fasta",
+  "taxid_locations_genus_nr_json": "input_files/taxid_locations_genus_nr.json",
+  "taxid_annot_sorted_family_nt_fasta": "input_files/taxid_annot_sorted_family_nt.fasta",
+  "taxid_locations_family_nt_json": "input_files/taxid_locations_family_nt.json",
+  "taxid_annot_sorted_family_nr_fasta": "input_files/taxid_annot_sorted_family_nr.fasta",
+  "taxid_locations_family_nr_json": "input_files/taxid_locations_family_nr.json",
+  "taxid_locations_combined_json": "input_files/taxid_locations_combined.json",
+  "nt_db": "s3://idseq-database/ncbi-sources/2020-04-20/nt",
+  "nt_loc_db": "s3://idseq-database/alignment_data/2020-04-20/nt_loc.db"
+}

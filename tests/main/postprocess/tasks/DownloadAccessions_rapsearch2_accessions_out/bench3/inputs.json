@@ -1,0 +1,12 @@
+{
+  "docker_image_id": "732052188396.dkr.ecr.us-east-2.amazonaws.com/idseq-main:sha-9c23348d87d042ba",
+  "dag_branch": "",
+  "s3_wd_uri": "s3://DUMMY_BKT/",
+  "rapsearch2_out_rapsearch2_m8": "input_files/rapsearch2.m8",
+  "rapsearch2_out_rapsearch2_deduped_m8": "input_files/rapsearch2.deduped.m8",
+  "rapsearch2_out_rapsearch2_hitsummary_tab": "input_files/rapsearch2.hitsummary.tab",
+  "rapsearch2_out_rapsearch2_counts_with_dcr_json": "input_files/rapsearch2_counts_with_dcr.json",
+  "nr_db": "s3://idseq-database/ncbi-sources/2020-04-20/nr",
+  "nr_loc_db": "s3://idseq-database/alignment_data/2020-04-20/nr_loc.db",
+  "lineage_db": "s3://idseq-database/taxonomy/2020-04-20/taxid-lineages.db"
+}

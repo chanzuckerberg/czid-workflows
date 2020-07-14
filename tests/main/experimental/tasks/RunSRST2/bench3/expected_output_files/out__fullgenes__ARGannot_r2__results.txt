@@ -1,0 +1,3 @@
+Sample	DB	gene	allele	coverage	depth	diffs	uncertainty	divergence	length	maxMAF	clusterid	seqid	annotation
+	ARGannot_r2	Aac3-Ik_AGly	Aac3-Ik_273	35.811	0.965	5indel280holes	edge0.0	-1.22	444	0.0	448	273	
+	ARGannot_r2	Dha1_Phe	Dha1_1050	20.034	0.968	7indel943holes	edge0.0	-2.449	1188	0.0	71	1050	

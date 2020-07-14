@@ -1,0 +1,16 @@
+{
+  "GenerateTaxidLocator.assembly_refined_taxid_annot_sorted_nt_fasta": "expected_output_files/refined_taxid_annot_sorted_nt.fasta",
+  "GenerateTaxidLocator.assembly_refined_taxid_locations_nt_json": "expected_output_files/refined_taxid_locations_nt.json",
+  "GenerateTaxidLocator.assembly_refined_taxid_annot_sorted_nr_fasta": "expected_output_files/refined_taxid_annot_sorted_nr.fasta",
+  "GenerateTaxidLocator.assembly_refined_taxid_locations_nr_json": "expected_output_files/refined_taxid_locations_nr.json",
+  "GenerateTaxidLocator.assembly_refined_taxid_annot_sorted_genus_nt_fasta": "expected_output_files/refined_taxid_annot_sorted_genus_nt.fasta",
+  "GenerateTaxidLocator.assembly_refined_taxid_locations_genus_nt_json": "expected_output_files/refined_taxid_locations_genus_nt.json",
+  "GenerateTaxidLocator.assembly_refined_taxid_annot_sorted_genus_nr_fasta": "expected_output_files/refined_taxid_annot_sorted_genus_nr.fasta",
+  "GenerateTaxidLocator.assembly_refined_taxid_locations_genus_nr_json": "expected_output_files/refined_taxid_locations_genus_nr.json",
+  "GenerateTaxidLocator.assembly_refined_taxid_annot_sorted_family_nt_fasta": "expected_output_files/refined_taxid_annot_sorted_family_nt.fasta",
+  "GenerateTaxidLocator.assembly_refined_taxid_locations_family_nt_json": "expected_output_files/refined_taxid_locations_family_nt.json",
+  "GenerateTaxidLocator.assembly_refined_taxid_annot_sorted_family_nr_fasta": "expected_output_files/refined_taxid_annot_sorted_family_nr.fasta",
+  "GenerateTaxidLocator.assembly_refined_taxid_locations_family_nr_json": "expected_output_files/refined_taxid_locations_family_nr.json",
+  "GenerateTaxidLocator.assembly_refined_taxid_locations_combined_json": "expected_output_files/refined_taxid_locations_combined.json",
+  "GenerateTaxidLocator.output_read_count": null
+}

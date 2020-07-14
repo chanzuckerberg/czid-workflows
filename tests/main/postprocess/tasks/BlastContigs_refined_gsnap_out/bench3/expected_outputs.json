@@ -1,0 +1,9 @@
+{
+  "BlastContigs_refined_gsnap_out.assembly_gsnap_blast_m8": "expected_output_files/gsnap.blast.m8",
+  "BlastContigs_refined_gsnap_out.assembly_gsnap_reassigned_m8": "expected_output_files/gsnap.reassigned.m8",
+  "BlastContigs_refined_gsnap_out.assembly_gsnap_hitsummary2_tab": "expected_output_files/gsnap.hitsummary2.tab",
+  "BlastContigs_refined_gsnap_out.assembly_refined_gsnap_counts_with_dcr_json": "expected_output_files/refined_gsnap_counts_with_dcr.json",
+  "BlastContigs_refined_gsnap_out.assembly_gsnap_contig_summary_json": "expected_output_files/gsnap_contig_summary.json",
+  "BlastContigs_refined_gsnap_out.assembly_gsnap_blast_top_m8": "expected_output_files/gsnap.blast.top.m8",
+  "BlastContigs_refined_gsnap_out.output_read_count": null
+}

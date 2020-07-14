@@ -1,0 +1,13 @@
+{
+  "docker_image_id": "732052188396.dkr.ecr.us-east-2.amazonaws.com/idseq-main:sha-9c23348d87d042ba",
+  "dag_branch": "",
+  "s3_wd_uri": "s3://DUMMY_BKT/",
+  "refined_gsnap_in_gsnap_reassigned_m8": "input_files/gsnap.reassigned.m8",
+  "refined_gsnap_in_gsnap_hitsummary2_tab": "input_files/gsnap.hitsummary2.tab",
+  "refined_gsnap_in_gsnap_blast_top_m8": "input_files/gsnap.blast.top.m8",
+  "contig_in_contig_coverage_json": "input_files/contig_coverage.json",
+  "contig_in_contig_stats_json": "input_files/contig_stats.json",
+  "contig_in_contigs_fasta": "input_files/contigs.fasta",
+  "gsnap_m8_gsnap_deduped_m8": "input_files/gsnap.deduped.m8",
+  "nt_info_db": "s3://idseq-database/alignment_data/2020-04-20/nt_info.db"
+}

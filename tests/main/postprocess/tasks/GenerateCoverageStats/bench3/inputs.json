@@ -1,0 +1,9 @@
+{
+  "docker_image_id": "732052188396.dkr.ecr.us-east-2.amazonaws.com/idseq-main:sha-9c23348d87d042ba",
+  "dag_branch": "",
+  "s3_wd_uri": "s3://DUMMY_BKT/",
+  "assembly_contigs_fasta": "input_files/contigs.fasta",
+  "assembly_scaffolds_fasta": "input_files/scaffolds.fasta",
+  "assembly_read_contig_sam": "input_files/read-contig.sam",
+  "assembly_contig_stats_json": "input_files/contig_stats.json"
+}

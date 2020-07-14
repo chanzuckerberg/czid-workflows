@@ -1,0 +1,5 @@
+{
+  "NonhostFastq.nonhost_R1_fastq": "expected_output_files/nonhost_R1.fastq",
+  "NonhostFastq.nonhost_R2_fastq": "expected_output_files/nonhost_R2.fastq",
+  "NonhostFastq.output_read_count": null
+}

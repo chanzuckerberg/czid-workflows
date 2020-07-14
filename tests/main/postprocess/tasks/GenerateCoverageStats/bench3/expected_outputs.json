@@ -1,0 +1,5 @@
+{
+  "GenerateCoverageStats.assembly_contig_coverage_json": "expected_output_files/contig_coverage.json",
+  "GenerateCoverageStats.assembly_contig_coverage_summary_csv": "expected_output_files/contig_coverage_summary.csv",
+  "GenerateCoverageStats.output_read_count": null
+}

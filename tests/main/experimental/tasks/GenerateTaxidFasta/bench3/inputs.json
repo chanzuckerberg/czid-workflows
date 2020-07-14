@@ -1,0 +1,8 @@
+{
+  "docker_image_id": "732052188396.dkr.ecr.us-east-2.amazonaws.com/idseq-main:sha-9c23348d87d042ba",
+  "dag_branch": "",
+  "s3_wd_uri": "s3://DUMMY_BKT/",
+  "taxid_fasta_in_annotated_merged_fa": "input_files/refined_annotated_merged.fa",
+  "taxid_fasta_in_gsnap_hitsummary_tab": "input_files/gsnap.hitsummary.tab",
+  "taxid_fasta_in_rapsearch2_hitsummary_tab": "input_files/rapsearch2.hitsummary.tab"
+}

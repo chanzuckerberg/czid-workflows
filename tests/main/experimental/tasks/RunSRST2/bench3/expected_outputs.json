@@ -1,0 +1,9 @@
+{
+  "RunSRST2.out_log": "expected_output_files/out.log",
+  "RunSRST2.out__genes__ARGannot_r2__results_txt": "expected_output_files/out__genes__ARGannot_r2__results.txt",
+  "RunSRST2.out__fullgenes__ARGannot_r2__results_txt": "expected_output_files/out__fullgenes__ARGannot_r2__results.txt",
+  "RunSRST2.amr_processed_results_csv": "expected_output_files/amr_processed_results.csv",
+  "RunSRST2.amr_summary_results_csv": "expected_output_files/amr_summary_results.csv",
+  "RunSRST2.output___ARGannot_r2_sorted_bam": "expected_output_files/output__.ARGannot_r2.sorted.bam",
+  "RunSRST2.output_read_count": null
+}

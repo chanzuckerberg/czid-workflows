@@ -1,0 +1,4 @@
+{
+  "GenerateTaxidFasta.taxid_annot_fasta": "expected_output_files/taxid_annot.fasta",
+  "GenerateTaxidFasta.output_read_count": null
+}

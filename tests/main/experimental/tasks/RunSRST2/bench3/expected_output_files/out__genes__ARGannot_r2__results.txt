@@ -1,0 +1,2 @@
+Sample	Aac3-Ik_AGly	Dha1_Phe
+	Aac3-Ik_273*?	Dha1_1050*?
