@@ -8,6 +8,7 @@ task GenerateTaxidFasta {
     File taxid_fasta_in_annotated_merged_fa
     File taxid_fasta_in_gsnap_hitsummary_tab
     File taxid_fasta_in_rapsearch2_hitsummary_tab
+    File lineage_db
   }
   command<<<
   set -euxo pipefail
@@ -21,7 +22,7 @@ task GenerateTaxidFasta {
     --input-files '[["~{taxid_fasta_in_annotated_merged_fa}", "~{taxid_fasta_in_gsnap_hitsummary_tab}", "~{taxid_fasta_in_rapsearch2_hitsummary_tab}"]]' \
     --output-files '["taxid_annot.fasta"]' \
     --output-dir-s3 '~{s3_wd_uri}' \
-    --additional-files '{"lineage_db": "s3://idseq-database/taxonomy/2020-02-10/taxid-lineages.db"}' \
+    --additional-files '{"lineage_db": "~{lineage_db}"}' \
     --additional-attributes '{}'
   >>>
   output {
@@ -261,6 +262,7 @@ workflow idseq_experimental {
     String nt_db = "s3://~{idseq_db_bucket}/ncbi-sources/~{index_version}/nt"
     String nt_loc_db = "s3://~{idseq_db_bucket}/alignment_data/~{index_version}/nt_loc.db"
     String nt_info_db = "s3://~{idseq_db_bucket}/alignment_data/~{index_version}/nt_info.db"
+    File lineage_db = "s3://idseq-database/taxonomy/2020-02-10/taxid-lineages.db"
     Boolean use_taxon_whitelist = false
   }
 
@@ -271,7 +273,8 @@ workflow idseq_experimental {
       s3_wd_uri = s3_wd_uri,
       taxid_fasta_in_annotated_merged_fa = taxid_fasta_in_annotated_merged_fa,
       taxid_fasta_in_gsnap_hitsummary_tab = taxid_fasta_in_gsnap_hitsummary_tab,
-      taxid_fasta_in_rapsearch2_hitsummary_tab = taxid_fasta_in_rapsearch2_hitsummary_tab
+      taxid_fasta_in_rapsearch2_hitsummary_tab = taxid_fasta_in_rapsearch2_hitsummary_tab,
+      lineage_db = lineage_db
   }
 
   call GenerateTaxidLocator {

@@ -43,7 +43,7 @@ task RunStar {
     String s3_wd_uri
     File validate_input_summary_json
     Array[File] valid_input_fastq
-    String star_genome
+    File star_genome
     String nucleotide_type
     String host_genome
   }
@@ -217,7 +217,7 @@ task RunBowtie2_bowtie2_out {
     Array[File] dedup_fa
     File dedup1_fa_clstr
     File cdhitdup_cluster_sizes_tsv
-    String bowtie2_genome
+    File bowtie2_genome
   }
   command<<<
   set -euxo pipefail
@@ -293,7 +293,7 @@ task RunStarDownstream {
     Array[File] dedup_fa
     File dedup1_fa_clstr
     File cdhitdup_cluster_sizes_tsv
-    String human_star_genome
+    File human_star_genome
   }
   command<<<
   set -euxo pipefail
@@ -329,7 +329,7 @@ task RunBowtie2_bowtie2_human_out {
     Array[File] dedup_fa
     File dedup1_fa_clstr
     File cdhitdup_cluster_sizes_tsv
-    String human_bowtie2_genome
+    File human_bowtie2_genome
   }
   command<<<
   set -euxo pipefail
@@ -366,6 +366,7 @@ task RunGsnapFilter {
     Array[File] dedup_fa
     File dedup1_fa_clstr
     File cdhitdup_cluster_sizes_tsv
+    File gsnap_genome
   }
   command<<<
   set -euxo pipefail
@@ -379,7 +380,7 @@ task RunGsnapFilter {
     --input-files '[["~{sep='","' subsampled_fa}"], ["~{sep='","' dedup_fa}", "~{dedup1_fa_clstr}", "~{cdhitdup_cluster_sizes_tsv}"]]' \
     --output-files '[~{if length(dedup_fa) == 2 then '"gsnap_filter_1.fa", "gsnap_filter_2.fa", "gsnap_filter_merged.fa"' else '"gsnap_filter_1.fa"'}]' \
     --output-dir-s3 '~{s3_wd_uri}' \
-    --additional-files '{"gsnap_genome": "s3://idseq-database/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/hg38_pantro5_k16.tar"}' \
+    --additional-files '{"gsnap_genome": "~{gsnap_genome}"}' \
     --additional-attributes '{"output_sam_file": "gsnap_filter.sam"}'
   >>>
   output {
@@ -404,8 +405,9 @@ workflow idseq_host_filter {
     String nucleotide_type
     String host_genome
     File adapter_fasta
-    String star_genome
-    String bowtie2_genome
+    File star_genome
+    File bowtie2_genome
+    File gsnap_genome = "s3://idseq-database/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/hg38_pantro5_k16.tar"
     String human_star_genome
     String human_bowtie2_genome
     Int max_input_fragments
@@ -533,7 +535,8 @@ workflow idseq_host_filter {
       subsampled_fa = gsnap_filter_input,
       dedup_fa = select_all([RunCDHitDup.dedup1_fa, RunCDHitDup.dedup2_fa]),
       dedup1_fa_clstr = RunCDHitDup.dedup1_fa_clstr,
-      cdhitdup_cluster_sizes_tsv = RunCDHitDup.cdhitdup_cluster_sizes_tsv
+      cdhitdup_cluster_sizes_tsv = RunCDHitDup.cdhitdup_cluster_sizes_tsv,
+      gsnap_genome = gsnap_genome
   }
 
   output {

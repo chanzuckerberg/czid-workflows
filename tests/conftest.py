@@ -13,7 +13,7 @@ INPUT_OVERRIDES = {
         "DOCKER_IMAGE_ID",
         "docker.pkg.github.com/chanzuckerberg/idseq-workflows/idseq-main-public:6fc07e6",
     ),
-    "dag_branch": "",
+    "dag_branch": os.environ.get("IDSEQ_DAG_BRANCH", ""),
     "s3_wd_uri": "s3://DUMMY_URI/",
 }
 

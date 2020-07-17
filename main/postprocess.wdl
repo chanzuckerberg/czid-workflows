@@ -81,7 +81,7 @@ task DownloadAccessions_gsnap_accessions_out {
     File gsnap_out_gsnap_counts_with_dcr_json
     String nt_db
     String nt_loc_db
-    String lineage_db
+    File lineage_db
   }
   command<<<
   set -euxo pipefail
@@ -116,7 +116,7 @@ task DownloadAccessions_rapsearch2_accessions_out {
     File rapsearch2_out_rapsearch2_deduped_m8
     File rapsearch2_out_rapsearch2_hitsummary_tab
     File rapsearch2_out_rapsearch2_counts_with_dcr_json
-    String lineage_db
+    File lineage_db
     String nr_loc_db
     String nr_db
   }
@@ -159,8 +159,8 @@ task BlastContigs_refined_gsnap_out {
     File assembly_contig_stats_json
     File assembly_nt_refseq_fasta
     File cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv
-    String lineage_db
-    String taxon_blacklist
+    File lineage_db
+    File taxon_blacklist
     String? deuterostome_db
     Boolean use_deuterostome_filter
     Boolean use_taxon_whitelist
@@ -209,8 +209,8 @@ task BlastContigs_refined_rapsearch2_out {
     File assembly_contig_stats_json
     File assembly_nr_refseq_fasta
     File cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv
-    String lineage_db
-    String taxon_blacklist
+    File lineage_db
+    File taxon_blacklist
     Boolean use_taxon_whitelist
   }
   command<<<
@@ -392,7 +392,7 @@ task GenerateTaxidFasta {
     File assembly_refined_rapsearch2_counts_with_dcr_json
     File assembly_rapsearch2_contig_summary_json
     File assembly_rapsearch2_blast_top_m8
-    String lineage_db
+    File lineage_db
   }
   command<<<
   set -euxo pipefail
@@ -486,8 +486,8 @@ workflow idseq_postprocess {
     String nt_loc_db = "s3://~{idseq_db_bucket}/alignment_data/~{index_version}/nt_loc.db"
     String nr_db = "s3://~{idseq_db_bucket}/ncbi-sources/~{index_version}/nr"
     String nr_loc_db = "s3://~{idseq_db_bucket}/alignment_data/~{index_version}/nr_loc.db"
-    String lineage_db = "s3://~{idseq_db_bucket}/taxonomy/~{index_version}/taxid-lineages.db"
-    String taxon_blacklist = "s3://~{idseq_db_bucket}/taxonomy/~{index_version}/taxon_blacklist.txt"
+    File lineage_db = "s3://~{idseq_db_bucket}/taxonomy/~{index_version}/taxid-lineages.db"
+    File taxon_blacklist = "s3://~{idseq_db_bucket}/taxonomy/~{index_version}/taxon_blacklist.txt"
     String deuterostome_db = "s3://~{idseq_db_bucket}/taxonomy/~{index_version}/deuterostome_taxids.txt"
     Boolean use_deuterostome_filter = true
     Boolean use_taxon_whitelist = false

@@ -12,5 +12,6 @@
     "input_files/dedup2.fa"
   ],
   "dedup1_fa_clstr": "input_files/dedup1.fa.clstr",
-  "cdhitdup_cluster_sizes_tsv": "input_files/cdhitdup_cluster_sizes.tsv"
+  "cdhitdup_cluster_sizes_tsv": "input_files/cdhitdup_cluster_sizes.tsv",
+  "gsnap_genome": "s3://idseq-database/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/hg38_pantro5_k16.tar"
 }

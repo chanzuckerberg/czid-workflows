@@ -59,11 +59,18 @@ jobs:
           echo "::set-env name=TAG::${TAG}"
       - name: run tests
         run: |
+          # explicitly block EC2 IMDS endpoint to work around awscli issue:
+          # https://github.com/aws/aws-cli/issues/5234#issuecomment-635459464
+          # https://github.com/aws/aws-cli/issues/5262
+          sudo ip route add blackhole 169.254.169.254
+
           source /etc/profile
           sudo apt-get -qq update
           sudo apt-get -qq install --yes jq moreutils make virtualenv zip unzip httpie git shellcheck
           virtualenv --python=python3.6 .venv
           source .venv/bin/activate
           pip install -r requirements-dev.txt
+
           export DOCKER_IMAGE_ID="${IMAGE_URI}:${TAG}"
+
           make test-${{ matrix.workflow_dir }}
