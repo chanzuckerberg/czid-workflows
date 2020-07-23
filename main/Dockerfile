@@ -39,7 +39,6 @@ RUN apt-get -q install -y \
         python3-cutadapt \
         python3-scipy \
         samtools \
-        rna-star \
         fastx-toolkit \
         seqtk \
         bedtools
@@ -102,6 +101,12 @@ RUN curl -L -o /usr/local/bin/picard.jar https://github.com/broadinstitute/picar
 # Create a single executable so we can use SingleCommand
 RUN printf '#!/bin/bash\njava -jar /usr/local/bin/picard.jar "$@"\n' > /usr/local/bin/picard
 RUN chmod +x /usr/local/bin/picard
+
+# install STAR, the package rna-star does not include STARlong
+RUN curl -L https://github.com/alexdobin/STAR/archive/2.5.3a.tar.gz | tar xz
+RUN mv STAR-2.5.3a/bin/Linux_x86_64_static/* /usr/local/bin
+RUN rm -rf STAR-2.5.3a
+
 
 # Install rapsearch2, required for running alignment locally
 RUN apt-get install -y \
