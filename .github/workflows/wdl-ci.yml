@@ -33,7 +33,7 @@ jobs:
     runs-on: ubuntu-18.04
     strategy:
       matrix:
-        workflow_dir: [main]
+        workflow_dir: [main, consensus-genome]
     steps:
       - uses: actions/checkout@v2
       - name: docker login
