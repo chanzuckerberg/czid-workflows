@@ -14,6 +14,8 @@ task RunAlignmentRemotely_gsnap_out {
     String index_dir_suffix
     Boolean use_deuterostome_filter
     Boolean use_taxon_whitelist
+
+    File? local_index_tar
   }
   command<<<
   set -euxo pipefail
@@ -27,7 +29,7 @@ task RunAlignmentRemotely_gsnap_out {
     --input-files '[["~{sep='","' host_filter_out_gsnap_filter_fa}"], ["~{cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv}"]]' \
     --output-files '["gsnap.m8", "gsnap.deduped.m8", "gsnap.hitsummary.tab", "gsnap_counts_with_dcr.json"]' \
     --output-dir-s3 '~{s3_wd_uri}' \
-    --additional-files '{"lineage_db": "~{lineage_db}", "accession2taxid_db": "~{accession2taxid_db}", "taxon_blacklist": "~{taxon_blacklist}", "deuterostome_db": "~{if use_deuterostome_filter then '~{deuterostome_db}' else ''}"}' \
+    --additional-files '{"lineage_db": "~{lineage_db}", "accession2taxid_db": "~{accession2taxid_db}", "taxon_blacklist": "~{taxon_blacklist}", "deuterostome_db": "~{if use_deuterostome_filter then '~{deuterostome_db}' else ''}", "index": "~{local_index_tar}"}' \
     --additional-attributes '{"alignment_algorithm": "gsnap", "index_dir_suffix": "~{index_dir_suffix}", "use_taxon_whitelist": ~{use_taxon_whitelist}}'
   >>>
   output {
@@ -54,11 +56,18 @@ task RunAlignmentRemotely_rapsearch2_out {
     String taxon_blacklist
     String index_dir_suffix
     Boolean use_taxon_whitelist
+
+    Array[File] local_index_files = []
   }
   command<<<
   set -euxo pipefail
   if [[ -n "~{dag_branch}" ]]; then
     pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
+  fi
+  local_index_value=""
+  if [[ '~{length(local_index_files)>0}' == 'true' ]]; then
+    # assume the lexicographically first (shortest) of local_index_files is the database basename
+    local_index_value="$(sort '~{write_lines(local_index_files)}' | head -n 1)"
   fi
   idseq-dag-run-step --workflow-name non_host_alignment \
     --step-module idseq_dag.steps.run_alignment_remotely \
@@ -67,7 +76,7 @@ task RunAlignmentRemotely_rapsearch2_out {
     --input-files '[["~{sep='","' host_filter_out_gsnap_filter_fa}"], ["~{cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv}"]]' \
     --output-files '["rapsearch2.m8", "rapsearch2.deduped.m8", "rapsearch2.hitsummary.tab", "rapsearch2_counts_with_dcr.json"]' \
     --output-dir-s3 '~{s3_wd_uri}' \
-    --additional-files '{"lineage_db": "~{lineage_db}", "accession2taxid_db": "~{accession2taxid_db}", "taxon_blacklist": "~{taxon_blacklist}"}' \
+    --additional-files '{"lineage_db": "~{lineage_db}", "accession2taxid_db": "~{accession2taxid_db}", "taxon_blacklist": "~{taxon_blacklist}", "index": "' "$local_index_value" '"}' \
     --additional-attributes '{"alignment_algorithm": "rapsearch2", "index_dir_suffix": "~{index_dir_suffix}", "use_taxon_whitelist": ~{use_taxon_whitelist}}'
   >>>
   output {
