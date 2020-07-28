@@ -29,7 +29,6 @@ def miniwdl_run_cfg():
     with WDL._util.configure_logger():
         logger = logging.getLogger(__name__)
         cfg = WDL.runtime.config.Loader(logger)
-        WDL.runtime.task.SwarmContainer.global_init(cfg, logger)
         return cfg
 
 
