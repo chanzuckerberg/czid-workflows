@@ -1,5 +1,6 @@
 FROM ubuntu:18.04
 ARG DEBIAN_FRONTEND=noninteractive
+ARG MINIWDL_VERSION=0.7.5
 
 LABEL maintainer="IDseq Team idseq-tech@chanzuckerberg.com"
 
@@ -51,10 +52,13 @@ RUN apt-get -q install -y \
 
 # Match versions from Ubuntu 20.04 LTS (please do not upgrade except to fix bugs)
 RUN pip3 install awscli==1.17.14 boto3==1.9.253
-RUN pip3 install miniwdl==0.7.5 miniwdl-s3parcp==0.0.5 miniwdl-s3upload==0.0.4
+RUN pip3 install miniwdl==${MINIWDL_VERSION} miniwdl-s3parcp==0.0.5 miniwdl-s3upload==0.0.4
 RUN pip3 install https://github.com/chanzuckerberg/miniwdl-plugins/archive/f0465b0.zip#subdirectory=sfn-wdl
 RUN pip3 install https://github.com/chanzuckerberg/idseq-dag/archive/v4.11.6.tar.gz
 RUN pip3 install https://github.com/chanzuckerberg/s3mi/archive/v0.8.0.tar.gz
+
+ADD https://raw.githubusercontent.com/chanzuckerberg/miniwdl/v${MINIWDL_VERSION}/examples/clean_download_cache.sh /usr/local/bin
+RUN chmod +x /usr/local/bin/clean_download_cache.sh
 
 # docker.io is the largest package at 250MB+ / half of all package disk space usage.
 # The docker daemons never run inside the container - removing them saves 150MB+
