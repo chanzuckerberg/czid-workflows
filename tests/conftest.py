@@ -11,7 +11,7 @@ import WDL
 INPUT_OVERRIDES = {
     "docker_image_id": os.environ.get(
         "DOCKER_IMAGE_ID",
-        "docker.pkg.github.com/chanzuckerberg/idseq-workflows/idseq-main-public:6fc07e6",
+        "docker.pkg.github.com/chanzuckerberg/idseq-workflows/idseq-main-public:3db222b",
     ),
     "dag_branch": os.environ.get("IDSEQ_DAG_BRANCH", ""),
     "s3_wd_uri": "s3://DUMMY_URI/",

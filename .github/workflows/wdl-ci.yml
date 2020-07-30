@@ -64,6 +64,11 @@ jobs:
           # https://github.com/aws/aws-cli/issues/5262
           sudo ip route add blackhole 169.254.169.254
 
+          # configure miniwdl to auto-delete task working directories, to reduce chance of worker
+          # running out of space
+          export MINIWDL__FILE_IO__OUTPUT_HARDLINKS=true
+          export MINIWDL__FILE_IO__DELETE_WORK=success
+
           source /etc/profile
           sudo apt-get -qq update
           sudo apt-get -qq install --yes jq moreutils make virtualenv zip unzip httpie git shellcheck
