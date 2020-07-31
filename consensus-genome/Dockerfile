@@ -16,19 +16,15 @@ RUN curl -sSL https://repo.anaconda.com/miniconda/Miniconda3-py37_4.8.3-Linux-x8
   && bash /tmp/miniconda.sh -bfp /usr/local \
   && rm -rf /tmp/miniconda.sh \
   && conda update conda \
-  && conda install -y python=3.6 \
+  && conda install -y python=3.7.4 \
   && conda clean -a
 
 # Setup conda environment
-# current quast (through conda) requires python 3.6
-RUN conda create --name consensus_genome \
-  && conda config --add channels defaults \
+RUN conda config --add channels defaults \
   && conda config --add channels conda-forge \
   && conda config --add channels bioconda \
   && conda clean -a
 
-RUN conda install -y bcftools=1.9 biopython=1.76 freebayes=1.3.2 ivar=1.0.1 kraken2=2.0.8_beta minimap2=2.17 \
-  multiqc=1.8 pysam=0.15.3 quast=5.0.2 samtools=1.9 seaborn=0.10.0 seqtk=1.3 trim-galore=0.6.5 \
+RUN conda install -y bcftools=1.9 biopython=1.76 freebayes=1.3.2 ivar=1.2 kraken2=2.0.8_beta minimap2=2.17 \
+  multiqc=1.8 pysam=0.15.4 quast=5.0.2 samtools=1.9 seaborn=0.10.0 seqtk=1.3 trim-galore=0.6.5 \
   && conda clean -a
-
-RUN echo "conda activate consensus_genome" > ~/.bashrc
