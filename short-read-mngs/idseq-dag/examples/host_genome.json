@@ -1,6 +1,6 @@
 {
   "name": "host_genome",
-  "output_dir_s3": "s3://idseq-database/host_filter/pig/2019-02-06",
+  "output_dir_s3": "s3://idseq-public-references/host_filter/pig/2019-02-06",
   "targets": {
     "host_fasta": ["GCA_002844635.1_USMARCv1.0_genomic.fna.gz"],
     "host_index": ["fasta_with_ercc.fa", "gtf_with_ercc.fa", "pig_STAR_genome.tar", "pig_bowtie2_genome.tar"]
@@ -12,15 +12,15 @@
       "class": "PipelineStepGenerateHostGenome",
       "module": "idseq_dag.steps.generate_host_genome",
       "additional_files": {
-          "ercc_fasta": "s3://idseq-database/host_filter/pig/2019-02-06/ERCC.fasta", 
-          "ercc_gtf": "s3://idseq-database/host_filter/pig/2019-02-06/ERCC.gtf" 
+          "ercc_fasta": "s3://idseq-public-references/host_filter/pig/2019-02-06/ERCC.fasta", 
+          "ercc_gtf": "s3://idseq-public-references/host_filter/pig/2019-02-06/ERCC.gtf" 
       },
       "additional_attributes": {"host_name": "pig", "max_star_part_size": null}
     }
   ],
   "given_targets": {
     "host_fasta": {
-      "s3_dir": "s3://idseq-database/host_filter/pig/2019-02-06"
+      "s3_dir": "s3://idseq-public-references/host_filter/pig/2019-02-06"
     }  
   }
 }

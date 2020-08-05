@@ -36,7 +36,7 @@
         "class": "PipelineStepBlastContigs",
         "module": "idseq_dag.steps.blast_contigs",
         "additional_files": {
-            "lineage_db": "s3://idseq-database/taxonomy/2020-02-10/taxid-lineages.db"
+            "lineage_db": "s3://idseq-public-references/taxonomy/2020-02-10/taxid-lineages.db"
         },
         "additional_attributes": {
             "db_type": "nt"

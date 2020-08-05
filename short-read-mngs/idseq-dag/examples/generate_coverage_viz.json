@@ -24,7 +24,7 @@
       "class": "PipelineStepGenerateCoverageViz",
       "module": "idseq_dag.steps.generate_coverage_viz",
       "additional_files": {
-        "info_db": "s3://idseq-database/alignment_data/2018-12-01/nt_info.db"
+        "info_db": "s3://idseq-public-references/alignment_data/2018-12-01/nt_info.db"
       },
       "additional_attributes": {}
     }
