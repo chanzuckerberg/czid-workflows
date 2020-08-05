@@ -45,6 +45,7 @@ class PipelineStep(object):
         self.status_dict = {}
         self.step_status_local = step_status_local
         self.step_status_lock = step_status_lock
+        self.step_status_upload_failed = False
 
         self.additional_files = additional_files
         self.additional_attributes = additional_attributes
@@ -159,7 +160,12 @@ class PipelineStep(object):
                 # if something fails, we prefer not raising an exception to not affect the rest of the pipeline
                 # these updates are non-critical functions and *should* be replaced by a new event bus soon
                 # so, we only log the message for later debug
-                log.write(f"Exception updating status. Traceback: {traceback.format_exc()}", warning=True)
+                if not self.step_status_upload_failed:
+                    log.write(
+                        f"Exception uploading status JSON to S3; traceback follows. Subsequent updates for this step may fail silently.\n{traceback.format_exc()}",
+                        warning=True
+                    )
+                    self.step_status_upload_failed = True
                 return
 
     @staticmethod
