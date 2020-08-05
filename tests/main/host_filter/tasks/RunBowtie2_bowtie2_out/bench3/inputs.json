@@ -12,5 +12,5 @@
   ],
   "dedup1_fa_clstr": "input_files/dedup1.fa.clstr",
   "cdhitdup_cluster_sizes_tsv": "input_files/cdhitdup_cluster_sizes.tsv",
-  "bowtie2_genome": "s3://idseq-database/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/human_bowtie2_genome.tar"
+  "bowtie2_genome": "s3://idseq-public-references/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/human_bowtie2_genome.tar"
 }

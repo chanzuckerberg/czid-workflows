@@ -16,5 +16,5 @@
   "assembly_refined_rapsearch2_counts_with_dcr_json": "input_files/refined_rapsearch2_counts_with_dcr.json",
   "assembly_rapsearch2_contig_summary_json": "input_files/rapsearch2_contig_summary.json",
   "assembly_rapsearch2_blast_top_m8": "input_files/rapsearch2.blast.top.m8",
-  "lineage_db": "s3://idseq-database/taxonomy/2020-04-20/taxid-lineages.db"
+  "lineage_db": "s3://idseq-public-references/taxonomy/2020-04-20/taxid-lineages.db"
 }

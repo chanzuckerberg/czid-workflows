@@ -16,6 +16,6 @@
   "taxid_annot_sorted_family_nr_fasta": "input_files/taxid_annot_sorted_family_nr.fasta",
   "taxid_locations_family_nr_json": "input_files/taxid_locations_family_nr.json",
   "taxid_locations_combined_json": "input_files/taxid_locations_combined.json",
-  "nt_db": "s3://idseq-database/ncbi-sources/2020-04-20/nt",
-  "nt_loc_db": "s3://idseq-database/alignment_data/2020-04-20/nt_loc.db"
+  "nt_db": "s3://idseq-public-references/ncbi-sources/2020-04-20/nt",
+  "nt_loc_db": "s3://idseq-public-references/alignment_data/2020-04-20/nt_loc.db"
 }

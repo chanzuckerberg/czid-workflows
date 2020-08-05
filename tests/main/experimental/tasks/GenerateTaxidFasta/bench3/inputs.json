@@ -5,5 +5,5 @@
   "taxid_fasta_in_annotated_merged_fa": "input_files/refined_annotated_merged.fa",
   "taxid_fasta_in_gsnap_hitsummary_tab": "input_files/gsnap.hitsummary.tab",
   "taxid_fasta_in_rapsearch2_hitsummary_tab": "input_files/rapsearch2.hitsummary.tab",
-  "lineage_db": "s3://idseq-database/taxonomy/2020-02-10/taxid-lineages.db"
+  "lineage_db": "s3://idseq-public-references/taxonomy/2020-02-10/taxid-lineages.db"
 }

@@ -9,5 +9,5 @@
   "contig_in_contig_stats_json": "input_files/contig_stats.json",
   "contig_in_contigs_fasta": "input_files/contigs.fasta",
   "gsnap_m8_gsnap_deduped_m8": "input_files/gsnap.deduped.m8",
-  "nt_info_db": "s3://idseq-database/alignment_data/2020-04-20/nt_info.db"
+  "nt_info_db": "s3://idseq-public-references/alignment_data/2020-04-20/nt_info.db"
 }

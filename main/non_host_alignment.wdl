@@ -174,7 +174,7 @@ workflow idseq_non_host_alignment {
     File cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv
     File cdhitdup_out_dedup1_fa_clstr
     File cdhitdup_out_dedup1_fa
-    String idseq_db_bucket = "idseq-database"
+    String idseq_db_bucket = "idseq-public-references"
     String index_version = "2020-04-20"
     String lineage_db = "s3://~{idseq_db_bucket}/taxonomy/~{index_version}/taxid-lineages.db"
     String accession2taxid_db = "s3://~{idseq_db_bucket}/alignment_data/~{index_version}/accession2taxid.db"

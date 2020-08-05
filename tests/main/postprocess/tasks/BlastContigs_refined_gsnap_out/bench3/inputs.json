@@ -12,9 +12,9 @@
   "assembly_contig_stats_json": "input_files/contig_stats.json",
   "assembly_nt_refseq_fasta": "input_files/nt.refseq.fasta",
   "cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv": "input_files/cdhitdup_cluster_sizes.tsv",
-  "lineage_db": "s3://idseq-database/taxonomy/2020-04-20/taxid-lineages.db",
-  "taxon_blacklist": "s3://idseq-database/taxonomy/2020-04-20/taxon_blacklist.txt",
-  "deuterostome_db": "s3://idseq-database/taxonomy/2020-04-20/deuterostome_taxids.txt",
+  "lineage_db": "s3://idseq-public-references/taxonomy/2020-04-20/taxid-lineages.db",
+  "taxon_blacklist": "s3://idseq-public-references/taxonomy/2020-04-20/taxon_blacklist.txt",
+  "deuterostome_db": "s3://idseq-public-references/taxonomy/2020-04-20/deuterostome_taxids.txt",
   "use_deuterostome_filter": true,
   "use_taxon_whitelist": false
 }

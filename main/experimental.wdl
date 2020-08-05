@@ -144,7 +144,7 @@ task RunSRST2 {
     --input-files '[["~{sep='","' fastqs}"]]' \
     --output-files '["out.log", "out__genes__ARGannot_r2__results.txt", "out__fullgenes__ARGannot_r2__results.txt", "amr_processed_results.csv", "amr_summary_results.csv", "output__.ARGannot_r2.sorted.bam"]' \
     --output-dir-s3 '~{s3_wd_uri}' \
-    --additional-files '{"resist_gene_db": "s3://idseq-database/amr/ARGannot_r2.fasta", "resist_genome_bed": "s3://idseq-database/amr/argannot_genome.bed"}' \
+    --additional-files '{"resist_gene_db": "s3://idseq-public-references/amr/ARGannot_r2.fasta", "resist_genome_bed": "s3://idseq-public-references/amr/argannot_genome.bed"}' \
     --additional-attributes '{"min_cov": 0, "n_threads": 16, "file_ext": "~{file_ext}"}'
   >>>
   output {
@@ -257,12 +257,12 @@ workflow idseq_experimental {
     File cdhitdup_clusters_dedup1_fa_clstr
     File deduped_fasta_dedup1_fa
     String file_ext = "fastq"
-    String idseq_db_bucket = "idseq-database"
+    String idseq_db_bucket = "idseq-public-references"
     String index_version = "2020-04-20"
     String nt_db = "s3://~{idseq_db_bucket}/ncbi-sources/~{index_version}/nt"
     String nt_loc_db = "s3://~{idseq_db_bucket}/alignment_data/~{index_version}/nt_loc.db"
     String nt_info_db = "s3://~{idseq_db_bucket}/alignment_data/~{index_version}/nt_info.db"
-    File lineage_db = "s3://idseq-database/taxonomy/2020-02-10/taxid-lineages.db"
+    File lineage_db = "s3://idseq-public-references/taxonomy/2020-02-10/taxid-lineages.db"
     Boolean use_taxon_whitelist = false
   }
 

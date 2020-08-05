@@ -407,7 +407,7 @@ workflow idseq_host_filter {
     File adapter_fasta
     File star_genome
     File bowtie2_genome
-    File gsnap_genome = "s3://idseq-database/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/hg38_pantro5_k16.tar"
+    File gsnap_genome = "s3://idseq-public-references/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/hg38_pantro5_k16.tar"
     String human_star_genome
     String human_bowtie2_genome
     Int max_input_fragments

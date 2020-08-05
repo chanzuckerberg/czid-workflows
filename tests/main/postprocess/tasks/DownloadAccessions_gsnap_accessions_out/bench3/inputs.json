@@ -6,7 +6,7 @@
   "gsnap_out_gsnap_deduped_m8": "input_files/gsnap.deduped.m8",
   "gsnap_out_gsnap_hitsummary_tab": "input_files/gsnap.hitsummary.tab",
   "gsnap_out_gsnap_counts_with_dcr_json": "input_files/gsnap_counts_with_dcr.json",
-  "nt_db": "s3://idseq-database/ncbi-sources/2020-04-20/nt",
-  "nt_loc_db": "s3://idseq-database/alignment_data/2020-04-20/nt_loc.db",
-  "lineage_db": "s3://idseq-database/taxonomy/2020-04-20/taxid-lineages.db"
+  "nt_db": "s3://idseq-public-references/ncbi-sources/2020-04-20/nt",
+  "nt_loc_db": "s3://idseq-public-references/alignment_data/2020-04-20/nt_loc.db",
+  "lineage_db": "s3://idseq-public-references/taxonomy/2020-04-20/taxid-lineages.db"
 }
