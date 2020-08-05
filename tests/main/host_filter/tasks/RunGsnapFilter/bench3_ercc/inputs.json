@@ -1,0 +1,17 @@
+{
+  "docker_image_id": null,
+  "dag_branch": null,
+  "s3_wd_uri": null,
+  "subsampled_fa": [
+    "input_files/subsampled_1.fa",
+    "input_files/subsampled_2.fa",
+    "input_files/subsampled_merged.fa"
+  ],
+  "dedup_fa": [
+    "input_files/dedup1.fa",
+    "input_files/dedup2.fa"
+  ],
+  "dedup1_fa_clstr": "input_files/dedup1.fa.clstr",
+  "cdhitdup_cluster_sizes_tsv": "input_files/cdhitdup_cluster_sizes.tsv",
+  "gsnap_genome": "s3://idseq-database/test/gsnap/ERCC_k16.tar"
+}
