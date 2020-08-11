@@ -1,4 +1,5 @@
-# The following pipeline was imported from previous work at: https://github.com/czbiohub/sc2-illumina-pipeline
+# The following pipeline was initially based on previous work at: https://github.com/czbiohub/sc2-illumina-pipeline
+# workflow version: consensus-genomes-1.1.0
 version 1.0
 
 workflow consensus_genome {
@@ -74,104 +75,101 @@ workflow consensus_genome {
             docker_image_id = docker_image_id
     }
 
-    # skip remaining steps if no SC2 reads were found (28 = size of an empty bgzip file)
-    if (size(FilterReads.filtered_fastqs_0) > 28) {
-        if (trim_adapters) {
-            call TrimReads {
-                input:
-                    fastqs_0 = FilterReads.filtered_fastqs_0,
-                    fastqs_1 = FilterReads.filtered_fastqs_1,
-                    docker_image_id = docker_image_id
-            }
-        }
-
-        call AlignReads {
+    if (trim_adapters) {
+        call TrimReads {
             input:
-                prefix = prefix,
-                sample = sample,
-                # use trimReads output if we ran it; otherwise fall back to FilterReads output
-                fastqs_0 = select_first([TrimReads.trimmed_fastqs_0, FilterReads.filtered_fastqs_0]),
-                fastqs_1 = select_first([TrimReads.trimmed_fastqs_1, FilterReads.filtered_fastqs_1]),
-                ref_fasta = ref_fasta,
+                fastqs_0 = FilterReads.filtered_fastqs_0,
+                fastqs_1 = FilterReads.filtered_fastqs_1,
                 docker_image_id = docker_image_id
         }
+    }
 
-        call TrimPrimers {
+    call AlignReads {
+        input:
+            prefix = prefix,
+            sample = sample,
+            # use trimReads output if we ran it; otherwise fall back to FilterReads output
+            fastqs_0 = select_first([TrimReads.trimmed_fastqs_0, FilterReads.filtered_fastqs_0]),
+            fastqs_1 = select_first([TrimReads.trimmed_fastqs_1, FilterReads.filtered_fastqs_1]),
+            ref_fasta = ref_fasta,
+            docker_image_id = docker_image_id
+    }
+
+    call TrimPrimers {
+        input:
+            prefix = prefix,
+            alignments = AlignReads.alignments,
+            primer_bed = primer_bed,
+            docker_image_id = docker_image_id
+    }
+
+    if (intrahost_variants) {
+        call IntrahostVariants {
             input:
-                prefix = prefix,
-                alignments = AlignReads.alignments,
-                primer_bed = primer_bed,
-                docker_image_id = docker_image_id
-        }
-
-        if (intrahost_variants) {
-            call IntrahostVariants {
-                input:
-                    bam = TrimPrimers.trimmed_bam_ch,
-                    ref_fasta = ref_fasta,
-                    intrahost_ploidy = intrahost_ploidy,
-                    intrahost_min_frac = intrahost_min_frac,
-                    docker_image_id = docker_image_id
-            }
-        }
-
-        call MakeConsensus {
-            input:
-                prefix = prefix,
-                sample = sample,
                 bam = TrimPrimers.trimmed_bam_ch,
-                ivarFreqThreshold = ivarFreqThreshold,
-                minDepth = minDepth,
-                ivarQualThreshold = ivarQualTreshold,
-                mpileupDepth = mpileupDepth,
-                docker_image_id = docker_image_id
-        }
-
-        call Quast {
-            input:
-                prefix = prefix,
-                assembly = MakeConsensus.consensus_fa,
-                bam = TrimPrimers.trimmed_bam_ch,
-                # use trimReads output if we ran it; otherwise fall back to FilterReads output
-                fastqs_0 = select_first([TrimReads.trimmed_fastqs_0, FilterReads.filtered_fastqs_0]),
-                fastqs_1 = select_first([TrimReads.trimmed_fastqs_1, FilterReads.filtered_fastqs_1]),
                 ref_fasta = ref_fasta,
-                no_reads_quast = no_reads_quast,
+                intrahost_ploidy = intrahost_ploidy,
+                intrahost_min_frac = intrahost_min_frac,
                 docker_image_id = docker_image_id
         }
+    }
 
-        call RealignConsensus {
-            input:
-                prefix = prefix,
-                sample = sample,
-                realign_fa = MakeConsensus.consensus_fa,
-                ref_fasta = ref_fasta,
-                docker_image_id = docker_image_id
-        }
+    call MakeConsensus {
+        input:
+            prefix = prefix,
+            sample = sample,
+            bam = TrimPrimers.trimmed_bam_ch,
+            ivarFreqThreshold = ivarFreqThreshold,
+            minDepth = minDepth,
+            ivarQualThreshold = ivarQualTreshold,
+            mpileupDepth = mpileupDepth,
+            docker_image_id = docker_image_id
+    }
 
-        call CallVariants {
-            input:
-                prefix = prefix,
-                call_variants_bam = TrimPrimers.trimmed_bam_ch,
-                ref_fasta = ref_fasta,
-                bcftoolsCallTheta = bcftoolsCallTheta,
-                minDepth = minDepth,
-                docker_image_id = docker_image_id
-        }
+    call Quast {
+        input:
+            prefix = prefix,
+            assembly = MakeConsensus.consensus_fa,
+            bam = TrimPrimers.trimmed_bam_ch,
+            # use trimReads output if we ran it; otherwise fall back to FilterReads output
+            fastqs_0 = select_first([TrimReads.trimmed_fastqs_0, FilterReads.filtered_fastqs_0]),
+            fastqs_1 = select_first([TrimReads.trimmed_fastqs_1, FilterReads.filtered_fastqs_1]),
+            ref_fasta = ref_fasta,
+            no_reads_quast = no_reads_quast,
+            docker_image_id = docker_image_id
+    }
 
-        call ComputeStats {
-            input:
-                prefix = prefix,
-                sample = sample,
-                cleaned_bam = TrimPrimers.trimmed_bam_ch,
-                assembly = MakeConsensus.consensus_fa,
-                ercc_stats = QuantifyERCCs.ercc_out,
-                vcf = CallVariants.variants_ch,
-                fastqs_0 = fastqs_0,
-                fastqs_1 = fastqs_1,
-                ref_host = ref_host,
-                docker_image_id = docker_image_id
-        }
+    call RealignConsensus {
+        input:
+            prefix = prefix,
+            sample = sample,
+            realign_fa = MakeConsensus.consensus_fa,
+            ref_fasta = ref_fasta,
+            docker_image_id = docker_image_id
+    }
+
+    call CallVariants {
+        input:
+            prefix = prefix,
+            call_variants_bam = TrimPrimers.trimmed_bam_ch,
+            ref_fasta = ref_fasta,
+            bcftoolsCallTheta = bcftoolsCallTheta,
+            minDepth = minDepth,
+            docker_image_id = docker_image_id
+    }
+
+    call ComputeStats {
+        input:
+            prefix = prefix,
+            sample = sample,
+            cleaned_bam = TrimPrimers.trimmed_bam_ch,
+            assembly = MakeConsensus.consensus_fa,
+            ercc_stats = QuantifyERCCs.ercc_out,
+            vcf = CallVariants.variants_ch,
+            fastqs_0 = fastqs_0,
+            fastqs_1 = fastqs_1,
+            ref_host = ref_host,
+            docker_image_id = docker_image_id
     }
 
     call ZipOutputs {
@@ -215,7 +213,6 @@ workflow consensus_genome {
 # TODO: task to validate input
 
 task RemoveHost {
-    # TODO: process errors: no reads left
     input {
         String prefix
         File fastqs_0
@@ -230,6 +227,12 @@ task RemoveHost {
         minimap2 -t $CORES -ax sr ~{ref_host} ~{fastqs_0} ~{fastqs_1} | \
         samtools view -@ $CORES -b -f 4 | \
         samtools fastq -@ $CORES -1 "~{prefix}no_host_1.fq.gz" -2 "~{prefix}no_host_2.fq.gz" -0 /dev/null -s /dev/null -n -c 6 -
+
+        uncompressed_size=`gzip -l "~{prefix}no_host_1.fq.gz" "~{prefix}no_host_2.fq.gz" | awk 'END{print $2}'`
+        if [ "$uncompressed_size" -eq "0" ]; then
+            >&2 echo "{\"wdl_error_message\": true, \"error\": \"InsufficientReadsError\", \"cause\": \"No reads after RemoveHost\"}"
+            exit 1
+        fi
     >>>
 
     output {
@@ -267,9 +270,9 @@ task QuantifyERCCs {
 }
 
 task FilterReads {
-    # TODO: process errors: no reads left
     input {
         String prefix
+        # SARS-CoV-2 default
         String taxid = "2697049"
         File fastqs_0
         File fastqs_1
@@ -314,6 +317,12 @@ task FilterReads {
             mv "${TMPDIR}/paired1.fq.gz" "~{prefix}filtered_1.fq.gz"
             mv "${TMPDIR}/paired2.fq.gz" "~{prefix}filtered_2.fq.gz"
         fi
+
+        uncompressed_size=`gzip -l "~{prefix}filtered_1.fq.gz" "~{prefix}filtered_1.fq.gz" | awk 'END{print $2}'`
+        if [ "$uncompressed_size" -eq "0" ]; then
+            >&2 echo "{\"wdl_error_message\": true, \"error\": \"InsufficientReadsError\", \"cause\": \No reads after FilterReads\"}"
+            exit 1
+        fi
     >>>
 
     output {
@@ -327,7 +336,6 @@ task FilterReads {
 }
 
 task TrimReads {
-    # TODO: process errors: no reads left
     input {
         File fastqs_0
         File fastqs_1
@@ -335,9 +343,15 @@ task TrimReads {
         String docker_image_id
     }
 
-    command {
+    command <<<
         trim_galore --fastqc --paired "~{fastqs_0}" "~{fastqs_1}"
-    }
+
+        uncompressed_size=`gzip -l "~{basename(fastqs_0, '.fq.gz')}_val_1.fq.gz" "~{basename(fastqs_0, '.fq.gz')}_val_2.fq.gz" | awk 'END{print $2}'`
+        if [ "$uncompressed_size" -eq "0" ]; then
+            >&2 echo "{\"wdl_error_message\": true, \"error\": \"InsufficientReadsError\", \"cause\": \"No reads after TrimReads\"}"
+            exit 1
+        fi
+    >>>
 
     output {
         File trimmed_fastqs_0 = "~{basename(fastqs_0, '.fq.gz')}_val_1.fq.gz"
@@ -365,7 +379,7 @@ task AlignReads {
         set -euxo pipefail
 
         export CORES=`nproc --all`
-        # Sample id included in the bam  files
+        # Sample id included in the bam files
         minimap2 -ax sr -t $CORES -R '@RG\tID:~{sample}\tSM:~{sample}' "~{ref_fasta}" "~{fastqs_0}" "~{fastqs_1}" \
             | samtools sort -@ $CORES -O bam -o "~{prefix}aligned_reads.bam"
     >>>
