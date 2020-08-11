@@ -13,6 +13,7 @@ on:
 
 env:
   GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+  GH_DEPLOY_TOKEN: ${{secrets.GH_DEPLOY_TOKEN}}
   DEBIAN_FRONTEND: noninteractive
   GH_CLI_VERSION: 0.11.1
   LC_ALL: C.UTF-8
@@ -20,11 +21,12 @@ env:
 
 jobs:
   create_release:
-    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
       - name: Install release script dependencies
         run: |
           source /etc/profile
@@ -32,14 +34,5 @@ jobs:
           sudo apt-get -qq install -o=Dpkg::Use-Pty=0 --yes jq moreutils gettext httpie git curl
           curl -OLs https://github.com/cli/cli/releases/download/v${GH_CLI_VERSION}/gh_${GH_CLI_VERSION}_linux_amd64.deb
           sudo dpkg -i gh_${GH_CLI_VERSION}_linux_amd64.deb
-      - name: Run release
+      - name: Release workflow and trigger deployment
         run: scripts/release.sh ${{github.event.inputs.workflow_name}} ${{github.event.inputs.release_type}} "${{github.event.inputs.release_notes}}"
-      - name: Publish released workflow
-        env:
-          DEPLOYMENT_ENV: wdl
-          DEPLOY_REF: main
-          GITHUB_TOKEN: ${{secrets.GH_DEPLOY_TOKEN}}
-          WORKFLOW_NAME: ${{github.event.inputs.workflow_name}}
-        run: |
-          deployment_args=$(jq -n ".auto_merge=false | .ref=env.DEPLOY_REF | .environment=env.DEPLOYMENT_ENV | .required_contexts=[] | .payload={workflow_name: env.WORKFLOW_NAME}")
-          gh api repos/:owner/idseq/deployments --input - <<< "$deployment_args"
