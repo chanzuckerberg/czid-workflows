@@ -16,13 +16,13 @@ if ! [[ -d "$(dirname $0)/../$WORKFLOW_NAME" ]]; then
     exit 1
 fi
 
-OLD_TAG=$(git describe --tags --match "${WORKFLOW_NAME}-*")
+OLD_TAG=$(git describe --tags --match "${WORKFLOW_NAME}-*" || echo "${WORKFLOW_NAME}-v0.0.0")
 if [[ $RELEASE_TYPE == major ]]; then
-    TAG=$(echo "$OLD_TAG" | perl -ne '/(.+)-(\d+)\.(\d+)\.(\d+)/; print "$1-@{[$2+1]}.0.0"')
+    TAG=$(echo "$OLD_TAG" | perl -ne '/(.+)-v(\d+)\.(\d+)\.(\d+)/; print "$1-v@{[$2+1]}.0.0"')
 elif [[ $RELEASE_TYPE == minor ]]; then
-    TAG=$(echo "$OLD_TAG" | perl -ne '/(.+)-(\d+)\.(\d+)\.(\d+)/; print "$1-$2.@{[$3+1]}.0"')
+    TAG=$(echo "$OLD_TAG" | perl -ne '/(.+)-v(\d+)\.(\d+)\.(\d+)/; print "$1-v$2.@{[$3+1]}.0"')
 elif [[ $RELEASE_TYPE == patch ]]; then
-    TAG=$(echo "$OLD_TAG" | perl -ne '/(.+)-(\d+)\.(\d+)\.(\d+)/; print "$1-$2.$3.@{[$4+1]}"')
+    TAG=$(echo "$OLD_TAG" | perl -ne '/(.+)-v(\d+)\.(\d+)\.(\d+)/; print "$1-v$2.$3.@{[$4+1]}"')
 else
     echo "RELEASE_TYPE should be one of major, minor, patch" 1>&2
     exit 1
