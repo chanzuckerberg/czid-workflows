@@ -165,7 +165,7 @@
     {
       "in": ["gsnap_filter_out"],
       "out": "gsnap_out",
-      "class": "PipelineStepRunAlignmentRemotely",
+      "class": "PipelineStepRunAlignment",
       "module": "idseq_dag.steps.run_alignment_remotely",
       "additional_files": {
         "lineage_db":
@@ -183,7 +183,7 @@
     {
       "in": ["gsnap_filter_out"],
       "out": "rapsearch2_out",
-      "class": "PipelineStepRunAlignmentRemotely",
+      "class": "PipelineStepRunAlignment",
       "module": "idseq_dag.steps.run_alignment_remotely",
       "additional_files": {
         "lineage_db":

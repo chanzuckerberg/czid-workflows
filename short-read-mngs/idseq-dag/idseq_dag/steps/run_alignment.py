@@ -63,7 +63,7 @@ def download_from_s3(session, src, dest):
 class BatchJobFailed(Exception):
     pass
 
-class PipelineStepRunAlignmentRemotely(PipelineStep):
+class PipelineStepRunAlignment(PipelineStep):
     """ Runs gsnap/rapsearch2 remotely.
 
     For GSNAP:
@@ -131,14 +131,20 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
 
     def __init__(self, *args, **kwrds):
         PipelineStep.__init__(self, *args, **kwrds)
-        # TODO: (tmorse) remove service compatibility https://jira.czi.team/browse/IDSEQ-2568
-        self.alignment_algorithm = self.additional_attributes.get("alignment_algorithm", self.additional_attributes.get("service"))
+        self.alignment_algorithm = self.additional_attributes.get("alignment_algorithm")
         assert self.alignment_algorithm in ("gsnap", "rapsearch2")
         self.chunks_in_flight_semaphore = threading.Semaphore(MAX_CHUNKS_IN_FLIGHT)
         self.chunks_result_dir_local = os.path.join(self.output_dir_local, "chunks")
         self.chunks_result_dir_s3 = os.path.join(self.output_dir_s3, "chunks")
         self.batch_job_desc_bucket = get_batch_job_desc_bucket()
-        command.make_dirs(self.chunks_result_dir_local)
+        self.is_local_run = bool(self.additional_attributes.get("run_locally"))
+        self.genome_name = self.additional_attributes.get("genome_name", "nt_k16")
+        self.index = self.additional_files.get("index")
+        if self.is_local_run:
+            assert self.index, "local runs require an index to be passed in"
+        else:
+            assert not self.index, "passing in an index is not supported for remote runs"
+            command.make_dirs(self.chunks_result_dir_local)
 
     def count_reads(self):
         pass
@@ -146,15 +152,13 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
     def run(self):
         ''' Run alignmment remotely '''
 
-        alignment_algorithm_inputs = PipelineStepRunAlignmentRemotely._alignment_algorithm_inputs(self.input_files_local[0])
+        alignment_algorithm_inputs = PipelineStepRunAlignment._alignment_algorithm_inputs(self.input_files_local[0])
         cdhit_cluster_sizes_path, = self.input_files_local[1]
         output_m8, deduped_output_m8, output_hitsummary, output_counts_with_dcr_json = self.output_files_local()
         assert output_counts_with_dcr_json.endswith("_with_dcr.json"), self.output_files_local()
 
-        # Providing an index only works locally
-        index_path = self.additional_files.get("index")
-        if index_path:
-            self.run_locally(index_path, alignment_algorithm_inputs[self.alignment_algorithm], output_m8)
+        if self.is_local_run:
+            self.run_locally(alignment_algorithm_inputs[self.alignment_algorithm], output_m8)
         else:
             self.run_remotely(alignment_algorithm_inputs[self.alignment_algorithm], output_m8)
 
@@ -187,9 +191,39 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
             lineage_db, deuterostome_db, taxon_whitelist, taxon_blacklist, cdhit_cluster_sizes_path,
             output_counts_with_dcr_json)
 
-    def run_locally(self, index_path, input_fas, output_m8):
-        command = self._get_command(index_path, input_fas, output_m8, threads=multiprocessing.cpu_count())
-        command.execute(command_patterns.SingleCommand(cmd=command[0], args=command[1:]))
+    def run_locally(self, input_fas, output_m8):
+        index_path = os.path.join(os.path.dirname(output_m8), "reference")
+        os.mkdir(index_path)
+        run(["tar", "-xzvf", self.index, "-C", index_path], check=True)
+
+        if self.alignment_algorithm == "gsnap":
+            # Hack to determine gsnap vs gsnapl
+            error_message = run(
+                ['gsnapl-2018-10-26', '-D', index_path, '-d', self.genome_name],
+                input='>'.encode('utf-8'),
+                stderr=PIPE,
+                stdout=PIPE
+            ).stderr
+            # note, alignment uses a pinned version of gmap/gsnap
+            gsnap_command = "gsnap-2018-10-26" if 'please run gsnap instead' in error_message.decode('utf-8') else "gsnapl-2018-10-26"
+        else:
+            gsnap_command = None
+
+        # rapsearch2 expects the filename of the primary file, but still depends on the .info file being a sibbling
+        if self.alignment_algorithm == "rapsearch2":
+            for filename in os.listdir(index_path):
+                if not filename.endswith(".info"):
+                    index_path = os.path.join(index_path, filename)
+
+        cmd = self._get_command(
+            index_path,
+            input_fas,
+            output_m8,
+            threads=multiprocessing.cpu_count(),
+            gsnap_command=gsnap_command
+        )
+        log.write(f"running command {cmd}")
+        run(cmd, check=True)
 
     def run_remotely(self, input_fas, output_m8):
         # Split files into chunks for performance
@@ -210,7 +244,7 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
                 self.chunks_in_flight_semaphore.acquire()
                 self.check_for_errors(mutex, chunk_output_files, input_chunks, self.alignment_algorithm)
                 t = threading.Thread(
-                    target=PipelineStepRunAlignmentRemotely.run_chunk_wrapper,
+                    target=PipelineStepRunAlignment.run_chunk_wrapper,
                     kwargs={
                         'chunks_in_flight_semaphore': self.chunks_in_flight_semaphore,
                         'chunk_output_files': chunk_output_files,
@@ -444,12 +478,11 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
         else:
             log.write(f"no hits in output file {chunk_output_filename}")
 
-    def _get_command(self, index_path, input_paths, output_path, threads=None):
+    def _get_command(self, index_path, input_paths, output_path, threads=None, gsnap_command="gsnapl"):
         if not threads:
             threads = 48 if self.alignment_algorithm == "gsnap" else 24
         if self.alignment_algorithm == "gsnap":
-            genome_name = self.additional_attributes.get("genome_name", "nt_k16")
-            return ["gsnapl",
+            return [gsnap_command,
                     "-A", "m8",
                     "--batch=0",
                     "--use-shared-memory=0",
@@ -459,10 +492,11 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
                     "-t", str(threads),
                     "--max-mismatches=40",
                     "-D", index_path,
-                    "-d", genome_name,
+                    "-d", self.genome_name,
                     "-o", output_path,
                     ] + input_paths
         else:
+            output_path = re.sub(r'\.m8$', '', output_path)
             return ["rapsearch",
                     "-d", index_path,
                     "-e", "-6",
@@ -613,4 +647,4 @@ class PipelineStepRunAlignmentRemotely(PipelineStep):
                 Rapsearch2 documentation is available [here](http://omics.informatics.indiana.edu/mg/RAPSearch2/).
             """
         # If neither, then return default step_description method.
-        return super(PipelineStepRunAlignmentRemotely, self).step_description()
+        return super(PipelineStepRunAlignment, self).step_description()

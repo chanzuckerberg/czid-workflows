@@ -98,7 +98,7 @@ The following is an example dag for generating alignment output for idseq. The *
     {
       "in": ["host_filter_out"],
       "out": "gsnap_out",
-      "class": "PipelineStepRunAlignmentRemotely",
+      "class": "PipelineStepRunAlignment",
       "module": "idseq_dag.steps.run_alignment_remotely",
       "additional_files": {
         "lineage_db": "s3://idseq-public-references/taxonomy/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/taxid-lineages.db",
@@ -114,7 +114,7 @@ The following is an example dag for generating alignment output for idseq. The *
     {
       "in": ["host_filter_out"],
       "out": "rapsearch2_out",
-      "class": "PipelineStepRunAlignmentRemotely",
+      "class": "PipelineStepRunAlignment",
       "module": "idseq_dag.steps.run_alignment_remotely",
       "additional_files": {
         "lineage_db": "s3://idseq-public-references/taxonomy/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/taxid-lineages.db",
@@ -226,6 +226,8 @@ Changes to X or Y force recomputation of all results when a sample is rerun usin
 
 When releasing a new version, please add a Git tag of the form `vX.Y.Z`.
 
+- 4.11.7
+  - Support local non-host alignment
 
 - 4.11.7
   - Replace references to idseq-database with idseq-public-references
