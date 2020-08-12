@@ -38,7 +38,7 @@ jobs:
       - name: Publish released workflow
         env:
           DEPLOYMENT_ENV: wdl
-          DEPLOY_REF: main
+          DEPLOY_REF: akislyuk-unbundle-dockerfiles
           GITHUB_TOKEN: ${{secrets.GH_DEPLOY_TOKEN}}
           WORKFLOW_NAME: ${{github.event.inputs.workflow_name}}
         run: |
