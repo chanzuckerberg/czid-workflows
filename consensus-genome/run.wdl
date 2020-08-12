@@ -1,5 +1,5 @@
 # The following pipeline was initially based on previous work at: https://github.com/czbiohub/sc2-illumina-pipeline
-# workflow version: consensus-genomes-1.1.0
+# workflow version: consensus-genomes-1.2.0
 version 1.0
 
 workflow consensus_genome {
@@ -27,14 +27,9 @@ workflow consensus_genome {
         # could they be extracted to a separate params file? put in .json input to wdl?
         Boolean trim_adapters = true
 
-        Float   intrahost_min_frac = 0.5
-        String  intrahost_ploidy   = "2"
-        Boolean intrahost_variants = true
-
         Float ivarFreqThreshold = 0.9
         Int   ivarQualTreshold  = 20
         Int   minDepth          = 10
-        Int   mpileupDepth      = 10000
 
         String no_reads_quast = false
 
@@ -103,17 +98,6 @@ workflow consensus_genome {
             docker_image_id = docker_image_id
     }
 
-    if (intrahost_variants) {
-        call IntrahostVariants {
-            input:
-                bam = TrimPrimers.trimmed_bam_ch,
-                ref_fasta = ref_fasta,
-                intrahost_ploidy = intrahost_ploidy,
-                intrahost_min_frac = intrahost_min_frac,
-                docker_image_id = docker_image_id
-        }
-    }
-
     call MakeConsensus {
         input:
             prefix = prefix,
@@ -122,7 +106,6 @@ workflow consensus_genome {
             ivarFreqThreshold = ivarFreqThreshold,
             minDepth = minDepth,
             ivarQualThreshold = ivarQualTreshold,
-            mpileupDepth = mpileupDepth,
             docker_image_id = docker_image_id
     }
 
@@ -136,15 +119,6 @@ workflow consensus_genome {
             fastqs_1 = select_first([TrimReads.trimmed_fastqs_1, FilterReads.filtered_fastqs_1]),
             ref_fasta = ref_fasta,
             no_reads_quast = no_reads_quast,
-            docker_image_id = docker_image_id
-    }
-
-    call RealignConsensus {
-        input:
-            prefix = prefix,
-            sample = sample,
-            realign_fa = MakeConsensus.consensus_fa,
-            ref_fasta = ref_fasta,
             docker_image_id = docker_image_id
     }
 
@@ -423,38 +397,6 @@ task TrimPrimers {
 
 }
 
-task IntrahostVariants {
-    input {
-        File bam
-        File ref_fasta
-
-        String intrahost_ploidy
-        Float intrahost_min_frac
-
-        String docker_image_id
-    }
-
-    command <<<
-        export CORES=`nproc --all`
-        ls "~{bam}" | xargs -I % samtools index %
-        samtools faidx "~{ref_fasta}"
-        freebayes-parallel <(fasta_generate_regions.py "~{ref_fasta}.fai" 1000) $CORES \
-            --ploidy "~{intrahost_ploidy}" \
-            --min-alternate-fraction "~{intrahost_min_frac}" \
-            -f "~{ref_fasta}" "~{bam}" |
-            bcftools view -g het \
-            > "intrahost-variants.ploidy~{intrahost_ploidy}-minfrac~{intrahost_min_frac}.vcf"
-    >>>
-
-    output {
-        File intrahost_vars = "intrahost-variants.ploidy~{intrahost_ploidy}-minfrac~{intrahost_min_frac}.vcf"
-    }
-
-    runtime {
-        docker: docker_image_id
-    }
-}
-
 task MakeConsensus {
     input {
         String prefix
@@ -464,14 +406,13 @@ task MakeConsensus {
         Float ivarFreqThreshold
         Int minDepth
         Int ivarQualThreshold
-        Int mpileupDepth
 
         String docker_image_id
     }
 
     command <<<
         samtools index ${bam}
-        samtools mpileup -A -d "~{mpileupDepth}" -Q0 "~{bam}" | ivar consensus -q "~{ivarQualThreshold}" -t "~{ivarFreqThreshold}" -m "~{minDepth}" -n N -p "~{prefix}primertrimmed.consensus"
+        samtools mpileup -A -d 0 -Q0 "~{bam}" | ivar consensus -q "~{ivarQualThreshold}" -t "~{ivarFreqThreshold}" -m "~{minDepth}" -n N -p "~{prefix}primertrimmed.consensus"
         echo ">""~{sample}" > "~{prefix}consensus.fa"
         seqtk seq -l 50 "~{prefix}primertrimmed.consensus.fa" | tail -n +2 >> "~{prefix}consensus.fa"
     >>>
@@ -528,35 +469,10 @@ task Quast {
     }
 }
 
-task RealignConsensus {
-    input {
-        String prefix
-        String sample
-        File realign_fa   # same as consensus_fa
-        File ref_fasta
-
-        String docker_image_id
-    }
-
-    command <<<
-        minimap2 -ax asm5 -R '@RG\tID:~{sample}\tSM:~{sample}' "~{ref_fasta}" "~{realign_fa}" | samtools sort -O bam -o "~{prefix}realigned.bam"
-        samtools index "~{prefix}realigned.bam"
-    >>>
-
-    output {
-        File realigned_bam = "~{prefix}realigned.bam"
-        File realigned_bai = "~{prefix}realigned.bam.bai"
-    }
-
-    runtime {
-        docker: docker_image_id
-    }
-}
-
 task CallVariants {
     input {
         String prefix
-        File call_variants_bam  # same as primertrimmed_bam produced by realignConsensus
+        File call_variants_bam  # same as primertrimmed_bam produced by trimPrimers
         File ref_fasta
         Float bcftoolsCallTheta
         Int minDepth
@@ -565,7 +481,8 @@ task CallVariants {
     }
 
     command <<<
-        bcftools mpileup -a FORMAT/AD -f "~{ref_fasta}" "~{call_variants_bam}" | bcftools call --ploidy 1 -m -P "~{bcftoolsCallTheta}" -v - | bcftools view -i 'DP>=~{minDepth}' > "~{prefix}variants.vcf"
+        # NOTE: we use samtools instead of bcftools mpileup because bcftools 1.9 ignores -d0
+        samtools mpileup -u -d 0 -t AD -f "~{ref_fasta}" "~{call_variants_bam}" | bcftools call --ploidy 1 -m -P "~{bcftoolsCallTheta}" -v - | bcftools view -i 'DP>=~{minDepth}' > "~{prefix}variants.vcf"
         bgzip "~{prefix}variants.vcf"
         tabix "~{prefix}variants.vcf.gz"
         bcftools stats "~{prefix}variants.vcf.gz" > "~{prefix}bcftools_stats.txt"
@@ -600,6 +517,7 @@ task ComputeStats {
     command <<<
         samtools index "~{cleaned_bam}"
         samtools stats "~{cleaned_bam}" > "~{prefix}samtools_stats.txt"
+        samtools depth -aa -d 0 "~{cleaned_bam}" | awk '{print $3}' > "~{prefix}samtools_depth.txt"
 
         python <<CODE
 
@@ -616,12 +534,11 @@ task ComputeStats {
 
         stats = {"sample_name": "~{sample}"}
 
-        samfile = pysam.AlignmentFile("~{cleaned_bam}", "rb")
-        ref_len, = samfile.lengths
-        depths = [0] * ref_len
-        for column in samfile.pileup():
-            depths[column.reference_pos] = column.nsegments
-        depths = np.array(depths)
+        depths = open("~{prefix}samtools_depth.txt").read().splitlines()
+        if depths:
+            depths = np.array([int(d) for d in depths])
+        else:
+            depths = np.array([0]*pysam.AlignmentFile("~{cleaned_bam}", "rb").lengths([0]))
 
         stats["depth_avg"] = depths.mean()
         stats["depth_q.25"] = np.quantile(depths, .25)
@@ -632,7 +549,7 @@ task ComputeStats {
         stats["depth_frac_above_50x"] = (depths >= 30).mean()
         stats["depth_frac_above_100x"] = (depths >= 100).mean()
 
-        ax = sns.lineplot(np.arange(1, ref_len+1), depths)
+        ax = sns.lineplot(np.arange(1, len(depths)+1), depths)
         ax.set_title("~{sample}")
         ax.set(xlabel="position", ylabel="depth")
         plt.yscale("symlog")
