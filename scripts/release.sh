@@ -31,6 +31,6 @@ fi
 TAG_MSG=$(mktemp)
 echo "# Changes for ${TAG} ($(date +%Y-%m-%d))" > $TAG_MSG
 echo "$RELEASE_NOTES" >> $TAG_MSG
-git log --pretty=format:%s ${OLD_TAG}..HEAD >> $TAG_MSG
+git log --pretty=format:%s ${OLD_TAG}..HEAD >> $TAG_MSG || true
 git tag --annotate --file $TAG_MSG "$TAG"
 git push origin "$TAG"
