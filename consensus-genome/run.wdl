@@ -1,5 +1,5 @@
 # The following pipeline was initially based on previous work at: https://github.com/czbiohub/sc2-illumina-pipeline
-# workflow version: consensus-genomes-1.2.0
+# workflow version: consensus-genomes-1.2.1
 version 1.0
 
 workflow consensus_genome {
@@ -197,6 +197,8 @@ task RemoveHost {
     }
 
     command <<<
+        set -euxo pipefail
+
         export CORES=`nproc --all`
         minimap2 -t $CORES -ax sr ~{ref_host} ~{fastqs_0} ~{fastqs_1} | \
         samtools view -@ $CORES -b -f 4 | \
@@ -204,6 +206,7 @@ task RemoveHost {
 
         uncompressed_size=`gzip -l "~{prefix}no_host_1.fq.gz" "~{prefix}no_host_2.fq.gz" | awk 'END{print $2}'`
         if [ "$uncompressed_size" -eq "0" ]; then
+            set +x
             >&2 echo "{\"wdl_error_message\": true, \"error\": \"InsufficientReadsError\", \"cause\": \"No reads after RemoveHost\"}"
             exit 1
         fi
@@ -230,6 +233,8 @@ task QuantifyERCCs {
     }
 
     command <<<
+        set -euxo pipefail
+
         minimap2 -ax sr ~{ercc_fasta} ~{fastqs_0} ~{fastqs_1} | samtools view -bo ercc_mapped.bam
         samtools stats ercc_mapped.bam > "~{prefix}ercc_stats.txt"
     >>>
@@ -259,6 +264,7 @@ task FilterReads {
 
     command <<<
         set -euxo pipefail
+
         export TMPDIR=${TMPDIR:-/tmp}
         export CORES=`nproc --all`
 
@@ -294,7 +300,8 @@ task FilterReads {
 
         uncompressed_size=`gzip -l "~{prefix}filtered_1.fq.gz" "~{prefix}filtered_1.fq.gz" | awk 'END{print $2}'`
         if [ "$uncompressed_size" -eq "0" ]; then
-            >&2 echo "{\"wdl_error_message\": true, \"error\": \"InsufficientReadsError\", \"cause\": \No reads after FilterReads\"}"
+            set +x
+            >&2 echo "{\"wdl_error_message\": true, \"error\": \"InsufficientReadsError\", \"cause\": \"No reads after FilterReads\"}"
             exit 1
         fi
     >>>
@@ -318,10 +325,12 @@ task TrimReads {
     }
 
     command <<<
+        set -euxo pipefail
         trim_galore --fastqc --paired "~{fastqs_0}" "~{fastqs_1}"
 
         uncompressed_size=`gzip -l "~{basename(fastqs_0, '.fq.gz')}_val_1.fq.gz" "~{basename(fastqs_0, '.fq.gz')}_val_2.fq.gz" | awk 'END{print $2}'`
         if [ "$uncompressed_size" -eq "0" ]; then
+            set +x
             >&2 echo "{\"wdl_error_message\": true, \"error\": \"InsufficientReadsError\", \"cause\": \"No reads after TrimReads\"}"
             exit 1
         fi
@@ -379,6 +388,8 @@ task TrimPrimers {
     }
 
     command <<<
+        set -euxo pipefail
+
         samtools view -F4 -q "~{samQualThreshold}" -o ivar.bam "~{alignments}"
         samtools index ivar.bam
         ivar trim -e -i ivar.bam -b "~{primer_bed}" -p ivar.out
@@ -411,6 +422,8 @@ task MakeConsensus {
     }
 
     command <<<
+        set -euxo pipefail
+
         samtools index ${bam}
         samtools mpileup -A -d 0 -Q0 "~{bam}" | ivar consensus -q "~{ivarQualThreshold}" -t "~{ivarFreqThreshold}" -m "~{minDepth}" -n N -p "~{prefix}primertrimmed.consensus"
         echo ">""~{sample}" > "~{prefix}consensus.fa"
@@ -443,6 +456,8 @@ task Quast {
     }
 
     command <<<
+        set -euxo pipefail
+
         export CORES=`nproc --all`
         a=`cat "~{assembly}" | wc -l`
 
@@ -481,6 +496,8 @@ task CallVariants {
     }
 
     command <<<
+        set -euxo pipefail
+
         # NOTE: we use samtools instead of bcftools mpileup because bcftools 1.9 ignores -d0
         samtools mpileup -u -d 0 -t AD -f "~{ref_fasta}" "~{call_variants_bam}" | bcftools call --ploidy 1 -m -P "~{bcftoolsCallTheta}" -v - | bcftools view -i 'DP>=~{minDepth}' > "~{prefix}variants.vcf"
         bgzip "~{prefix}variants.vcf"
@@ -515,6 +532,8 @@ task ComputeStats {
     }
 
     command <<<
+        set -euxo pipefail
+
         samtools index "~{cleaned_bam}"
         samtools stats "~{cleaned_bam}" > "~{prefix}samtools_stats.txt"
         samtools depth -aa -d 0 "~{cleaned_bam}" | awk '{print $3}' > "~{prefix}samtools_depth.txt"
@@ -644,6 +663,8 @@ task ZipOutputs {
     }
 
     command <<<
+        set -euxo pipefail
+
         mkdir ${TMPDIR}/outputs
         cp ~{sep=' ' outputFiles} ${TMPDIR}/outputs/
         zip -r -j ~{prefix}outputs.zip ${TMPDIR}/outputs/
