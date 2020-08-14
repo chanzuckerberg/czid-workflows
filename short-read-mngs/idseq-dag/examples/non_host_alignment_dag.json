@@ -1,0 +1,136 @@
+{
+  "name": "non_host_alignment_dag",
+  "output_dir_s3": "s3://idseq-samples-staging/samples/114/1118/results_test",
+  "targets": {
+    "host_filter_out": [
+
+        "gsnap_filter_1.fa"
+
+          , "gsnap_filter_2.fa"
+          , "gsnap_filter_merged.fa"
+
+
+    ],
+    "gsnap_out": [
+      "gsnap.m8",
+      "gsnap.deduped.m8",
+      "gsnap.hitsummary.tab",
+      "gsnap_counts.json"
+    ],
+    "refined_gsnap_out": [
+      "gsnap.blast.m8",
+      "gsnap.reassigned.m8",
+      "gsnap.hitsummary2.tab",
+      "refined_gsnap_counts.json", 
+      "gsnap_genus_accession_list.tab"
+    ],
+    "rapsearch2_out": [
+      "rapsearch2.m8",
+      "rapsearch2.deduped.m8",
+      "rapsearch2.hitsummary.tab",
+      "rapsearch2_counts.json"
+    ],
+    "refined_rapsearch2_out": [
+      "rapsearch2.blast.m8",
+      "rapsearch2.reassigned.m8",
+      "rapsearch2.hitsummary2.tab",
+      "refined_rapsearch2_counts.json",
+      "rapsearch2_genus_accession_list.tab"
+    ],
+    "refined_rapsearch2_out": [
+      "rapsearch2.blast.m8",
+      "rapsearch2.reassigned.m8",
+      "rapsearch2.hitsummary2.tab",
+      "refined_rapsearch2_counts.json",
+      "rapsearch2_genus_accession_list.tab"
+    ],
+    "taxon_count_out": ["taxon_counts.json"],
+    "annotated_out": ["annotated_merged.fa", "unidentified.fa"]
+  },
+  "steps": [
+    {
+      "in": ["host_filter_out"],
+      "out": "gsnap_out",
+      "class": "PipelineStepRunAlignment",
+      "module": "idseq_dag.steps.run_alignment_remotely",
+      "additional_files": {
+        "lineage_db": "s3://idseq-public-references/taxonomy/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/taxid-lineages.db",
+        "accession2taxid_db": "s3://idseq-public-references/alignment_data/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/accession2taxid.db"
+
+          ,"deuterostome_db": "s3://idseq-public-references/taxonomy/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/deuterostome_taxids.txt"
+
+      },
+      "additional_attributes": {
+        "alignment_algorithm": "gsnap",
+        "index_dir_suffix": "2018-04-01"
+      }
+    },
+    {
+      "in": ["host_filter_out"],
+      "out": "rapsearch2_out",
+      "class": "PipelineStepRunAlignment",
+      "module": "idseq_dag.steps.run_alignment_remotely",
+      "additional_files": {
+        "lineage_db": "s3://idseq-public-references/taxonomy/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/taxid-lineages.db",
+        "accession2taxid_db": "s3://idseq-public-references/alignment_data/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/accession2taxid.db"
+
+          ,"deuterostome_db": "s3://idseq-public-references/taxonomy/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/deuterostome_taxids.txt"
+
+      },
+      "additional_attributes": {
+        "alignment_algorithm": "rapsearch2",
+        "index_dir_suffix": "2018-04-01"
+      }
+    },
+    {
+      "in": ["gsnap_out"],
+      "out": "refined_gsnap_out",
+      "class": "PipelineStepReclassifyReads",
+      "module": "idseq_dag.steps.reclassify_reads", 
+      "additional_files": { 
+        "loc_db": "s3://idseq-public-references/alignment_data/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/nt_loc.db",
+        "lineage_db": "s3://idseq-public-references/taxonomy/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/taxid-lineages.db"
+      },
+      "additional_attributes": {
+        "db": "s3://idseq-public-references/alignment_data/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/nt",
+        "db_type": "nt"
+      }
+    },
+    {
+      "in": ["rapsearch2_out"],
+      "out": "refined_rapsearch2_out",
+      "class": "PipelineStepReclassifyReads",
+      "module": "idseq_dag.steps.reclassify_reads", 
+      "additional_files": { 
+        "loc_db": "s3://idseq-public-references/alignment_data/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/nr_loc.db",
+        "lineage_db": "s3://idseq-public-references/taxonomy/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/taxid-lineages.db"
+      },
+      "additional_attributes": {
+        "db": "s3://idseq-public-references/alignment_data/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/nr",
+        "db_type": "nr"
+      }
+    },
+    {
+      "in": ["refined_gsnap_out", "refined_rapsearch2_out"],
+      "out": "taxon_count_out",
+      "class": "PipelineStepCombineTaxonCounts",
+      "module": "idseq_dag.steps.combine_taxon_counts",
+      "additional_files": {},
+      "additional_attributes": {}
+    },
+    {
+      "in": ["host_filter_out", "refined_gsnap_out", "refined_rapsearch2_out"],
+      "out": "annotated_out",
+      "class": "PipelineStepGenerateAnnotatedFasta",
+      "module": "idseq_dag.steps.generate_annotated_fasta",
+      "additional_files": {},
+      "additional_attributes": {}
+    }
+  ],
+  "given_targets": {
+    "host_filter_out": {
+      "s3_dir": "s3://idseq-samples-staging/samples/114/1118/results/2.11"
+    }
+  }
+}
+

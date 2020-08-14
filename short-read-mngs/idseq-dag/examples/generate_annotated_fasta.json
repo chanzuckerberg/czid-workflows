@@ -1,0 +1,67 @@
+{
+  "name": "generate_annotated_fasta",
+  "output_dir_s3": "s3://idseq-samples-development/gdingle/generate_annotated_fasta",
+  "targets": {
+    "gsnap_filter_out": [
+      "gsnap_filter_1.fa",
+      "gsnap_filter_2.fa",
+      "gsnap_filter_merged.fa"
+    ],
+    "gsnap_out": [
+      "gsnap.m8",
+      "gsnap.deduped.m8",
+      "gsnap.hitsummary.tab",
+      "gsnap_counts_with_dcr.json"
+    ],
+    "rapsearch2_out": [
+      "rapsearch2.m8",
+      "rapsearch2.deduped.m8",
+      "rapsearch2.hitsummary.tab",
+      "rapsearch2_counts_with_dcr.json"
+    ],
+    "cdhitdup_out": [
+      "dedup1.fa.clstr",
+      "dedup1.fa"
+    ],
+    "cdhitdup_cluster_sizes": [
+      "cdhitdup_cluster_sizes.tsv"
+    ],
+    "annotated_out": [
+      "annotated_merged.fa",
+      "unidentified.fa"
+    ]
+  },
+  "steps": [
+    {
+      "in": [
+        "gsnap_filter_out",
+        "gsnap_out",
+        "rapsearch2_out",
+        "cdhitdup_out",
+        "cdhitdup_cluster_sizes"
+      ],
+      "out": "annotated_out",
+      "class": "PipelineStepGenerateAnnotatedFasta",
+      "module": "idseq_dag.steps.generate_annotated_fasta",
+      "additional_files": {},
+      "additional_attributes": {}
+    }
+  ],
+  "given_targets": {
+    "gsnap_filter_out": {
+      "s3_dir": "s3://idseq-samples-prod/samples/995/51454/results/idseq-prod-main-1/wdl-1/dag-4.6"
+    },
+    "gsnap_out": {
+      "s3_dir": "s3://idseq-samples-prod/samples/995/51454/results/idseq-prod-main-1/wdl-1/dag-4.6"
+    },
+    "rapsearch2_out": {
+      "s3_dir": "s3://idseq-samples-prod/samples/995/51454/results/idseq-prod-main-1/wdl-1/dag-4.6"
+    },
+    "cdhitdup_out": {
+      "s3_dir": "s3://idseq-samples-prod/samples/995/51454/results/idseq-prod-main-1/wdl-1/dag-4.6"
+    },
+    "cdhitdup_cluster_sizes": {
+      "s3_dir": "s3://idseq-samples-prod/samples/995/51454/results/idseq-prod-main-1/wdl-1/dag-4.6"
+    }
+  }
+}

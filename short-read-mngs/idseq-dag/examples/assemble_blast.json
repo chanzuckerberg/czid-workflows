@@ -1,0 +1,141 @@
+{
+  "name": "assemble_blast",
+  "output_dir_s3": "s3://idseq-samples-development/yunfang/sample_1793/assembly_blast/",
+  "targets": {
+    "host_filter_out": [
+      "gsnap_filter_1.fa",
+      "gsnap_filter_2.fa",
+      "gsnap_filter_merged.fa"
+    ],
+    "assembly_out": [
+      "contigs.fasta",
+      "scaffolds.fasta",
+      "read-contig.sam",
+      "contig_stats.json"
+    ],
+    "gsnap_out": [
+        "gsnap.m8",
+        "gsnap.deduped.m8",
+        "gsnap.hitsummary.tab",
+        "gsnap_counts.json"
+    ],
+    "rapsearch2_out": [
+      "rapsearch2.m8",
+      "rapsearch2.deduped.m8",
+      "rapsearch2.hitsummary.tab",
+      "rapsearch2_counts.json"
+    ],
+    "gsnap_accessions_out": ["nt.refseq.fasta"],
+    "rapsearch2_accessions_out": ["nr.refseq.fasta"],
+    "refined_gsnap_out": [
+      "gsnap.blast.m8",
+      "gsnap.reassigned.m8",
+      "gsnap.hitsummary2.tab",
+      "refined_gsnap_counts.json",
+      "gsnap_contig_summary.json",
+      "gsnap.blast.top.m8"
+    ],
+    "refined_rapsearch2_out": [
+      "rapsearch2.blast.m8",
+      "rapsearch2.reassigned.m8",
+      "rapsearch2.hitsummary2.tab",
+      "refined_rapsearch2_counts.json",
+      "rapsearch2_contig_summary.json",
+      "rapsearch2.blast.top.m8"
+    ],
+    "refined_taxon_count_out": ["refined_taxon_counts.json"],
+    "contig_summary_out": ["combined_contig_summary.json"]
+  },
+  "steps": [
+    {
+      "in": ["host_filter_out"],
+      "out": "assembly_out",
+      "class": "PipelineStepRunAssembly",
+      "module": "idseq_dag.steps.run_assembly",
+      "additional_files": {},
+      "additional_attributes": {"memory": 100}
+    },
+    {
+      "in": ["gsnap_out"],
+      "out": "gsnap_accessions_out",
+      "class": "PipelineStepDownloadAccessions",
+      "module": "idseq_dag.steps.download_accessions",
+      "additional_files": {
+        "lineage_db": "s3://idseq-public-references/taxonomy/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/taxid-lineages.db",
+        "loc_db": "s3://idseq-public-references/alignment_data/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/nt_loc.db"
+      },
+      "additional_attributes": {
+          "db": "s3://idseq-public-references/alignment_data/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/nt",
+          "db_type": "nt"
+      }
+    },
+    {
+      "in": ["rapsearch2_out"],
+      "out": "rapsearch2_accessions_out",
+      "class": "PipelineStepDownloadAccessions",
+      "module": "idseq_dag.steps.download_accessions",
+      "additional_files": {
+        "lineage_db": "s3://idseq-public-references/taxonomy/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/taxid-lineages.db",
+        "loc_db": "s3://idseq-public-references/alignment_data/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/nr_loc.db"
+      },
+      "additional_attributes": {
+          "db": "s3://idseq-public-references/alignment_data/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/nr",
+          "db_type": "nr"
+      }
+    },
+    {
+      "in": ["gsnap_out", "assembly_out", "gsnap_accessions_out"],
+      "out": "refined_gsnap_out",
+      "class": "PipelineStepBlastContigs",
+      "module": "idseq_dag.steps.blast_contigs",
+      "additional_files": {
+        "lineage_db": "s3://idseq-public-references/taxonomy/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/taxid-lineages.db",
+        "deuterostome_db": "s3://idseq-public-references/taxonomy/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/deuterostome_taxids.txt"
+      },
+      "additional_attributes": {
+          "db_type": "nt"
+      }
+    },
+    {
+      "in": ["rapsearch2_out", "assembly_out", "rapsearch2_accessions_out"],
+      "out": "refined_rapsearch2_out",
+      "class": "PipelineStepBlastContigs",
+      "module": "idseq_dag.steps.blast_contigs",
+      "additional_files": {
+        "lineage_db": "s3://idseq-public-references/taxonomy/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/taxid-lineages.db",
+        "deuterostome_db": "s3://idseq-public-references/taxonomy/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/deuterostome_taxids.txt"
+      },
+      "additional_attributes": {
+          "db_type": "nr"
+      }
+    },
+    {
+      "in": ["refined_gsnap_out", "refined_rapsearch2_out"],
+      "out": "refined_taxon_count_out",
+      "class": "PipelineStepCombineTaxonCounts",
+      "module": "idseq_dag.steps.combine_taxon_counts",
+      "additional_files": {},
+      "additional_attributes": {}
+    },
+    {
+      "in": ["refined_gsnap_out", "refined_rapsearch2_out"],
+      "out": "contig_summary_out",
+      "class": "PipelineStepCombineJson",
+      "module": "idseq_dag.steps.combine_json",
+      "additional_files": {},
+      "additional_attributes": {"field_idx": 4}
+    }
+  ],
+  "given_targets": {
+    "host_filter_out": {
+      "s3_dir":  "s3://idseq-samples-prod/samples/27/1793/results/3.0", "count_reads": 0
+    },
+    "gsnap_out": {
+      "s3_dir": "s3://idseq-samples-prod/samples/27/1793/results/3.0"
+    },
+    "rapsearch2_out": {
+      "s3_dir": "s3://idseq-samples-prod/samples/27/1793/results/3.0"
+    }
+  }
+}
+

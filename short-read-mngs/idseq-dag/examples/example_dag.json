@@ -1,0 +1,66 @@
+{
+  "name": "example_dag",
+  "output_dir_s3": "s3://idseq-samples-prod/1/10/results",
+  "targets": {
+    "fastqs": ["fastq1.gz", "fastq2.gz"],
+    "star_out": ["unmapped1.fq", "unmapped2.fq"],
+    "priceseq_out": ["priceseq1.fa", "priceseq2.fa"],
+    "lzw_out": ["lzw1.fa", "lzw2.fa"],
+    "cdhitdup_out": ["dedup1.fa", "dedup2.fa"],
+    "bowtie2_out": ["bowtie2_1.fa", "bowtie2_2.fa"],
+    "gsnap_filter_out": ["gsnap_filter_1.fa", "gsnap_filter_2.fa"],
+    "gsnap_out":  ["gsnap.m8"],
+    "rapsearch2_out":  ["rapsearch2.m8"],
+    "taxon_count_out": ["taxon_counts.json", "gsnap.filtered.m8", "rapsearch2.filtered.m8"]
+  },
+
+  "steps": [
+    {
+      "in" : ["fastqs"], "out": "star_out", "class": "PipelineStepRunStar",
+      "additional_files": {"star_genome": "s3://idseq-public-references/star_genome"},
+      "additional_attributes": {"truncate_fragments_to": 75000000}
+    },
+    {
+      "in" : ["star_out"], "out": "priceseq_out", "class": "PipelineStepRunPriceSeq",
+      "additional_files": {},
+      "additional_attributes": {}
+    },
+    {
+      "in" : ["priceseq_out"], "out": "lzw_out", "class": "PipelineStepRunLZW",
+      "additional_files": {},
+      "additional_attributes": {"threshold": 0.45}
+    },
+    {
+      "in" : ["lzw_out"], "out": "cdhitdup_out", "class": "PipelineStepRunCDHitDup",
+      "additional_files": {},
+      "additional_attributes": {}
+    },
+    {
+      "in" : ["cdhitdup_out"], "out": "bowtie2_out", "class": "PipelineStepRunBowtie2",
+      "additional_files": {"bowtie2_genome": "s3://idseq-public-references/bowtie2_genome"},
+      "additional_attributes": {}
+    },
+    {
+      "in" : ["bowtie2_out"], "out": "gsnap_filter_out", "class": "PipelineStepRunGsnapFilter",
+      "additional_files": {"gsnap_genome": "s3://idseq-public-references/gsnap_genome"},
+      "additional_attributes": {"sub_sample_to": 1000000}
+    },
+    {
+      "in" : ["gsnap_filter_out"], "out": "gsnap_out", "class": "PipelineStepRunGsnap",
+      "additional_files": {},
+      "additional_attributes": {}
+    },
+    {
+      "in" : ["gsnap_filter_out"], "out": "rapsearch2_out", "class": "PipelineStepRunRapsearch2",
+      "additional_files": {},
+      "additional_attributes": {}
+    },
+    {
+      "in" : ["gsnap_out", "rapsearch2_out"], "out": "taxon_count_out",
+      "class": "PipelineStepRunHitcalling",
+      "additional_files": {},
+      "additional_attributes": {}
+    }
+  ],
+  "given_targets": {"fastqs": {"s3_dir":  "s3://idseq-samples-prod/samples/1/10/fastqs", "count_reads": 1, "max_fragments": 75000000 } }
+}

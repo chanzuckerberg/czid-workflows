@@ -1,0 +1,27 @@
+{
+  "name": "lz4_test",
+  "output_dir_s3": "s3://idseq-samples-development/gdingle/lz4_test/",
+  "targets": {
+    "test_in": [
+      "taxid2wgs_accession.db"
+    ],
+    "test_out": [
+      "taxid2wgs_accession.db.lz4"
+    ]
+  },
+  "steps": [
+    {
+      "in": ["test_in"],
+      "out": "test_out",
+      "class": "PipelineStepGenerateLZ4",
+      "module": "idseq_dag.steps.generate_lz4",
+      "additional_files": {},
+      "additional_attributes": {}
+    }
+  ],
+  "given_targets": {
+    "test_in": {
+      "s3_dir": "s3://idseq-public-references/alignment_data/2019-09-17/"
+    }
+  }
+}
