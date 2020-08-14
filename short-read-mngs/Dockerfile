@@ -54,8 +54,10 @@ RUN apt-get -q install -y \
 RUN pip3 install awscli==1.17.14 boto3==1.9.253
 RUN pip3 install miniwdl==${MINIWDL_VERSION} miniwdl-s3parcp==0.0.5 miniwdl-s3upload==0.0.4
 RUN pip3 install https://github.com/chanzuckerberg/miniwdl-plugins/archive/f0465b0.zip#subdirectory=sfn-wdl
-RUN pip3 install https://github.com/chanzuckerberg/idseq-dag/archive/v4.11.8.tar.gz
 RUN pip3 install https://github.com/chanzuckerberg/s3mi/archive/v0.8.0.tar.gz
+
+COPY idseq-dag /tmp/
+RUN pip3 install /tmp/idseq-dag && rm -rf /tmp/idseq-dag
 
 ADD https://raw.githubusercontent.com/chanzuckerberg/miniwdl/v${MINIWDL_VERSION}/examples/clean_download_cache.sh /usr/local/bin
 RUN chmod +x /usr/local/bin/clean_download_cache.sh
@@ -114,8 +116,8 @@ RUN rm -rf STAR-2.5.3a
 # install gsnap and rapsearch2 for local alignment
 RUN apt-get install -y \
         g++ \
-		libperl4-corelibs-perl \
-		make \
+        libperl4-corelibs-perl \
+        make \
         # Runtime dependencies
         # On versions higher than 1.62 compilation errors because of an overloading ambiguity with the `advance` method
         libboost1.62-all-dev
