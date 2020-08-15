@@ -1,6 +1,4 @@
-# idseq-workflows - portable IDseq production pipeline logic &middot; [![GitHub license](https://img.shields.io/badge/license-MIT-brightgreen.svg)](https://github.com/chanzuckerberg/idseq-web/blob/master/LICENSE) ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)
-
-![idseq-logo](https://assets.idseq.net/assets/Logo_Black.png)
+# idseq-workflows - portable IDseq production pipeline logic
 
 #### Infectious Disease Sequencing Platform
 IDseq is a hypothesis-free global software platform that helps scientists identify pathogens in metagenomic sequencing
