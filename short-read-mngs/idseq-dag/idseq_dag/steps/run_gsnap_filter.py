@@ -1,4 +1,5 @@
 import os
+import subprocess
 from idseq_dag.engine.pipeline_step import PipelineCountingStep
 from idseq_dag.exceptions import InsufficientReadsError
 import idseq_dag.util.command as command
@@ -55,6 +56,14 @@ class PipelineStepRunGsnapFilter(PipelineCountingStep):
                                      auto_untar=True)
         gsnap_base_dir = os.path.dirname(genome_dir)
         gsnap_index_name = os.path.basename(genome_dir)
+        # Hack to determine gsnap vs gsnapl
+        error_message = subprocess.run(
+                ['gsnapl', '-D', gsnap_base_dir, '-d', gsnap_index_name],
+                input='>'.encode('utf-8'),
+                stderr=subprocess.PIPE,
+                stdout=subprocess.PIPE
+            ).stderr
+        gsnap_exe = "gsnap" if 'please run gsnap instead' in error_message.decode('utf-8') else "gsnapl"
         # Run Gsnap
         gsnap_params = [
             '-A', 'sam', '--batch=0', '--use-shared-memory=0',
@@ -65,7 +74,7 @@ class PipelineStepRunGsnapFilter(PipelineCountingStep):
         ] + input_fas
         command.execute(
             command_patterns.SingleCommand(
-                cmd='gsnapl',
+                cmd=gsnap_exe,
                 args=gsnap_params
             )
         )
