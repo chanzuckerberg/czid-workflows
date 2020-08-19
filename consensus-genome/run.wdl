@@ -1,5 +1,5 @@
 # The following pipeline was initially based on previous work at: https://github.com/czbiohub/sc2-illumina-pipeline
-# workflow version: consensus-genomes-1.2.1
+# workflow version: consensus-genomes-1.2.2
 version 1.0
 
 workflow consensus_genome {
@@ -168,19 +168,23 @@ workflow consensus_genome {
     }
 
     output {
-        File remove_host_out_host_removed_fastqs_0 = RemoveHost.host_removed_fastqs_0
-        File remove_host__out_host_removed_fastqs_1 = RemoveHost.host_removed_fastqs_1
-        File? make_consensus_out_consensus_fa = MakeConsensus.consensus_fa
+        File  remove_host_out_host_removed_fastqs_0 = RemoveHost.host_removed_fastqs_0
+        File  remove_host__out_host_removed_fastqs_1 = RemoveHost.host_removed_fastqs_1
+        File  quantify_erccs_out_ercc_out = QuantifyERCCs.ercc_out
+        File  filter_reads_out_filtered_fastqs_0 = FilterReads.filtered_fastqs_0
+        File  filter_reads_out_filtered_fastqs_1 = FilterReads.filtered_fastqs_1
+        File? trim_reads_out_trimmed_fastqs_0 = TrimReads.trimmed_fastqs_0
+        File? trim_reads_out_trimmed_fastqs_1 = TrimReads.trimmed_fastqs_1
+        File? align_reads_out_alignments = AlignReads.alignments
         File? trim_primers_out_trimmed_bam_ch = TrimPrimers.trimmed_bam_ch
         File? trim_primers_out_trimmed_bam_bai = TrimPrimers.trimmed_bam_bai
+        File? make_consensus_out_consensus_fa = MakeConsensus.consensus_fa
         File? quast_out_quast_txt = Quast.quast_txt
         File? quast_out_quast_tsv = Quast.quast_tsv
-        File? align_reads_out_alignments = AlignReads.alignments
-        File quantify_erccs_out_ercc_out = QuantifyERCCs.ercc_out
+        File? call_variants_out_variants_ch = CallVariants.variants_ch
         File? compute_stats_out_depths_fig = ComputeStats.depths_fig
         File? compute_stats_out_output_stats = ComputeStats.output_stats
-        File? call_variants_out_variants_ch = CallVariants.variants_ch
-        File zip_outputs_out_output_zip = ZipOutputs.output_zip
+        File  zip_outputs_out_output_zip = ZipOutputs.output_zip
     }
 }
 
@@ -204,8 +208,7 @@ task RemoveHost {
         samtools view -@ $CORES -b -f 4 | \
         samtools fastq -@ $CORES -1 "~{prefix}no_host_1.fq.gz" -2 "~{prefix}no_host_2.fq.gz" -0 /dev/null -s /dev/null -n -c 6 -
 
-        uncompressed_size=`gzip -l "~{prefix}no_host_1.fq.gz" "~{prefix}no_host_2.fq.gz" | awk 'END{print $2}'`
-        if [ "$uncompressed_size" -eq "0" ]; then
+        if [ -z $(gzip -cd "~{prefix}no_host_1.fq.gz" | head -c1) ] && [ -z $(gzip -cd "~{prefix}no_host_2.fq.gz" | head -c1) ]; then
             set +x
             >&2 echo "{\"wdl_error_message\": true, \"error\": \"InsufficientReadsError\", \"cause\": \"No reads after RemoveHost\"}"
             exit 1
@@ -298,8 +301,7 @@ task FilterReads {
             mv "${TMPDIR}/paired2.fq.gz" "~{prefix}filtered_2.fq.gz"
         fi
 
-        uncompressed_size=`gzip -l "~{prefix}filtered_1.fq.gz" "~{prefix}filtered_1.fq.gz" | awk 'END{print $2}'`
-        if [ "$uncompressed_size" -eq "0" ]; then
+        if [ -z $(gzip -cd "~{prefix}filtered_1.fq.gz" | head -c1) ] && [ -z $(gzip -cd "~{prefix}filtered_2.fq.gz" | head -c1) ]; then
             set +x
             >&2 echo "{\"wdl_error_message\": true, \"error\": \"InsufficientReadsError\", \"cause\": \"No reads after FilterReads\"}"
             exit 1
@@ -326,10 +328,10 @@ task TrimReads {
 
     command <<<
         set -euxo pipefail
-        trim_galore --fastqc --paired "~{fastqs_0}" "~{fastqs_1}"
 
-        uncompressed_size=`gzip -l "~{basename(fastqs_0, '.fq.gz')}_val_1.fq.gz" "~{basename(fastqs_0, '.fq.gz')}_val_2.fq.gz" | awk 'END{print $2}'`
-        if [ "$uncompressed_size" -eq "0" ]; then
+        trim_galore --gzip --fastqc --paired "~{fastqs_0}" "~{fastqs_1}"
+
+        if [ -z $(gzip -cd "~{basename(fastqs_0, '.fq.gz')}_val_1.fq.gz" | head -c1) ] && [ -z $(gzip -cd "~{basename(fastqs_1, '.fq.gz')}_val_2.fq.gz" | head -c1) ]; then
             set +x
             >&2 echo "{\"wdl_error_message\": true, \"error\": \"InsufficientReadsError\", \"cause\": \"No reads after TrimReads\"}"
             exit 1
@@ -362,6 +364,7 @@ task AlignReads {
         set -euxo pipefail
 
         export CORES=`nproc --all`
+
         # Sample id included in the bam files
         minimap2 -ax sr -t $CORES -R '@RG\tID:~{sample}\tSM:~{sample}' "~{ref_fasta}" "~{fastqs_0}" "~{fastqs_1}" \
             | samtools sort -@ $CORES -O bam -o "~{prefix}aligned_reads.bam"
@@ -424,7 +427,7 @@ task MakeConsensus {
     command <<<
         set -euxo pipefail
 
-        samtools index ${bam}
+        samtools index "~{bam}"
         samtools mpileup -A -d 0 -Q0 "~{bam}" | ivar consensus -q "~{ivarQualThreshold}" -t "~{ivarFreqThreshold}" -m "~{minDepth}" -n N -p "~{prefix}primertrimmed.consensus"
         echo ">""~{sample}" > "~{prefix}consensus.fa"
         seqtk seq -l 50 "~{prefix}primertrimmed.consensus.fa" | tail -n +2 >> "~{prefix}consensus.fa"
@@ -664,6 +667,8 @@ task ZipOutputs {
 
     command <<<
         set -euxo pipefail
+
+        export TMPDIR=${TMPDIR:-/tmp}
 
         mkdir ${TMPDIR}/outputs
         cp ~{sep=' ' outputFiles} ${TMPDIR}/outputs/
