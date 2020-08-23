@@ -36,6 +36,6 @@ git config --get user.name || git config user.name "IDseq release action trigger
 git tag --annotate --file $TAG_MSG "$TAG"
 git push origin "$TAG"
 
-export TAG DEPLOYMENT_ENV=wdl DEPLOY_REF=main GITHUB_TOKEN=${GH_DEPLOY_TOKEN:-GITHUB_TOKEN}
+export TAG DEPLOYMENT_ENV=wdl DEPLOY_REF=akislyuk-release-slack-alerts GITHUB_TOKEN=${GH_DEPLOY_TOKEN:-GITHUB_TOKEN}
 deployment_args=$(jq -n ".auto_merge=false | .ref=env.DEPLOY_REF | .environment=env.DEPLOYMENT_ENV | .required_contexts=[] | .payload={workflow_tag: env.TAG}")
 gh api repos/:owner/idseq/deployments --input - <<< "$deployment_args"
