@@ -179,15 +179,17 @@ workflow idseq_non_host_alignment {
     File cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv
     File cdhitdup_out_dedup1_fa_clstr
     File cdhitdup_out_dedup1_fa
-    String idseq_db_bucket = "idseq-public-references"
     String index_version = "2020-04-20"
-    String lineage_db = "s3://~{idseq_db_bucket}/taxonomy/~{index_version}/taxid-lineages.db"
-    String accession2taxid_db = "s3://~{idseq_db_bucket}/alignment_data/~{index_version}/accession2taxid.db"
-    String taxon_blacklist = "s3://~{idseq_db_bucket}/taxonomy/~{index_version}/taxon_blacklist.txt"
+    File lineage_db = "s3://idseq-public-references/taxonomy/2020-04-20/taxid-lineages.db"
+    File accession2taxid_db = "s3://idseq-public-references/alignment_data/2020-04-20/accession2taxid.db"
+    File taxon_blacklist = "s3://idseq-public-references/taxonomy/2020-04-20/taxon_blacklist.txt"
     String index_dir_suffix = index_version
-    String deuterostome_db = "s3://~{idseq_db_bucket}/taxonomy/~{index_version}/deuterostome_taxids.txt"
+    File deuterostome_db = "s3://idseq-public-references/taxonomy/2020-04-20/deuterostome_taxids.txt"
     Boolean use_deuterostome_filter = true
     Boolean use_taxon_whitelist = false
+    File? local_gsnap_index
+    String? local_gsnap_genome_name
+    File? local_rapsearch2_index
   }
 
   call RunAlignment_gsnap_out {
@@ -203,7 +205,10 @@ workflow idseq_non_host_alignment {
       deuterostome_db = deuterostome_db,
       index_dir_suffix = index_dir_suffix,
       use_deuterostome_filter = use_deuterostome_filter,
-      use_taxon_whitelist = use_taxon_whitelist
+      use_taxon_whitelist = use_taxon_whitelist,
+      run_locally = defined(local_gsnap_index),
+      index = local_gsnap_index,
+      genome_name = local_gsnap_genome_name
   }
 
   call RunAlignment_rapsearch2_out {
@@ -217,7 +222,9 @@ workflow idseq_non_host_alignment {
       accession2taxid_db = accession2taxid_db,
       taxon_blacklist = taxon_blacklist,
       index_dir_suffix = index_dir_suffix,
-      use_taxon_whitelist = use_taxon_whitelist
+      use_taxon_whitelist = use_taxon_whitelist,
+      run_locally = defined(local_rapsearch2_index),
+      index = local_rapsearch2_index
   }
 
   call CombineTaxonCounts {

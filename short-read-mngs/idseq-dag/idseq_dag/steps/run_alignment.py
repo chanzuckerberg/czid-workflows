@@ -136,7 +136,6 @@ class PipelineStepRunAlignment(PipelineStep):
         self.chunks_in_flight_semaphore = threading.Semaphore(MAX_CHUNKS_IN_FLIGHT)
         self.chunks_result_dir_local = os.path.join(self.output_dir_local, "chunks")
         self.chunks_result_dir_s3 = os.path.join(self.output_dir_s3, "chunks")
-        self.batch_job_desc_bucket = get_batch_job_desc_bucket()
         self.is_local_run = bool(self.additional_attributes.get("run_locally"))
         self.genome_name = self.additional_attributes.get("genome_name", "nt_k16")
         self.index = self.additional_files.get("index")
@@ -145,6 +144,7 @@ class PipelineStepRunAlignment(PipelineStep):
         else:
             assert not self.index, "passing in an index is not supported for remote runs"
             command.make_dirs(self.chunks_result_dir_local)
+            self.batch_job_desc_bucket = get_batch_job_desc_bucket()
 
     def count_reads(self):
         pass
@@ -199,13 +199,13 @@ class PipelineStepRunAlignment(PipelineStep):
         if self.alignment_algorithm == "gsnap":
             # Hack to determine gsnap vs gsnapl
             error_message = run(
-                ['gsnapl-2018-10-26', '-D', index_path, '-d', self.genome_name],
+                ['gsnapl.avx2-2018-10-26', '-D', index_path, '-d', self.genome_name],
                 input='>'.encode('utf-8'),
                 stderr=PIPE,
                 stdout=PIPE
             ).stderr
             # note, alignment uses a pinned version of gmap/gsnap
-            gsnap_command = "gsnap-2018-10-26" if 'please run gsnap instead' in error_message.decode('utf-8') else "gsnapl-2018-10-26"
+            gsnap_command = "gsnap.avx2-2018-10-26" if 'please run gsnap instead' in error_message.decode('utf-8') else "gsnapl.avx2-2018-10-26"
         else:
             gsnap_command = None
 

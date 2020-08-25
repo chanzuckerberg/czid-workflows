@@ -79,8 +79,8 @@ task DownloadAccessions_gsnap_accessions_out {
     File gsnap_out_gsnap_deduped_m8
     File gsnap_out_gsnap_hitsummary_tab
     File gsnap_out_gsnap_counts_with_dcr_json
-    String nt_db
-    String nt_loc_db
+    File nt_db
+    File nt_loc_db
     File lineage_db
   }
   command<<<
@@ -117,8 +117,8 @@ task DownloadAccessions_rapsearch2_accessions_out {
     File rapsearch2_out_rapsearch2_hitsummary_tab
     File rapsearch2_out_rapsearch2_counts_with_dcr_json
     File lineage_db
-    String nr_loc_db
-    String nr_db
+    File nr_loc_db
+    File nr_db
   }
   command<<<
   set -euxo pipefail
@@ -480,15 +480,14 @@ workflow idseq_postprocess {
     File cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv
     File cdhitdup_out_dedup1_fa_clstr
     File cdhitdup_out_dedup1_fa
-    String idseq_db_bucket = "idseq-public-references"
     String index_version = "2020-04-20"
-    String nt_db = "s3://~{idseq_db_bucket}/ncbi-sources/~{index_version}/nt"
-    String nt_loc_db = "s3://~{idseq_db_bucket}/alignment_data/~{index_version}/nt_loc.db"
-    String nr_db = "s3://~{idseq_db_bucket}/ncbi-sources/~{index_version}/nr"
-    String nr_loc_db = "s3://~{idseq_db_bucket}/alignment_data/~{index_version}/nr_loc.db"
-    File lineage_db = "s3://~{idseq_db_bucket}/taxonomy/~{index_version}/taxid-lineages.db"
-    File taxon_blacklist = "s3://~{idseq_db_bucket}/taxonomy/~{index_version}/taxon_blacklist.txt"
-    String deuterostome_db = "s3://~{idseq_db_bucket}/taxonomy/~{index_version}/deuterostome_taxids.txt"
+    File nt_db = "s3://idseq-public-references/ncbi-sources/2020-04-20/nt"
+    File nt_loc_db = "s3://idseq-public-references/alignment_data/2020-04-20/nt_loc.db"
+    File nr_db = "s3://idseq-public-references/ncbi-sources/2020-04-20/nr"
+    File nr_loc_db = "s3://idseq-public-references/alignment_data/2020-04-20/nr_loc.db"
+    File lineage_db = "s3://idseq-public-references/taxonomy/2020-04-20/taxid-lineages.db"
+    File taxon_blacklist = "s3://idseq-public-references/taxonomy/2020-04-20/taxon_blacklist.txt"
+    File deuterostome_db = "s3://idseq-public-references/taxonomy/2020-04-20/deuterostome_taxids.txt"
     Boolean use_deuterostome_filter = true
     Boolean use_taxon_whitelist = false
   }

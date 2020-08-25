@@ -1,0 +1,21 @@
+# local_test_viral.yml
+# Boilerplate local_driver.wdl input YAML for use with `miniwdl run` so that this file,
+# docker_image_id, fastqs_0, and fastqs_1 are the only inputs required on the command line.
+# Note: this YAML file doesn't show all possible optional inputs to the workflow, only ones that
+# must be set or overridden for the above-mentioned purposes. See the help message printed by
+# `miniwdl run local_driver.wdl` to see them all.
+host_filter.file_ext: fastq
+host_filter.nucleotide_type: DNA
+host_filter.host_genome: human
+host_filter.star_genome: s3://idseq-public-references/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/human_STAR_genome.tar
+host_filter.bowtie2_genome: s3://idseq-public-references/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/human_bowtie2_genome.tar
+host_filter.gsnap_genome: s3://idseq-public-references/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/hg38_pantro5_k16.tar
+host_filter.human_star_genome: s3://idseq-public-references/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/human_STAR_genome.tar
+host_filter.human_bowtie2_genome: s3://idseq-public-references/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/human_bowtie2_genome.tar
+host_filter.adapter_fasta: https://raw.githubusercontent.com/broadinstitute/viral-pipelines/master/test/input/clipDb.fasta
+host_filter.max_input_fragments: 9000
+host_filter.max_subsample_fragments: 9000
+# TODO: full-size indices for non-host alignment
+non_host_rapsearch2_index: s3://idseq-database/test/viral-alignment-indexes/viral_nr_rapsearch.tar.gz
+non_host_gsnap_index: s3://idseq-database/test/viral-alignment-indexes/viral_nt_gsnap2018-10-26_k16.tar.gz
+non_host_gsnap_genome_name: viral_nt_gsnap2018-10-26_k16
