@@ -30,6 +30,7 @@ deduplicated read is not the one marked with '*'.  Hence we handle that case cor
 and put a lot of assertions to make sure problems with cdhit output are detected.
 """
 
+import idseq_dag.util.log as log
 from idseq_dag.util.fasta import iterator
 from typing import Dict, Optional, Set, Tuple
 
@@ -67,17 +68,16 @@ def parse_clusters_file(
         just use the current read_id as cluster_representative.  Everything will
         work fine, aside from reduced sensitivity. {line_number}"""
 
-        assert len(emitted_reads_from_cluster) == 1, f"""If this assertion
-        fails, CD-HIT-DUP has emitted multiple reads from the same cluster.
-        Feel free to comment out this assertion if that happens a lot in
-        practice.  Everything will run fine, but read counts contributed by that
-        cluster will be exaggerated.  If you want to fix that, make the cluster
-        sizes a float --- divide the actual cluster size by the number of reads
-        emitted for the cluster, i.e. by len(emitted_reads_from_cluster).
-        Probably an even better way of fixing it would be to emit your own fasta
-        based on the .clstr file if that's reliable, or use a tool other than
-        cdhit that doesn't have this bug.  {line_number}:
-        {emitted_reads_from_cluster}"""
+        if len(emitted_reads_from_cluster) != 1:
+            """
+            If this check is true, cd-hit-dup has emitted multiple reads
+            from the same cluster. We have observed that this does happen.
+            Everything will run fine, but read counts contributed by that
+            cluster will be exaggerated. We are in the process of replacing
+            cd-hit-dup with a tool that does not have this bug but until
+            that time we will just output a warning so we don't block results.
+            """
+            log.write(f"more than one read emitted from cd-hit-dup cluster: {emitted_reads_from_cluster} reads emitted on line {line_number}", warning=True)
 
         cluster_representative = emitted_reads_from_cluster.pop()
 

@@ -226,6 +226,9 @@ Changes to X or Y force recomputation of all results when a sample is rerun usin
 
 When releasing a new version, please add a Git tag of the form `vX.Y.Z`.
 
+- 4.11.9
+  - Switch from assertion that cd-hit-clusters only emit one read to a warning if they emit more than one read
+
 - 4.11.8
   - Support local non-host alignment
 
