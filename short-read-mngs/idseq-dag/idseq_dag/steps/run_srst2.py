@@ -138,6 +138,7 @@ class PipelineStepRunSRST2(PipelineStep):
         command.execute(
             command_patterns.ShellScriptCommand(
                 script='''
+                    set -o pipefail;
                     bedtools bamtobed -i "$1" |
                     env LC_ALL=C sort -T "$2" -k1,1 -k2,2n |
                     bedtools coverage -sorted -a "$3" -b stdin > "$4";''',
