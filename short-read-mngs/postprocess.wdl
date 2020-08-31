@@ -480,7 +480,7 @@ workflow idseq_postprocess {
     File cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv
     File cdhitdup_out_dedup1_fa_clstr
     File cdhitdup_out_dedup1_fa
-    String index_version = "2020-04-20"
+    String index_version = "2020-04-20" # FIXME: vestigial input
     File nt_db = "s3://idseq-public-references/ncbi-sources/2020-04-20/nt"
     File nt_loc_db = "s3://idseq-public-references/alignment_data/2020-04-20/nt_loc.db"
     File nr_db = "s3://idseq-public-references/ncbi-sources/2020-04-20/nr"

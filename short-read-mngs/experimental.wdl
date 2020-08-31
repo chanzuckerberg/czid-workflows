@@ -259,14 +259,13 @@ workflow idseq_experimental {
     File cdhitdup_clusters_dedup1_fa_clstr
     File deduped_fasta_dedup1_fa
     String file_ext = "fastq"
-    String index_version = "2020-04-20"
+    String index_version = "2020-04-20" # FIXME: vestigial input
     File nt_db = "s3://idseq-public-references/ncbi-sources/2020-04-20/nt"
     File nt_loc_db = "s3://idseq-public-references/alignment_data/2020-04-20/nt_loc.db"
     File nt_info_db = "s3://idseq-public-references/alignment_data/2020-04-20/nt_info.db"
     File lineage_db = "s3://idseq-public-references/taxonomy/2020-02-10/taxid-lineages.db"
-    # non-public databases:
-    File? resist_genome_db #= "s3://idseq-public-references/amr/ARGannot_r2.fasta"
-    File? resist_genome_bed #= "s3://idseq-public-references/amr/argannot_genome.bed"
+    File resist_genome_db = "s3://idseq-public-references/amr/ARGannot_r2.fasta"
+    File resist_genome_bed = "s3://idseq-public-references/amr/argannot_genome.bed"
     Boolean use_taxon_whitelist = false
   }
 
@@ -312,17 +311,15 @@ workflow idseq_experimental {
       nt_loc_db = nt_loc_db
   }
 
-  if (defined(resist_genome_db) && defined(resist_genome_bed)) {
-    call RunSRST2 {
-      input:
-        docker_image_id = docker_image_id,
-        dag_branch = dag_branch,
-        s3_wd_uri = s3_wd_uri,
-        fastqs = select_all([fastqs_0, fastqs_1]),
-        file_ext = file_ext,
-        resist_genome_db = select_first([resist_genome_db]),
-        resist_genome_bed = select_first([resist_genome_bed])
-    }
+  call RunSRST2 {
+    input:
+      docker_image_id = docker_image_id,
+      dag_branch = dag_branch,
+      s3_wd_uri = s3_wd_uri,
+      fastqs = select_all([fastqs_0, fastqs_1]),
+      file_ext = file_ext,
+      resist_genome_db = resist_genome_db,
+      resist_genome_bed = resist_genome_bed
   }
 
   call GenerateCoverageViz {
@@ -371,12 +368,12 @@ workflow idseq_experimental {
     File? taxid_locator_out_count = GenerateTaxidLocator.output_read_count
     File alignment_viz_out_align_viz_summary = GenerateAlignmentViz.align_viz_summary
     File? alignment_viz_out_count = GenerateAlignmentViz.output_read_count
-    File? srst2_out_out_log = RunSRST2.out_log
-    File? srst2_out_out__genes__ARGannot_r2__results_txt = RunSRST2.out__genes__ARGannot_r2__results_txt
-    File? srst2_out_out__fullgenes__ARGannot_r2__results_txt = RunSRST2.out__fullgenes__ARGannot_r2__results_txt
-    File? srst2_out_amr_processed_results_csv = RunSRST2.amr_processed_results_csv
-    File? srst2_out_amr_summary_results_csv = RunSRST2.amr_summary_results_csv
-    File? srst2_out_output___ARGannot_r2_sorted_bam = RunSRST2.output___ARGannot_r2_sorted_bam
+    File srst2_out_out_log = RunSRST2.out_log
+    File srst2_out_out__genes__ARGannot_r2__results_txt = RunSRST2.out__genes__ARGannot_r2__results_txt
+    File srst2_out_out__fullgenes__ARGannot_r2__results_txt = RunSRST2.out__fullgenes__ARGannot_r2__results_txt
+    File srst2_out_amr_processed_results_csv = RunSRST2.amr_processed_results_csv
+    File srst2_out_amr_summary_results_csv = RunSRST2.amr_summary_results_csv
+    File srst2_out_output___ARGannot_r2_sorted_bam = RunSRST2.output___ARGannot_r2_sorted_bam
     File? srst2_out_count = RunSRST2.output_read_count
     File coverage_viz_out_coverage_viz_summary_json = GenerateCoverageViz.coverage_viz_summary_json
     File? coverage_viz_out_count = GenerateCoverageViz.output_read_count
