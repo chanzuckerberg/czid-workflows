@@ -14,6 +14,7 @@ workflow consensus_genome {
         File primer_bed
         File ref_fasta
         File ref_host
+        #String memory
 
         # Sample name : include in tags and files
         String sample
@@ -25,6 +26,7 @@ workflow consensus_genome {
 
         # all of the following seem to be parameters in params.* of the nextflow pipeline;
         # could they be extracted to a separate params file? put in .json input to wdl?
+        Boolean filter_reads = true
         Boolean trim_adapters = true
 
         Float ivarFreqThreshold = 0.9
@@ -60,21 +62,25 @@ workflow consensus_genome {
             docker_image_id = docker_image_id
     }
 
-    call FilterReads {
-        input:
-            prefix = prefix,
-            fastqs_0 = RemoveHost.host_removed_fastqs_0,
-            fastqs_1 = RemoveHost.host_removed_fastqs_1,
-            ref_fasta = ref_fasta,
-            kraken2_db_tar_gz = kraken2_db_tar_gz,
-            docker_image_id = docker_image_id
+    if (filter_reads) {
+        call FilterReads {
+            input:
+                prefix = prefix,
+                fastqs_0 = RemoveHost.host_removed_fastqs_0,
+                fastqs_1 = RemoveHost.host_removed_fastqs_1,
+                ref_fasta = ref_fasta,
+                kraken2_db_tar_gz = kraken2_db_tar_gz,
+                docker_image_id = docker_image_id
+            }
     }
+
 
     if (trim_adapters) {
         call TrimReads {
             input:
-                fastqs_0 = FilterReads.filtered_fastqs_0,
-                fastqs_1 = FilterReads.filtered_fastqs_1,
+                # use FilterReads output if we ran it; otherwise fall back to RemoveHost reads
+                fastqs_0 = select_first([FilterReads.filtered_fastqs_0,RemoveHost.host_removed_fastqs_0]),
+                fastqs_1 = select_first([FilterReads.filtered_fastqs_1,RemoveHost.host_removed_fastqs_1]),
                 docker_image_id = docker_image_id
         }
     }
@@ -83,9 +89,9 @@ workflow consensus_genome {
         input:
             prefix = prefix,
             sample = sample,
-            # use trimReads output if we ran it; otherwise fall back to FilterReads output
-            fastqs_0 = select_first([TrimReads.trimmed_fastqs_0, FilterReads.filtered_fastqs_0]),
-            fastqs_1 = select_first([TrimReads.trimmed_fastqs_1, FilterReads.filtered_fastqs_1]),
+            # use trimReads output if we ran it; otherwise fall back to FilterReads output if we ran it; otherwise fall back to RemoveHost outupt
+            fastqs_0 = select_first([TrimReads.trimmed_fastqs_0, FilterReads.filtered_fastqs_0, RemoveHost.host_removed_fastqs_0]),
+            fastqs_1 = select_first([TrimReads.trimmed_fastqs_1, FilterReads.filtered_fastqs_1, RemoveHost.host_removed_fastqs_1]),
             ref_fasta = ref_fasta,
             docker_image_id = docker_image_id
     }
@@ -114,9 +120,9 @@ workflow consensus_genome {
             prefix = prefix,
             assembly = MakeConsensus.consensus_fa,
             bam = TrimPrimers.trimmed_bam_ch,
-            # use trimReads output if we ran it; otherwise fall back to FilterReads output
-            fastqs_0 = select_first([TrimReads.trimmed_fastqs_0, FilterReads.filtered_fastqs_0]),
-            fastqs_1 = select_first([TrimReads.trimmed_fastqs_1, FilterReads.filtered_fastqs_1]),
+            # use trimReads output if we ran it; otherwise fall back to FilterReads output if we ran it; otherwise fall back to RemoveHost outupt
+            fastqs_0 = select_first([TrimReads.trimmed_fastqs_0, FilterReads.filtered_fastqs_0, RemoveHost.host_removed_fastqs_0]),
+            fastqs_1 = select_first([TrimReads.trimmed_fastqs_1, FilterReads.filtered_fastqs_1, RemoveHost.host_removed_fastqs_1]),
             ref_fasta = ref_fasta,
             no_reads_quast = no_reads_quast,
             docker_image_id = docker_image_id
@@ -171,8 +177,8 @@ workflow consensus_genome {
         File  remove_host_out_host_removed_fastqs_0 = RemoveHost.host_removed_fastqs_0
         File  remove_host__out_host_removed_fastqs_1 = RemoveHost.host_removed_fastqs_1
         File  quantify_erccs_out_ercc_out = QuantifyERCCs.ercc_out
-        File  filter_reads_out_filtered_fastqs_0 = FilterReads.filtered_fastqs_0
-        File  filter_reads_out_filtered_fastqs_1 = FilterReads.filtered_fastqs_1
+        File? filter_reads_out_filtered_fastqs_0 = FilterReads.filtered_fastqs_0
+        File? filter_reads_out_filtered_fastqs_1 = FilterReads.filtered_fastqs_1
         File? trim_reads_out_trimmed_fastqs_0 = TrimReads.trimmed_fastqs_0
         File? trim_reads_out_trimmed_fastqs_1 = TrimReads.trimmed_fastqs_1
         File? align_reads_out_alignments = AlignReads.alignments
