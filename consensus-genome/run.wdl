@@ -1,5 +1,5 @@
 # The following pipeline was initially based on previous work at: https://github.com/czbiohub/sc2-illumina-pipeline
-# workflow version: consensus-genomes-1.2.2
+# workflow version: consensus-genomes-1.2.4
 version 1.0
 
 workflow consensus_genome {
@@ -184,6 +184,7 @@ workflow consensus_genome {
         File? call_variants_out_variants_ch = CallVariants.variants_ch
         File? compute_stats_out_depths_fig = ComputeStats.depths_fig
         File? compute_stats_out_output_stats = ComputeStats.output_stats
+        File? compute_stats_out_sam_depths = ComputeStats.sam_depths
         File  zip_outputs_out_output_zip = ZipOutputs.output_zip
     }
 }
@@ -647,6 +648,7 @@ task ComputeStats {
     >>>
 
     output {
+        File sam_depths = "~{prefix}samtools_depth.txt"
         File sam_stats = "~{prefix}samtools_stats.txt"
         File depths_fig = "~{prefix}depths.png"
         File output_stats = "~{prefix}stats.json"
