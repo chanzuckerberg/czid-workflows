@@ -68,6 +68,9 @@ jobs:
           # running out of space
           export MINIWDL__FILE_IO__OUTPUT_HARDLINKS=true
           export MINIWDL__FILE_IO__DELETE_WORK=success
+          export MINIWDL__DOWNLOAD_CACHE__GET=true
+          export MINIWDL__DOWNLOAD_CACHE__PUT=true
+          export MINIWDL__DOWNLOAD_CACHE__DIR="$(mktemp -d --tmpdir miniwdl_download_cache_XXXXXX)"
 
           source /etc/profile
           sudo apt-get -qq update
