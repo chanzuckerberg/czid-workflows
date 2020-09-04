@@ -1,6 +1,5 @@
 {
   "docker_image_id": null,
-  "dag_branch": null,
   "s3_wd_uri": null,
   "trimmomatic_fastq": [
     "input_files/trimmomatic1.fastq",

@@ -1,6 +1,5 @@
 {
   "docker_image_id": null,
-  "dag_branch": null,
   "s3_wd_uri": null,
   "lzw_fa": [
     "input_files/lzw1.fa",

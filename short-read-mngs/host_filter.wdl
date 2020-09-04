@@ -3,7 +3,6 @@ version 1.0
 task RunValidateInput {
   input {
     String docker_image_id
-    String dag_branch
     String s3_wd_uri
     Array[File] fastqs
     Int max_input_fragments
@@ -11,9 +10,6 @@ task RunValidateInput {
   }
   command<<<
   set -euxo pipefail
-  if [[ -n "~{dag_branch}" ]]; then
-    pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
-  fi
   idseq-dag-run-step --workflow-name host_filter \
     --step-module idseq_dag.steps.run_validate_input \
     --step-class PipelineStepRunValidateInput \
@@ -39,7 +35,6 @@ task RunValidateInput {
 task RunStar {
   input {
     String docker_image_id
-    String dag_branch
     String s3_wd_uri
     File validate_input_summary_json
     Array[File] valid_input_fastq
@@ -49,9 +44,6 @@ task RunStar {
   }
   command<<<
   set -euxo pipefail
-  if [[ -n "~{dag_branch}" ]]; then
-    pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
-  fi
   idseq-dag-run-step --workflow-name host_filter \
     --step-module idseq_dag.steps.run_star \
     --step-class PipelineStepRunStar \
@@ -78,16 +70,12 @@ task RunStar {
 task RunTrimmomatic {
   input {
     String docker_image_id
-    String dag_branch
     String s3_wd_uri
     Array[File] unmapped_fastq
     File adapter_fasta
   }
   command<<<
   set -euxo pipefail
-  if [[ -n "~{dag_branch}" ]]; then
-    pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
-  fi
   idseq-dag-run-step --workflow-name host_filter \
     --step-module idseq_dag.steps.run_trimmomatic \
     --step-class PipelineStepRunTrimmomatic \
@@ -111,15 +99,11 @@ task RunTrimmomatic {
 task RunPriceSeq {
   input {
     String docker_image_id
-    String dag_branch
     String s3_wd_uri
     Array[File] trimmomatic_fastq
   }
   command<<<
   set -euxo pipefail
-  if [[ -n "~{dag_branch}" ]]; then
-    pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
-  fi
   idseq-dag-run-step --workflow-name host_filter \
     --step-module idseq_dag.steps.run_priceseq \
     --step-class PipelineStepRunPriceSeq \
@@ -143,15 +127,11 @@ task RunPriceSeq {
 task RunCDHitDup {
   input {
     String docker_image_id
-    String dag_branch
     String s3_wd_uri
     Array[File] priceseq_fa
   }
   command<<<
   set -euxo pipefail
-  if [[ -n "~{dag_branch}" ]]; then
-    pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
-  fi
   idseq-dag-run-step --workflow-name host_filter \
     --step-module idseq_dag.steps.run_cdhitdup \
     --step-class PipelineStepRunCDHitDup \
@@ -177,7 +157,6 @@ task RunCDHitDup {
 task RunLZW {
   input {
     String docker_image_id
-    String dag_branch
     String s3_wd_uri
     Array[File] dedup_fa
     File dedup1_fa_clstr
@@ -185,9 +164,6 @@ task RunLZW {
   }
   command<<<
   set -euxo pipefail
-  if [[ -n "~{dag_branch}" ]]; then
-    pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
-  fi
   idseq-dag-run-step --workflow-name host_filter \
     --step-module idseq_dag.steps.run_lzw \
     --step-class PipelineStepRunLZW \
@@ -211,7 +187,6 @@ task RunLZW {
 task RunBowtie2_bowtie2_out {
   input {
     String docker_image_id
-    String dag_branch
     String s3_wd_uri
     Array[File] lzw_fa
     Array[File] dedup_fa
@@ -221,9 +196,6 @@ task RunBowtie2_bowtie2_out {
   }
   command<<<
   set -euxo pipefail
-  if [[ -n "~{dag_branch}" ]]; then
-    pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
-  fi
   idseq-dag-run-step --workflow-name host_filter \
     --step-module idseq_dag.steps.run_bowtie2 \
     --step-class PipelineStepRunBowtie2 \
@@ -248,7 +220,6 @@ task RunBowtie2_bowtie2_out {
 task RunSubsample {
   input {
     String docker_image_id
-    String dag_branch
     String s3_wd_uri
     Array[File] bowtie2_fa
     Array[File] dedup_fa
@@ -258,9 +229,6 @@ task RunSubsample {
   }
   command<<<
   set -euxo pipefail
-  if [[ -n "~{dag_branch}" ]]; then
-    pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
-  fi
   idseq-dag-run-step --workflow-name host_filter \
     --step-module idseq_dag.steps.run_subsample \
     --step-class PipelineStepRunSubsample \
@@ -285,7 +253,6 @@ task RunSubsample {
 task RunStarDownstream {
   input {
     String docker_image_id
-    String dag_branch
     String s3_wd_uri
     Array[File] subsampled_fa
     File validate_input_summary_json
@@ -297,9 +264,6 @@ task RunStarDownstream {
   }
   command<<<
   set -euxo pipefail
-  if [[ -n "~{dag_branch}" ]]; then
-    pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
-  fi
   idseq-dag-run-step --workflow-name host_filter \
     --step-module idseq_dag.steps.run_star_downstream \
     --step-class PipelineStepRunStarDownstream \
@@ -323,7 +287,6 @@ task RunStarDownstream {
 task RunBowtie2_bowtie2_human_out {
   input {
     String docker_image_id
-    String dag_branch
     String s3_wd_uri
     Array[File] unmapped_human_fa
     Array[File] dedup_fa
@@ -333,9 +296,6 @@ task RunBowtie2_bowtie2_human_out {
   }
   command<<<
   set -euxo pipefail
-  if [[ -n "~{dag_branch}" ]]; then
-    pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
-  fi
   idseq-dag-run-step --workflow-name host_filter \
     --step-module idseq_dag.steps.run_bowtie2 \
     --step-class PipelineStepRunBowtie2 \
@@ -360,7 +320,6 @@ task RunBowtie2_bowtie2_human_out {
 task RunGsnapFilter {
   input {
     String docker_image_id
-    String dag_branch
     String s3_wd_uri
     Array[File] subsampled_fa
     Array[File] dedup_fa
@@ -370,9 +329,6 @@ task RunGsnapFilter {
   }
   command<<<
   set -euxo pipefail
-  if [[ -n "~{dag_branch}" ]]; then
-    pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
-  fi
   idseq-dag-run-step --workflow-name host_filter \
     --step-module idseq_dag.steps.run_gsnap_filter \
     --step-class PipelineStepRunGsnapFilter \
@@ -397,7 +353,6 @@ task RunGsnapFilter {
 workflow idseq_host_filter {
   input {
     String docker_image_id
-    String dag_branch = ""
     String s3_wd_uri
     File fastqs_0
     File? fastqs_1
@@ -417,7 +372,6 @@ workflow idseq_host_filter {
   call RunValidateInput {
     input:
       docker_image_id = docker_image_id,
-      dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       fastqs = select_all([fastqs_0, fastqs_1]),
       file_ext = file_ext,
@@ -427,7 +381,6 @@ workflow idseq_host_filter {
   call RunStar {
     input:
       docker_image_id = docker_image_id,
-      dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       validate_input_summary_json = RunValidateInput.validate_input_summary_json,
       valid_input_fastq = select_all([RunValidateInput.valid_input1_fastq, RunValidateInput.valid_input2_fastq]),
@@ -439,7 +392,6 @@ workflow idseq_host_filter {
   call RunTrimmomatic {
     input:
       docker_image_id = docker_image_id,
-      dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       unmapped_fastq = select_all([RunStar.unmapped1_fastq, RunStar.unmapped2_fastq]),
       adapter_fasta = adapter_fasta
@@ -448,7 +400,6 @@ workflow idseq_host_filter {
   call RunPriceSeq {
     input:
       docker_image_id = docker_image_id,
-      dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       trimmomatic_fastq = select_all([RunTrimmomatic.trimmomatic1_fastq, RunTrimmomatic.trimmomatic2_fastq])
   }
@@ -456,7 +407,6 @@ workflow idseq_host_filter {
   call RunCDHitDup {
     input:
       docker_image_id = docker_image_id,
-      dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       priceseq_fa = select_all([RunPriceSeq.priceseq1_fa, RunPriceSeq.priceseq2_fa])
   }
@@ -464,7 +414,6 @@ workflow idseq_host_filter {
   call RunLZW {
     input:
       docker_image_id = docker_image_id,
-      dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       dedup_fa = select_all([RunCDHitDup.dedup1_fa, RunCDHitDup.dedup2_fa]),
       dedup1_fa_clstr = RunCDHitDup.dedup1_fa_clstr,
@@ -474,7 +423,6 @@ workflow idseq_host_filter {
   call RunBowtie2_bowtie2_out {
     input:
       docker_image_id = docker_image_id,
-      dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       lzw_fa = select_all([RunLZW.lzw1_fa, RunLZW.lzw2_fa]),
       dedup_fa = select_all([RunCDHitDup.dedup1_fa, RunCDHitDup.dedup2_fa]),
@@ -486,7 +434,6 @@ workflow idseq_host_filter {
   call RunSubsample {
     input:
       docker_image_id = docker_image_id,
-      dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       bowtie2_fa = select_all([RunBowtie2_bowtie2_out.bowtie2_1_fa, RunBowtie2_bowtie2_out.bowtie2_2_fa, RunBowtie2_bowtie2_out.bowtie2_merged_fa]),
       dedup_fa = select_all([RunCDHitDup.dedup1_fa, RunCDHitDup.dedup2_fa]),
@@ -499,7 +446,6 @@ workflow idseq_host_filter {
     call RunStarDownstream {
       input:
         docker_image_id = docker_image_id,
-        dag_branch = dag_branch,
         s3_wd_uri = s3_wd_uri,
         subsampled_fa = select_all([RunSubsample.subsampled_1_fa, RunSubsample.subsampled_2_fa, RunSubsample.subsampled_merged_fa]),
         validate_input_summary_json = RunValidateInput.validate_input_summary_json,
@@ -513,7 +459,6 @@ workflow idseq_host_filter {
     call RunBowtie2_bowtie2_human_out {
       input:
         docker_image_id = docker_image_id,
-        dag_branch = dag_branch,
         s3_wd_uri = s3_wd_uri,
         unmapped_human_fa = select_all([RunStarDownstream.unmapped_human_1_fa, RunStarDownstream.unmapped_human_2_fa]),
         dedup_fa = select_all([RunCDHitDup.dedup1_fa, RunCDHitDup.dedup2_fa]),
@@ -530,7 +475,6 @@ workflow idseq_host_filter {
   call RunGsnapFilter {
     input:
       docker_image_id = docker_image_id,
-      dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       subsampled_fa = gsnap_filter_input,
       dedup_fa = select_all([RunCDHitDup.dedup1_fa, RunCDHitDup.dedup2_fa]),

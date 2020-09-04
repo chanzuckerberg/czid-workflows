@@ -1,6 +1,5 @@
 {
   "docker_image_id": null,
-  "dag_branch": null,
   "s3_wd_uri": null,
   "fastqs": [
     "input_files/norg_6__nacc_27__uniform_weight_per_organism__hiseq_reads__v6__R1.fastq.gz",

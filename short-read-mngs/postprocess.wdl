@@ -3,16 +3,12 @@ version 1.0
 task RunAssembly {
   input {
     String docker_image_id
-    String dag_branch
     String s3_wd_uri
     Array[File] host_filter_out_gsnap_filter_fa
     File cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv
   }
   command<<<
   set -euxo pipefail
-  if [[ -n "~{dag_branch}" ]]; then
-    pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
-  fi
   idseq-dag-run-step --workflow-name postprocess \
     --step-module idseq_dag.steps.run_assembly \
     --step-class PipelineStepRunAssembly \
@@ -38,7 +34,6 @@ task RunAssembly {
 task GenerateCoverageStats {
   input {
     String docker_image_id
-    String dag_branch
     String s3_wd_uri
     File assembly_contigs_fasta
     File assembly_scaffolds_fasta
@@ -47,9 +42,6 @@ task GenerateCoverageStats {
   }
   command<<<
   set -euxo pipefail
-  if [[ -n "~{dag_branch}" ]]; then
-    pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
-  fi
   idseq-dag-run-step --workflow-name postprocess \
     --step-module idseq_dag.steps.generate_coverage_stats \
     --step-class PipelineStepGenerateCoverageStats \
@@ -73,7 +65,6 @@ task GenerateCoverageStats {
 task DownloadAccessions_gsnap_accessions_out {
   input {
     String docker_image_id
-    String dag_branch
     String s3_wd_uri
     File gsnap_out_gsnap_m8
     File gsnap_out_gsnap_deduped_m8
@@ -85,9 +76,6 @@ task DownloadAccessions_gsnap_accessions_out {
   }
   command<<<
   set -euxo pipefail
-  if [[ -n "~{dag_branch}" ]]; then
-    pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
-  fi
   idseq-dag-run-step --workflow-name postprocess \
     --step-module idseq_dag.steps.download_accessions \
     --step-class PipelineStepDownloadAccessions \
@@ -110,7 +98,6 @@ task DownloadAccessions_gsnap_accessions_out {
 task DownloadAccessions_rapsearch2_accessions_out {
   input {
     String docker_image_id
-    String dag_branch
     String s3_wd_uri
     File rapsearch2_out_rapsearch2_m8
     File rapsearch2_out_rapsearch2_deduped_m8
@@ -122,9 +109,6 @@ task DownloadAccessions_rapsearch2_accessions_out {
   }
   command<<<
   set -euxo pipefail
-  if [[ -n "~{dag_branch}" ]]; then
-    pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
-  fi
   idseq-dag-run-step --workflow-name postprocess \
     --step-module idseq_dag.steps.download_accessions \
     --step-class PipelineStepDownloadAccessions \
@@ -147,7 +131,6 @@ task DownloadAccessions_rapsearch2_accessions_out {
 task BlastContigs_refined_gsnap_out {
   input {
     String docker_image_id
-    String dag_branch
     String s3_wd_uri
     File gsnap_out_gsnap_m8
     File gsnap_out_gsnap_deduped_m8
@@ -167,9 +150,6 @@ task BlastContigs_refined_gsnap_out {
   }
   command<<<
   set -euxo pipefail
-  if [[ -n "~{dag_branch}" ]]; then
-    pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
-  fi
   idseq-dag-run-step --workflow-name postprocess \
     --step-module idseq_dag.steps.blast_contigs \
     --step-class PipelineStepBlastContigs \
@@ -197,7 +177,6 @@ task BlastContigs_refined_gsnap_out {
 task BlastContigs_refined_rapsearch2_out {
   input {
     String docker_image_id
-    String dag_branch
     String s3_wd_uri
     File rapsearch2_out_rapsearch2_m8
     File rapsearch2_out_rapsearch2_deduped_m8
@@ -215,9 +194,6 @@ task BlastContigs_refined_rapsearch2_out {
   }
   command<<<
   set -euxo pipefail
-  if [[ -n "~{dag_branch}" ]]; then
-    pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
-  fi
   idseq-dag-run-step --workflow-name postprocess \
     --step-module idseq_dag.steps.blast_contigs \
     --step-class PipelineStepBlastContigs \
@@ -245,7 +221,6 @@ task BlastContigs_refined_rapsearch2_out {
 task CombineTaxonCounts {
   input {
     String docker_image_id
-    String dag_branch
     String s3_wd_uri
     File assembly_gsnap_blast_m8
     File assembly_gsnap_reassigned_m8
@@ -262,9 +237,6 @@ task CombineTaxonCounts {
   }
   command<<<
   set -euxo pipefail
-  if [[ -n "~{dag_branch}" ]]; then
-    pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
-  fi
   idseq-dag-run-step --workflow-name postprocess \
     --step-module idseq_dag.steps.combine_taxon_counts \
     --step-class PipelineStepCombineTaxonCounts \
@@ -287,7 +259,6 @@ task CombineTaxonCounts {
 task CombineJson {
   input {
     String docker_image_id
-    String dag_branch
     String s3_wd_uri
     File assembly_gsnap_blast_m8
     File assembly_gsnap_reassigned_m8
@@ -304,9 +275,6 @@ task CombineJson {
   }
   command<<<
   set -euxo pipefail
-  if [[ -n "~{dag_branch}" ]]; then
-    pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
-  fi
   idseq-dag-run-step --workflow-name postprocess \
     --step-module idseq_dag.steps.combine_json \
     --step-class PipelineStepCombineJson \
@@ -329,7 +297,6 @@ task CombineJson {
 task GenerateAnnotatedFasta {
   input {
     String docker_image_id
-    String dag_branch
     String s3_wd_uri
     Array[File] host_filter_out_gsnap_filter_fa
     File assembly_gsnap_blast_m8
@@ -350,9 +317,6 @@ task GenerateAnnotatedFasta {
   }
   command<<<
   set -euxo pipefail
-  if [[ -n "~{dag_branch}" ]]; then
-    pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
-  fi
   idseq-dag-run-step --workflow-name postprocess \
     --step-module idseq_dag.steps.generate_annotated_fasta \
     --step-class PipelineStepGenerateAnnotatedFasta \
@@ -376,7 +340,6 @@ task GenerateAnnotatedFasta {
 task GenerateTaxidFasta {
   input {
     String docker_image_id
-    String dag_branch
     String s3_wd_uri
     File assembly_refined_annotated_merged_fa
     File assembly_refined_unidentified_fa
@@ -396,9 +359,6 @@ task GenerateTaxidFasta {
   }
   command<<<
   set -euxo pipefail
-  if [[ -n "~{dag_branch}" ]]; then
-    pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
-  fi
   idseq-dag-run-step --workflow-name postprocess \
     --step-module idseq_dag.steps.generate_taxid_fasta \
     --step-class PipelineStepGenerateTaxidFasta \
@@ -421,15 +381,11 @@ task GenerateTaxidFasta {
 task GenerateTaxidLocator {
   input {
     String docker_image_id
-    String dag_branch
     String s3_wd_uri
     File assembly_refined_taxid_annot_fasta
   }
   command<<<
   set -euxo pipefail
-  if [[ -n "~{dag_branch}" ]]; then
-    pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
-  fi
   idseq-dag-run-step --workflow-name postprocess \
     --step-module idseq_dag.steps.generate_taxid_locator \
     --step-class PipelineStepGenerateTaxidLocator \
@@ -464,7 +420,6 @@ task GenerateTaxidLocator {
 workflow idseq_postprocess {
   input {
     String docker_image_id
-    String dag_branch = ""
     String s3_wd_uri
     File host_filter_out_gsnap_filter_1_fa
     File? host_filter_out_gsnap_filter_2_fa
@@ -495,7 +450,6 @@ workflow idseq_postprocess {
   call RunAssembly {
     input:
       docker_image_id = docker_image_id,
-      dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       host_filter_out_gsnap_filter_fa = select_all([host_filter_out_gsnap_filter_1_fa, host_filter_out_gsnap_filter_2_fa, host_filter_out_gsnap_filter_merged_fa]),
       cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv = cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv
@@ -504,7 +458,6 @@ workflow idseq_postprocess {
   call GenerateCoverageStats {
     input:
       docker_image_id = docker_image_id,
-      dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       assembly_contigs_fasta = RunAssembly.assembly_contigs_fasta,
       assembly_scaffolds_fasta = RunAssembly.assembly_scaffolds_fasta,
@@ -515,7 +468,6 @@ workflow idseq_postprocess {
   call DownloadAccessions_gsnap_accessions_out {
     input:
       docker_image_id = docker_image_id,
-      dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       gsnap_out_gsnap_m8 = gsnap_out_gsnap_m8,
       gsnap_out_gsnap_deduped_m8 = gsnap_out_gsnap_deduped_m8,
@@ -529,7 +481,6 @@ workflow idseq_postprocess {
   call DownloadAccessions_rapsearch2_accessions_out {
     input:
       docker_image_id = docker_image_id,
-      dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       rapsearch2_out_rapsearch2_m8 = rapsearch2_out_rapsearch2_m8,
       rapsearch2_out_rapsearch2_deduped_m8 = rapsearch2_out_rapsearch2_deduped_m8,
@@ -543,7 +494,6 @@ workflow idseq_postprocess {
   call BlastContigs_refined_gsnap_out {
     input:
       docker_image_id = docker_image_id,
-      dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       gsnap_out_gsnap_m8 = gsnap_out_gsnap_m8,
       gsnap_out_gsnap_deduped_m8 = gsnap_out_gsnap_deduped_m8,
@@ -565,7 +515,6 @@ workflow idseq_postprocess {
   call BlastContigs_refined_rapsearch2_out {
     input:
       docker_image_id = docker_image_id,
-      dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       rapsearch2_out_rapsearch2_m8 = rapsearch2_out_rapsearch2_m8,
       rapsearch2_out_rapsearch2_deduped_m8 = rapsearch2_out_rapsearch2_deduped_m8,
@@ -585,7 +534,6 @@ workflow idseq_postprocess {
   call CombineTaxonCounts {
     input:
       docker_image_id = docker_image_id,
-      dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       assembly_gsnap_blast_m8 = BlastContigs_refined_gsnap_out.assembly_gsnap_blast_m8,
       assembly_gsnap_reassigned_m8 = BlastContigs_refined_gsnap_out.assembly_gsnap_reassigned_m8,
@@ -604,7 +552,6 @@ workflow idseq_postprocess {
   call CombineJson {
     input:
       docker_image_id = docker_image_id,
-      dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       assembly_gsnap_blast_m8 = BlastContigs_refined_gsnap_out.assembly_gsnap_blast_m8,
       assembly_gsnap_reassigned_m8 = BlastContigs_refined_gsnap_out.assembly_gsnap_reassigned_m8,
@@ -623,7 +570,6 @@ workflow idseq_postprocess {
   call GenerateAnnotatedFasta {
     input:
       docker_image_id = docker_image_id,
-      dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       host_filter_out_gsnap_filter_fa = select_all([host_filter_out_gsnap_filter_1_fa, host_filter_out_gsnap_filter_2_fa, host_filter_out_gsnap_filter_merged_fa]),
       assembly_gsnap_blast_m8 = BlastContigs_refined_gsnap_out.assembly_gsnap_blast_m8,
@@ -646,7 +592,6 @@ workflow idseq_postprocess {
   call GenerateTaxidFasta {
     input:
       docker_image_id = docker_image_id,
-      dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       assembly_refined_annotated_merged_fa = GenerateAnnotatedFasta.assembly_refined_annotated_merged_fa,
       assembly_refined_unidentified_fa = GenerateAnnotatedFasta.assembly_refined_unidentified_fa,
@@ -668,7 +613,6 @@ workflow idseq_postprocess {
   call GenerateTaxidLocator {
     input:
       docker_image_id = docker_image_id,
-      dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       assembly_refined_taxid_annot_fasta = GenerateTaxidFasta.assembly_refined_taxid_annot_fasta
   }

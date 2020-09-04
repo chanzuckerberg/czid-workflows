@@ -1,6 +1,5 @@
 {
   "docker_image_id": null,
-  "dag_branch": null,
   "s3_wd_uri": null,
   "validate_input_summary_json": "input_files/validate_input_summary.json",
   "valid_input_fastq": [

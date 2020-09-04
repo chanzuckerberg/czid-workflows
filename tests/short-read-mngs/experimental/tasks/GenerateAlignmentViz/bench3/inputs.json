@@ -1,6 +1,5 @@
 {
   "docker_image_id": "732052188396.dkr.ecr.us-east-2.amazonaws.com/idseq-main:sha-9c23348d87d042ba",
-  "dag_branch": "",
   "s3_wd_uri": "s3://DUMMY_BKT/",
   "gsnap_m8_gsnap_deduped_m8": "input_files/gsnap.deduped.m8",
   "taxid_annot_sorted_nt_fasta": "input_files/taxid_annot_sorted_nt.fasta",

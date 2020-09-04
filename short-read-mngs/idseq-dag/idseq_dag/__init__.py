@@ -1,2 +1,2 @@
 ''' idseq_dag '''
-__version__ = "4.11.9"
+__version__ = "EXTERNALLY_MANAGED"

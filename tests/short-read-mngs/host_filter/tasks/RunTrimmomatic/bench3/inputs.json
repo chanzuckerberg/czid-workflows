@@ -1,6 +1,5 @@
 {
   "docker_image_id": null,
-  "dag_branch": null,
   "s3_wd_uri": null,
   "unmapped_fastq": [
     "input_files/unmapped1.fastq",

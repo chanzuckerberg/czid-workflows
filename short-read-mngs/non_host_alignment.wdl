@@ -3,7 +3,6 @@ version 1.0
 task RunAlignment_gsnap_out {
   input {
     String docker_image_id
-    String dag_branch
     String s3_wd_uri
     String? genome_name
     Array[File] host_filter_out_gsnap_filter_fa
@@ -20,9 +19,6 @@ task RunAlignment_gsnap_out {
   }
   command<<<
   set -euxo pipefail
-  if [[ -n "~{dag_branch}" ]]; then
-    pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
-  fi
   idseq-dag-run-step --workflow-name non_host_alignment \
     --step-module idseq_dag.steps.run_alignment \
     --step-class PipelineStepRunAlignment \
@@ -48,7 +44,6 @@ task RunAlignment_gsnap_out {
 task RunAlignment_rapsearch2_out {
   input {
     String docker_image_id
-    String dag_branch
     String s3_wd_uri
     Array[File] host_filter_out_gsnap_filter_fa
     File cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv
@@ -62,9 +57,6 @@ task RunAlignment_rapsearch2_out {
   }
   command<<<
   set -euxo pipefail
-  if [[ -n "~{dag_branch}" ]]; then
-    pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
-  fi
   idseq-dag-run-step --workflow-name non_host_alignment \
     --step-module idseq_dag.steps.run_alignment \
     --step-class PipelineStepRunAlignment \
@@ -90,7 +82,6 @@ task RunAlignment_rapsearch2_out {
 task CombineTaxonCounts {
   input {
     String docker_image_id
-    String dag_branch
     String s3_wd_uri
     File gsnap_m8
     File gsnap_deduped_m8
@@ -103,9 +94,6 @@ task CombineTaxonCounts {
   }
   command<<<
   set -euxo pipefail
-  if [[ -n "~{dag_branch}" ]]; then
-    pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
-  fi
   idseq-dag-run-step --workflow-name non_host_alignment \
     --step-module idseq_dag.steps.combine_taxon_counts \
     --step-class PipelineStepCombineTaxonCounts \
@@ -128,7 +116,6 @@ task CombineTaxonCounts {
 task GenerateAnnotatedFasta {
   input {
     String docker_image_id
-    String dag_branch
     String s3_wd_uri
     Array[File] host_filter_out_gsnap_filter_fa
     File gsnap_m8
@@ -145,9 +132,6 @@ task GenerateAnnotatedFasta {
   }
   command<<<
   set -euxo pipefail
-  if [[ -n "~{dag_branch}" ]]; then
-    pip3 install --upgrade https://github.com/chanzuckerberg/idseq-dag/archive/~{dag_branch}.tar.gz
-  fi
   idseq-dag-run-step --workflow-name non_host_alignment \
     --step-module idseq_dag.steps.generate_annotated_fasta \
     --step-class PipelineStepGenerateAnnotatedFasta \
@@ -171,7 +155,6 @@ task GenerateAnnotatedFasta {
 workflow idseq_non_host_alignment {
   input {
     String docker_image_id
-    String dag_branch = ""
     String s3_wd_uri
     File host_filter_out_gsnap_filter_1_fa
     File? host_filter_out_gsnap_filter_2_fa
@@ -195,7 +178,6 @@ workflow idseq_non_host_alignment {
   call RunAlignment_gsnap_out {
     input:
       docker_image_id = docker_image_id,
-      dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       host_filter_out_gsnap_filter_fa = select_all([host_filter_out_gsnap_filter_1_fa, host_filter_out_gsnap_filter_2_fa, host_filter_out_gsnap_filter_merged_fa]),
       cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv = cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv,
@@ -214,7 +196,6 @@ workflow idseq_non_host_alignment {
   call RunAlignment_rapsearch2_out {
     input:
       docker_image_id = docker_image_id,
-      dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       host_filter_out_gsnap_filter_fa = select_all([host_filter_out_gsnap_filter_1_fa, host_filter_out_gsnap_filter_2_fa, host_filter_out_gsnap_filter_merged_fa]),
       cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv = cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv,
@@ -230,7 +211,6 @@ workflow idseq_non_host_alignment {
   call CombineTaxonCounts {
     input:
       docker_image_id = docker_image_id,
-      dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       gsnap_m8 = RunAlignment_gsnap_out.gsnap_m8,
       gsnap_deduped_m8 = RunAlignment_gsnap_out.gsnap_deduped_m8,
@@ -245,7 +225,6 @@ workflow idseq_non_host_alignment {
   call GenerateAnnotatedFasta {
     input:
       docker_image_id = docker_image_id,
-      dag_branch = dag_branch,
       s3_wd_uri = s3_wd_uri,
       host_filter_out_gsnap_filter_fa = select_all([host_filter_out_gsnap_filter_1_fa, host_filter_out_gsnap_filter_2_fa, host_filter_out_gsnap_filter_merged_fa]),
       gsnap_m8 = RunAlignment_gsnap_out.gsnap_m8,

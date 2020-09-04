@@ -12,9 +12,7 @@ class ReadCountingMode(Enum):
     COUNT_ALL = "COUNT ALL READS"
 
 
-# Feel free to delete the support for COUNT_UNIQUE after pipeline 4.0 has been released and well accepted.
-PIPELINE_MAJOR_VERSION = int(__version__.split(".", 1)[0])
-READ_COUNTING_MODE = ReadCountingMode.COUNT_ALL if PIPELINE_MAJOR_VERSION >= 4 else ReadCountingMode.COUNT_UNIQUE
+READ_COUNTING_MODE = ReadCountingMode.COUNT_ALL
 
 GZIP_MAGIC_HEADER = b'\037\213'
 
