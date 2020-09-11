@@ -12,7 +12,8 @@ IDseq is a collaborative open project of [Chan Zuckerberg Initiative](https://ww
 [Chan Zuckerberg Biohub](https://czbiohub.org).
 
 This repository contains [WDL](https://openwdl.org/) workflows that the [IDseq](https://idseq.net/) platform uses in
-production.
+production. See [Running WDL workflows locally](https://github.com/chanzuckerberg/idseq-workflows/wiki/Running-WDL-workflows-locally)
+to get started with them.
 
 # CI/CD
 

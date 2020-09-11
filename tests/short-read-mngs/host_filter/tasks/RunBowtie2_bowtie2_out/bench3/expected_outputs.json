@@ -1,6 +1,0 @@
-{
-  "RunBowtie2_bowtie2_out.bowtie2_1_fa": "expected_output_files/bowtie2_1.fa",
-  "RunBowtie2_bowtie2_out.bowtie2_2_fa": "expected_output_files/bowtie2_2.fa",
-  "RunBowtie2_bowtie2_out.bowtie2_merged_fa": "expected_output_files/bowtie2_merged.fa",
-  "RunBowtie2_bowtie2_out.output_read_count": "expected_output_files/bowtie2_out.count"
-}

@@ -1,9 +1,0 @@
-{
-  "BlastContigs_refined_rapsearch2_out.assembly_rapsearch2_blast_m8": "expected_output_files/rapsearch2.blast.m8",
-  "BlastContigs_refined_rapsearch2_out.assembly_rapsearch2_reassigned_m8": "expected_output_files/rapsearch2.reassigned.m8",
-  "BlastContigs_refined_rapsearch2_out.assembly_rapsearch2_hitsummary2_tab": "expected_output_files/rapsearch2.hitsummary2.tab",
-  "BlastContigs_refined_rapsearch2_out.assembly_refined_rapsearch2_counts_with_dcr_json": "expected_output_files/refined_rapsearch2_counts_with_dcr.json",
-  "BlastContigs_refined_rapsearch2_out.assembly_rapsearch2_contig_summary_json": "expected_output_files/rapsearch2_contig_summary.json",
-  "BlastContigs_refined_rapsearch2_out.assembly_rapsearch2_blast_top_m8": "expected_output_files/rapsearch2.blast.top.m8",
-  "BlastContigs_refined_rapsearch2_out.output_read_count": null
-}

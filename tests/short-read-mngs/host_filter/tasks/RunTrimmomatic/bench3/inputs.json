@@ -1,9 +1,0 @@
-{
-  "docker_image_id": null,
-  "s3_wd_uri": null,
-  "unmapped_fastq": [
-    "input_files/unmapped1.fastq",
-    "input_files/unmapped2.fastq"
-  ],
-  "adapter_fasta": "https://raw.githubusercontent.com/broadinstitute/viral-pipelines/master/test/input/clipDb.fasta"
-}

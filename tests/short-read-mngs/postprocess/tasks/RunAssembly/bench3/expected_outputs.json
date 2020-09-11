@@ -1,7 +1,0 @@
-{
-  "RunAssembly.assembly_contigs_fasta": "expected_output_files/contigs.fasta",
-  "RunAssembly.assembly_scaffolds_fasta": "expected_output_files/scaffolds.fasta",
-  "RunAssembly.assembly_read_contig_sam": "expected_output_files/read-contig.sam",
-  "RunAssembly.assembly_contig_stats_json": "expected_output_files/contig_stats.json",
-  "RunAssembly.output_read_count": null
-}

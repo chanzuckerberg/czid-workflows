@@ -1,8 +1,0 @@
-{
-  "GenerateCoverageViz.coverage_viz_summary_json": "expected_output_files/coverage_viz_summary.json",
-  "GenerateCoverageViz.output_read_count": null,
-  "GenerateCoverageViz.coverage_viz": [
-    "expected_output_files/MG049915.1_coverage_viz.json",
-    "expected_output_files/MG148341.1_coverage_viz.json"
-  ]
-}

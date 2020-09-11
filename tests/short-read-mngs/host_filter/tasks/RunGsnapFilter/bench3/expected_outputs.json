@@ -1,6 +1,0 @@
-{
-  "RunGsnapFilter.gsnap_filter_1_fa": "expected_output_files/gsnap_filter_1.fa",
-  "RunGsnapFilter.gsnap_filter_2_fa": "expected_output_files/gsnap_filter_2.fa",
-  "RunGsnapFilter.gsnap_filter_merged_fa": "expected_output_files/gsnap_filter_merged.fa",
-  "RunGsnapFilter.output_read_count": "expected_output_files/gsnap_filter_out.count"
-}

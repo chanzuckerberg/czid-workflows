@@ -1,9 +1,0 @@
-{
-  "docker_image_id": null,
-  "s3_wd_uri": null,
-  "fastqs": [
-    "invalid.fastq"
-  ],
-  "file_ext": "fastq",
-  "max_input_fragments": 9000
-}

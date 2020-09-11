@@ -1,5 +1,0 @@
-{
-  "GenerateAnnotatedFasta.assembly_refined_annotated_merged_fa": "expected_output_files/refined_annotated_merged.fa",
-  "GenerateAnnotatedFasta.assembly_refined_unidentified_fa": "expected_output_files/refined_unidentified.fa",
-  "GenerateAnnotatedFasta.output_read_count": "expected_output_files/refined_annotated_out.count"
-}

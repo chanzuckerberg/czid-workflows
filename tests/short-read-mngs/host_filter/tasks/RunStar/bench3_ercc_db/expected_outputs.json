@@ -1,8 +1,0 @@
-{
-  "RunStar.unmapped1_fastq": "expected_output_files/unmapped1.fastq",
-  "RunStar.unmapped2_fastq": "expected_output_files/unmapped2.fastq",
-  "RunStar.output_read_count": "expected_output_files/star_out.count",
-  "RunStar.output_gene_file": "expected_output_files/reads_per_gene.star.tab",
-  "RunStar.output_metrics_file": null,
-  "RunStar.output_histogram_file": null
-}

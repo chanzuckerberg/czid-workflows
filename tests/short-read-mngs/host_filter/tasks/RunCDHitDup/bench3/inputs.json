@@ -1,8 +1,0 @@
-{
-  "docker_image_id": null,
-  "s3_wd_uri": null,
-  "priceseq_fa": [
-    "input_files/priceseq1.fa",
-    "input_files/priceseq2.fa"
-  ]
-}

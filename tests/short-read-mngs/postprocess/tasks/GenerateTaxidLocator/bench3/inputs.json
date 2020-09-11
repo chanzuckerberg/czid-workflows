@@ -1,5 +1,0 @@
-{
-  "docker_image_id": "732052188396.dkr.ecr.us-east-2.amazonaws.com/idseq-main:sha-9c23348d87d042ba",
-  "s3_wd_uri": "s3://DUMMY_BKT/",
-  "assembly_refined_taxid_annot_fasta": "input_files/refined_taxid_annot.fasta"
-}
