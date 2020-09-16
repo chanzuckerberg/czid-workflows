@@ -4,9 +4,6 @@ ARG MINIWDL_VERSION=0.7.5
 
 LABEL maintainer="IDseq Team idseq-tech@chanzuckerberg.com"
 
-RUN sed -i s/archive.ubuntu.com/us-west-2.ec2.archive.ubuntu.com/ /etc/apt/sources.list; \
-        echo 'APT::Install-Recommends "false";' > /etc/apt/apt.conf.d/98idseq; \
-        echo 'APT::Install-Suggests "false";' > /etc/apt/apt.conf.d/99idseq
 
 RUN apt-get -q update
 RUN apt-get -q install -y \
