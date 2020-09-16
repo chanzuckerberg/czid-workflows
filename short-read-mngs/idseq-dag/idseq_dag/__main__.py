@@ -21,7 +21,6 @@ def main():
     from idseq_dag.engine.pipeline_flow import PipelineFlow
     import idseq_dag.util.log as log
     log.configure_logger()
-    print("YAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAY")
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--version', action='version',

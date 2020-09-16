@@ -133,6 +133,7 @@ class PipelineStepRunStar(PipelineStep):
     def run(self):
         """Run STAR to filter out host reads."""
         # Setup
+        log.write("YAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAY")
         if self.sequence_input_files is not None and self.validated_input_counts_file is not None:
             validated_input_counts_file = self.validated_input_counts_file
             input_files = self.sequence_input_files
