@@ -10,6 +10,7 @@ import idseq_dag.util.command_patterns as command_patterns
 from idseq_dag.util.m8 import MIN_CONTIG_SIZE
 from idseq_dag.util.count import get_read_cluster_size, load_cdhit_cluster_sizes, READ_COUNTING_MODE, ReadCountingMode
 
+MIN_CONTIG_LENGTH = 100
 
 class PipelineStepRunAssembly(PipelineStep):
     """ To obtain longer contigs for improved sensitivity in mapping, short reads must be
@@ -124,7 +125,8 @@ class PipelineStepRunAssembly(PipelineStep):
                         ]
                     )
                 )
-            command.move_file(assembled_contig_tmp, assembled_contig)
+            PipelineStepRunAssembly.filter_contigs(assembled_contig_tmp, assembled_contig)
+            #command.move_file(assembled_contig_tmp, assembled_contig)
             command.move_file(assembled_scaffold_tmp, assembled_scaffold)
 
             PipelineStepRunAssembly.generate_read_to_contig_mapping(assembled_contig, bowtie_fasta,
@@ -137,6 +139,27 @@ class PipelineStepRunAssembly(PipelineStep):
             command.write_text_to_file('{}', contig_stats)
             traceback.print_exc()
         command.remove_rf(assembled_dir)
+
+    @staticmethod
+    def filter_contigs(assembled_contig_tmp, assembled_contig):
+        file1 = open(assembled_contig_tmp, 'r')
+        file2 = open(assembled_contig, 'w')
+        emit_this_seq = False
+        while True:
+            line = file1.readline().strip()
+            if not line:
+                break
+            if line[0] == '>':
+                length = int(line.split('_')[3])
+                if length > MIN_CONTIG_LENGTH:
+                    emit_this_seq = True
+                else:
+                    emit_this_seq = False
+            # write passing contigs to final contig file
+            if emit_this_seq:
+                file2.write(line + '\n')
+        file1.close()
+        file2.close()
 
     @staticmethod
     def generate_read_to_contig_mapping(assembled_contig,
