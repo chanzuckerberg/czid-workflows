@@ -1,5 +1,5 @@
 # The following pipeline was initially based on previous work at: https://github.com/czbiohub/sc2-illumina-pipeline
-# workflow version: consensus-genomes-1.2.4
+# workflow version: consensus-genomes-1.2.5
 version 1.0
 
 workflow consensus_genome {
@@ -39,7 +39,6 @@ workflow consensus_genome {
 
         # Dummy values - required by SFN interface
         String s3_wd_uri
-        String dag_branch
     }
 
     call RemoveHost {
