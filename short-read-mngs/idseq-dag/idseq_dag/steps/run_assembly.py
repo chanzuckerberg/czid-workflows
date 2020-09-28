@@ -125,8 +125,8 @@ class PipelineStepRunAssembly(PipelineStep):
                         ]
                     )
                 )
-            #PipelineStepRunAssembly.filter_contigs(assembled_contig_tmp, assembled_contig)
-            command.move_file(assembled_contig_tmp, assembled_contig)
+            PipelineStepRunAssembly.filter_contigs(assembled_contig_tmp, assembled_contig)
+            #command.move_file(assembled_contig_tmp, assembled_contig)
             command.move_file(assembled_scaffold_tmp, assembled_scaffold)
 
             PipelineStepRunAssembly.generate_read_to_contig_mapping(assembled_contig, bowtie_fasta,
