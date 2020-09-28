@@ -1,12 +1,12 @@
 # The following pipeline was initially based on previous work at: https://github.com/czbiohub/sc2-illumina-pipeline
-# workflow version: consensus-genomes-1.2.5
+# workflow version: consensus-genomes-1.3.0
 version 1.0
 
 workflow consensus_genome {
     input {
         # Required parameters
         File fastqs_0
-        File fastqs_1
+        File? fastqs_1
 
         String docker_image_id
         File ercc_fasta
@@ -44,8 +44,7 @@ workflow consensus_genome {
     call RemoveHost {
         input:
             prefix = prefix,
-            fastqs_0 = fastqs_0,
-            fastqs_1 = fastqs_1,
+            fastqs = select_all([fastqs_0, fastqs_1]),
             ref_host = ref_host,
             docker_image_id = docker_image_id
     }
@@ -53,8 +52,7 @@ workflow consensus_genome {
     call QuantifyERCCs {
         input:
             prefix = prefix,
-            fastqs_0 = RemoveHost.host_removed_fastqs_0,
-            fastqs_1 = RemoveHost.host_removed_fastqs_1,
+            fastqs = RemoveHost.host_removed_fastqs,
             ercc_fasta = ercc_fasta,
             docker_image_id = docker_image_id
     }
@@ -62,8 +60,7 @@ workflow consensus_genome {
     call FilterReads {
         input:
             prefix = prefix,
-            fastqs_0 = RemoveHost.host_removed_fastqs_0,
-            fastqs_1 = RemoveHost.host_removed_fastqs_1,
+            fastqs = RemoveHost.host_removed_fastqs,
             ref_fasta = ref_fasta,
             kraken2_db_tar_gz = kraken2_db_tar_gz,
             docker_image_id = docker_image_id
@@ -72,8 +69,7 @@ workflow consensus_genome {
     if (trim_adapters) {
         call TrimReads {
             input:
-                fastqs_0 = FilterReads.filtered_fastqs_0,
-                fastqs_1 = FilterReads.filtered_fastqs_1,
+                fastqs = FilterReads.filtered_fastqs,
                 docker_image_id = docker_image_id
         }
     }
@@ -83,8 +79,7 @@ workflow consensus_genome {
             prefix = prefix,
             sample = sample,
             # use trimReads output if we ran it; otherwise fall back to FilterReads output
-            fastqs_0 = select_first([TrimReads.trimmed_fastqs_0, FilterReads.filtered_fastqs_0]),
-            fastqs_1 = select_first([TrimReads.trimmed_fastqs_1, FilterReads.filtered_fastqs_1]),
+            fastqs = select_first([TrimReads.trimmed_fastqs, FilterReads.filtered_fastqs]),
             ref_fasta = ref_fasta,
             docker_image_id = docker_image_id
     }
@@ -114,8 +109,7 @@ workflow consensus_genome {
             assembly = MakeConsensus.consensus_fa,
             bam = TrimPrimers.trimmed_bam_ch,
             # use trimReads output if we ran it; otherwise fall back to FilterReads output
-            fastqs_0 = select_first([TrimReads.trimmed_fastqs_0, FilterReads.filtered_fastqs_0]),
-            fastqs_1 = select_first([TrimReads.trimmed_fastqs_1, FilterReads.filtered_fastqs_1]),
+            fastqs = select_first([TrimReads.trimmed_fastqs, FilterReads.filtered_fastqs]),
             ref_fasta = ref_fasta,
             no_reads_quast = no_reads_quast,
             docker_image_id = docker_image_id
@@ -139,8 +133,7 @@ workflow consensus_genome {
             assembly = MakeConsensus.consensus_fa,
             ercc_stats = QuantifyERCCs.ercc_out,
             vcf = CallVariants.variants_ch,
-            fastqs_0 = fastqs_0,
-            fastqs_1 = fastqs_1,
+            fastqs = select_all([fastqs_0, fastqs_1]),
             ref_host = ref_host,
             docker_image_id = docker_image_id
     }
@@ -148,32 +141,30 @@ workflow consensus_genome {
     call ZipOutputs {
         input:
             prefix = prefix,
-            outputFiles = select_all([
-                RemoveHost.host_removed_fastqs_0,
-                RemoveHost.host_removed_fastqs_1,
-                MakeConsensus.consensus_fa,
-                ComputeStats.depths_fig,
-                TrimPrimers.trimmed_bam_ch,
-                TrimPrimers.trimmed_bam_bai,
-                Quast.quast_txt,
-                Quast.quast_tsv,
-                AlignReads.alignments,
-                QuantifyERCCs.ercc_out,
-                QuantifyERCCs.ercc_out,
-                ComputeStats.output_stats,
-                CallVariants.variants_ch
-            ]),
+            outputFiles = select_all(flatten([
+                RemoveHost.host_removed_fastqs,
+                select_all([
+                    MakeConsensus.consensus_fa,
+                    ComputeStats.depths_fig,
+                    TrimPrimers.trimmed_bam_ch,
+                    TrimPrimers.trimmed_bam_bai,
+                    Quast.quast_txt,
+                    Quast.quast_tsv,
+                    AlignReads.alignments,
+                    QuantifyERCCs.ercc_out,
+                    QuantifyERCCs.ercc_out,
+                    ComputeStats.output_stats,
+                    CallVariants.variants_ch
+                ])
+            ])),
             docker_image_id = docker_image_id
     }
 
     output {
-        File  remove_host_out_host_removed_fastqs_0 = RemoveHost.host_removed_fastqs_0
-        File  remove_host__out_host_removed_fastqs_1 = RemoveHost.host_removed_fastqs_1
-        File  quantify_erccs_out_ercc_out = QuantifyERCCs.ercc_out
-        File  filter_reads_out_filtered_fastqs_0 = FilterReads.filtered_fastqs_0
-        File  filter_reads_out_filtered_fastqs_1 = FilterReads.filtered_fastqs_1
-        File? trim_reads_out_trimmed_fastqs_0 = TrimReads.trimmed_fastqs_0
-        File? trim_reads_out_trimmed_fastqs_1 = TrimReads.trimmed_fastqs_1
+        Array[File] remove_host_out_host_removed_fastqs = RemoveHost.host_removed_fastqs
+        File quantify_erccs_out_ercc_out = QuantifyERCCs.ercc_out
+        Array[File]+ filter_reads_out_filtered_fastqs = FilterReads.filtered_fastqs
+        Array[File]+? trim_reads_out_trimmed_fastqs = TrimReads.trimmed_fastqs
         File? align_reads_out_alignments = AlignReads.alignments
         File? trim_primers_out_trimmed_bam_ch = TrimPrimers.trimmed_bam_ch
         File? trim_primers_out_trimmed_bam_bai = TrimPrimers.trimmed_bam_bai
@@ -184,7 +175,7 @@ workflow consensus_genome {
         File? compute_stats_out_depths_fig = ComputeStats.depths_fig
         File? compute_stats_out_output_stats = ComputeStats.output_stats
         File? compute_stats_out_sam_depths = ComputeStats.sam_depths
-        File  zip_outputs_out_output_zip = ZipOutputs.output_zip
+        File zip_outputs_out_output_zip = ZipOutputs.output_zip
     }
 }
 
@@ -193,8 +184,7 @@ workflow consensus_genome {
 task RemoveHost {
     input {
         String prefix
-        File fastqs_0
-        File fastqs_1
+        Array[File]+ fastqs
         File ref_host
 
         String docker_image_id
@@ -204,11 +194,17 @@ task RemoveHost {
         set -euxo pipefail
 
         export CORES=`nproc --all`
-        minimap2 -t $CORES -ax sr ~{ref_host} ~{fastqs_0} ~{fastqs_1} | \
-        samtools view -@ $CORES -b -f 4 | \
-        samtools fastq -@ $CORES -1 "~{prefix}no_host_1.fq.gz" -2 "~{prefix}no_host_2.fq.gz" -0 /dev/null -s /dev/null -n -c 6 -
+        if [[ "~{length(fastqs)}" == 1 ]]; then
+            minimap2 -t $CORES -ax sr ~{ref_host} ~{fastqs[0]} | \
+            samtools view -@ $CORES -b -f 4 | \
+            samtools fastq -@ $CORES -0 "~{prefix}no_host_1.fq.gz" -n -c 6 -
+        else
+            minimap2 -t $CORES -ax sr ~{ref_host} ~{sep=' ' fastqs} | \
+            samtools view -@ $CORES -b -f 4 | \
+            samtools fastq -@ $CORES -1 "~{prefix}no_host_1.fq.gz" -2 "~{prefix}no_host_2.fq.gz" -0 /dev/null -s /dev/null -n -c 6 -
+        fi
 
-        if [ -z $(gzip -cd "~{prefix}no_host_1.fq.gz" | head -c1) ] && [ -z $(gzip -cd "~{prefix}no_host_2.fq.gz" | head -c1) ]; then
+        if [ -z $(gzip -cd "~{prefix}no_host_1.fq.gz" | head -c1) ] && ([-z "~{prefix}no_host_2.fq.gz"] || [ -z $(gzip -cd "~{prefix}no_host_2.fq.gz" | head -c1) ]); then
             set +x
             >&2 echo "{\"wdl_error_message\": true, \"error\": \"InsufficientReadsError\", \"cause\": \"No reads after RemoveHost\"}"
             exit 1
@@ -216,8 +212,7 @@ task RemoveHost {
     >>>
 
     output {
-        File host_removed_fastqs_0 = "~{prefix}no_host_1.fq.gz"
-        File host_removed_fastqs_1 = "~{prefix}no_host_2.fq.gz"
+        Array[File] host_removed_fastqs = glob("~{prefix}no_host_*.fq.gz")
     }
 
     runtime {
@@ -228,8 +223,7 @@ task RemoveHost {
 task QuantifyERCCs {
     input {
         String prefix
-        File fastqs_0
-        File fastqs_1
+        Array[File]+ fastqs
         File ercc_fasta
 
         String docker_image_id
@@ -238,7 +232,7 @@ task QuantifyERCCs {
     command <<<
         set -euxo pipefail
 
-        minimap2 -ax sr ~{ercc_fasta} ~{fastqs_0} ~{fastqs_1} | samtools view -bo ercc_mapped.bam
+        minimap2 -ax sr ~{ercc_fasta} ~{sep=' ' fastqs} | samtools view -bo ercc_mapped.bam
         samtools stats ercc_mapped.bam > "~{prefix}ercc_stats.txt"
     >>>
 
@@ -256,8 +250,7 @@ task FilterReads {
         String prefix
         # SARS-CoV-2 default
         String taxid = "2697049"
-        File fastqs_0
-        File fastqs_1
+        Array[File]+ fastqs
 
         File ref_fasta
         File kraken2_db_tar_gz
@@ -266,51 +259,68 @@ task FilterReads {
     }
 
     command <<<
+        _no_reads_error() {
+            set +x
+            >&2 echo "{\"wdl_error_message\": true, \"error\": \"InsufficientReadsError\", \"cause\": \"No reads after FilterReads\"}"
+            exit 1
+        }
+
         set -euxo pipefail
 
         export TMPDIR=${TMPDIR:-/tmp}
         export CORES=`nproc --all`
 
-        minimap2 -ax sr -t $CORES "~{ref_fasta}" ~{fastqs_0} ~{fastqs_1} \
+        minimap2 -ax sr -t $CORES "~{ref_fasta}" ~{sep=' ' fastqs} \
             | samtools sort -@ $CORES -n -O bam -o "${TMPDIR}/mapped.bam"
-        samtools fastq -@ $CORES -G 12 -1 "${TMPDIR}/paired1.fq.gz" -2 "${TMPDIR}/paired2.fq.gz" \
-            -0 /dev/null -s /dev/null -n -c 6 "${TMPDIR}/mapped.bam"
+
+        if [[ "~{length(fastqs)}" == 1 ]]; then
+            samtools fastq -@ $CORES -G 12 -0 "${TMPDIR}/paired1.fq.gz" -n -c 6 "${TMPDIR}/mapped.bam"
+        else
+            samtools fastq -@ $CORES -G 12 -1 "${TMPDIR}/paired1.fq.gz" -2 "${TMPDIR}/paired2.fq.gz" \
+                -0 /dev/null -s /dev/null -n -c 6 "${TMPDIR}/mapped.bam"
+        fi
 
         paired1size=$(stat --printf="%s" "${TMPDIR}/paired1.fq.gz")
         if (( paired1size > 28 )); then
+            if [[ "~{length(fastqs)}" == 1 ]]; then
+                KRAKEN_ARGS="${TMPDIR}/paired1.fq.gz"
+                KRAKEN_OUTPUT_ARG="${TMPDIR}/~{prefix}classified_1.fq"
+            else
+                KRAKEN_ARGS="--paired ${TMPDIR}/paired1.fq.gz ${TMPDIR}/paired2.fq.gz"
+                KRAKEN_OUTPUT_ARG="${TMPDIR}/~{prefix}classified#.fq"
+            fi
+
             mkdir "${TMPDIR}/kraken_db"
             tar -xzv -C "${TMPDIR}/kraken_db" -f "~{kraken2_db_tar_gz}"
-            kraken2 --db "${TMPDIR}"/kraken_db/* \
+            kraken2 --db ${TMPDIR}/kraken_db/* \
                 --threads $CORES \
-                --report "${TMPDIR}/~{prefix}kraken2_report.txt" \
-                --classified-out "${TMPDIR}/~{prefix}classified#.fq" \
+                --report ${TMPDIR}/~{prefix}kraken2_report.txt \
+                --classified-out $KRAKEN_OUTPUT_ARG \
                 --output - \
-                --memory-mapping --gzip-compressed --paired \
-                "${TMPDIR}/paired1.fq.gz" "${TMPDIR}/paired2.fq.gz"
+                --memory-mapping --gzip-compressed \
+                $KRAKEN_ARGS
 
             grep --no-group-separator -A3 "kraken:taxid|~{taxid}" \
                 "${TMPDIR}/~{prefix}classified_1.fq" \
-                > "${TMPDIR}/~{prefix}filtered_1.fq" || [[ \$? == 1 ]]
-            grep --no-group-separator -A3 "kraken:taxid|~{taxid}" \
+                > "${TMPDIR}/~{prefix}filtered_1.fq" || _no_reads_error
+            [[ "~{length(fastqs)}" == 1 ]] || grep --no-group-separator -A3 "kraken:taxid|~{taxid}" \
                 "${TMPDIR}/~{prefix}classified_2.fq" \
-                > "${TMPDIR}/~{prefix}filtered_2.fq" || [[ \$? == 1 ]]
+                > "${TMPDIR}/~{prefix}filtered_2.fq" || _no_reads_error
             bgzip -@ $CORES -c "${TMPDIR}/~{prefix}filtered_1.fq" > "~{prefix}filtered_1.fq.gz"
-            bgzip -@ $CORES -c "${TMPDIR}/~{prefix}filtered_2.fq" > "~{prefix}filtered_2.fq.gz"
+            [[ "~{length(fastqs)}" == 1 ]] || bgzip -@ $CORES -c "${TMPDIR}/~{prefix}filtered_2.fq" > "~{prefix}filtered_2.fq.gz"
         else
             mv "${TMPDIR}/paired1.fq.gz" "~{prefix}filtered_1.fq.gz"
-            mv "${TMPDIR}/paired2.fq.gz" "~{prefix}filtered_2.fq.gz"
+            [[ "~{length(fastqs)}" == 1 ]] || mv "${TMPDIR}/paired2.fq.gz" "~{prefix}filtered_2.fq.gz"
         fi
 
-        if [ -z $(gzip -cd "~{prefix}filtered_1.fq.gz" | head -c1) ] && [ -z $(gzip -cd "~{prefix}filtered_2.fq.gz" | head -c1) ]; then
-            set +x
-            >&2 echo "{\"wdl_error_message\": true, \"error\": \"InsufficientReadsError\", \"cause\": \"No reads after FilterReads\"}"
-            exit 1
+        echo `gzip -cd "~{prefix}filtered_1.fq.gz" | head -c1`
+        if [ -z $(gzip -cd "~{prefix}filtered_1.fq.gz" | head -c1) ] && ([[ "~{length(fastqs)}" == 1 ]] || [ -z $(gzip -cd "~{prefix}filtered_2.fq.gz" | head -c1) ]); then
+            _no_reads_error
         fi
     >>>
 
     output {
-        File filtered_fastqs_0 = "~{prefix}filtered_1.fq.gz"
-        File filtered_fastqs_1 = "~{prefix}filtered_2.fq.gz"
+        Array[File]+ filtered_fastqs = glob("~{prefix}filtered_*.fq.gz")
     }
 
     runtime {
@@ -320,8 +330,7 @@ task FilterReads {
 
 task TrimReads {
     input {
-        File fastqs_0
-        File fastqs_1
+        Array[File]+ fastqs
 
         String docker_image_id
     }
@@ -329,9 +338,15 @@ task TrimReads {
     command <<<
         set -euxo pipefail
 
-        trim_galore --gzip --fastqc --paired "~{fastqs_0}" "~{fastqs_1}"
+        BASENAME="trim_reads"
+        if [[ "~{length(fastqs)}" == 1 ]]; then
+            trim_galore --gzip --fastqc "~{fastqs[0]}" --basename $BASENAME
+            mv "${BASENAME}_trimmed.fq.gz" "${BASENAME}_val_1.fq.gz"
+        else
+            trim_galore --gzip --fastqc --paired --basename $BASENAME ~{sep=' ' fastqs}
+        fi
 
-        if [ -z $(gzip -cd "~{basename(fastqs_0, '.fq.gz')}_val_1.fq.gz" | head -c1) ] && [ -z $(gzip -cd "~{basename(fastqs_1, '.fq.gz')}_val_2.fq.gz" | head -c1) ]; then
+        if [ -z $(gzip -cd "${BASENAME}_val_1.fq.gz" | head -c1) ] && ([[ "~{length(fastqs)}" == 1 ]] || [ -z $(gzip -cd "${BASENAME}_val_2.fq.gz" | head -c1) ]); then
             set +x
             >&2 echo "{\"wdl_error_message\": true, \"error\": \"InsufficientReadsError\", \"cause\": \"No reads after TrimReads\"}"
             exit 1
@@ -339,8 +354,7 @@ task TrimReads {
     >>>
 
     output {
-        File trimmed_fastqs_0 = "~{basename(fastqs_0, '.fq.gz')}_val_1.fq.gz"
-        File trimmed_fastqs_1 = "~{basename(fastqs_1, '.fq.gz')}_val_2.fq.gz"
+        Array[File]+ trimmed_fastqs = glob("*_val_1.fq.gz")
     }
 
     runtime {
@@ -353,8 +367,7 @@ task AlignReads {
     input {
         String prefix
         String sample
-        File fastqs_0
-        File fastqs_1
+        Array[File]+ fastqs
         File ref_fasta
 
         String docker_image_id
@@ -366,7 +379,7 @@ task AlignReads {
         export CORES=`nproc --all`
 
         # Sample id included in the bam files
-        minimap2 -ax sr -t $CORES -R '@RG\tID:~{sample}\tSM:~{sample}' "~{ref_fasta}" "~{fastqs_0}" "~{fastqs_1}" \
+        minimap2 -ax sr -t $CORES -R '@RG\tID:~{sample}\tSM:~{sample}' "~{ref_fasta}" ~{sep=' ' fastqs} \
             | samtools sort -@ $CORES -O bam -o "~{prefix}aligned_reads.bam"
     >>>
 
@@ -447,8 +460,7 @@ task Quast {
         String prefix
         File assembly   # same as consensus_fa
         File bam
-        File fastqs_0
-        File fastqs_1
+        Array[File]+ fastqs
         File ref_fasta
 
         String no_reads_quast
@@ -468,7 +480,11 @@ task Quast {
             if [ ~{no_reads_quast} = true ]; then
                 quast --min-contig 0 -o quast -r "~{ref_fasta}" -t $CORES --ref-bam "~{bam}" "~{assembly}"
             else
-                quast --min-contig 0 -o quast -r "~{ref_fasta}" -t $CORES --ref-bam "~{bam}" "~{assembly}" -1 "~{fastqs_0}" -2 "~{fastqs_1}"
+                if [[ "~{length(fastqs)}" == 1 ]]; then
+                    quast --min-contig 0 -o quast -r "~{ref_fasta}" -t $CORES --ref-bam "~{bam}" "~{assembly}" --single "~{fastqs[0]}"
+                else
+                    quast --min-contig 0 -o quast -r "~{ref_fasta}" -t $CORES --ref-bam "~{bam}" "~{assembly}" -1 ~{sep=' -2 ' fastqs}
+                fi
             fi
         else
             mkdir quast
@@ -527,8 +543,7 @@ task ComputeStats {
         File ercc_stats
         File vcf
 
-        File fastqs_0
-        File fastqs_1
+        Array[File]+ fastqs
         File ref_host
 
         String docker_image_id
@@ -545,9 +560,9 @@ task ComputeStats {
 
         import argparse
         import collections
+        import gzip
         import json
         import re
-        import subprocess
         import pysam
         from Bio import SeqIO
         import numpy as np
@@ -580,7 +595,18 @@ task ComputeStats {
         seq, = SeqIO.parse("~{assembly}", "fasta")
         stats["allele_counts"] = dict(collections.Counter(str(seq.seq)))
 
-        fq_lines = subprocess.run(" ".join(["zcat"] + ["~{fastqs_0}", "~{fastqs_1}"]) + " | wc -l", shell=True, stdout=subprocess.PIPE).stdout
+        fq_list=list(filter(None, ["~{sep='\",\"' fastqs}"]))
+        try:
+            fq_lines = 0
+            for fq_file in fq_list:
+                with gzip.open(fq_file, 'r') as f:
+                    for line in f: fq_lines += 1
+        except OSError:
+            fq_lines = 0
+            for fq_file in fq_list:
+                with open(fq_file, 'r') as f:
+                    for line in f: fq_lines += 1
+
         stats["total_reads"] = int(int(fq_lines) / 4)
 
         with open("~{prefix}samtools_stats.txt") as f:
