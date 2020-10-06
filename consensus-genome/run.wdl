@@ -1,5 +1,5 @@
 # The following pipeline was initially based on previous work at: https://github.com/czbiohub/sc2-illumina-pipeline
-# workflow version: consensus-genomes-1.3.0
+# workflow version: consensus-genomes-1.4.0
 version 1.0
 
 workflow consensus_genome {
@@ -154,7 +154,8 @@ workflow consensus_genome {
                     QuantifyERCCs.ercc_out,
                     QuantifyERCCs.ercc_out,
                     ComputeStats.output_stats,
-                    CallVariants.variants_ch
+                    ComputeStats.sam_depths,
+                    CallVariants.variants_ch,
                 ])
             ])),
             docker_image_id = docker_image_id
