@@ -218,22 +218,54 @@ task BlastContigs_refined_rapsearch2_out {
   }
 }
 
+task ComputeMergedTaxonCounts {
+  input {
+    String docker_image_id
+    String s3_wd_uri
+
+    File nt_deduped_m8
+    File nt_hitsummary2_tab
+    File nr_deduped_m8
+    File nr_hitsummary2_tab
+    File cluster_sizes_tsv
+
+    File lineage_db
+    File taxon_blacklist
+    File deuterostome_db
+
+    Boolean use_deuterostome_filter
+    Boolean use_taxon_whitelist
+  }
+
+  command<<<
+    set -euxo pipefail
+    idseq-dag-run-step --workflow-name postprocess \
+      --step-module idseq_dag.steps.compute_merged_taxon_counts \
+      --step-class ComputeMergedTaxonCounts \
+      --step-name compute_merged_taxon_counts_out \
+      --input-files '["~{nt_deduped_m8}", "~{nt_hitsummary2_tab}", "~{nr_deduped_m8}", "~{nr_hitsummary2_tab}", "~{cluster_sizes_tsv}"]' \
+      --output-files '["merged.m8", "merged.hitsummary2.tab", "merged_taxon_counts_with_dcr.json"]' \
+      --output-dir-s3 '~{s3_wd_uri}' \
+      --additional-files '{"lineage_db": "~{lineage_db}", "taxon_blacklist": "~{taxon_blacklist}", "deuterostome_db": "~{if use_deuterostome_filter then '~{deuterostome_db}' else ''}"}' \
+      --additional-attributes '{"use_taxon_whitelist": ~{use_taxon_whitelist} }'
+  >>>
+
+  output {
+    File merged_m8 = "merged.m8"
+    File merged_hitsummary2_tab = "merged.hitsummary2.tab"
+    File merged_taxon_counts_with_dcr_json = "merged_taxon_counts_with_dcr.json"
+  }
+
+  runtime {
+    docker: docker_image_id
+  }
+}
+
 task CombineTaxonCounts {
   input {
     String docker_image_id
     String s3_wd_uri
-    File assembly_gsnap_blast_m8
-    File assembly_gsnap_reassigned_m8
-    File assembly_gsnap_hitsummary2_tab
-    File assembly_refined_gsnap_counts_with_dcr_json
-    File assembly_gsnap_contig_summary_json
-    File assembly_gsnap_blast_top_m8
-    File assembly_rapsearch2_blast_m8
-    File assembly_rapsearch2_reassigned_m8
-    File assembly_rapsearch2_hitsummary2_tab
-    File assembly_refined_rapsearch2_counts_with_dcr_json
-    File assembly_rapsearch2_contig_summary_json
-    File assembly_rapsearch2_blast_top_m8
+    Array[File] counts_json_files
   }
   command<<<
   set -euxo pipefail
@@ -241,7 +273,7 @@ task CombineTaxonCounts {
     --step-module idseq_dag.steps.combine_taxon_counts \
     --step-class PipelineStepCombineTaxonCounts \
     --step-name refined_taxon_count_out \
-    --input-files '[["~{assembly_gsnap_blast_m8}", "~{assembly_gsnap_reassigned_m8}", "~{assembly_gsnap_hitsummary2_tab}", "~{assembly_refined_gsnap_counts_with_dcr_json}", "~{assembly_gsnap_contig_summary_json}", "~{assembly_gsnap_blast_top_m8}"], ["~{assembly_rapsearch2_blast_m8}", "~{assembly_rapsearch2_reassigned_m8}", "~{assembly_rapsearch2_hitsummary2_tab}", "~{assembly_refined_rapsearch2_counts_with_dcr_json}", "~{assembly_rapsearch2_contig_summary_json}", "~{assembly_rapsearch2_blast_top_m8}"]]' \
+    --input-files '["~{sep='", "' counts_json_files}""]' \
     --output-files '["assembly/refined_taxon_counts_with_dcr.json"]' \
     --output-dir-s3 '~{s3_wd_uri}' \
     --additional-files '{}' \
@@ -531,22 +563,34 @@ workflow idseq_postprocess {
       use_taxon_whitelist = use_taxon_whitelist
   }
 
+  call ComputeMergedTaxonCounts {
+    input:
+      docker_image_id = docker_image_id,
+      s3_wd_uri = s3_wd_uri,
+
+      nt_m8 = BlastContigs_refined_gsnap_out.assembly_gsnap_reassigned_m8,
+      nt_hitsummary2_tab = tigs_refined_gsnap_out.assembly_gsnap_hitsummary2_tab,
+      nr_m8 = BlastContigs_refined_rapsearch2_out.assembly_rapsearch2_reassigned_m8,
+      nr_hitsummary2_tab = BlastContigs_refined_rapsearch2_out.assembly_rapsearch2_hitsummary2_tab,
+      cluster_sizes_tsv = cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv,
+
+      lineage_db = lineage_db,
+      taxon_blacklist = taxon_blacklist,
+      deuterostome_db = deuterostome_db,
+
+      use_deuterostome_filter = use_deuterostome_filter,
+      use_taxon_whitelist = use_taxon_whitelist
+  }
+
   call CombineTaxonCounts {
     input:
       docker_image_id = docker_image_id,
       s3_wd_uri = s3_wd_uri,
-      assembly_gsnap_blast_m8 = BlastContigs_refined_gsnap_out.assembly_gsnap_blast_m8,
-      assembly_gsnap_reassigned_m8 = BlastContigs_refined_gsnap_out.assembly_gsnap_reassigned_m8,
-      assembly_gsnap_hitsummary2_tab = BlastContigs_refined_gsnap_out.assembly_gsnap_hitsummary2_tab,
-      assembly_refined_gsnap_counts_with_dcr_json = BlastContigs_refined_gsnap_out.assembly_refined_gsnap_counts_with_dcr_json,
-      assembly_gsnap_contig_summary_json = BlastContigs_refined_gsnap_out.assembly_gsnap_contig_summary_json,
-      assembly_gsnap_blast_top_m8 = BlastContigs_refined_gsnap_out.assembly_gsnap_blast_top_m8,
-      assembly_rapsearch2_blast_m8 = BlastContigs_refined_rapsearch2_out.assembly_rapsearch2_blast_m8,
-      assembly_rapsearch2_reassigned_m8 = BlastContigs_refined_rapsearch2_out.assembly_rapsearch2_reassigned_m8,
-      assembly_rapsearch2_hitsummary2_tab = BlastContigs_refined_rapsearch2_out.assembly_rapsearch2_hitsummary2_tab,
-      assembly_refined_rapsearch2_counts_with_dcr_json = BlastContigs_refined_rapsearch2_out.assembly_refined_rapsearch2_counts_with_dcr_json,
-      assembly_rapsearch2_contig_summary_json = BlastContigs_refined_rapsearch2_out.assembly_rapsearch2_contig_summary_json,
-      assembly_rapsearch2_blast_top_m8 = BlastContigs_refined_rapsearch2_out.assembly_rapsearch2_blast_top_m8
+      counts_json_files = [
+        BlastContigs_refined_gsnap_out.assembly_refined_gsnap_counts_with_dcr_json,
+        BlastContigs_refined_rapsearch2_out.assembly_refined_rapsearch2_counts_with_dcr_json,
+        ComputeMergedTaxonCounts.merged_taxon_counts_with_dcr_json
+      ]
   }
 
   call CombineJson {

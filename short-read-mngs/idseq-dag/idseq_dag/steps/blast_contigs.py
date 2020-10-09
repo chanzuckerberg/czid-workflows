@@ -209,7 +209,7 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
             deuterostome_db = s3.fetch_reference(self.additional_files["deuterostome_db"],
                                                  self.ref_dir_local, allow_s3mi=False)  # Too small for s3mi
 
-        blacklist_s3_file = self.additional_attributes.get('taxon_blacklist', DEFAULT_BLACKLIST_S3)
+        blacklist_s3_file = self.additional_files.get('taxon_blacklist', DEFAULT_BLACKLIST_S3)
         taxon_blacklist = s3.fetch_reference(blacklist_s3_file, self.ref_dir_local)
 
         taxon_whitelist = None

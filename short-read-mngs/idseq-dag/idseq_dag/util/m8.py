@@ -71,17 +71,24 @@ RERANKED_BLAST_OUTPUT_SCHEMA = {
 MIN_CONTIG_SIZE = 4
 
 
-def parse_tsv(path, schema, expect_headers=False, raw_lines=False):
-    '''Parse TSV file with given schema, yielding a dict per line.  See BLAST_OUTPUT_SCHEMA, for example.  When expect_headers=True, treat the first line as column headers.'''
+def parse_tsv(path, schema, expect_headers=False, raw_lines=False, strict=True):
+    '''
+    Parse TSV file with given schema, yielding a dict per line.
+    See BLAST_OUTPUT_SCHEMA, for example.
+    When expect_headers=True, treat the first line as column headers.
+    When strict mode is True, all columns in schema are required. When strict mode is False, will return None values for column not found.
+    '''
     assert expect_headers == False, "Headers not yet implemented."
-    schema_items = schema.items()
+    schema_items = list(schema.items())
     with open(path, "r") as stream:
         for line_number, raw_line in enumerate(stream):
             try:
                 row = raw_line.rstrip("\n").split("\t")
-                assert len(row) == len(schema)
+                if strict:
+                    assert len(row) == len(schema)
+                length = min(len(row), len(schema))
                 row_dict = {cname: ctype(vstr) for vstr,
-                            (cname, ctype) in zip(row, schema_items)}
+                            (cname, ctype) in zip(row[0:length], schema_items[0:length])}
             except:
                 msg = f"{path}:{line_number + 1}:  Parse error.  Input does not conform to schema: {schema}"
                 log.write(msg, warning=True)
@@ -458,6 +465,7 @@ def generate_taxon_count_json_from_m8(
         m8_file, hit_level_file, e_value_type, count_type, lineage_map_path,
         deuterostome_path, taxon_whitelist_path, taxon_blacklist_path,
         cdhit_cluster_sizes_path, output_json_file):
+
     # Parse through hit file and m8 input file and format a JSON file with
     # our desired attributes, including aggregated statistics.
 
@@ -486,6 +494,7 @@ def generate_taxon_count_json_from_m8(
                 hit_taxid = hit_line_columns[2]
                 if int(hit_level) < 0:
                     log.write('int(hit_level) < 0', debug=True)
+                hit_source_count_type = hit_line_columns[13] if len(hit_line_columns) >= 14 else None
 
                 # m8 files correspond to BLAST tabular output format 6:
                 # Columns: read_id | _ref_id | percent_identity | alignment_length...
@@ -547,6 +556,8 @@ def generate_taxon_count_json_from_m8(
                         agg_bucket['sum_percent_identity'] += percent_identity
                         agg_bucket['sum_alignment_length'] += alignment_length
                         agg_bucket['sum_e_value'] += e_value
+                        if hit_source_count_type:
+                            agg_bucket.setdefault('source_count_type', set()).add(hit_source_count_type)
                         # Chomp off the lowest rank as we aggregate up the tree
                         agg_key = agg_key[1:]
 
@@ -561,7 +572,7 @@ def generate_taxon_count_json_from_m8(
             nonunique_count = agg_bucket['nonunique_count']
             tax_level = num_ranks - len(agg_key) + 1
             # TODO: Extend taxonomic ranks as indicated on the commented out lines.
-            taxon_counts_attributes.append({
+            taxon_counts_row = {
                 "tax_id":
                 agg_key[0],
                 "tax_level":
@@ -592,7 +603,11 @@ def generate_taxon_count_json_from_m8(
                 agg_bucket['sum_e_value'] / unique_count,
                 "count_type":
                 count_type
-            })
+            }
+            if agg_bucket.get('source_count_type'):
+                taxon_counts_row['source_count_type'] = list(agg_bucket['source_count_type'])
+
+            taxon_counts_attributes.append(taxon_counts_row)
         output_dict = {
             "pipeline_output": {
                 "taxon_counts_attributes": taxon_counts_attributes

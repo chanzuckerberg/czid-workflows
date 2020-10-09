@@ -6,14 +6,8 @@ class PipelineStepCombineTaxonCounts(PipelineStep):
     Combine counts from gsnap and rapsearch
     '''
     def run(self):
-        input_files = []
-        for target in self.input_files_local:
-            input_files.append(target[3])
         output_file = self.output_files_local()[0]
-        self.combine_counts(input_files, output_file)
-
-        with_dcr = all(input_f.endswith("_with_dcr.json") for input_f in input_files)
-        assert with_dcr
+        self.combine_counts(self.input_files_local, output_file)
 
     def count_reads(self):
         pass

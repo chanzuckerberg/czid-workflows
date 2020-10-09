@@ -178,7 +178,7 @@ class PipelineStepRunAlignment(PipelineStep):
             deuterostome_db = fetch_reference(self.additional_files["deuterostome_db"],
                                               self.ref_dir_local, allow_s3mi=True)
 
-        blacklist_s3_file = self.additional_attributes.get('taxon_blacklist', DEFAULT_BLACKLIST_S3)
+        blacklist_s3_file = self.additional_files.get('taxon_blacklist', DEFAULT_BLACKLIST_S3)
         taxon_blacklist = fetch_reference(blacklist_s3_file, self.ref_dir_local)
 
         taxon_whitelist = None
