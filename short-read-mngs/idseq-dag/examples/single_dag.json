@@ -5,34 +5,34 @@
     "fastqs": ["RR004_water_2_S23_R1_001.fastq.gz"],
     "star_out": ["unmapped.star.1.fq"],
     "priceseq_out": ["priceseqfilter.unmapped.star.1.fasta"],
-    "cdhitdup_out": ["cdhitdup.priceseqfilter.unmapped.star.1.fasta"],
-    "lzw_out": ["lzw.cdhitdup.priceseqfilter.unmapped.star.1.fasta"],
+    "idseq_dedup_out": ["idseq_dedup.priceseqfilter.unmapped.star.1.fasta"],
+    "lzw_out": ["lzw.idseq_dedup.priceseqfilter.unmapped.star.1.fasta"],
     "bowtie2_out": [
-      "unmapped.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.1.fasta"
+      "unmapped.bowtie2.lzw.idseq_dedup.priceseqfilter.unmapped.star.1.fasta"
     ],
     "subsampled_out": ["subsampled_1.fa"],
     "gsnap_filter_out": [
-      "unmapped.gsnap_filter.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.1.fasta"
+      "unmapped.gsnap_filter.bowtie2.lzw.idseq_dedup.priceseqfilter.unmapped.star.1.fasta"
     ],
     "gsnap_out": [
-      "subsample_1000000/multihit.gsnapl.unmapped.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.m8",
-      "subsample_1000000/dedup.multihit.gsnapl.unmapped.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.m8",
-      "subsample_1000000/summary.multihit.gsnapl.unmapped.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.tab",
+      "subsample_1000000/multihit.gsnapl.unmapped.bowtie2.lzw.idseq_dedup.priceseqfilter.unmapped.star.m8",
+      "subsample_1000000/dedup.multihit.gsnapl.unmapped.bowtie2.lzw.idseq_dedup.priceseqfilter.unmapped.star.m8",
+      "subsample_1000000/summary.multihit.gsnapl.unmapped.bowtie2.lzw.idseq_dedup.priceseqfilter.unmapped.star.tab",
       "subsample_1000000/nt_multihit_idseq_web_sample.json"
     ],
     "rapsearch2_out": [
-      "subsample_1000000/multihit.rapsearch2.filter.deuterostomes.taxids.gsnapl.unmapped.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.m8",
-      "subsample_1000000/dedup.multihit.rapsearch2.filter.deuterostomes.taxids.gsnapl.unmapped.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.m8",
-      "subsample_1000000/summary.multihit.rapsearch2.filter.deuterostomes.taxids.gsnapl.unmapped.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.tab",
+      "subsample_1000000/multihit.rapsearch2.filter.deuterostomes.taxids.gsnapl.unmapped.bowtie2.lzw.idseq_dedup.priceseqfilter.unmapped.star.m8",
+      "subsample_1000000/dedup.multihit.rapsearch2.filter.deuterostomes.taxids.gsnapl.unmapped.bowtie2.lzw.idseq_dedup.priceseqfilter.unmapped.star.m8",
+      "subsample_1000000/summary.multihit.rapsearch2.filter.deuterostomes.taxids.gsnapl.unmapped.bowtie2.lzw.idseq_dedup.priceseqfilter.unmapped.star.tab",
       "subsample_1000000/nr_multihit_idseq_web_sample.json"
     ],
     "taxon_count_out": ["taxon_counts.json"],
     "annotated_out": ["annotated_merged.fa","unidentified.fa"],
     "taxid_fasta_in": [
       "accessions.rapsearch2.gsnapl.fasta",
-      "dedup.multihit.gsnapl.unmapped.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.m8",
-      "summary.multihit.gsnapl.unmapped.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.tab",
-      "summary.multihit.rapsearch2.filter.deuterostomes.taxids.gsnapl.unmapped.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.tab"
+      "dedup.multihit.gsnapl.unmapped.bowtie2.lzw.idseq_dedup.priceseqfilter.unmapped.star.m8",
+      "summary.multihit.gsnapl.unmapped.bowtie2.lzw.idseq_dedup.priceseqfilter.unmapped.star.tab",
+      "summary.multihit.rapsearch2.filter.deuterostomes.taxids.gsnapl.unmapped.bowtie2.lzw.idseq_dedup.priceseqfilter.unmapped.star.tab"
     ],
     "taxid_fasta_out": ["taxid_annot.fasta"],
     "taxid_locator_out": [
@@ -75,14 +75,14 @@
     },
     {
       "in": ["priceseq_out"],
-      "out": "cdhitdup_out",
-      "class": "PipelineStepRunCDHitDup",
-      "module": "idseq_dag.steps.run_cdhitdup",
+      "out": "idseq_dedup_out",
+      "class": "PipelineStepRunIDSeqDedup",
+      "module": "idseq_dag.steps.run_idseq_dedup",
       "additional_files": {},
       "additional_attributes": {}
     },
     {
-      "in": ["cdhitdup_out"],
+      "in": ["idseq_dedup_out"],
       "out": "lzw_out",
       "class": "PipelineStepRunLZW",
       "module": "idseq_dag.steps.run_lzw",

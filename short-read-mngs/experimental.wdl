@@ -188,8 +188,7 @@ task NonhostFastq {
     String s3_wd_uri
     Array[File] fastqs
     File nonhost_fasta_refined_taxid_annot_fasta
-    File cdhitdup_clusters_dedup1_fa_clstr
-    File deduped_fasta_dedup1_fa
+    File duplicate_clusters_csv
     Boolean use_taxon_whitelist
   }
   command<<<
@@ -198,7 +197,7 @@ task NonhostFastq {
     --step-module idseq_dag.steps.nonhost_fastq \
     --step-class PipelineStepNonhostFastq \
     --step-name nonhost_fastq_out \
-    --input-files '[["~{sep='","' fastqs}"], ["~{nonhost_fasta_refined_taxid_annot_fasta}"], ["~{cdhitdup_clusters_dedup1_fa_clstr}"], ["~{deduped_fasta_dedup1_fa}"]]' \
+    --input-files '[["~{sep='","' fastqs}"], ["~{nonhost_fasta_refined_taxid_annot_fasta}"], ["~{duplicate_clusters_csv}"]]' \
     --output-files '[~{if length(fastqs) == 2 then '"nonhost_R1.fastq", "nonhost_R2.fastq"' else '"nonhost_R1.fastq"'}]' \
     --output-dir-s3 '~{s3_wd_uri}' \
     --additional-files '{}' \
@@ -231,8 +230,7 @@ workflow idseq_experimental {
     File fastqs_0
     File? fastqs_1
     File nonhost_fasta_refined_taxid_annot_fasta
-    File cdhitdup_clusters_dedup1_fa_clstr
-    File deduped_fasta_dedup1_fa
+    File duplicate_clusters_csv
     String file_ext = "fastq"
     String index_version = "2020-04-20" # FIXME: vestigial input
     File nt_db = "s3://idseq-public-references/ncbi-sources/2020-04-20/nt"
@@ -313,8 +311,7 @@ workflow idseq_experimental {
       s3_wd_uri = s3_wd_uri,
       fastqs = select_all([fastqs_0, fastqs_1]),
       nonhost_fasta_refined_taxid_annot_fasta = nonhost_fasta_refined_taxid_annot_fasta,
-      cdhitdup_clusters_dedup1_fa_clstr = cdhitdup_clusters_dedup1_fa_clstr,
-      deduped_fasta_dedup1_fa = deduped_fasta_dedup1_fa,
+      duplicate_clusters_csv = duplicate_clusters_csv,
       use_taxon_whitelist = use_taxon_whitelist
   }
 

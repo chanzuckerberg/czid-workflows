@@ -19,12 +19,12 @@
       "rapsearch2.hitsummary.tab",
       "rapsearch2_counts_with_dcr.json"
     ],
-    "cdhitdup_out": [
-      "dedup1.fa.clstr",
+    "idseq_dedup_out": [
+      "clusters.csv",
       "dedup1.fa"
     ],
-    "cdhitdup_cluster_sizes": [
-      "cdhitdup_cluster_sizes.tsv"
+    "duplicate_cluster_sizes": [
+      "duplicate_cluster_sizes.tsv"
     ],
     "annotated_out": [
       "annotated_merged.fa",
@@ -37,8 +37,8 @@
         "gsnap_filter_out",
         "gsnap_out",
         "rapsearch2_out",
-        "cdhitdup_out",
-        "cdhitdup_cluster_sizes"
+        "idseq_dedup_out",
+        "duplicate_cluster_sizes"
       ],
       "out": "annotated_out",
       "class": "PipelineStepGenerateAnnotatedFasta",
@@ -57,10 +57,10 @@
     "rapsearch2_out": {
       "s3_dir": "s3://idseq-samples-prod/samples/995/51454/results/idseq-prod-main-1/wdl-1/dag-4.6"
     },
-    "cdhitdup_out": {
+    "idseq_dedup_out": {
       "s3_dir": "s3://idseq-samples-prod/samples/995/51454/results/idseq-prod-main-1/wdl-1/dag-4.6"
     },
-    "cdhitdup_cluster_sizes": {
+    "duplicate_cluster_sizes": {
       "s3_dir": "s3://idseq-samples-prod/samples/995/51454/results/idseq-prod-main-1/wdl-1/dag-4.6"
     }
   }

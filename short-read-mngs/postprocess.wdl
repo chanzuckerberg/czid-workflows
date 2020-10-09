@@ -5,7 +5,7 @@ task RunAssembly {
     String docker_image_id
     String s3_wd_uri
     Array[File] host_filter_out_gsnap_filter_fa
-    File cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv
+    File duplicate_cluster_sizes_tsv
   }
   command<<<
   set -euxo pipefail
@@ -13,7 +13,7 @@ task RunAssembly {
     --step-module idseq_dag.steps.run_assembly \
     --step-class PipelineStepRunAssembly \
     --step-name assembly_out \
-    --input-files '[["~{sep='","' host_filter_out_gsnap_filter_fa}"], ["~{cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv}"]]' \
+    --input-files '[["~{sep='","' host_filter_out_gsnap_filter_fa}"], ["~{duplicate_cluster_sizes_tsv}"]]' \
     --output-files '["assembly/contigs.fasta", "assembly/scaffolds.fasta", "assembly/read-contig.sam", "assembly/contig_stats.json"]' \
     --output-dir-s3 '~{s3_wd_uri}' \
     --additional-files '{}' \
@@ -141,7 +141,7 @@ task BlastContigs_refined_gsnap_out {
     File assembly_read_contig_sam
     File assembly_contig_stats_json
     File assembly_nt_refseq_fasta
-    File cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv
+    File duplicate_cluster_sizes_tsv
     File lineage_db
     File taxon_blacklist
     String? deuterostome_db
@@ -154,7 +154,7 @@ task BlastContigs_refined_gsnap_out {
     --step-module idseq_dag.steps.blast_contigs \
     --step-class PipelineStepBlastContigs \
     --step-name refined_gsnap_out \
-    --input-files '[["~{gsnap_out_gsnap_m8}", "~{gsnap_out_gsnap_deduped_m8}", "~{gsnap_out_gsnap_hitsummary_tab}", "~{gsnap_out_gsnap_counts_with_dcr_json}"], ["~{assembly_contigs_fasta}", "~{assembly_scaffolds_fasta}", "~{assembly_read_contig_sam}", "~{assembly_contig_stats_json}"], ["~{assembly_nt_refseq_fasta}"], ["~{cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv}"]]' \
+    --input-files '[["~{gsnap_out_gsnap_m8}", "~{gsnap_out_gsnap_deduped_m8}", "~{gsnap_out_gsnap_hitsummary_tab}", "~{gsnap_out_gsnap_counts_with_dcr_json}"], ["~{assembly_contigs_fasta}", "~{assembly_scaffolds_fasta}", "~{assembly_read_contig_sam}", "~{assembly_contig_stats_json}"], ["~{assembly_nt_refseq_fasta}"], ["~{duplicate_cluster_sizes_tsv}"]]' \
     --output-files '["assembly/gsnap.blast.m8", "assembly/gsnap.reassigned.m8", "assembly/gsnap.hitsummary2.tab", "assembly/refined_gsnap_counts_with_dcr.json", "assembly/gsnap_contig_summary.json", "assembly/gsnap.blast.top.m8"]' \
     --output-dir-s3 '~{s3_wd_uri}' \
     --additional-files '{"lineage_db": "~{lineage_db}", "taxon_blacklist": "~{taxon_blacklist}", "deuterostome_db": "~{if use_deuterostome_filter then '~{deuterostome_db}' else ''}"}' \
@@ -187,7 +187,7 @@ task BlastContigs_refined_rapsearch2_out {
     File assembly_read_contig_sam
     File assembly_contig_stats_json
     File assembly_nr_refseq_fasta
-    File cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv
+    File duplicate_cluster_sizes_tsv
     File lineage_db
     File taxon_blacklist
     Boolean use_taxon_whitelist
@@ -198,7 +198,7 @@ task BlastContigs_refined_rapsearch2_out {
     --step-module idseq_dag.steps.blast_contigs \
     --step-class PipelineStepBlastContigs \
     --step-name refined_rapsearch2_out \
-    --input-files '[["~{rapsearch2_out_rapsearch2_m8}", "~{rapsearch2_out_rapsearch2_deduped_m8}", "~{rapsearch2_out_rapsearch2_hitsummary_tab}", "~{rapsearch2_out_rapsearch2_counts_with_dcr_json}"], ["~{assembly_contigs_fasta}", "~{assembly_scaffolds_fasta}", "~{assembly_read_contig_sam}", "~{assembly_contig_stats_json}"], ["~{assembly_nr_refseq_fasta}"], ["~{cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv}"]]' \
+    --input-files '[["~{rapsearch2_out_rapsearch2_m8}", "~{rapsearch2_out_rapsearch2_deduped_m8}", "~{rapsearch2_out_rapsearch2_hitsummary_tab}", "~{rapsearch2_out_rapsearch2_counts_with_dcr_json}"], ["~{assembly_contigs_fasta}", "~{assembly_scaffolds_fasta}", "~{assembly_read_contig_sam}", "~{assembly_contig_stats_json}"], ["~{assembly_nr_refseq_fasta}"], ["~{duplicate_cluster_sizes_tsv}"]]' \
     --output-files '["assembly/rapsearch2.blast.m8", "assembly/rapsearch2.reassigned.m8", "assembly/rapsearch2.hitsummary2.tab", "assembly/refined_rapsearch2_counts_with_dcr.json", "assembly/rapsearch2_contig_summary.json", "assembly/rapsearch2.blast.top.m8"]' \
     --output-dir-s3 '~{s3_wd_uri}' \
     --additional-files '{"lineage_db": "~{lineage_db}", "taxon_blacklist": "~{taxon_blacklist}"}' \
@@ -311,9 +311,8 @@ task GenerateAnnotatedFasta {
     File assembly_refined_rapsearch2_counts_with_dcr_json
     File assembly_rapsearch2_contig_summary_json
     File assembly_rapsearch2_blast_top_m8
-    File cdhitdup_out_dedup1_fa_clstr
-    File cdhitdup_out_dedup1_fa
-    File cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv
+    File idseq_dedup_out_duplicate_clusters_csv
+    File duplicate_cluster_sizes_tsv
   }
   command<<<
   set -euxo pipefail
@@ -321,7 +320,7 @@ task GenerateAnnotatedFasta {
     --step-module idseq_dag.steps.generate_annotated_fasta \
     --step-class PipelineStepGenerateAnnotatedFasta \
     --step-name refined_annotated_out \
-    --input-files '[["~{sep='","' host_filter_out_gsnap_filter_fa}"], ["~{assembly_gsnap_blast_m8}", "~{assembly_gsnap_reassigned_m8}", "~{assembly_gsnap_hitsummary2_tab}", "~{assembly_refined_gsnap_counts_with_dcr_json}", "~{assembly_gsnap_contig_summary_json}", "~{assembly_gsnap_blast_top_m8}"], ["~{assembly_rapsearch2_blast_m8}", "~{assembly_rapsearch2_reassigned_m8}", "~{assembly_rapsearch2_hitsummary2_tab}", "~{assembly_refined_rapsearch2_counts_with_dcr_json}", "~{assembly_rapsearch2_contig_summary_json}", "~{assembly_rapsearch2_blast_top_m8}"], ["~{cdhitdup_out_dedup1_fa_clstr}", "~{cdhitdup_out_dedup1_fa}"], ["~{cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv}"]]' \
+    --input-files '[["~{sep='","' host_filter_out_gsnap_filter_fa}"], ["~{assembly_gsnap_blast_m8}", "~{assembly_gsnap_reassigned_m8}", "~{assembly_gsnap_hitsummary2_tab}", "~{assembly_refined_gsnap_counts_with_dcr_json}", "~{assembly_gsnap_contig_summary_json}", "~{assembly_gsnap_blast_top_m8}"], ["~{assembly_rapsearch2_blast_m8}", "~{assembly_rapsearch2_reassigned_m8}", "~{assembly_rapsearch2_hitsummary2_tab}", "~{assembly_refined_rapsearch2_counts_with_dcr_json}", "~{assembly_rapsearch2_contig_summary_json}", "~{assembly_rapsearch2_blast_top_m8}"], ["~{idseq_dedup_out_duplicate_clusters_csv}"], ["~{duplicate_cluster_sizes_tsv}"]]' \
     --output-files '["assembly/refined_annotated_merged.fa", "assembly/refined_unidentified.fa"]' \
     --output-dir-s3 '~{s3_wd_uri}' \
     --additional-files '{}' \
@@ -432,9 +431,8 @@ workflow idseq_postprocess {
     File rapsearch2_out_rapsearch2_deduped_m8
     File rapsearch2_out_rapsearch2_hitsummary_tab
     File rapsearch2_out_rapsearch2_counts_with_dcr_json
-    File cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv
-    File cdhitdup_out_dedup1_fa_clstr
-    File cdhitdup_out_dedup1_fa
+    File duplicate_cluster_sizes_tsv
+    File idseq_dedup_out_duplicate_clusters_csv
     String index_version = "2020-04-20" # FIXME: vestigial input
     File nt_db = "s3://idseq-public-references/ncbi-sources/2020-04-20/nt"
     File nt_loc_db = "s3://idseq-public-references/alignment_data/2020-04-20/nt_loc.db"
@@ -452,7 +450,7 @@ workflow idseq_postprocess {
       docker_image_id = docker_image_id,
       s3_wd_uri = s3_wd_uri,
       host_filter_out_gsnap_filter_fa = select_all([host_filter_out_gsnap_filter_1_fa, host_filter_out_gsnap_filter_2_fa, host_filter_out_gsnap_filter_merged_fa]),
-      cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv = cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv
+      duplicate_cluster_sizes_tsv = duplicate_cluster_sizes_tsv
   }
 
   call GenerateCoverageStats {
@@ -504,7 +502,7 @@ workflow idseq_postprocess {
       assembly_read_contig_sam = RunAssembly.assembly_read_contig_sam,
       assembly_contig_stats_json = RunAssembly.assembly_contig_stats_json,
       assembly_nt_refseq_fasta = DownloadAccessions_gsnap_accessions_out.assembly_nt_refseq_fasta,
-      cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv = cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv,
+      duplicate_cluster_sizes_tsv = duplicate_cluster_sizes_tsv,
       lineage_db = lineage_db,
       taxon_blacklist = taxon_blacklist,
       deuterostome_db = deuterostome_db,
@@ -525,7 +523,7 @@ workflow idseq_postprocess {
       assembly_read_contig_sam = RunAssembly.assembly_read_contig_sam,
       assembly_contig_stats_json = RunAssembly.assembly_contig_stats_json,
       assembly_nr_refseq_fasta = DownloadAccessions_rapsearch2_accessions_out.assembly_nr_refseq_fasta,
-      cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv = cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv,
+      duplicate_cluster_sizes_tsv = duplicate_cluster_sizes_tsv,
       lineage_db = lineage_db,
       taxon_blacklist = taxon_blacklist,
       use_taxon_whitelist = use_taxon_whitelist
@@ -584,9 +582,8 @@ workflow idseq_postprocess {
       assembly_refined_rapsearch2_counts_with_dcr_json = BlastContigs_refined_rapsearch2_out.assembly_refined_rapsearch2_counts_with_dcr_json,
       assembly_rapsearch2_contig_summary_json = BlastContigs_refined_rapsearch2_out.assembly_rapsearch2_contig_summary_json,
       assembly_rapsearch2_blast_top_m8 = BlastContigs_refined_rapsearch2_out.assembly_rapsearch2_blast_top_m8,
-      cdhitdup_out_dedup1_fa_clstr = cdhitdup_out_dedup1_fa_clstr,
-      cdhitdup_out_dedup1_fa = cdhitdup_out_dedup1_fa,
-      cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv = cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv
+      idseq_dedup_out_duplicate_clusters_csv = idseq_dedup_out_duplicate_clusters_csv,
+      duplicate_cluster_sizes_tsv = duplicate_cluster_sizes_tsv
   }
 
   call GenerateTaxidFasta {

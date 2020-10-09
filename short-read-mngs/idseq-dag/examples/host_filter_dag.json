@@ -8,7 +8,7 @@
       "star_out": ["unmapped1.fq", "unmapped2.fq"],
       "trimmomatic_out": ["trimmomatic1.fq", "trimmomatic2.fq"],
       "priceseq_out": ["priceseq1.fa", "priceseq2.fa"],
-      "cdhitdup_out": ["dedup1.fa", "dedup2.fa"],
+      "idseq_dedup_out": ["dedup1.fa", "dedup2.fa"],
       "lzw_out": ["lzw1.fa", "lzw2.fa"],
       "bowtie2_out": ["bowtie2_1.fa", "bowtie2_2.fa", "bowtie2_merged.fa"],
       "subsampled_out": [
@@ -63,14 +63,14 @@
     },
     {
       "in": ["priceseq_out"],
-      "out": "cdhitdup_out",
-      "class": "PipelineStepRunCDHitDup",
-      "module": "idseq_dag.steps.run_cdhitdup",
+      "out": "idseq_dedup_out",
+      "class": "PipelineStepRunIDSeqDedup",
+      "module": "idseq_dag.steps.run_idseq_dedup",
       "additional_files": {},
       "additional_attributes": {}
     },
     {
-      "in": ["cdhitdup_out"],
+      "in": ["idseq_dedup_out"],
       "out": "lzw_out",
       "class": "PipelineStepRunLZW",
       "module": "idseq_dag.steps.run_lzw",

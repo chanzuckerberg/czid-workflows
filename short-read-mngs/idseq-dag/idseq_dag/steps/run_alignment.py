@@ -153,7 +153,7 @@ class PipelineStepRunAlignment(PipelineStep):
         ''' Run alignmment remotely '''
 
         alignment_algorithm_inputs = PipelineStepRunAlignment._alignment_algorithm_inputs(self.input_files_local[0])
-        cdhit_cluster_sizes_path, = self.input_files_local[1]
+        duplicate_cluster_sizes_path, = self.input_files_local[1]
         output_m8, deduped_output_m8, output_hitsummary, output_counts_with_dcr_json = self.output_files_local()
         assert output_counts_with_dcr_json.endswith("_with_dcr.json"), self.output_files_local()
 
@@ -188,7 +188,7 @@ class PipelineStepRunAlignment(PipelineStep):
 
         m8.generate_taxon_count_json_from_m8(
             deduped_output_m8, output_hitsummary, evalue_type, db_type,
-            lineage_db, deuterostome_db, taxon_whitelist, taxon_blacklist, cdhit_cluster_sizes_path,
+            lineage_db, deuterostome_db, taxon_whitelist, taxon_blacklist, duplicate_cluster_sizes_path,
             output_counts_with_dcr_json)
 
     def run_locally(self, input_fas, output_m8):

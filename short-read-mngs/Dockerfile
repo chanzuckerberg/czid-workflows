@@ -71,7 +71,7 @@ RUN chmod +x /usr/bin/docker-credential-ecr-login
 RUN mkdir -p /root/.docker
 RUN jq -n '.credsStore="ecr-login"' > /root/.docker/config.json
 
-RUN curl -Ls https://anaconda.org/bioconda/cd-hit-auxtools/4.6.8/download/linux-64/cd-hit-auxtools-4.6.8-h2d50403_1.tar.bz2 | tar -C /usr -xj bin/cd-hit-dup
+RUN curl -L -o /usr/bin/idseq-dedup https://github.com/chanzuckerberg/idseq-dedup/releases/download/v0.1.0/idseq-dedup-Linux; chmod +x /usr/bin/idseq-dedup
 
 # Note: bsdtar is available in libarchive-tools
 # Note: python3-scipy pulls in gcc (fixed in Ubuntu 19.10)

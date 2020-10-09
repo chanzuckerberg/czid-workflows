@@ -10,7 +10,7 @@ import idseq_dag.util.command as command
 import idseq_dag.util.lineage as lineage
 import idseq_dag.util.log as log
 
-from idseq_dag.util.count import READ_COUNTING_MODE, ReadCountingMode, get_read_cluster_size, load_cdhit_cluster_sizes
+from idseq_dag.util.count import READ_COUNTING_MODE, ReadCountingMode, get_read_cluster_size, load_duplicate_cluster_sizes
 from idseq_dag.util.dict import open_file_db_by_extension
 
 # NT alginments with shorter length are associated with a high rate of false positives.
@@ -457,11 +457,11 @@ def _call_hits_m8_work(input_m8, lineage_map, accession2taxid_dict,
 def generate_taxon_count_json_from_m8(
         m8_file, hit_level_file, e_value_type, count_type, lineage_map_path,
         deuterostome_path, taxon_whitelist_path, taxon_blacklist_path,
-        cdhit_cluster_sizes_path, output_json_file):
+        duplicate_cluster_sizes_path, output_json_file):
     # Parse through hit file and m8 input file and format a JSON file with
     # our desired attributes, including aggregated statistics.
 
-    cdhit_cluster_sizes = load_cdhit_cluster_sizes(cdhit_cluster_sizes_path)
+    duplicate_cluster_sizes = load_duplicate_cluster_sizes(duplicate_cluster_sizes_path)
 
     should_keep = build_should_keep_filter(
         deuterostome_path, taxon_whitelist_path, taxon_blacklist_path)
@@ -542,7 +542,7 @@ def generate_taxon_count_json_from_m8(
                             }
                             aggregation[agg_key] = agg_bucket
                         agg_bucket['nonunique_count'] += get_read_cluster_size(
-                            cdhit_cluster_sizes, read_id)
+                            duplicate_cluster_sizes, read_id)
                         agg_bucket['unique_count'] += 1
                         agg_bucket['sum_percent_identity'] += percent_identity
                         agg_bucket['sum_alignment_length'] += alignment_length

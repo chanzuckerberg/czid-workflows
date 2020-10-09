@@ -284,7 +284,7 @@ When releasing a new version, please add a Git tag of the form `vX.Y.Z`.
   - Re-enable reusing previous chunks when re-running alignment.
 
 - 4.4.1
-  - Disable reusing previous chunks when re-running alignment. This was casing an error because the input to this step is non-determinsitic and cdhitdup requires all reads from the input to be present in the `cdhit_cluster_sizes` file.
+  - Disable reusing previous chunks when re-running alignment. This was casing an error because the input to this step is non-determinsitic and cdhitdup requires all reads from the input to be present in the `duplicate_cluster_sizes` file.
 
 - 4.4
   - When assigning contigs to their best-matching accessions, prioritize the accession that has the most best matches across all contigs when resolving ties.
@@ -352,7 +352,7 @@ When releasing a new version, please add a Git tag of the form `vX.Y.Z`.
 - 3.21.0
   - work around cdhitdup bug affecting unpaired reads that sometimes discards half the unique reads in an unpaired sample
   - set stage for 4.0 release by changing cdhit identity threshold to 100%
-  - emit new files taxon_count_with_dcr.json, cdhit_cluster_sizes.tsv, dedup1.clstr
+  - emit new files taxon_count_with_dcr.json, duplicate_cluster_sizes.tsv, dedup1.clstr
   - compute ReadCountingMode.COUNT_ALL but still emit COUNT_UNIQUE
 
 - 3.20.1
