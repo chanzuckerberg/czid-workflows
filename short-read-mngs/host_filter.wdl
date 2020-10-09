@@ -124,7 +124,7 @@ task RunPriceSeq {
   }
 }
 
-task RunCDHitDup {
+task RunIDSeqDedup {
   input {
     String docker_image_id
     String s3_wd_uri
@@ -133,11 +133,11 @@ task RunCDHitDup {
   command<<<
   set -euxo pipefail
   idseq-dag-run-step --workflow-name host_filter \
-    --step-module idseq_dag.steps.run_cdhitdup \
-    --step-class PipelineStepRunCDHitDup \
-    --step-name cdhitdup_out \
+    --step-module idseq_dag.steps.run_idseq_dedup \
+    --step-class PipelineStepRunIDSeqDedup \
+    --step-name idseq_dedup_out \
     --input-files '[["~{sep='","' priceseq_fa}"]]' \
-    --output-files '[~{if length(priceseq_fa) == 2 then '"dedup1.fa", "dedup2.fa"' else '"dedup1.fa"'}, "dedup1.fa.clstr", "cdhitdup_cluster_sizes.tsv"]' \
+    --output-files '[~{if length(priceseq_fa) == 2 then '"dedup1.fa", "dedup2.fa"' else '"dedup1.fa"'}, "clusters.csv", "duplicate_cluster_sizes.tsv"]' \
     --output-dir-s3 '~{s3_wd_uri}' \
     --additional-files '{}' \
     --additional-attributes '{}'
@@ -145,9 +145,9 @@ task RunCDHitDup {
   output {
     File dedup1_fa = "dedup1.fa"
     File? dedup2_fa = "dedup2.fa"
-    File dedup1_fa_clstr = "dedup1.fa.clstr"
-    File cdhitdup_cluster_sizes_tsv = "cdhitdup_cluster_sizes.tsv"
-    File? output_read_count = "cdhitdup_out.count"
+    File duplicate_clusters_csv = "clusters.csv"
+    File duplicate_cluster_sizes_tsv = "duplicate_cluster_sizes.tsv"
+    File? output_read_count = "idseq_dedup_out.count"
   }
   runtime {
     docker: docker_image_id
@@ -159,8 +159,8 @@ task RunLZW {
     String docker_image_id
     String s3_wd_uri
     Array[File] dedup_fa
-    File dedup1_fa_clstr
-    File cdhitdup_cluster_sizes_tsv
+    File duplicate_clusters_csv
+    File duplicate_cluster_sizes_tsv
   }
   command<<<
   set -euxo pipefail
@@ -168,7 +168,7 @@ task RunLZW {
     --step-module idseq_dag.steps.run_lzw \
     --step-class PipelineStepRunLZW \
     --step-name lzw_out \
-    --input-files '[["~{sep='","' dedup_fa}", "~{dedup1_fa_clstr}", "~{cdhitdup_cluster_sizes_tsv}"]]' \
+    --input-files '[["~{sep='","' dedup_fa}", "~{duplicate_clusters_csv}", "~{duplicate_cluster_sizes_tsv}"]]' \
     --output-files '[~{if length(dedup_fa) == 2 then '"lzw1.fa", "lzw2.fa"' else '"lzw1.fa"'}]' \
     --output-dir-s3 '~{s3_wd_uri}' \
     --additional-files '{}' \
@@ -190,8 +190,8 @@ task RunBowtie2_bowtie2_out {
     String s3_wd_uri
     Array[File] lzw_fa
     Array[File] dedup_fa
-    File dedup1_fa_clstr
-    File cdhitdup_cluster_sizes_tsv
+    File duplicate_clusters_csv
+    File duplicate_cluster_sizes_tsv
     File bowtie2_genome
   }
   command<<<
@@ -200,7 +200,7 @@ task RunBowtie2_bowtie2_out {
     --step-module idseq_dag.steps.run_bowtie2 \
     --step-class PipelineStepRunBowtie2 \
     --step-name bowtie2_out \
-    --input-files '[["~{sep='","' lzw_fa}"], ["~{sep='","' dedup_fa}", "~{dedup1_fa_clstr}", "~{cdhitdup_cluster_sizes_tsv}"]]' \
+    --input-files '[["~{sep='","' lzw_fa}"], ["~{sep='","' dedup_fa}", "~{duplicate_clusters_csv}", "~{duplicate_cluster_sizes_tsv}"]]' \
     --output-files '[~{if length(lzw_fa) == 2 then '"bowtie2_1.fa", "bowtie2_2.fa", "bowtie2_merged.fa"' else '"bowtie2_1.fa"'}]' \
     --output-dir-s3 '~{s3_wd_uri}' \
     --additional-files '{"bowtie2_genome": "~{bowtie2_genome}"}' \
@@ -223,8 +223,8 @@ task RunSubsample {
     String s3_wd_uri
     Array[File] bowtie2_fa
     Array[File] dedup_fa
-    File dedup1_fa_clstr
-    File cdhitdup_cluster_sizes_tsv
+    File duplicate_clusters_csv
+    File duplicate_cluster_sizes_tsv
     Int max_subsample_fragments
   }
   command<<<
@@ -233,7 +233,7 @@ task RunSubsample {
     --step-module idseq_dag.steps.run_subsample \
     --step-class PipelineStepRunSubsample \
     --step-name subsampled_out \
-    --input-files '[["~{sep='","' bowtie2_fa}"], ["~{sep='","' dedup_fa}", "~{dedup1_fa_clstr}", "~{cdhitdup_cluster_sizes_tsv}"]]' \
+    --input-files '[["~{sep='","' bowtie2_fa}"], ["~{sep='","' dedup_fa}", "~{duplicate_clusters_csv}", "~{duplicate_cluster_sizes_tsv}"]]' \
     --output-files '[~{if length(dedup_fa) == 2 then '"subsampled_1.fa", "subsampled_2.fa", "subsampled_merged.fa"' else '"subsampled_1.fa"'}]' \
     --output-dir-s3 '~{s3_wd_uri}' \
     --additional-files '{}' \
@@ -258,8 +258,8 @@ task RunStarDownstream {
     File validate_input_summary_json
     Array[File] valid_input_fastq
     Array[File] dedup_fa
-    File dedup1_fa_clstr
-    File cdhitdup_cluster_sizes_tsv
+    File duplicate_clusters_csv
+    File duplicate_cluster_sizes_tsv
     File human_star_genome
   }
   command<<<
@@ -268,7 +268,7 @@ task RunStarDownstream {
     --step-module idseq_dag.steps.run_star_downstream \
     --step-class PipelineStepRunStarDownstream \
     --step-name star_human_out \
-    --input-files '[["~{sep='","' subsampled_fa}"], ["~{validate_input_summary_json}", "~{sep='","' valid_input_fastq}"], ["~{sep='","' dedup_fa}", "~{dedup1_fa_clstr}", "~{cdhitdup_cluster_sizes_tsv}"]]' \
+    --input-files '[["~{sep='","' subsampled_fa}"], ["~{validate_input_summary_json}", "~{sep='","' valid_input_fastq}"], ["~{sep='","' dedup_fa}", "~{duplicate_clusters_csv}", "~{duplicate_cluster_sizes_tsv}"]]' \
     --output-files '[~{if length(dedup_fa) == 2 then '"unmapped_human_1.fa", "unmapped_human_2.fa"' else '"unmapped_human_1.fa"'}]' \
     --output-dir-s3 '~{s3_wd_uri}' \
     --additional-files '{"star_genome": "~{human_star_genome}"}' \
@@ -290,8 +290,8 @@ task RunBowtie2_bowtie2_human_out {
     String s3_wd_uri
     Array[File] unmapped_human_fa
     Array[File] dedup_fa
-    File dedup1_fa_clstr
-    File cdhitdup_cluster_sizes_tsv
+    File duplicate_clusters_csv
+    File duplicate_cluster_sizes_tsv
     File human_bowtie2_genome
   }
   command<<<
@@ -300,7 +300,7 @@ task RunBowtie2_bowtie2_human_out {
     --step-module idseq_dag.steps.run_bowtie2 \
     --step-class PipelineStepRunBowtie2 \
     --step-name bowtie2_human_out \
-    --input-files '[["~{sep='","' unmapped_human_fa}"], ["~{sep='","' dedup_fa}", "~{dedup1_fa_clstr}", "~{cdhitdup_cluster_sizes_tsv}"]]' \
+    --input-files '[["~{sep='","' unmapped_human_fa}"], ["~{sep='","' dedup_fa}", "~{duplicate_clusters_csv}", "~{duplicate_cluster_sizes_tsv}"]]' \
     --output-files '[~{if length(dedup_fa) == 2 then '"bowtie2_human_1.fa", "bowtie2_human_2.fa", "bowtie2_human_merged.fa"' else '"bowtie2_human_1.fa"'}]' \
     --output-dir-s3 '~{s3_wd_uri}' \
     --additional-files '{"bowtie2_genome": "~{human_bowtie2_genome}"}' \
@@ -323,8 +323,8 @@ task RunGsnapFilter {
     String s3_wd_uri
     Array[File] subsampled_fa
     Array[File] dedup_fa
-    File dedup1_fa_clstr
-    File cdhitdup_cluster_sizes_tsv
+    File duplicate_clusters_csv
+    File duplicate_cluster_sizes_tsv
     File gsnap_genome
   }
   command<<<
@@ -333,7 +333,7 @@ task RunGsnapFilter {
     --step-module idseq_dag.steps.run_gsnap_filter \
     --step-class PipelineStepRunGsnapFilter \
     --step-name gsnap_filter_out \
-    --input-files '[["~{sep='","' subsampled_fa}"], ["~{sep='","' dedup_fa}", "~{dedup1_fa_clstr}", "~{cdhitdup_cluster_sizes_tsv}"]]' \
+    --input-files '[["~{sep='","' subsampled_fa}"], ["~{sep='","' dedup_fa}", "~{duplicate_clusters_csv}", "~{duplicate_cluster_sizes_tsv}"]]' \
     --output-files '[~{if length(dedup_fa) == 2 then '"gsnap_filter_1.fa", "gsnap_filter_2.fa", "gsnap_filter_merged.fa"' else '"gsnap_filter_1.fa"'}]' \
     --output-dir-s3 '~{s3_wd_uri}' \
     --additional-files '{"gsnap_genome": "~{gsnap_genome}"}' \
@@ -404,7 +404,7 @@ workflow idseq_host_filter {
       trimmomatic_fastq = select_all([RunTrimmomatic.trimmomatic1_fastq, RunTrimmomatic.trimmomatic2_fastq])
   }
 
-  call RunCDHitDup {
+  call RunIDSeqDedup {
     input:
       docker_image_id = docker_image_id,
       s3_wd_uri = s3_wd_uri,
@@ -415,9 +415,9 @@ workflow idseq_host_filter {
     input:
       docker_image_id = docker_image_id,
       s3_wd_uri = s3_wd_uri,
-      dedup_fa = select_all([RunCDHitDup.dedup1_fa, RunCDHitDup.dedup2_fa]),
-      dedup1_fa_clstr = RunCDHitDup.dedup1_fa_clstr,
-      cdhitdup_cluster_sizes_tsv = RunCDHitDup.cdhitdup_cluster_sizes_tsv
+      dedup_fa = select_all([RunIDSeqDedup.dedup1_fa, RunIDSeqDedup.dedup2_fa]),
+      duplicate_clusters_csv = RunIDSeqDedup.duplicate_clusters_csv,
+      duplicate_cluster_sizes_tsv = RunIDSeqDedup.duplicate_cluster_sizes_tsv
   }
 
   call RunBowtie2_bowtie2_out {
@@ -425,9 +425,9 @@ workflow idseq_host_filter {
       docker_image_id = docker_image_id,
       s3_wd_uri = s3_wd_uri,
       lzw_fa = select_all([RunLZW.lzw1_fa, RunLZW.lzw2_fa]),
-      dedup_fa = select_all([RunCDHitDup.dedup1_fa, RunCDHitDup.dedup2_fa]),
-      dedup1_fa_clstr = RunCDHitDup.dedup1_fa_clstr,
-      cdhitdup_cluster_sizes_tsv = RunCDHitDup.cdhitdup_cluster_sizes_tsv,
+      dedup_fa = select_all([RunIDSeqDedup.dedup1_fa, RunIDSeqDedup.dedup2_fa]),
+      duplicate_clusters_csv = RunIDSeqDedup.duplicate_clusters_csv,
+      duplicate_cluster_sizes_tsv = RunIDSeqDedup.duplicate_cluster_sizes_tsv,
       bowtie2_genome = bowtie2_genome
   }
 
@@ -436,9 +436,9 @@ workflow idseq_host_filter {
       docker_image_id = docker_image_id,
       s3_wd_uri = s3_wd_uri,
       bowtie2_fa = select_all([RunBowtie2_bowtie2_out.bowtie2_1_fa, RunBowtie2_bowtie2_out.bowtie2_2_fa, RunBowtie2_bowtie2_out.bowtie2_merged_fa]),
-      dedup_fa = select_all([RunCDHitDup.dedup1_fa, RunCDHitDup.dedup2_fa]),
-      dedup1_fa_clstr = RunCDHitDup.dedup1_fa_clstr,
-      cdhitdup_cluster_sizes_tsv = RunCDHitDup.cdhitdup_cluster_sizes_tsv,
+      dedup_fa = select_all([RunIDSeqDedup.dedup1_fa, RunIDSeqDedup.dedup2_fa]),
+      duplicate_clusters_csv = RunIDSeqDedup.duplicate_clusters_csv,
+      duplicate_cluster_sizes_tsv = RunIDSeqDedup.duplicate_cluster_sizes_tsv,
       max_subsample_fragments = max_subsample_fragments
   }
 
@@ -450,9 +450,9 @@ workflow idseq_host_filter {
         subsampled_fa = select_all([RunSubsample.subsampled_1_fa, RunSubsample.subsampled_2_fa, RunSubsample.subsampled_merged_fa]),
         validate_input_summary_json = RunValidateInput.validate_input_summary_json,
         valid_input_fastq = select_all([RunValidateInput.valid_input1_fastq, RunValidateInput.valid_input2_fastq]),
-        dedup_fa = select_all([RunCDHitDup.dedup1_fa, RunCDHitDup.dedup2_fa]),
-        dedup1_fa_clstr = RunCDHitDup.dedup1_fa_clstr,
-        cdhitdup_cluster_sizes_tsv = RunCDHitDup.cdhitdup_cluster_sizes_tsv,
+        dedup_fa = select_all([RunIDSeqDedup.dedup1_fa, RunIDSeqDedup.dedup2_fa]),
+        duplicate_clusters_csv = RunIDSeqDedup.duplicate_clusters_csv,
+        duplicate_cluster_sizes_tsv = RunIDSeqDedup.duplicate_cluster_sizes_tsv,
         human_star_genome = human_star_genome
     }
 
@@ -461,9 +461,9 @@ workflow idseq_host_filter {
         docker_image_id = docker_image_id,
         s3_wd_uri = s3_wd_uri,
         unmapped_human_fa = select_all([RunStarDownstream.unmapped_human_1_fa, RunStarDownstream.unmapped_human_2_fa]),
-        dedup_fa = select_all([RunCDHitDup.dedup1_fa, RunCDHitDup.dedup2_fa]),
-        dedup1_fa_clstr = RunCDHitDup.dedup1_fa_clstr,
-        cdhitdup_cluster_sizes_tsv = RunCDHitDup.cdhitdup_cluster_sizes_tsv,
+        dedup_fa = select_all([RunIDSeqDedup.dedup1_fa, RunIDSeqDedup.dedup2_fa]),
+        duplicate_clusters_csv = RunIDSeqDedup.duplicate_clusters_csv,
+        duplicate_cluster_sizes_tsv = RunIDSeqDedup.duplicate_cluster_sizes_tsv,
         human_bowtie2_genome = human_bowtie2_genome
     }
   }
@@ -477,9 +477,9 @@ workflow idseq_host_filter {
       docker_image_id = docker_image_id,
       s3_wd_uri = s3_wd_uri,
       subsampled_fa = gsnap_filter_input,
-      dedup_fa = select_all([RunCDHitDup.dedup1_fa, RunCDHitDup.dedup2_fa]),
-      dedup1_fa_clstr = RunCDHitDup.dedup1_fa_clstr,
-      cdhitdup_cluster_sizes_tsv = RunCDHitDup.cdhitdup_cluster_sizes_tsv,
+      dedup_fa = select_all([RunIDSeqDedup.dedup1_fa, RunIDSeqDedup.dedup2_fa]),
+      duplicate_clusters_csv = RunIDSeqDedup.duplicate_clusters_csv,
+      duplicate_cluster_sizes_tsv = RunIDSeqDedup.duplicate_cluster_sizes_tsv,
       gsnap_genome = gsnap_genome
   }
 
@@ -497,11 +497,11 @@ workflow idseq_host_filter {
     File priceseq_out_priceseq1_fa = RunPriceSeq.priceseq1_fa
     File? priceseq_out_priceseq2_fa = RunPriceSeq.priceseq2_fa
     File? priceseq_out_count = RunPriceSeq.output_read_count
-    File cdhitdup_out_dedup1_fa = RunCDHitDup.dedup1_fa
-    File? cdhitdup_out_dedup2_fa = RunCDHitDup.dedup2_fa
-    File cdhitdup_out_dedup1_fa_clstr = RunCDHitDup.dedup1_fa_clstr
-    File cdhitdup_out_cdhitdup_cluster_sizes_tsv = RunCDHitDup.cdhitdup_cluster_sizes_tsv
-    File? cdhitdup_out_count = RunCDHitDup.output_read_count
+    File idseq_dedup_out_dedup1_fa = RunIDSeqDedup.dedup1_fa
+    File? idseq_dedup_out_dedup2_fa = RunIDSeqDedup.dedup2_fa
+    File idseq_dedup_out_duplicate_clusters_csv = RunIDSeqDedup.duplicate_clusters_csv
+    File idseq_dedup_out_duplicate_cluster_sizes_tsv = RunIDSeqDedup.duplicate_cluster_sizes_tsv
+    File? idseq_dedup_out_count = RunIDSeqDedup.output_read_count
     File lzw_out_lzw1_fa = RunLZW.lzw1_fa
     File? lzw_out_lzw2_fa = RunLZW.lzw2_fa
     File? lzw_out_count = RunLZW.output_read_count

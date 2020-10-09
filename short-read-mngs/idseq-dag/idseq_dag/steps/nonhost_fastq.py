@@ -6,7 +6,7 @@ import idseq_dag.util.command as command
 import idseq_dag.util.command_patterns as command_patterns
 
 from idseq_dag.engine.pipeline_step import PipelineStep
-from idseq_dag.util.cdhit_clusters import parse_clusters_file
+from idseq_dag.util.idseq_dedup_clusters import parse_clusters_file
 from idseq_dag.util.count import READ_COUNTING_MODE, ReadCountingMode
 
 
@@ -18,10 +18,7 @@ class PipelineStepNonhostFastq(PipelineStep):
         if READ_COUNTING_MODE == ReadCountingMode.COUNT_ALL:
             # NOTE: this will load the set of all original read headers, which
             # could be several GBs in the worst case.
-            clusters_dict = parse_clusters_file(
-                self.input_files_local[2][0],
-                self.input_files_local[3][0]
-            )
+            clusters_dict = parse_clusters_file(self.input_files_local[2][0])
 
         self.run_with_tax_ids(None, None, clusters_dict)
         # TODO: (gdingle): Generate taxon-specific downloads in idseq-web at
@@ -163,7 +160,7 @@ class PipelineStepNonhostFastq(PipelineStep):
                             output_file_0.write(other_header + "\n")
                             output_file_1.write(other_header + "\n")
                             # Add other headers just in case something has gone
-                            # wrong upstream with cdhitdup.
+                            # wrong upstream with idseq-dedup.
                             seen.add(other_header)
                     continue
                 else:

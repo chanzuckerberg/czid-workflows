@@ -6,7 +6,7 @@ task RunAlignment_gsnap_out {
     String s3_wd_uri
     String? genome_name
     Array[File] host_filter_out_gsnap_filter_fa
-    File cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv
+    File duplicate_cluster_sizes_tsv
     File? index
     File lineage_db
     File accession2taxid_db
@@ -23,7 +23,7 @@ task RunAlignment_gsnap_out {
     --step-module idseq_dag.steps.run_alignment \
     --step-class PipelineStepRunAlignment \
     --step-name gsnap_out \
-    --input-files '[["~{sep='","' host_filter_out_gsnap_filter_fa}"], ["~{cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv}"]]' \
+    --input-files '[["~{sep='","' host_filter_out_gsnap_filter_fa}"], ["~{duplicate_cluster_sizes_tsv}"]]' \
     --output-files '["gsnap.m8", "gsnap.deduped.m8", "gsnap.hitsummary.tab", "gsnap_counts_with_dcr.json"]' \
     --output-dir-s3 '~{s3_wd_uri}' \
     --additional-files '{"lineage_db": "~{lineage_db}", "accession2taxid_db": "~{accession2taxid_db}", "taxon_blacklist": "~{taxon_blacklist}", "deuterostome_db": "~{if use_deuterostome_filter then '~{deuterostome_db}' else ''}" ~{if defined(index) then ', "index": "~{index}"' else ''} }' \
@@ -46,7 +46,7 @@ task RunAlignment_rapsearch2_out {
     String docker_image_id
     String s3_wd_uri
     Array[File] host_filter_out_gsnap_filter_fa
-    File cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv
+    File duplicate_cluster_sizes_tsv
     File lineage_db
     File accession2taxid_db
     File taxon_blacklist
@@ -61,7 +61,7 @@ task RunAlignment_rapsearch2_out {
     --step-module idseq_dag.steps.run_alignment \
     --step-class PipelineStepRunAlignment \
     --step-name rapsearch2_out \
-    --input-files '[["~{sep='","' host_filter_out_gsnap_filter_fa}"], ["~{cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv}"]]' \
+    --input-files '[["~{sep='","' host_filter_out_gsnap_filter_fa}"], ["~{duplicate_cluster_sizes_tsv}"]]' \
     --output-files '["rapsearch2.m8", "rapsearch2.deduped.m8", "rapsearch2.hitsummary.tab", "rapsearch2_counts_with_dcr.json"]' \
     --output-dir-s3 '~{s3_wd_uri}' \
     --additional-files '{"lineage_db": "~{lineage_db}", "accession2taxid_db": "~{accession2taxid_db}", "taxon_blacklist": "~{taxon_blacklist}" ~{if defined(index) then ', "index": "~{index}"' else ''} }' \
@@ -119,9 +119,8 @@ task GenerateAnnotatedFasta {
     File rapsearch2_deduped_m8
     File rapsearch2_hitsummary_tab
     File rapsearch2_counts_with_dcr_json
-    File cdhitdup_out_dedup1_fa_clstr
-    File cdhitdup_out_dedup1_fa
-    File cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv
+    File idseq_dedup_out_duplicate_clusters_csv
+    File duplicate_cluster_sizes_tsv
   }
   command<<<
   set -euxo pipefail
@@ -129,7 +128,7 @@ task GenerateAnnotatedFasta {
     --step-module idseq_dag.steps.generate_annotated_fasta \
     --step-class PipelineStepGenerateAnnotatedFasta \
     --step-name annotated_out \
-    --input-files '[["~{sep='","' host_filter_out_gsnap_filter_fa}"], ["~{gsnap_m8}", "~{gsnap_deduped_m8}", "~{gsnap_hitsummary_tab}", "~{gsnap_counts_with_dcr_json}"], ["~{rapsearch2_m8}", "~{rapsearch2_deduped_m8}", "~{rapsearch2_hitsummary_tab}", "~{rapsearch2_counts_with_dcr_json}"], ["~{cdhitdup_out_dedup1_fa_clstr}", "~{cdhitdup_out_dedup1_fa}"], ["~{cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv}"]]' \
+    --input-files '[["~{sep='","' host_filter_out_gsnap_filter_fa}"], ["~{gsnap_m8}", "~{gsnap_deduped_m8}", "~{gsnap_hitsummary_tab}", "~{gsnap_counts_with_dcr_json}"], ["~{rapsearch2_m8}", "~{rapsearch2_deduped_m8}", "~{rapsearch2_hitsummary_tab}", "~{rapsearch2_counts_with_dcr_json}"], ["~{idseq_dedup_out_duplicate_clusters_csv}"], ["~{duplicate_cluster_sizes_tsv}"]]' \
     --output-files '["annotated_merged.fa", "unidentified.fa"]' \
     --output-dir-s3 '~{s3_wd_uri}' \
     --additional-files '{}' \
@@ -152,9 +151,8 @@ workflow idseq_non_host_alignment {
     File host_filter_out_gsnap_filter_1_fa
     File? host_filter_out_gsnap_filter_2_fa
     File? host_filter_out_gsnap_filter_merged_fa
-    File cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv
-    File cdhitdup_out_dedup1_fa_clstr
-    File cdhitdup_out_dedup1_fa
+    File duplicate_cluster_sizes_tsv
+    File idseq_dedup_out_duplicate_clusters_csv
     String index_version = "2020-04-20"
     File lineage_db = "s3://idseq-public-references/taxonomy/2020-04-20/taxid-lineages.db"
     File accession2taxid_db = "s3://idseq-public-references/alignment_data/2020-04-20/accession2taxid.db"
@@ -173,7 +171,7 @@ workflow idseq_non_host_alignment {
       docker_image_id = docker_image_id,
       s3_wd_uri = s3_wd_uri,
       host_filter_out_gsnap_filter_fa = select_all([host_filter_out_gsnap_filter_1_fa, host_filter_out_gsnap_filter_2_fa, host_filter_out_gsnap_filter_merged_fa]),
-      cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv = cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv,
+      duplicate_cluster_sizes_tsv = duplicate_cluster_sizes_tsv,
       lineage_db = lineage_db,
       accession2taxid_db = accession2taxid_db,
       taxon_blacklist = taxon_blacklist,
@@ -191,7 +189,7 @@ workflow idseq_non_host_alignment {
       docker_image_id = docker_image_id,
       s3_wd_uri = s3_wd_uri,
       host_filter_out_gsnap_filter_fa = select_all([host_filter_out_gsnap_filter_1_fa, host_filter_out_gsnap_filter_2_fa, host_filter_out_gsnap_filter_merged_fa]),
-      cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv = cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv,
+      duplicate_cluster_sizes_tsv = duplicate_cluster_sizes_tsv,
       lineage_db = lineage_db,
       accession2taxid_db = accession2taxid_db,
       taxon_blacklist = taxon_blacklist,
@@ -224,9 +222,8 @@ workflow idseq_non_host_alignment {
       rapsearch2_deduped_m8 = RunAlignment_rapsearch2_out.rapsearch2_deduped_m8,
       rapsearch2_hitsummary_tab = RunAlignment_rapsearch2_out.rapsearch2_hitsummary_tab,
       rapsearch2_counts_with_dcr_json = RunAlignment_rapsearch2_out.rapsearch2_counts_with_dcr_json,
-      cdhitdup_out_dedup1_fa_clstr = cdhitdup_out_dedup1_fa_clstr,
-      cdhitdup_out_dedup1_fa = cdhitdup_out_dedup1_fa,
-      cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv = cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv
+      idseq_dedup_out_duplicate_clusters_csv = idseq_dedup_out_duplicate_clusters_csv,
+      duplicate_cluster_sizes_tsv = duplicate_cluster_sizes_tsv
   }
 
   output {

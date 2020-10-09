@@ -12,7 +12,7 @@ from idseq_dag.engine.pipeline_step import PipelineStep
 from idseq_dag.util.trace_lock import TraceLock
 
 from idseq_dag.steps.run_assembly import PipelineStepRunAssembly
-from idseq_dag.util.count import READ_COUNTING_MODE, ReadCountingMode, get_read_cluster_size, load_cdhit_cluster_sizes
+from idseq_dag.util.count import READ_COUNTING_MODE, ReadCountingMode, get_read_cluster_size, load_duplicate_cluster_sizes
 from idseq_dag.util.lineage import DEFAULT_BLACKLIST_S3, DEFAULT_WHITELIST_S3
 from idseq_dag.util.m8 import MIN_CONTIG_SIZE, NT_MIN_ALIGNMENT_LEN, MAX_EVALUE_THRESHOLD
 
@@ -164,7 +164,7 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
         _align_m8, deduped_m8, hit_summary, orig_counts_with_dcr = self.input_files_local[0]
         assembled_contig, _assembled_scaffold, bowtie_sam, _contig_stats = self.input_files_local[1]
         reference_fasta, = self.input_files_local[2]
-        cdhit_cluster_sizes_path, = self.input_files_local[3]
+        duplicate_cluster_sizes_path, = self.input_files_local[3]
 
         blast_m8, refined_m8, refined_hit_summary, refined_counts_with_dcr, contig_summary_json, blast_top_m8 = self.output_files_local()
 
@@ -190,7 +190,7 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
         (read_dict, accession_dict, _selected_genera) = m8.summarize_hits(hit_summary)
         PipelineStepBlastContigs.run_blast(db_type, blast_m8, assembled_contig, reference_fasta, blast_top_m8)
         read2contig = {}
-        PipelineStepRunAssembly.generate_info_from_sam(bowtie_sam, read2contig, cdhit_cluster_sizes_path)
+        PipelineStepRunAssembly.generate_info_from_sam(bowtie_sam, read2contig, duplicate_cluster_sizes_path)
 
         (updated_read_dict, read2blastm8, contig2lineage, added_reads) = self.update_read_dict(
             read2contig, blast_top_m8, read_dict, accession_dict, db_type)
@@ -223,7 +223,7 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
                 m8.generate_taxon_count_json_from_m8(refined_m8, refined_hit_summary,
                                                      evalue_type, db_type.upper(),
                                                      lineage_db, deuterostome_db, taxon_whitelist, taxon_blacklist,
-                                                     cdhit_cluster_sizes_path, refined_counts_with_dcr)
+                                                     duplicate_cluster_sizes_path, refined_counts_with_dcr)
 
         # generate contig stats at genus/species level
         with log.log_context("PipelineStepBlastContigs", {"substep": "generate_taxon_summary"}):
@@ -233,7 +233,7 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
                 updated_read_dict,
                 added_reads,
                 db_type,
-                cdhit_cluster_sizes_path,
+                duplicate_cluster_sizes_path,
                 # same filter as applied in generate_taxon_count_json_from_m8
                 m8.build_should_keep_filter(deuterostome_db, taxon_whitelist, taxon_blacklist)
             )
@@ -266,12 +266,12 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
         read_dict,
         added_reads_dict,
         db_type,
-        cdhit_cluster_sizes_path,
+        duplicate_cluster_sizes_path,
         should_keep
     ):
         # Return an array with
         # { taxid: , tax_level:, contig_counts: { 'contig_name': <count>, .... } }
-        cdhit_cluster_sizes = load_cdhit_cluster_sizes(cdhit_cluster_sizes_path)
+        duplicate_cluster_sizes = load_duplicate_cluster_sizes(duplicate_cluster_sizes_path)
 
         def new_summary():
             return defaultdict(lambda: defaultdict(lambda: [0, 0]))
@@ -280,7 +280,7 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
         species_summary = new_summary()
 
         def record_read(species_taxid, genus_taxid, contig, read_id):
-            cluster_size = get_read_cluster_size(cdhit_cluster_sizes, read_id)
+            cluster_size = get_read_cluster_size(duplicate_cluster_sizes, read_id)
 
             def increment(counters):
                 counters[0] += 1

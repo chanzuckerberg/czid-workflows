@@ -17,8 +17,8 @@
       "gsnap_accessions_out": [
         "nt.refseq.fasta"
       ],
-      "cdhitdup_cluster_sizes": [
-        "cdhitdup_cluster_sizes.tsv"
+      "duplicate_cluster_sizes": [
+        "duplicate_cluster_sizes.tsv"
       ],
       "refined_gsnap_out": [
         "gsnap.blast.m8",
@@ -31,7 +31,7 @@
     },
     "steps": [
       {
-        "in": ["gsnap_out", "assembly_out", "gsnap_accessions_out", "cdhitdup_cluster_sizes"],
+        "in": ["gsnap_out", "assembly_out", "gsnap_accessions_out", "duplicate_cluster_sizes"],
         "out": "refined_gsnap_out",
         "class": "PipelineStepBlastContigs",
         "module": "idseq_dag.steps.blast_contigs",
@@ -53,7 +53,7 @@
       "gsnap_accessions_out": {
         "s3_dir": "s3://idseq-samples-staging/samples/496/18284/results/idseq-staging-main-1/wdl-1/dag-4.6"
       },
-      "cdhitdup_cluster_sizes": {
+      "duplicate_cluster_sizes": {
         "s3_dir": "s3://idseq-samples-staging/samples/496/18284/results/idseq-staging-main-1/wdl-1/dag-4.6"
       }
     }

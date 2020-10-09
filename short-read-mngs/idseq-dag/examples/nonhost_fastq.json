@@ -5,12 +5,12 @@
     "fastqs": ["RR004_water_2_S23A_R1_001.fastq", "RR004_water_2_S23A_R2_001.fastq"],
     "nonhost_fasta": ["refined_taxid_annot.fasta"],
     "nonhost_fastq_out": ["nonhost_R1.fastq", "nonhost_R2.fastq"],
-    "cdhitdup_clusters": ["dedup1.fa.clstr"],
+    "duplicate_clusters": ["clusters.csv"],
     "deduped_fasta": ["dedup1.fa"]
   },
   "steps": [
     {
-      "in": ["fastqs", "nonhost_fasta", "cdhitdup_clusters", "deduped_fasta"],
+      "in": ["fastqs", "nonhost_fasta", "duplicate_clusters", "deduped_fasta"],
       "out": "nonhost_fastq_out",
       "class": "PipelineStepNonhostFastq",
       "module": "idseq_dag.steps.nonhost_fastq",
@@ -27,7 +27,7 @@
     "nonhost_fasta": {
       "s3_dir": "s3://idseq-samples-prod/samples/833/45285/postprocess/4.0/assembly"
     },
-    "cdhitdup_clusters": {
+    "duplicate_clusters": {
       "s3_dir": "s3://idseq-samples-prod/samples/833/45285/results/4.0"
     },
     "deduped_fasta": {

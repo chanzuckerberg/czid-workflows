@@ -1,5 +1,5 @@
 from idseq_dag.steps.run_star import PipelineStepRunStar
-from idseq_dag.util.count import load_cdhit_cluster_sizes, reads_in_group
+from idseq_dag.util.count import load_duplicate_cluster_sizes, reads_in_group
 
 class PipelineStepRunStarDownstream(PipelineStepRunStar):
     """ Runs STAR as a step with two input targets:
@@ -30,5 +30,5 @@ class PipelineStepRunStarDownstream(PipelineStepRunStar):
         self.should_count_reads = True
         self.counts_dict[self.name] = reads_in_group(
             file_group=self.output_files_local()[0:2],
-            cluster_sizes=load_cdhit_cluster_sizes(self.input_cluster_sizes_path()),
+            cluster_sizes=load_duplicate_cluster_sizes(self.input_cluster_sizes_path()),
             cluster_key=lambda x: x)

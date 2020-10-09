@@ -87,52 +87,48 @@ def _count_reads_expanding_duplicates(local_file_path, cluster_sizes, cluster_ke
     return unique_count, nonunique_count
 
 
-def get_read_cluster_size(cdhit_cluster_sizes, read_id):
+def get_read_cluster_size(duplicate_cluster_sizes, read_id):
     suffix = None
-    cluster_size = cdhit_cluster_sizes.get(read_id)
+    cluster_size = duplicate_cluster_sizes.get(read_id)
     if cluster_size == None:
         prefix, suffix = read_id[:-2], read_id[-2:]
-        cluster_size = cdhit_cluster_sizes.get(prefix)
+        cluster_size = duplicate_cluster_sizes.get(prefix)
     assert cluster_size != None and suffix in (
-        None, "/1", "/2"), f"Read ID not found in cdhit_cluster_sizes dict: {read_id}"
+        None, "/1", "/2"), f"Read ID not found in duplicate_cluster_sizes dict: {read_id}"
     return cluster_size
 
 
-def _load_cdhit_cluster_sizes_work(filename):
-    cdhit_cluster_sizes = {}
+def _load_duplicate_cluster_sizes_work(filename):
+    duplicate_cluster_sizes = {}
     with open(filename, "r") as f:
         for line in f:
             cluster_size_str, read_id = line.split(None, 1)
-            cdhit_cluster_sizes[read_id.strip()] = int(cluster_size_str)
-    return cdhit_cluster_sizes
+            duplicate_cluster_sizes[read_id.strip()] = int(cluster_size_str)
+    return duplicate_cluster_sizes
 
 
 # Loading cluster sizes can be expensive prior to subsampling (for some exceptionally large
 # samples with over 100 million reads).  To ameliorate this cost, we make sure it is only
 # paid once per stage (not once per step).
-_CDHIT_CLUSTER_SIZES_CACHE = {}
-_CDHIT_CLUSTER_SIZES_LOCK = multiprocessing.RLock()
+_DUPLICATE_CLUSTER_SIZES_CACHE = {}
+_DUPLICATE_CLUSTER_SIZES_LOCK = multiprocessing.RLock()
 
 
-def load_cdhit_cluster_sizes(filename):
-    with _CDHIT_CLUSTER_SIZES_LOCK:
-        if filename not in _CDHIT_CLUSTER_SIZES_CACHE:
-            _CDHIT_CLUSTER_SIZES_CACHE[filename] = _load_cdhit_cluster_sizes_work(filename)
-        return _CDHIT_CLUSTER_SIZES_CACHE[filename]
+def load_duplicate_cluster_sizes(filename):
+    with _DUPLICATE_CLUSTER_SIZES_LOCK:
+        if filename not in _DUPLICATE_CLUSTER_SIZES_CACHE:
+            _DUPLICATE_CLUSTER_SIZES_CACHE[filename] = _load_duplicate_cluster_sizes_work(filename)
+        return _DUPLICATE_CLUSTER_SIZES_CACHE[filename]
 
 
-def save_cdhit_cluster_sizes(filename, cdhit_clusters):
-    with _CDHIT_CLUSTER_SIZES_LOCK:
-        _CDHIT_CLUSTER_SIZES_CACHE[filename] = {}
+def save_duplicate_cluster_sizes(filename, duplicate_clusters):
+    with _DUPLICATE_CLUSTER_SIZES_LOCK:
+        _DUPLICATE_CLUSTER_SIZES_CACHE[filename] = {}
     with open(filename, "w") as tsv:
-        for read_id, clusters in cdhit_clusters.items():
+        for read_id, clusters in duplicate_clusters.items():
             cluster_size = clusters[0]
-            assert cluster_size != None, f"""If this happened, probably
-            dedup1.fa output of cdhit contains reads that are not mentioned in
-            dedup1.fa.clstr.  Perhaps set cluster_size=1 for those reads but
-            also follow up with cdhit.  Read id: {read_id}"""
             tsv.write(f"{cluster_size}\t{read_id}\n")
-            _CDHIT_CLUSTER_SIZES_CACHE[filename][read_id] = cluster_size
+            _DUPLICATE_CLUSTER_SIZES_CACHE[filename][read_id] = cluster_size
 
 
 def reads_in_group(file_group, max_fragments=None, cluster_sizes=None, cluster_key=None):
@@ -140,7 +136,7 @@ def reads_in_group(file_group, max_fragments=None, cluster_sizes=None, cluster_k
     OVERVIEW
 
     Count reads in a group of matching files, up to a maximum number of fragments,
-    optionally expanding each fragment to its cdhit cluster size.  Inputs in
+    optionally expanding each fragment to its duplicate cluster size.  Inputs in
     FASTA and FASTQ format are supported, subject to restrictions below.
 
     DEFINITIONS
@@ -149,12 +145,12 @@ def reads_in_group(file_group, max_fragments=None, cluster_sizes=None, cluster_k
     If the input is single, then 1 fragment == 1 read.
     If the input is paired, then 1 fragment == 2 reads.
 
-    The term "cluster" refers to the output of the pipeline step cd-hit-dup, which
+    The term "cluster" refers to the output of the pipeline step idseq-dedup, which
     identifies and groups together duplicate fragments into clusters.  Duplicates
     typically result from PCR or other amplificaiton.  It is cost effective for the
     pipeline to operate on a single representative fragment from each cluster, then
     infer back the original fragment count using the cluster sizes information
-    emitted by the cd-hit-dup step.  The caller should load that information via
+    emitted by the idseq-dedup step.  The caller should load that information via
     m8.load_cluster_sizes() before passing it to this function.
 
     RESTRICTIONS
