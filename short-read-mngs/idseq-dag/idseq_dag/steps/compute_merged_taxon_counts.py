@@ -81,7 +81,6 @@ class ComputeMergedTaxonCounts(PipelineStep):
                     nr_hit_dict["source_count_type"] = "nr"
                     self._write_tsv_row(nr_hit_dict, TAB_SCHEMA_MERGED, output_hit)
 
-        print("LAST STEP")
         # Create new merged m8 and hit summary files
         self.create_taxon_count_file(merged_m8_filename, merged_hit_filename, cluster_sizes_filename, merged_taxon_count_filename)
 

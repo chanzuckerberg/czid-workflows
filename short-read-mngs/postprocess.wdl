@@ -570,7 +570,7 @@ workflow idseq_postprocess {
       nt_hitsummary2_tab = tigs_refined_gsnap_out.assembly_gsnap_hitsummary2_tab,
       nr_m8 = BlastContigs_refined_rapsearch2_out.assembly_rapsearch2_reassigned_m8,
       nr_hitsummary2_tab = BlastContigs_refined_rapsearch2_out.assembly_rapsearch2_hitsummary2_tab,
-      cluster_sizes_tsv = cdhitdup_cluster_sizes_cdhitdup_cluster_sizes_tsv,
+      cluster_sizes_tsv = duplicate_cluster_sizes_tsv,
 
       lineage_db = lineage_db,
       taxon_blacklist = taxon_blacklist,
