@@ -462,7 +462,7 @@ def _call_hits_m8_work(input_m8, lineage_map, accession2taxid_dict,
 
 @command.run_in_subprocess
 def generate_taxon_count_json_from_m8(
-        m8_file, hit_level_file, e_value_type, count_type, lineage_map_path,
+        m8_file, hit_level_file, count_type, lineage_map_path,
         deuterostome_path, taxon_whitelist_path, taxon_blacklist_path,
         duplicate_cluster_sizes_path, output_json_file):
     # Parse through hit file and m8 input file and format a JSON file with
@@ -515,17 +515,19 @@ def generate_taxon_count_json_from_m8(
                 assert m8_line_columns[0] == hit_line_columns[0], msg
                 percent_identity = float(m8_line_columns[2])
                 alignment_length = float(m8_line_columns[3])
+                if count_type == 'NR' or hit_source_count_type == 'NR':
+                    alignment_length *= 3
                 e_value = float(m8_line_columns[10])
 
                 # These have been filtered out before the creation of m8_f and hit_f
                 assert alignment_length > 0
                 assert -0.25 < percent_identity < 100.25
                 assert e_value == e_value
-                if e_value_type != 'log10':
-                    # e_value could be 0 when large contigs are mapped
-                    if e_value <= MIN_NORMAL_POSITIVE_DOUBLE:
-                        e_value = MIN_NORMAL_POSITIVE_DOUBLE
-                    e_value = math.log10(e_value)
+
+                # e_value could be 0 when large contigs are mapped
+                if e_value <= MIN_NORMAL_POSITIVE_DOUBLE:
+                    e_value = MIN_NORMAL_POSITIVE_DOUBLE
+                e_value = math.log10(e_value)
 
                 # Retrieve the taxon lineage and mark meaningless calls with fake
                 # taxids.

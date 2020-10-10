@@ -171,7 +171,6 @@ class PipelineStepRunAlignment(PipelineStep):
                         deduped_output_m8, output_hitsummary, min_alignment_length)
 
         db_type = 'NT' if self.alignment_algorithm == 'gsnap' else 'NR'
-        evalue_type = 'log10' if self.alignment_algorithm == 'rapsearch2' else 'raw'
 
         deuterostome_db = None
         if self.additional_files.get("deuterostome_db"):
@@ -187,7 +186,7 @@ class PipelineStepRunAlignment(PipelineStep):
                                               self.ref_dir_local)
 
         m8.generate_taxon_count_json_from_m8(
-            deduped_output_m8, output_hitsummary, evalue_type, db_type,
+            deduped_output_m8, output_hitsummary, db_type,
             lineage_db, deuterostome_db, taxon_whitelist, taxon_blacklist, duplicate_cluster_sizes_path,
             output_counts_with_dcr_json)
 
@@ -503,6 +502,7 @@ class PipelineStepRunAlignment(PipelineStep):
                     "-l", "10",
                     "-a", "T",
                     "-b", "0",
+                    "-s", "f",
                     "-v", "50",
                     "-z", str(threads),
                     "-o", output_path,
@@ -638,6 +638,7 @@ class PipelineStepRunAlignment(PipelineStep):
                 -l 10
                 -a T
                 -b 0
+                -s f
                 -v 50
                 -z 24
                 -q {remote_input_files}

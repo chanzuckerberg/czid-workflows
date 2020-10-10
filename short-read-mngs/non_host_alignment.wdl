@@ -204,8 +204,8 @@ workflow idseq_non_host_alignment {
       docker_image_id = docker_image_id,
       s3_wd_uri = s3_wd_uri,
       counts_json_files = [
-        RunAlignmentRemotely_gsnap_out.gsnap_counts_with_dcr_json,
-        RunAlignmentRemotely_rapsearch2_out.rapsearch2_counts_with_dcr_json
+        RunAlignment_gsnap_out.gsnap_counts_with_dcr_json,
+        RunAlignment_rapsearch2_out.rapsearch2_counts_with_dcr_json
       ]
   }
 

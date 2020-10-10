@@ -48,7 +48,7 @@ class ComputeMergedTaxonCounts(PipelineStep):
                 )
                 if nt_alignment.contig:
                     output_m8.write(nt_m8_row)
-                    nt_hit_dict["source_count_type"] = "nt"
+                    nt_hit_dict["source_count_type"] = "NT"
                     self._write_tsv_row(nt_hit_dict, TAB_SCHEMA_MERGED, output_hit)
                     if nr_alignment:
                         del nr_alignment_per_read[nt_hit_dict["read_id"]]
@@ -56,7 +56,7 @@ class ComputeMergedTaxonCounts(PipelineStep):
                     continue
                 elif nt_alignment.read:
                     output_m8.write(nt_m8_row)
-                    nt_hit_dict["source_count_type"] = "nt"
+                    nt_hit_dict["source_count_type"] = "NR"
                     self._write_tsv_row(nt_hit_dict, TAB_SCHEMA_MERGED, output_hit)
                     if nr_alignment:
                         del nr_alignment_per_read[nt_hit_dict["read_id"]]
@@ -78,7 +78,7 @@ class ComputeMergedTaxonCounts(PipelineStep):
 
                 if nr_alignment:
                     output_m8.write(nr_m8_row)
-                    nr_hit_dict["source_count_type"] = "nr"
+                    nr_hit_dict["source_count_type"] = "NR"
                     self._write_tsv_row(nr_hit_dict, TAB_SCHEMA_MERGED, output_hit)
 
         # Create new merged m8 and hit summary files
@@ -87,8 +87,7 @@ class ComputeMergedTaxonCounts(PipelineStep):
     def create_taxon_count_file(self, merged_m8_filename, merged_hit_filename, cluster_sizes_filename, merged_taxon_count_filename):
         # TOOO: Can this be consolidated throughout the pipeline?
         # This setup is mostly repeated in three steps. The list of taxa do not seem to change.
-        evalue_type = 'raw'
-        count_type = 'merged_nt_nr'
+        count_type = 'merged_NT_NR'
         lineage_db = fetch_reference(
             self.additional_files["lineage_db"],
             self.ref_dir_local,
@@ -109,7 +108,6 @@ class ComputeMergedTaxonCounts(PipelineStep):
         generate_taxon_count_json_from_m8(
             merged_m8_filename,
             merged_hit_filename,
-            evalue_type,
             count_type,
             lineage_db,
             deuterostome_db,

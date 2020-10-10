@@ -223,9 +223,9 @@ task ComputeMergedTaxonCounts {
     String docker_image_id
     String s3_wd_uri
 
-    File nt_deduped_m8
+    File nt_m8
     File nt_hitsummary2_tab
-    File nr_deduped_m8
+    File nr_m8
     File nr_hitsummary2_tab
     File cluster_sizes_tsv
 
@@ -243,7 +243,7 @@ task ComputeMergedTaxonCounts {
       --step-module idseq_dag.steps.compute_merged_taxon_counts \
       --step-class ComputeMergedTaxonCounts \
       --step-name compute_merged_taxon_counts_out \
-      --input-files '["~{nt_deduped_m8}", "~{nt_hitsummary2_tab}", "~{nr_deduped_m8}", "~{nr_hitsummary2_tab}", "~{cluster_sizes_tsv}"]' \
+      --input-files '["~{nt_m8}", "~{nt_hitsummary2_tab}", "~{nr_m8}", "~{nr_hitsummary2_tab}", "~{cluster_sizes_tsv}"]' \
       --output-files '["merged.m8", "merged.hitsummary2.tab", "merged_taxon_counts_with_dcr.json"]' \
       --output-dir-s3 '~{s3_wd_uri}' \
       --additional-files '{"lineage_db": "~{lineage_db}", "taxon_blacklist": "~{taxon_blacklist}", "deuterostome_db": "~{if use_deuterostome_filter then '~{deuterostome_db}' else ''}"}' \
@@ -567,7 +567,7 @@ workflow idseq_postprocess {
       s3_wd_uri = s3_wd_uri,
 
       nt_m8 = BlastContigs_refined_gsnap_out.assembly_gsnap_reassigned_m8,
-      nt_hitsummary2_tab = tigs_refined_gsnap_out.assembly_gsnap_hitsummary2_tab,
+      nt_hitsummary2_tab = BlastContigs_refined_gsnap_out.assembly_gsnap_hitsummary2_tab,
       nr_m8 = BlastContigs_refined_rapsearch2_out.assembly_rapsearch2_reassigned_m8,
       nr_hitsummary2_tab = BlastContigs_refined_rapsearch2_out.assembly_rapsearch2_hitsummary2_tab,
       cluster_sizes_tsv = duplicate_cluster_sizes_tsv,
