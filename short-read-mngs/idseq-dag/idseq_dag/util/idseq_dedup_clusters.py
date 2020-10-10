@@ -3,7 +3,7 @@ idseq-dedup outputs a cluster file in the form of a csv
 The first column contains the representative read id of
 a cluster, and the second column contains the read id.
 """
-from csv import reader
+from csv import DictReader
 from typing import Dict, Optional, Tuple
 
 
@@ -12,7 +12,8 @@ def parse_clusters_file(
 ) -> Dict[str, Optional[Tuple]]:
     clusters_dict = {}
     with open(idseq_dedup_clusters_path) as f:
-        for r_read_id, read_id in reader(f):
+        for row in DictReader(f):
+            r_read_id, read_id = row["representative read id"], row["read id"]
             if r_read_id not in clusters_dict:
                 clusters_dict[r_read_id] = (1,)
             else:
