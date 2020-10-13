@@ -273,7 +273,7 @@ task CombineTaxonCounts {
     --step-module idseq_dag.steps.combine_taxon_counts \
     --step-class PipelineStepCombineTaxonCounts \
     --step-name refined_taxon_count_out \
-    --input-files '["~{sep='", "' counts_json_files}""]' \
+    --input-files '["~{sep='", "' counts_json_files}"]' \
     --output-files '["assembly/refined_taxon_counts_with_dcr.json"]' \
     --output-dir-s3 '~{s3_wd_uri}' \
     --additional-files '{}' \
