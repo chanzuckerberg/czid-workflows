@@ -524,10 +524,11 @@ def generate_taxon_count_json_from_m8(
                 assert -0.25 < percent_identity < 100.25
                 assert e_value == e_value
 
-                # e_value could be 0 when large contigs are mapped
-                if e_value <= MIN_NORMAL_POSITIVE_DOUBLE:
-                    e_value = MIN_NORMAL_POSITIVE_DOUBLE
-                e_value = math.log10(e_value)
+                if count_type == "NT" or hit_source_count_type == "NT":
+                    # e_value could be 0 when large contigs are mapped
+                    if e_value <= MIN_NORMAL_POSITIVE_DOUBLE:
+                        e_value = MIN_NORMAL_POSITIVE_DOUBLE
+                    e_value = math.log10(e_value)
 
                 # Retrieve the taxon lineage and mark meaningless calls with fake
                 # taxids.

@@ -502,7 +502,6 @@ class PipelineStepRunAlignment(PipelineStep):
                     "-l", "10",
                     "-a", "T",
                     "-b", "0",
-                    "-s", "F",
                     "-v", "50",
                     "-z", str(threads),
                     "-o", output_path,
