@@ -24,8 +24,8 @@ class ComputeMergedTaxonCounts(PipelineStep):
 
         # Create new merged m8 and hit summary files
         nr_alignment_per_read = {}
-        # TODO: consider going through nt first, since that will save us from storing results in memory
-        # for all the reads that get they hit from NT contigs
+        # TODO: if bottleneck, consider going through nt first, since that will save us from storing
+        # results in memory for all the reads that get their hit from NT contigs
         for nr_hit_dict in parse_tsv(nr_hitsummary2_tab, TAB_SCHEMA_MERGED, strict=False):
             nr_alignment_per_read[nr_hit_dict["read_id"]] = SpeciesAlignmentResults(
                 contig=nr_hit_dict.get("contig_species_taxid"),

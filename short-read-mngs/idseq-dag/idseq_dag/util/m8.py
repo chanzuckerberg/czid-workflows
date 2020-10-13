@@ -84,8 +84,9 @@ def parse_tsv(path, schema, expect_headers=False, raw_lines=False, strict=True):
         for line_number, raw_line in enumerate(stream):
             try:
                 row = raw_line.rstrip("\n").split("\t")
-                if strict:
-                    assert len(row) == len(schema)
+                if strict and len(row) != len(schema):
+                    msg = f"{path}:{line_number + 1}:  Parse error.  Input line does not conform to schema: {schema}"
+                    log.write(msg, warning=True)
                 length = min(len(row), len(schema))
                 row_dict = {cname: ctype(vstr) for vstr,
                             (cname, ctype) in zip(row[0:length], schema_items[0:length])}
