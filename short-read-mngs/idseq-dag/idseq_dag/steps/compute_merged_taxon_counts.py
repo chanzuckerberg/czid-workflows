@@ -64,10 +64,10 @@ class ComputeMergedTaxonCounts(PipelineStep):
                     self._write_tsv_row(nt_hit_dict, TAB_SCHEMA_MERGED, output_hit)
                     if nr_alignment:
                         del nr_alignment_per_read[nt_hit_dict["read_id"]]
-                elif has_nr_contig_hit:
+                elif has_nr_contig_hit or has_nr_read_hit:
                     continue
                 else:
-                    raise Exception("NO ALIGNMENTS FOUND - SHOULD NOT BE HERE")
+                    raise Exception("NO ALIGNMENTS FOUND - Should not be here")
 
 
             # dump remaining reads from NR
