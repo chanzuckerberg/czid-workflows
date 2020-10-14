@@ -225,8 +225,10 @@ task ComputeMergedTaxonCounts {
 
     File nt_m8
     File nt_hitsummary2_tab
+    File nt_contig_summary_json
     File nr_m8
     File nr_hitsummary2_tab
+    File nr_contig_summary_json
     File cluster_sizes_tsv
 
     File lineage_db
@@ -243,7 +245,7 @@ task ComputeMergedTaxonCounts {
       --step-module idseq_dag.steps.compute_merged_taxon_counts \
       --step-class ComputeMergedTaxonCounts \
       --step-name compute_merged_taxon_counts_out \
-      --input-files '["~{nt_m8}", "~{nt_hitsummary2_tab}", "~{nr_m8}", "~{nr_hitsummary2_tab}", "~{cluster_sizes_tsv}"]' \
+      --input-files '["~{nt_m8}", "~{nt_hitsummary2_tab}", "~{nt_contig_summary_json}", "~{nr_m8}", "~{nr_hitsummary2_tab}", "~{nr_contig_summary_json}", "~{cluster_sizes_tsv}"]' \
       --output-files '["merged.m8", "merged.hitsummary2.tab", "merged_taxon_counts_with_dcr.json"]' \
       --output-dir-s3 '~{s3_wd_uri}' \
       --additional-files '{"lineage_db": "~{lineage_db}", "taxon_blacklist": "~{taxon_blacklist}", "deuterostome_db": "~{if use_deuterostome_filter then '~{deuterostome_db}' else ''}"}' \
@@ -254,6 +256,7 @@ task ComputeMergedTaxonCounts {
     File merged_m8 = "merged.m8"
     File merged_hitsummary2_tab = "merged.hitsummary2.tab"
     File merged_taxon_counts_with_dcr_json = "merged_taxon_counts_with_dcr.json"
+    File merged_contig_summary_json = "merged_contig_summary.json"
   }
 
   runtime {
@@ -568,8 +571,10 @@ workflow idseq_postprocess {
 
       nt_m8 = BlastContigs_refined_gsnap_out.assembly_gsnap_reassigned_m8,
       nt_hitsummary2_tab = BlastContigs_refined_gsnap_out.assembly_gsnap_hitsummary2_tab,
+      nt_contig_summary_json = BlastContigs_refined_gsnap_out.assembly_gsnap_contig_summary_json,
       nr_m8 = BlastContigs_refined_rapsearch2_out.assembly_rapsearch2_reassigned_m8,
       nr_hitsummary2_tab = BlastContigs_refined_rapsearch2_out.assembly_rapsearch2_hitsummary2_tab,
+      nr_contig_summary_json = BlastContigs_refined_rapsearch2_out.assembly_rapsearch2_contig_summary_json,
       cluster_sizes_tsv = duplicate_cluster_sizes_tsv,
 
       lineage_db = lineage_db,

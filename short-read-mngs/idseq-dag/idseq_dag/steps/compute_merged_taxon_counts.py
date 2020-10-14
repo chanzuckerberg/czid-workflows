@@ -11,6 +11,8 @@ from idseq_dag.util.s3 import fetch_reference
 
 
 SpeciesAlignmentResults = namedtuple('SpeciesAlignmentResults', ['contig', 'read'])
+ComputeMergedTaxonCountsInputs = namedtuple('ComputeMergedTaxonCountsInputs', ['nt_m8', 'nt_hitsummary2_tab', 'nt_contig_summary_json', 'nr_m8', 'nr_hitsummary2_tab', 'nr_contig_summary_json', 'cluster_sizes_filename'])
+ComputeMergedTaxonCountsOutputs = namedtuple('ComputeMergedTaxonCountsOutputs', ['merged_m8_filename', 'merged_hit_filename', 'merged_taxon_count_filename', 'merged_contig_summary_json'])
 
 class ComputeMergedTaxonCounts(PipelineStep):
     '''
@@ -18,25 +20,31 @@ class ComputeMergedTaxonCounts(PipelineStep):
     '''
 
     def run(self):
-        # Retrieve inputs and outputs
-        nt_m8, nt_hitsummary2_tab, nr_m8, nr_hitsummary2_tab, cluster_sizes_filename = self.input_files_local
-        merged_m8_filename, merged_hit_filename, merged_taxon_count_filename = self.output_files_local()
+        # Unpack inputs and outputs
+        self.inputs = ComputeMergedTaxonCountsInputs(*self.input_files_local)
+        self.outputs = ComputeMergedTaxonCountsOutputs(*self.output_files_local)
 
+        self.merge_taxon_counts()
+        self.merge_contigs()
+
+    def merge_taxon_counts(self):
         # Create new merged m8 and hit summary files
         nr_alignment_per_read = {}
-        # TODO: if bottleneck, consider going through nt first, since that will save us from storing
-        # results in memory for all the reads that get their hit from NT contigs
-        for nr_hit_dict in parse_tsv(nr_hitsummary2_tab, TAB_SCHEMA_MERGED, strict=False):
+        # if this is a bottleneck, consider
+        # (1) if processing time bottleneck, load all the data to memory
+        # (2) if memory bottleneck, going through nt first, since that will save us from storing
+        #     results in memory for all the reads that get their hit from NT contigs
+        for nr_hit_dict in parse_tsv(self.inputs.nr_hitsummary2_tab, TAB_SCHEMA_MERGED, strict=False):
             nr_alignment_per_read[nr_hit_dict["read_id"]] = SpeciesAlignmentResults(
                 contig=nr_hit_dict.get("contig_species_taxid"),
                 read=nr_hit_dict.get("species_taxid"),
             )
 
-        with open(merged_m8_filename, 'w') as output_m8, open(merged_hit_filename, 'w') as output_hit:
+        with open(self.inputs.merged_m8_filename, 'w') as output_m8, open(self.inputs.merged_hit_filename, 'w') as output_hit:
             # first pass for NR and output to m8 files if assignment should come from NT
             for nt_hit_dict, [nt_m8_dict, nt_m8_row] in zip(
-                parse_tsv(nt_hitsummary2_tab, TAB_SCHEMA_MERGED, strict=False),
-                parse_tsv(nt_m8, BLAST_OUTPUT_SCHEMA, raw_lines=True, strict=False)
+                parse_tsv(self.inputs.nt_hitsummary2_tab, TAB_SCHEMA_MERGED, strict=False),
+                parse_tsv(self.inputs.nt_m8, BLAST_OUTPUT_SCHEMA, raw_lines=True, strict=False)
             ):
                 # assert files match
                 assert nt_hit_dict['read_id'] == nt_m8_dict["qseqid"], f"Mismatched m8 and hit summary files for nt [{nt_hit_dict['read_id']} != {nt_m8_dict['qseqid']}]"
@@ -46,21 +54,17 @@ class ComputeMergedTaxonCounts(PipelineStep):
                     contig=nt_hit_dict.get("contig_species_taxid"),
                     read=nt_hit_dict.get("species_taxid")
                 )
-                if nt_alignment.contig:
+                has_nt_contig_hit = nt_alignment.contig
+                has_nr_contig_hit = nr_alignment and nr_alignment.contig
+                has_nt_read_hit = nt_alignment.read
+                has_nr_read_hit = nr_alignment and nr_alignment.read
+                if has_nt_contig_hit or (not has_nr_contig_hit and has_nt_read_hit):
                     output_m8.write(nt_m8_row)
                     nt_hit_dict["source_count_type"] = "NT"
                     self._write_tsv_row(nt_hit_dict, TAB_SCHEMA_MERGED, output_hit)
                     if nr_alignment:
                         del nr_alignment_per_read[nt_hit_dict["read_id"]]
-                elif nr_alignment and nr_alignment.contig:
-                    continue
-                elif nt_alignment.read:
-                    output_m8.write(nt_m8_row)
-                    nt_hit_dict["source_count_type"] = "NR"
-                    self._write_tsv_row(nt_hit_dict, TAB_SCHEMA_MERGED, output_hit)
-                    if nr_alignment:
-                        del nr_alignment_per_read[nt_hit_dict["read_id"]]
-                elif nr_alignment and nr_alignment.read:
+                elif has_nr_contig_hit:
                     continue
                 else:
                     raise Exception("NO ALIGNMENTS FOUND - SHOULD NOT BE HERE")
@@ -68,8 +72,8 @@ class ComputeMergedTaxonCounts(PipelineStep):
 
             # dump remaining reads from NR
             for nr_hit_dict, [nr_m8_dict, nr_m8_row] in zip(
-                parse_tsv(nr_hitsummary2_tab, TAB_SCHEMA_MERGED, strict=False),
-                parse_tsv(nr_m8, BLAST_OUTPUT_SCHEMA, raw_lines=True, strict=False)
+                parse_tsv(self.inputs.nr_hitsummary2_tab, TAB_SCHEMA_MERGED, strict=False),
+                parse_tsv(self.inputs.nr_m8, BLAST_OUTPUT_SCHEMA, raw_lines=True, strict=False)
             ):
                 # assert files match
                 assert nr_hit_dict['read_id'] == nr_m8_dict["qseqid"], f"Mismatched m8 and hit summary files for NR [{nr_hit_dict['read_id']} {nr_m8_dict['qseqid']}]."
@@ -82,9 +86,30 @@ class ComputeMergedTaxonCounts(PipelineStep):
                     self._write_tsv_row(nr_hit_dict, TAB_SCHEMA_MERGED, output_hit)
 
         # Create new merged m8 and hit summary files
-        self.create_taxon_count_file(merged_m8_filename, merged_hit_filename, cluster_sizes_filename, merged_taxon_count_filename)
+        self.create_taxon_count_file()
 
-    def create_taxon_count_file(self, merged_m8_filename, merged_hit_filename, cluster_sizes_filename, merged_taxon_count_filename):
+    def merge_contigs(self):
+        nt_contigs = json.loads(self.inputs.nt_contig_summary_json)
+        nr_contigs = json.loads(self.inputs.nr_contig_summary_json)
+
+        merged_contigs = nt_contigs
+        nt_contigs_name_set = set()
+        for contigs_per_taxid in nt_contigs:
+            nt_contigs_name_set |= set(contigs_per_taxid['contig_counts'].keys())
+
+        for contigs_per_taxid in nt_contigs:
+            # remove contigs that aligned to 'nt'
+            contigs_per_taxid['contig_counts'] = {
+                contig_name: contig_counts
+                for contig_name, contig_counts in contigs_per_taxid['contig_counts']
+                if contig_name not in nt_contigs_name_set
+            }
+            merged_contigs.append(contigs_per_taxid['contig_counts'])
+
+        with open(self.outputs.merged_contig_summary_json, 'w') as output_contig_json:
+            json.dump(merged_contigs, output_contig_json)
+
+    def create_taxon_count_file(self):
         # TOOO: Can this be consolidated throughout the pipeline?
         # This setup is mostly repeated in three steps. The list of taxa do not seem to change.
         count_type = 'merged_NT_NR'
@@ -102,19 +127,19 @@ class ComputeMergedTaxonCounts(PipelineStep):
                                                  self.ref_dir_local)
         blacklist_s3_file = self.additional_files.get('taxon_blacklist', DEFAULT_BLACKLIST_S3)
         taxon_blacklist = fetch_reference(blacklist_s3_file, self.ref_dir_local)
-        cdhit_cluster_sizes_path = cluster_sizes_filename
+        cdhit_cluster_sizes_path = self.inputs.cluster_sizes_filename
 
 
         generate_taxon_count_json_from_m8(
-            merged_m8_filename,
-            merged_hit_filename,
+            self.outputs.merged_m8_filename,
+            self.outputs.merged_hit_filename,
             count_type,
             lineage_db,
             deuterostome_db,
             taxon_whitelist,
             taxon_blacklist,
             cdhit_cluster_sizes_path,
-            merged_taxon_count_filename
+            self.outputs.merged_taxon_count_filename
         )
 
     def _write_tsv_row(self, data, schema, output):
