@@ -40,7 +40,7 @@ class ComputeMergedTaxonCounts(PipelineStep):
                 read=nr_hit_dict.get("species_taxid"),
             )
 
-        with open(self.inputs.merged_m8_filename, 'w') as output_m8, open(self.inputs.merged_hit_filename, 'w') as output_hit:
+        with open(self.outputs.merged_m8_filename, 'w') as output_m8, open(self.outputs.merged_hit_filename, 'w') as output_hit:
             # first pass for NR and output to m8 files if assignment should come from NT
             for nt_hit_dict, [nt_m8_dict, nt_m8_row] in zip(
                 parse_tsv(self.inputs.nt_hitsummary2_tab, TAB_SCHEMA_MERGED, strict=False),
