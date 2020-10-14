@@ -246,7 +246,7 @@ task ComputeMergedTaxonCounts {
       --step-class ComputeMergedTaxonCounts \
       --step-name compute_merged_taxon_counts_out \
       --input-files '["~{nt_m8}", "~{nt_hitsummary2_tab}", "~{nt_contig_summary_json}", "~{nr_m8}", "~{nr_hitsummary2_tab}", "~{nr_contig_summary_json}", "~{cluster_sizes_tsv}"]' \
-      --output-files '["merged.m8", "merged.hitsummary2.tab", "merged_taxon_counts_with_dcr.json"]' \
+      --output-files '["merged.m8", "merged.hitsummary2.tab", "merged_taxon_counts_with_dcr.json", "merged_contig_summary.json"]' \
       --output-dir-s3 '~{s3_wd_uri}' \
       --additional-files '{"lineage_db": "~{lineage_db}", "taxon_blacklist": "~{taxon_blacklist}", "deuterostome_db": "~{if use_deuterostome_filter then '~{deuterostome_db}' else ''}"}' \
       --additional-attributes '{"use_taxon_whitelist": ~{use_taxon_whitelist} }'
