@@ -3,6 +3,8 @@ import csv
 
 from collections import namedtuple
 
+import idseq_dag.util.log as log
+
 from idseq_dag.engine.pipeline_step import PipelineStep
 from idseq_dag.util.lineage import DEFAULT_BLACKLIST_S3, DEFAULT_WHITELIST_S3
 from idseq_dag.util.m8 import BLAST_OUTPUT_SCHEMA, generate_taxon_count_json_from_m8, parse_tsv
@@ -16,7 +18,8 @@ ComputeMergedTaxonCountsOutputs = namedtuple('ComputeMergedTaxonCountsOutputs', 
 
 class ComputeMergedTaxonCounts(PipelineStep):
     '''
-    Merge taxon results from NT database and from NR database
+    Merge taxon results from NT database and from NR database.
+    Create m8 and hit summary files for the new merged classifier and taxon count and contig json files.
     '''
 
     def run(self):
@@ -89,22 +92,29 @@ class ComputeMergedTaxonCounts(PipelineStep):
         self.create_taxon_count_file()
 
     def merge_contigs(self):
-        nt_contigs = json.loads(self.inputs.nt_contig_summary_json)
-        nr_contigs = json.loads(self.inputs.nr_contig_summary_json)
+        with open(self.inputs.nt_contig_summary_json) as f:
+            nt_contigs = json.load(f)
+        with open(self.inputs.nr_contig_summary_json) as f:
+            nr_contigs = json.load(f)
 
         merged_contigs = nt_contigs
+        for taxid_contigs in merged_contigs:
+            taxid_contigs['count_type'] = 'merged_NT_NR'
+
         nt_contigs_name_set = set()
         for contigs_per_taxid in nt_contigs:
             nt_contigs_name_set |= set(contigs_per_taxid['contig_counts'].keys())
 
-        for contigs_per_taxid in nt_contigs:
+        for contigs_per_taxid in nr_contigs:
             # remove contigs that aligned to 'nt'
             contigs_per_taxid['contig_counts'] = {
                 contig_name: contig_counts
-                for contig_name, contig_counts in contigs_per_taxid['contig_counts']
+                for contig_name, contig_counts in contigs_per_taxid['contig_counts'].items()
                 if contig_name not in nt_contigs_name_set
             }
-            merged_contigs.append(contigs_per_taxid['contig_counts'])
+            if len(contigs_per_taxid['contig_counts']) > 0:
+                contigs_per_taxid['count_type'] = 'merged_NT_NR'
+                merged_contigs.append(contigs_per_taxid)
 
         with open(self.outputs.merged_contig_summary_json, 'w') as output_contig_json:
             json.dump(merged_contigs, output_contig_json)
