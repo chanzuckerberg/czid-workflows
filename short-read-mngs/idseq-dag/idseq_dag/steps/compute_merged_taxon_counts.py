@@ -22,7 +22,7 @@ class ComputeMergedTaxonCounts(PipelineStep):
     def run(self):
         # Unpack inputs and outputs
         self.inputs = ComputeMergedTaxonCountsInputs(*self.input_files_local)
-        self.outputs = ComputeMergedTaxonCountsOutputs(*self.output_files_local)
+        self.outputs = ComputeMergedTaxonCountsOutputs(*self.output_files_local())
 
         self.merge_taxon_counts()
         self.merge_contigs()
