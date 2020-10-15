@@ -97,27 +97,31 @@ class ComputeMergedTaxonCounts(PipelineStep):
         with open(self.inputs.nr_contig_summary_json) as f:
             nr_contigs = json.load(f)
 
-        merged_contigs = nt_contigs
-        for taxid_contigs in merged_contigs:
-            taxid_contigs['count_type'] = 'merged_NT_NR'
-
+        merged_contigs = {}
         nt_contigs_name_set = set()
-        for contigs_per_taxid in nt_contigs:
-            nt_contigs_name_set |= set(contigs_per_taxid['contig_counts'].keys())
+        for taxid_contigs in nt_contigs:
+            taxid_contigs['count_type'] = 'merged_NT_NR'
+            merged_contigs[taxid_contigs['taxid']] = taxid_contigs
+            # save to set to keep track of contigs that aligned to NT
+            nt_contigs_name_set |= set(taxid_contigs['contig_counts'].keys())
 
         for contigs_per_taxid in nr_contigs:
-            # remove contigs that aligned to 'nt'
+            # remove contigs that aligned to NT
+            taxid = contigs_per_taxid['taxid']
             contigs_per_taxid['contig_counts'] = {
                 contig_name: contig_counts
                 for contig_name, contig_counts in contigs_per_taxid['contig_counts'].items()
                 if contig_name not in nt_contigs_name_set
             }
             if len(contigs_per_taxid['contig_counts']) > 0:
-                contigs_per_taxid['count_type'] = 'merged_NT_NR'
-                merged_contigs.append(contigs_per_taxid)
+                if (taxid in merged_contigs):
+                    merged_contigs[taxid]['contig_counts'].update(contigs_per_taxid['contig_counts'])
+                else:
+                    contigs_per_taxid['count_type'] = 'merged_NT_NR'
+                    merged_contigs[taxid] = contigs_per_taxid
 
         with open(self.outputs.merged_contig_summary_json, 'w') as output_contig_json:
-            json.dump(merged_contigs, output_contig_json)
+            json.dump(list(merged_contigs.values()), output_contig_json)
 
     def create_taxon_count_file(self):
         # TOOO: Can this be consolidated throughout the pipeline?
