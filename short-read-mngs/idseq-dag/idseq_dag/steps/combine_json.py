@@ -8,12 +8,8 @@ class PipelineStepCombineJson(PipelineStep):
     Combine json from multiple places
     '''
     def run(self):
-        input_files = []
-        field_idx = self.additional_attributes['field_idx']
-        for target in self.input_files_local:
-            input_files.append(target[field_idx])
         output_file = self.output_files_local()[0]
-        self.combine_json(input_files, output_file)
+        self.combine_json(self.input_files_local, output_file)
 
     def count_reads(self):
         pass

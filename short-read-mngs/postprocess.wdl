@@ -295,18 +295,7 @@ task CombineJson {
   input {
     String docker_image_id
     String s3_wd_uri
-    File assembly_gsnap_blast_m8
-    File assembly_gsnap_reassigned_m8
-    File assembly_gsnap_hitsummary2_tab
-    File assembly_refined_gsnap_counts_with_dcr_json
-    File assembly_gsnap_contig_summary_json
-    File assembly_gsnap_blast_top_m8
-    File assembly_rapsearch2_blast_m8
-    File assembly_rapsearch2_reassigned_m8
-    File assembly_rapsearch2_hitsummary2_tab
-    File assembly_refined_rapsearch2_counts_with_dcr_json
-    File assembly_rapsearch2_contig_summary_json
-    File assembly_rapsearch2_blast_top_m8
+    Array[File] json_files
   }
   command<<<
   set -euxo pipefail
@@ -314,11 +303,11 @@ task CombineJson {
     --step-module idseq_dag.steps.combine_json \
     --step-class PipelineStepCombineJson \
     --step-name contig_summary_out \
-    --input-files '[["~{assembly_gsnap_blast_m8}", "~{assembly_gsnap_reassigned_m8}", "~{assembly_gsnap_hitsummary2_tab}", "~{assembly_refined_gsnap_counts_with_dcr_json}", "~{assembly_gsnap_contig_summary_json}", "~{assembly_gsnap_blast_top_m8}"], ["~{assembly_rapsearch2_blast_m8}", "~{assembly_rapsearch2_reassigned_m8}", "~{assembly_rapsearch2_hitsummary2_tab}", "~{assembly_refined_rapsearch2_counts_with_dcr_json}", "~{assembly_rapsearch2_contig_summary_json}", "~{assembly_rapsearch2_blast_top_m8}"]]' \
+    --input-files '["~{sep='", "' json_files}"]' \
     --output-files '["assembly/combined_contig_summary.json"]' \
     --output-dir-s3 '~{s3_wd_uri}' \
     --additional-files '{}' \
-    --additional-attributes '{"field_idx": 4}'
+    --additional-attributes '{}'
   >>>
   output {
     File assembly_combined_contig_summary_json = "assembly/combined_contig_summary.json"
@@ -600,18 +589,11 @@ workflow idseq_postprocess {
     input:
       docker_image_id = docker_image_id,
       s3_wd_uri = s3_wd_uri,
-      assembly_gsnap_blast_m8 = BlastContigs_refined_gsnap_out.assembly_gsnap_blast_m8,
-      assembly_gsnap_reassigned_m8 = BlastContigs_refined_gsnap_out.assembly_gsnap_reassigned_m8,
-      assembly_gsnap_hitsummary2_tab = BlastContigs_refined_gsnap_out.assembly_gsnap_hitsummary2_tab,
-      assembly_refined_gsnap_counts_with_dcr_json = BlastContigs_refined_gsnap_out.assembly_refined_gsnap_counts_with_dcr_json,
-      assembly_gsnap_contig_summary_json = BlastContigs_refined_gsnap_out.assembly_gsnap_contig_summary_json,
-      assembly_gsnap_blast_top_m8 = BlastContigs_refined_gsnap_out.assembly_gsnap_blast_top_m8,
-      assembly_rapsearch2_blast_m8 = BlastContigs_refined_rapsearch2_out.assembly_rapsearch2_blast_m8,
-      assembly_rapsearch2_reassigned_m8 = BlastContigs_refined_rapsearch2_out.assembly_rapsearch2_reassigned_m8,
-      assembly_rapsearch2_hitsummary2_tab = BlastContigs_refined_rapsearch2_out.assembly_rapsearch2_hitsummary2_tab,
-      assembly_refined_rapsearch2_counts_with_dcr_json = BlastContigs_refined_rapsearch2_out.assembly_refined_rapsearch2_counts_with_dcr_json,
-      assembly_rapsearch2_contig_summary_json = BlastContigs_refined_rapsearch2_out.assembly_rapsearch2_contig_summary_json,
-      assembly_rapsearch2_blast_top_m8 = BlastContigs_refined_rapsearch2_out.assembly_rapsearch2_blast_top_m8
+      json_files = [
+        BlastContigs_refined_gsnap_out.assembly_gsnap_contig_summary_json,
+        BlastContigs_refined_rapsearch2_out.assembly_rapsearch2_contig_summary_json,
+        ComputeMergedTaxonCounts.merged_contig_summary_json
+      ],
   }
 
   call GenerateAnnotatedFasta {
