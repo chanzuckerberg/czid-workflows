@@ -71,17 +71,25 @@ RERANKED_BLAST_OUTPUT_SCHEMA = {
 MIN_CONTIG_SIZE = 4
 
 
-def parse_tsv(path, schema, expect_headers=False, raw_lines=False):
-    '''Parse TSV file with given schema, yielding a dict per line.  See BLAST_OUTPUT_SCHEMA, for example.  When expect_headers=True, treat the first line as column headers.'''
+def parse_tsv(path, schema, expect_headers=False, raw_lines=False, strict=True):
+    '''
+    Parse TSV file with given schema, yielding a dict per line.
+    See BLAST_OUTPUT_SCHEMA, for example.
+    When expect_headers=True, treat the first line as column headers.
+    When strict mode is True, all columns in schema are required. When strict mode is False, will return None values for column not found.
+    '''
     assert expect_headers == False, "Headers not yet implemented."
-    schema_items = schema.items()
+    schema_items = list(schema.items())
     with open(path, "r") as stream:
         for line_number, raw_line in enumerate(stream):
             try:
                 row = raw_line.rstrip("\n").split("\t")
-                assert len(row) == len(schema)
+                if strict and len(row) != len(schema):
+                    msg = f"{path}:{line_number + 1}:  Parse error.  Input line does not conform to schema: {schema}"
+                    log.write(msg, warning=True)
+                length = min(len(row), len(schema))
                 row_dict = {cname: ctype(vstr) for vstr,
-                            (cname, ctype) in zip(row, schema_items)}
+                            (cname, ctype) in zip(row[0:length], schema_items[0:length])}
             except:
                 msg = f"{path}:{line_number + 1}:  Parse error.  Input does not conform to schema: {schema}"
                 log.write(msg, warning=True)
@@ -455,7 +463,7 @@ def _call_hits_m8_work(input_m8, lineage_map, accession2taxid_dict,
 
 @command.run_in_subprocess
 def generate_taxon_count_json_from_m8(
-        m8_file, hit_level_file, e_value_type, count_type, lineage_map_path,
+        m8_file, hit_level_file, count_type, lineage_map_path,
         deuterostome_path, taxon_whitelist_path, taxon_blacklist_path,
         duplicate_cluster_sizes_path, output_json_file):
     # Parse through hit file and m8 input file and format a JSON file with
@@ -486,6 +494,7 @@ def generate_taxon_count_json_from_m8(
                 hit_taxid = hit_line_columns[2]
                 if int(hit_level) < 0:
                     log.write('int(hit_level) < 0', debug=True)
+                hit_source_count_type = hit_line_columns[13] if len(hit_line_columns) >= 14 else None
 
                 # m8 files correspond to BLAST tabular output format 6:
                 # Columns: read_id | _ref_id | percent_identity | alignment_length...
@@ -507,13 +516,21 @@ def generate_taxon_count_json_from_m8(
                 assert m8_line_columns[0] == hit_line_columns[0], msg
                 percent_identity = float(m8_line_columns[2])
                 alignment_length = float(m8_line_columns[3])
+
+                if count_type == 'merged_NT_NR' or hit_source_count_type == 'NR':
+                    # NOTE: At the moment of the change, applied ONLY in the scope of the prototype of NT/NR consensus project.
+                    # Protein alignments (NR) are done at amino acid level. Each amino acid is composed of 3 nucleotides.
+                    # To make alignment length values comparable across NT and NR alignments (for combined statistics),
+                    # the NR alignment lengths are multiplied by 3.
+                    alignment_length *= 3
                 e_value = float(m8_line_columns[10])
 
                 # These have been filtered out before the creation of m8_f and hit_f
                 assert alignment_length > 0
                 assert -0.25 < percent_identity < 100.25
                 assert e_value == e_value
-                if e_value_type != 'log10':
+
+                if count_type == "NT" or hit_source_count_type == "NT":
                     # e_value could be 0 when large contigs are mapped
                     if e_value <= MIN_NORMAL_POSITIVE_DOUBLE:
                         e_value = MIN_NORMAL_POSITIVE_DOUBLE
@@ -547,6 +564,8 @@ def generate_taxon_count_json_from_m8(
                         agg_bucket['sum_percent_identity'] += percent_identity
                         agg_bucket['sum_alignment_length'] += alignment_length
                         agg_bucket['sum_e_value'] += e_value
+                        if hit_source_count_type:
+                            agg_bucket.setdefault('source_count_type', set()).add(hit_source_count_type)
                         # Chomp off the lowest rank as we aggregate up the tree
                         agg_key = agg_key[1:]
 
@@ -561,7 +580,7 @@ def generate_taxon_count_json_from_m8(
             nonunique_count = agg_bucket['nonunique_count']
             tax_level = num_ranks - len(agg_key) + 1
             # TODO: Extend taxonomic ranks as indicated on the commented out lines.
-            taxon_counts_attributes.append({
+            taxon_counts_row = {
                 "tax_id":
                 agg_key[0],
                 "tax_level":
@@ -592,7 +611,11 @@ def generate_taxon_count_json_from_m8(
                 agg_bucket['sum_e_value'] / unique_count,
                 "count_type":
                 count_type
-            })
+            }
+            if agg_bucket.get('source_count_type'):
+                taxon_counts_row['source_count_type'] = list(agg_bucket['source_count_type'])
+
+            taxon_counts_attributes.append(taxon_counts_row)
         output_dict = {
             "pipeline_output": {
                 "taxon_counts_attributes": taxon_counts_attributes

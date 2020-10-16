@@ -83,14 +83,7 @@ task CombineTaxonCounts {
   input {
     String docker_image_id
     String s3_wd_uri
-    File gsnap_m8
-    File gsnap_deduped_m8
-    File gsnap_hitsummary_tab
-    File gsnap_counts_with_dcr_json
-    File rapsearch2_m8
-    File rapsearch2_deduped_m8
-    File rapsearch2_hitsummary_tab
-    File rapsearch2_counts_with_dcr_json
+    Array[File] counts_json_files
   }
   command<<<
   set -euxo pipefail
@@ -98,7 +91,7 @@ task CombineTaxonCounts {
     --step-module idseq_dag.steps.combine_taxon_counts \
     --step-class PipelineStepCombineTaxonCounts \
     --step-name taxon_count_out \
-    --input-files '[["~{gsnap_m8}", "~{gsnap_deduped_m8}", "~{gsnap_hitsummary_tab}", "~{gsnap_counts_with_dcr_json}"], ["~{rapsearch2_m8}", "~{rapsearch2_deduped_m8}", "~{rapsearch2_hitsummary_tab}", "~{rapsearch2_counts_with_dcr_json}"]]' \
+    --input-files '["~{sep='", "' counts_json_files}"]' \
     --output-files '["taxon_counts_with_dcr.json"]' \
     --output-dir-s3 '~{s3_wd_uri}' \
     --additional-files '{}' \
@@ -210,14 +203,10 @@ workflow idseq_non_host_alignment {
     input:
       docker_image_id = docker_image_id,
       s3_wd_uri = s3_wd_uri,
-      gsnap_m8 = RunAlignment_gsnap_out.gsnap_m8,
-      gsnap_deduped_m8 = RunAlignment_gsnap_out.gsnap_deduped_m8,
-      gsnap_hitsummary_tab = RunAlignment_gsnap_out.gsnap_hitsummary_tab,
-      gsnap_counts_with_dcr_json = RunAlignment_gsnap_out.gsnap_counts_with_dcr_json,
-      rapsearch2_m8 = RunAlignment_rapsearch2_out.rapsearch2_m8,
-      rapsearch2_deduped_m8 = RunAlignment_rapsearch2_out.rapsearch2_deduped_m8,
-      rapsearch2_hitsummary_tab = RunAlignment_rapsearch2_out.rapsearch2_hitsummary_tab,
-      rapsearch2_counts_with_dcr_json = RunAlignment_rapsearch2_out.rapsearch2_counts_with_dcr_json
+      counts_json_files = [
+        RunAlignment_gsnap_out.gsnap_counts_with_dcr_json,
+        RunAlignment_rapsearch2_out.rapsearch2_counts_with_dcr_json
+      ]
   }
 
   call GenerateAnnotatedFasta {

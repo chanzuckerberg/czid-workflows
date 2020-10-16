@@ -56,9 +56,6 @@ RUN pip3 install miniwdl==${MINIWDL_VERSION} miniwdl-s3parcp==0.0.5 miniwdl-s3up
 RUN pip3 install https://github.com/chanzuckerberg/miniwdl-plugins/archive/f0465b0.zip#subdirectory=sfn-wdl
 RUN pip3 install https://github.com/chanzuckerberg/s3mi/archive/v0.8.0.tar.gz
 
-COPY idseq-dag /tmp/idseq-dag
-RUN pip3 install /tmp/idseq-dag && rm -rf /tmp/idseq-dag
-
 ADD https://raw.githubusercontent.com/chanzuckerberg/miniwdl/v${MINIWDL_VERSION}/examples/clean_download_cache.sh /usr/local/bin
 RUN chmod +x /usr/local/bin/clean_download_cache.sh
 
@@ -139,4 +136,7 @@ RUN make
 ENV PATH="${PATH}:/rapsearch2/Src/"
 # Uninstall build only dependencies
 RUN apt-get purge -y g++ libperl4-corelibs-perl make
-WORKDIR / 
+WORKDIR /
+
+COPY idseq-dag /tmp/idseq-dag
+RUN pip3 install /tmp/idseq-dag && rm -rf /tmp/idseq-dag
