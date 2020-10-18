@@ -55,8 +55,8 @@ jobs:
             docker push "${IMAGE_URI}:latest"
           fi
 
-          echo "::set-env name=IMAGE_URI::${IMAGE_URI}"
-          echo "::set-env name=TAG::${TAG}"
+          echo "IMAGE_URI=${IMAGE_URI}" >> $GITHUB_ENV
+          echo "TAG=${TAG}" >> $GITHUB_ENV
       - name: run tests
         run: |
           # explicitly block EC2 IMDS endpoint to work around awscli issue:
