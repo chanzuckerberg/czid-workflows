@@ -144,7 +144,7 @@ task BlastContigs_refined_gsnap_out {
     File duplicate_cluster_sizes_tsv
     File lineage_db
     File taxon_blacklist
-    String? deuterostome_db
+    File deuterostome_db
     Boolean use_deuterostome_filter
     Boolean use_taxon_whitelist
   }
