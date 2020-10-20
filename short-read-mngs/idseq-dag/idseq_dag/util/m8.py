@@ -517,7 +517,7 @@ def generate_taxon_count_json_from_m8(
                 percent_identity = float(m8_line_columns[2])
                 alignment_length = float(m8_line_columns[3])
 
-                if count_type == 'merged_NT_NR' or hit_source_count_type == 'NR':
+                if count_type == 'merged_NT_NR' and hit_source_count_type == 'NR':
                     # NOTE: At the moment of the change, applied ONLY in the scope of the prototype of NT/NR consensus project.
                     # Protein alignments (NR) are done at amino acid level. Each amino acid is composed of 3 nucleotides.
                     # To make alignment length values comparable across NT and NR alignments (for combined statistics),
