@@ -38,7 +38,7 @@ workflow consensus_genome {
         Float bcftoolsCallTheta = 0.0006
 
         # Dummy values - required by SFN interface
-        String s3_wd_uri
+        String s3_wd_uri = ""
     }
 
     call RemoveHost {
