@@ -1,0 +1,113 @@
+name: short-read-mngs viral benchmarks
+
+on:
+  push
+
+env:
+  LC_ALL: C.UTF-8
+  LANG: C.UTF-8
+  DEBIAN_FRONTEND: noninteractive
+
+jobs:
+
+  run-samples:
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        sample: [idseq_bench_3, idseq_bench_5]
+        settings: [default]
+    steps:
+      - uses: actions/checkout@v2
+      - name: docker build
+        run: |
+            echo "${{ secrets.GITHUB_TOKEN }}" \
+                | docker login docker.pkg.github.com --username $(dirname $GITHUB_REPOSITORY) --password-stdin
+            IMAGE_NAME=idseq-short-read-mngs-public
+            IMAGE_URI="docker.pkg.github.com/${GITHUB_REPOSITORY}/${IMAGE_NAME}"
+            CACHE_FROM=""; docker pull "$IMAGE_URI" && CACHE_FROM="--cache-from $IMAGE_URI"
+            docker build short-read-mngs --tag idseq-short-read-mngs $CACHE_FROM \
+                || docker build short-read-mngs --tag idseq-short-read-mngs
+      - name: run sample
+        run: |
+          pip install -r requirements-dev.txt
+
+          export PATH=$PATH:$HOME/.local/bin
+          export MINIWDL__DOWNLOAD_CACHE__GET=true
+          export MINIWDL__DOWNLOAD_CACHE__PUT=true
+          export MINIWDL__DOWNLOAD_CACHE__DIR="$(mktemp -d --tmpdir miniwdl_download_cache_XXXXXX)"
+          # configure miniwdl to auto-delete task working directories, to reduce chance of worker
+          # running out of space
+          export MINIWDL__FILE_IO__OUTPUT_HARDLINKS=true
+          export MINIWDL__FILE_IO__DELETE_WORK=success
+          # explicitly block EC2 IMDS endpoint to work around awscli issue:
+          # https://github.com/aws/aws-cli/issues/5234#issuecomment-635459464
+          # https://github.com/aws/aws-cli/issues/5262
+          sudo ip route add blackhole 169.254.169.254
+
+          tests/short-read-mngs/auto_benchmark/run_local.py --dir testrun/ --docker-image-id idseq-short-read-mngs \
+            --settings ${{ matrix.settings }} ${{ matrix.sample }}
+      - name: harvest output statistics
+        run: |
+          export PATH=$PATH:$HOME/.local/bin
+          taxadb download -o taxadb --type taxa
+          taxadb create -i taxadb --dbname taxadb.sqlite || true  # exits nonzero w/o accessions
+          tests/short-read-mngs/auto_benchmark/harvest.py ${{ matrix.sample }}=testrun/${{ matrix.sample }} \
+            --taxadb taxadb.sqlite > ${{ matrix.sample }}.${{ matrix.settings }}_viral.json
+      - uses: actions/upload-artifact@v2
+        with:
+          name: ${{ matrix.sample }}.${{ matrix.settings }}_viral.json
+          path: ${{ matrix.sample }}.${{ matrix.settings }}_viral.json
+
+  notebook:
+    runs-on: ubuntu-20.04
+    needs: run-samples
+    strategy:
+      matrix:
+        settings: [default]
+    steps:
+      - uses: actions/checkout@v2
+      - name: fetch idseq_bench_3
+        uses: actions/download-artifact@v2
+        with:
+          name: idseq_bench_3.${{ matrix.settings }}_viral.json
+      - name: fetch idseq_bench_5
+        uses: actions/download-artifact@v2
+        with:
+          name: idseq_bench_5.${{ matrix.settings }}_viral.json
+      - name: run notebook
+        run: |
+          TAG=$(git describe --long --tags --always --dirty)
+          cp *_viral.json tests/short-read-mngs/auto_benchmark  # notebook wd
+          chmod -R 777 tests/short-read-mngs/auto_benchmark
+          # execute notebook
+          docker run -v $(pwd):/home/jovyan/work --workdir /home/jovyan/work \
+            --env "RUN_NAME=${{ matrix.settings }}_viral_$TAG" \
+            --env HARVEST_DATA=$(ls -1 *_viral.json | tr '\n' ':') \
+            --env REF_LIB=/home/jovyan/work/tests/short-read-mngs/auto_benchmark/ref_libs/${{ matrix.settings }}_viral \
+            --env CHOWN_HOME=yes \
+                jupyter/scipy-notebook:latest jupyter nbconvert --to notebook --execute --inplace \
+                    tests/short-read-mngs/auto_benchmark/short-read-mngs-benchmarks.ipynb
+          cp tests/short-read-mngs/auto_benchmark/short-read-mngs-benchmarks.ipynb short-read-mngs-benchmarks.${{ matrix.settings }}_viral.ipynb
+          # make HTML with code
+          docker run -v $(pwd):/home/jovyan/work --workdir /home/jovyan/work \
+                jupyter/scipy-notebook:latest jupyter nbconvert --to html \
+                    tests/short-read-mngs/auto_benchmark/short-read-mngs-benchmarks.ipynb
+          mv tests/short-read-mngs/auto_benchmark/short-read-mngs-benchmarks.html short-read-mngs-benchmarks.${{ matrix.settings }}_viral.with_code.html
+          # make HTML without code
+          docker run -v $(pwd):/home/jovyan/work --workdir /home/jovyan/work \
+                jupyter/scipy-notebook:latest jupyter nbconvert --to html --no-input \
+                    tests/short-read-mngs/auto_benchmark/short-read-mngs-benchmarks.ipynb
+          mv tests/short-read-mngs/auto_benchmark/short-read-mngs-benchmarks.html short-read-mngs-benchmarks.${{ matrix.settings }}_viral.html
+          mkdir ref_libs
+          cp -r tests/short-read-mngs/auto_benchmark/ref_libs/${{ matrix.settings }}_viral ref_libs/
+      - uses: actions/upload-artifact@v2
+        with:
+          name: short-read-mngs-benchmarks.${{ matrix.settings }}_viral.html
+          path: short-read-mngs-benchmarks.${{ matrix.settings }}_viral.html
+      - uses: actions/upload-artifact@v2
+        with:
+          name: short-read-mngs-benchmarks.${{ matrix.settings }}_viral.ipynb
+          path: |
+              short-read-mngs-benchmarks.${{ matrix.settings }}_viral.*
+              *.${{ matrix.settings }}_viral.json
+              ref_libs/

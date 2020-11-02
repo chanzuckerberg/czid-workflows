@@ -1,0 +1,166 @@
+#!/usr/bin/env python3
+"""
+Run benchmark.yml samples by submitting them to the idseq-dev SFN-WDL backend. The invoking session
+must have (i) AWS_PROFILE set to an appropriate role to access idseq-dev, and (ii) an SSH key able
+to clone chanzuckerberg/idseq.
+
+The SFN-WDL runs will use the full databases and the latest -released- version of the WDL code, not
+necessarily the current git checkout.
+
+After the runs complete, one can harvest the results e.g.
+    harvest.py idseq_bench_3=s3://idseq-samples-development/auto_benchmark/YYYYMMDD_HHmmSS_default_latest/results/short-read-mngs-V
+"""
+import sys
+import os
+import argparse
+import tempfile
+import subprocess
+import multiprocessing
+import concurrent.futures
+import threading
+import json
+import time
+from datetime import datetime
+from pathlib import Path
+from _util import load_benchmarks_yml
+
+BENCHMARKS = load_benchmarks_yml()
+BUCKET = "idseq-samples-development"
+KEY_PREFIX = "auto_benchmark"
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        sys.argv[0], description="run benchmark samples on idseq-dev SFN-WDL"
+    )
+    parser.add_argument(
+        "samples",
+        metavar="SAMPLE",
+        type=str,
+        nargs="+",
+        help="any of: " + ", ".join(BENCHMARKS["samples"].keys()),
+    )
+    parser.add_argument(
+        "--workflow_version",
+        metavar="vX.Y.Z",
+        type=str,
+        default="latest",
+        help="short-read-mngs version tag",
+    )
+    parser.add_argument(
+        "--settings",
+        metavar="ID",
+        type=str,
+        default="default",
+        help="settings presets; any of: " + ",".join(BENCHMARKS["settings"].keys()),
+    )
+
+    args = parser.parse_args(sys.argv[1:])
+    run_samples(**vars(args))
+
+
+def run_samples(samples, workflow_version, settings):
+    assert os.environ.get(
+        "AWS_PROFILE", False
+    ), f"export AWS_PROFILE to for access to s3://{BUCKET} and idseq-dev"
+
+    samples = set(samples)
+    for sample_i in samples:
+        assert sample_i in BENCHMARKS["samples"], f"unknown sample {sample_i}"
+
+    failure = None
+    with tempfile.TemporaryDirectory(prefix="idseq_short_read_mngs_auto_benchmark_") as tmpdir:
+        # clone monorepo
+        subprocess.run(
+            ["git", "clone", "--depth", "1", "git@github.com:chanzuckerberg/idseq.git"],
+            cwd=tmpdir,
+            check=True,
+        )
+        # ensure up-to-date dependencies (required when we `source environment.dev`)
+        subprocess.run(
+            ["pip3", "install", "-qr", os.path.join(tmpdir, "idseq/workflows/requirements.txt")],
+            check=True,
+        )
+        subprocess.run(
+            [
+                "pip3",
+                "install",
+                "-qr",
+                os.path.join(tmpdir, "idseq/workflows/requirements-dev.txt"),
+            ],
+            check=True,
+        )
+
+        # formulate S3 directory for these benchmarking runs
+        key_prefix = f"{KEY_PREFIX}/{datetime.today().strftime('%Y%m%d_%H%M%S')}_{settings}_{workflow_version}"
+
+        # parallelize run_sample on a thread pool
+        with concurrent.futures.ThreadPoolExecutor(
+            max_workers=max(4, multiprocessing.cpu_count())
+        ) as executor:
+            futures = {
+                executor.submit(
+                    run_sample,
+                    os.path.join(tmpdir, "idseq"),
+                    workflow_version,
+                    settings,
+                    key_prefix,
+                    sample_i,
+                ): sample_i
+                for sample_i in samples
+            }
+            for future in concurrent.futures.as_completed(futures):
+                exn = future.exception()
+                if exn and not failure:
+                    failure = (futures[future], exn)
+
+    if failure:
+        (failed_sample, exn) = failure
+        print(
+            f"\nsample {failed_sample} failed; see logs under s3://{BUCKET}/{key_prefix}/{sample_i}/\n",
+            file=sys.stderr,
+        )
+        raise exn from None
+
+
+_timestamp_lock = threading.Lock()
+
+
+def run_sample(idseq_repo, workflow_version, settings, key_prefix, sample):
+    local_input = {
+        **BENCHMARKS["settings"][settings],
+        **BENCHMARKS["databases"]["full"],
+        **BENCHMARKS["samples"][sample]["inputs"],
+    }
+
+    # copy inputs into the S3 directory where run_sfn.py will look for them
+    sample_inputs = BENCHMARKS["samples"][sample]["inputs"]
+    alt_inputs = next((k for k in sample_inputs if k.startswith("s3_")), None) is not None
+    for k, v in sample_inputs.items():
+        if (not alt_inputs and k.startswith("fastqs_")) or (
+            alt_inputs and k.startswith("s3_fastqs_")
+        ):
+            cmd = ["aws", "s3", "cp", v, f"s3://{BUCKET}/{key_prefix}/{sample}/fastqs/"]
+            print(" ".join(cmd), file=sys.stderr)
+            subprocess.run(cmd, check=True)
+
+    # run_sfn.py
+    cmd = (
+        "source workflows/environment.dev"
+        f" && scripts/run_sfn.py"
+        f" --sample-dir s3://{BUCKET}/{key_prefix}/{sample}"
+        f" --host-genome {local_input['host_filter.host_genome']}"
+        f" --max-input-fragments {local_input['host_filter.max_input_fragments']}"
+        f" --max-subsample-fragments {local_input['host_filter.max_subsample_fragments']}"
+        f" --adapter-fasta {local_input['host_filter.adapter_fasta']}"
+    )
+    if workflow_version != "latest":
+        cmd += f" --workflow-version {workflow_version}"
+    print(cmd, file=sys.stderr)
+    with _timestamp_lock:
+        time.sleep(1.1)
+        subprocess.run(cmd, shell=True, cwd=idseq_repo, check=True)
+
+
+if __name__ == "__main__":
+    main()

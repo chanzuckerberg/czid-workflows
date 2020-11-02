@@ -1,0 +1,90 @@
+---
+
+# short-read-mngs benchmark specs
+#
+# Each test run of the workflow has inputs formulated by merging three dicts: (i) basic preset
+# settings, (ii) database paths, (iii) sample-specific inputs. The operator launching the
+# benchmarks chooses each of these three from the respective "library" below.
+
+settings:
+  default:
+    host_filter.file_ext: fastq
+    host_filter.nucleotide_type: DNA
+    host_filter.host_genome: human
+    host_filter.adapter_fasta: https://raw.githubusercontent.com/broadinstitute/viral-pipelines/master/test/input/clipDb.fasta
+    host_filter.max_input_fragments: 75000000
+    host_filter.max_subsample_fragments: 1000000
+
+databases:
+  viral:
+    host_filter.star_genome: s3://idseq-public-references/host_filter/ercc/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/STAR_genome.tar
+    host_filter.bowtie2_genome: s3://idseq-public-references/host_filter/ercc/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/bowtie2_genome.tar
+    host_filter.gsnap_genome: s3://idseq-database/test/gsnap/ERCC_gsnap2017-11-15_k16.tar
+    host_filter.human_star_genome: s3://idseq-public-references/host_filter/ercc/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/STAR_genome.tar
+    host_filter.human_bowtie2_genome: s3://idseq-public-references/host_filter/ercc/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/bowtie2_genome.tar
+    non_host_rapsearch2_index: s3://idseq-database/test/viral-alignment-indexes/viral_nr_rapsearch.tar.gz
+    non_host_gsnap_index: s3://idseq-database/test/viral-alignment-indexes/viral_nt_gsnap2018-10-26_k16.tar.gz
+    non_host_gsnap_genome_name: viral_nt_gsnap2018-10-26_k16
+    non_host_alignment.accession2taxid_db: s3://idseq-public-references/mini-database/alignment_indexes/2020-08-20-viral/viral_accessions2taxid.db
+    postprocess.nt_db: s3://idseq-database/test/viral-alignment-indexes/viral_nt
+    postprocess.nt_loc_db: s3://idseq-database/test/viral-alignment-indexes/viral_nt_loc.db
+    postprocess.nr_db: s3://idseq-database/test/viral-alignment-indexes/viral_nr
+    postprocess.nr_loc_db: s3://idseq-database/test/viral-alignment-indexes/viral_nr_loc.db
+    experimental.nt_db: s3://idseq-database/test/viral-alignment-indexes/viral_nt
+    experimental.nt_loc_db: s3://idseq-database/test/viral-alignment-indexes/viral_nt_loc.db
+    experimental.nt_info_db: s3://idseq-database/test/viral-alignment-indexes/viral_nt_info.db
+  full:
+    host_filter.star_genome: s3://idseq-public-references/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/human_STAR_genome.tar
+    host_filter.bowtie2_genome: s3://idseq-public-references/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/human_bowtie2_genome.tar
+    host_filter.gsnap_genome: s3://idseq-public-references/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/hg38_pantro5_k16.tar
+    host_filter.human_star_genome: s3://idseq-public-references/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/human_STAR_genome.tar
+    host_filter.human_bowtie2_genome: s3://idseq-public-references/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/human_bowtie2_genome.tar
+    non_host_rapsearch2_index: s3://idseq-database/alignment_indexes/2020-04-20/nr.tar.gz
+    non_host_gsnap_index: s3://idseq-database/alignment_indexes/2020-04-20/nt.tar.gz
+    non_host_gsnap_genome_name: nt_k16
+
+samples:
+  idseq_bench_3:
+    inputs:
+      fastqs_0: https://github.com/chanzuckerberg/idseq-workflows/raw/main/tests/short-read-mngs/norg_6__nacc_27__uniform_weight_per_organism__hiseq_reads__v6__R1.fastq.gz
+      fastqs_1: https://github.com/chanzuckerberg/idseq-workflows/raw/main/tests/short-read-mngs/norg_6__nacc_27__uniform_weight_per_organism__hiseq_reads__v6__R2.fastq.gz
+      s3_fastqs_0: s3://idseq-bench/3/norg_6__nacc_27__uniform_weight_per_organism__hiseq_reads__v6__R1.fastq.gz
+      s3_fastqs_1: s3://idseq-bench/3/norg_6__nacc_27__uniform_weight_per_organism__hiseq_reads__v6__R2.fastq.gz
+  idseq_bench_5:
+    inputs:
+      fastqs_0: https://github.com/chanzuckerberg/idseq-workflows/raw/mlin-benchmarking-driver/tests/short-read-mngs/norg_13__nacc_35__uniform_weight_per_organism__hiseq_reads__v10__R1.fastq.gz
+      fastqs_1: https://github.com/chanzuckerberg/idseq-workflows/raw/mlin-benchmarking-driver/tests/short-read-mngs/norg_13__nacc_35__uniform_weight_per_organism__hiseq_reads__v10__R2.fastq.gz
+      s3_fastqs_0: s3://idseq-bench/5/norg_13__nacc_35__uniform_weight_per_organism__hiseq_reads__v10__R1.fastq.gz
+      s3_fastqs_1: s3://idseq-bench/5/norg_13__nacc_35__uniform_weight_per_organism__hiseq_reads__v10__R2.fastq.gz
+  atcc_staggered:
+    inputs:
+      fastqs_0: s3://idseq-bench/datasets/fastqs/atcc_even_R1.fastq.gz
+      fastqs_1: s3://idseq-bench/datasets/fastqs/atcc_even_R2.fastq.gz
+  atcc_even:
+    inputs:
+      fastqs_0: s3://idseq-bench/datasets/fastqs/atcc_staggered_R1.fastq.gz
+      fastqs_1: s3://idseq-bench/datasets/fastqs/atcc_staggered_R2.fastq.gz
+  unambiguouslymapped_ds_7:
+    inputs:
+      fastqs_0: s3://idseq-bench/datasets/fastqs/UnAmbiguouslyMapped_ds.7.fq.gz
+  unambiguouslymapped_ds_buccal:
+    inputs:
+      fastqs_0: s3://idseq-bench/datasets/fastqs/UnAmbiguouslyMapped_ds.buccal.fq.gz
+  unambiguouslymapped_ds_cityparks:
+    inputs:
+      fastqs_0: s3://idseq-bench/datasets/fastqs/UnAmbiguouslyMapped_ds.cityparks.fq.gz
+  unambiguouslymapped_ds_gut:
+    inputs:
+      fastqs_0: s3://idseq-bench/datasets/fastqs/UnAmbiguouslyMapped_ds.gut.fq.gz
+  unambiguouslymapped_ds_hous1:
+    inputs:
+      fastqs_0: s3://idseq-bench/datasets/fastqs/UnAmbiguouslyMapped_ds.hous1.fq.gz
+  unambiguouslymapped_ds_hous2:
+    inputs:
+      fastqs_0: s3://idseq-bench/datasets/fastqs/UnAmbiguouslyMapped_ds.hous2.fq.gz
+  unambiguouslymapped_ds_nycsm:
+    inputs:
+      fastqs_0: s3://idseq-bench/datasets/fastqs/UnAmbiguouslyMapped_ds.nycsm.fq.gz
+  unambiguouslymapped_ds_soil:
+    inputs:
+      fastqs_0: s3://idseq-bench/datasets/fastqs/UnAmbiguouslyMapped_ds.soil.fq.gz

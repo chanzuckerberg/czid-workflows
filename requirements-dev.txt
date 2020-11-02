@@ -2,3 +2,6 @@ miniwdl>=0.8.1
 pre-commit
 pytest
 pytest-xdist
+ruamel.yaml
+taxadb
+boto3
