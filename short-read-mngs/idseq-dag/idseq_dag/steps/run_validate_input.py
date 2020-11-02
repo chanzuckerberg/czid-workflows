@@ -90,6 +90,8 @@ class PipelineStepRunValidateInput(PipelineStep):
                                  vc.BUCKET_NORMAL: 0,
                                  vc.BUCKET_LONG: 0,
                                  vc.BUCKET_TOO_LONG: 0}
+            # add a total reads output as source of truth (if filtering changes)
+            self.total_output_reads = 0
 
             quick_check_passed = \
                 self.quick_check_file(input_files[0], is_fastq) and \
@@ -269,8 +271,6 @@ class PipelineStepRunValidateInput(PipelineStep):
 
                 if read_len < vc.READ_LEN_CUTOFF_LOW:
                     self.summary_dict[vc.BUCKET_TOO_SHORT] += 1
-                    if num_inputs == 1:
-                        continue
                 elif read_len < vc.READ_LEN_CUTOFF_MID:
                     self.summary_dict[vc.BUCKET_NORMAL] += 1
                 elif read_len < vc.READ_LEN_CUTOFF_HIGH:
@@ -281,6 +281,7 @@ class PipelineStepRunValidateInput(PipelineStep):
                     if is_fastq:
                         quality_l = quality_l[0:vc.READ_LEN_CUTOFF_HIGH]
 
+                self.total_output_reads += 1
                 output_f.write(identifier_l + read_l + "\n")
                 if is_fastq:
                     output_f.write(identifier2_l + quality_l + "\n")
@@ -289,6 +290,4 @@ class PipelineStepRunValidateInput(PipelineStep):
 
     def count_reads(self):
         self.should_count_reads = True
-        self.counts_dict[self.name] = self.summary_dict[vc.BUCKET_NORMAL] + \
-            self.summary_dict[vc.BUCKET_LONG] + \
-            self.summary_dict[vc.BUCKET_TOO_LONG]
+        self.counts_dict[self.name] = self.total_output_reads
