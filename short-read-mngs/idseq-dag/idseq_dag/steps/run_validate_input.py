@@ -201,6 +201,8 @@ class PipelineStepRunValidateInput(PipelineStep):
         )
         num_fragments = count.reads(outfile)
         self.summary_dict[vc.BUCKET_NORMAL] += num_fragments
+        self.total_output_reads += num_fragments
+
         return num_fragments
 
     # _full_check_and_truncate_file does an exhaustive check of the input file, up to
