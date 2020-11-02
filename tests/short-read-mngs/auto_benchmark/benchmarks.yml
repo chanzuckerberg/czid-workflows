@@ -52,8 +52,8 @@ samples:
       s3_fastqs_1: s3://idseq-bench/3/norg_6__nacc_27__uniform_weight_per_organism__hiseq_reads__v6__R2.fastq.gz
   idseq_bench_5:
     inputs:
-      fastqs_0: https://github.com/chanzuckerberg/idseq-workflows/raw/mlin-benchmarking-driver/tests/short-read-mngs/norg_13__nacc_35__uniform_weight_per_organism__hiseq_reads__v10__R1.fastq.gz
-      fastqs_1: https://github.com/chanzuckerberg/idseq-workflows/raw/mlin-benchmarking-driver/tests/short-read-mngs/norg_13__nacc_35__uniform_weight_per_organism__hiseq_reads__v10__R2.fastq.gz
+      fastqs_0: https://github.com/chanzuckerberg/idseq-workflows/raw/main/tests/short-read-mngs/norg_13__nacc_35__uniform_weight_per_organism__hiseq_reads__v10__R1.fastq.gz
+      fastqs_1: https://github.com/chanzuckerberg/idseq-workflows/raw/main/tests/short-read-mngs/norg_13__nacc_35__uniform_weight_per_organism__hiseq_reads__v10__R2.fastq.gz
       s3_fastqs_0: s3://idseq-bench/5/norg_13__nacc_35__uniform_weight_per_organism__hiseq_reads__v10__R1.fastq.gz
       s3_fastqs_1: s3://idseq-bench/5/norg_13__nacc_35__uniform_weight_per_organism__hiseq_reads__v10__R2.fastq.gz
   atcc_staggered:
