@@ -198,7 +198,7 @@ task NonhostFastq {
     --step-class PipelineStepNonhostFastq \
     --step-name nonhost_fastq_out \
     --input-files '[["~{sep='","' fastqs}"], ["~{nonhost_fasta_refined_taxid_annot_fasta}"], ["~{duplicate_clusters_csv}"]]' \
-    --output-files '[~{if length(fastqs) == 2 then '"nonhost_R1.fastq", "nonhost_R2.fastq"' else '"nonhost_R1.fastq"'}]' \
+    --output-files '[~{if length(fastqs) == 2 then '"nonhost_R1.fastq", "nonhost_R2.fastq"' else '"nonhost_R1.fastq"'}, "nonhost_headers_1.txt", "nonhost_headers_2.txt"]' \
     --output-dir-s3 '~{s3_wd_uri}' \
     --additional-files '{}' \
     --additional-attributes '{"use_taxon_whitelist": ~{use_taxon_whitelist}}'
@@ -206,6 +206,8 @@ task NonhostFastq {
   output {
     File nonhost_R1_fastq = "nonhost_R1.fastq"
     File? nonhost_R2_fastq = "nonhost_R2.fastq"
+    File nonhost_header_R1_txt = "nonhost_headers_1.txt"
+    File? nonhost_header_R2_txt = "nonhost_headers_2.txt"
     File? output_read_count = "nonhost_fastq_out.count"
   }
   runtime {
@@ -345,6 +347,8 @@ workflow idseq_experimental {
     File? coverage_viz_out_count = GenerateCoverageViz.output_read_count
     File nonhost_fastq_out_nonhost_R1_fastq = NonhostFastq.nonhost_R1_fastq
     File? nonhost_fastq_out_nonhost_R2_fastq = NonhostFastq.nonhost_R2_fastq
+    File nonhost_fastq_out_nonhost_header_R1_txt = NonhostFastq.nonhost_header_R1_txt
+    File? nonhost_fastq_out_nonhost_header_R2_txt = NonhostFastq.nonhost_header_R2_txt
     File? nonhost_fastq_out_count = NonhostFastq.output_read_count
     Array[File] align_viz = GenerateAlignmentViz.align_viz
     Array[File] coverage_viz = GenerateCoverageViz.coverage_viz

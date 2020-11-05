@@ -4,6 +4,7 @@ from typing import Dict, Optional, Sequence, Set, Tuple
 
 import idseq_dag.util.command as command
 import idseq_dag.util.command_patterns as command_patterns
+import idseq_dag.util.log as log
 
 from idseq_dag.engine.pipeline_step import PipelineStep
 from idseq_dag.util.idseq_dedup_clusters import parse_clusters_file
@@ -38,20 +39,22 @@ class PipelineStepNonhostFastq(PipelineStep):
         assert (tax_ids and filename) or not (
             tax_ids or filename), 'Must be supplied with tax_ids and filename or neither'
 
-        scratch_dir = os.path.join(self.output_dir_local, "scratch_nonhost_fastq")
-        command.make_dirs(scratch_dir)
-        self.nonhost_headers = [
-            os.path.join(scratch_dir, "nonhost_headers_r1.txt"),
-            os.path.join(scratch_dir, "nonhost_headers_r2.txt")
-        ]
-
+        # scratch_dir = os.path.join(self.output_dir_local, "scratch_nonhost_fastq")
+        # command.make_dirs(scratch_dir)
+        # self.nonhost_headers = [
+        #     os.path.join(scratch_dir, "nonhost_headers_r1.txt"),
+        #     os.path.join(scratch_dir, "nonhost_headers_r2.txt")
+        # ]
+        self.nonhost_headers =  self.output_files_local()[2:]
         # Assumed to be [R1.fastq, R2.fastq] if there are two read files.
         fastqs = self.input_files_local[0]
 
         nonhost_fasta = self.input_files_local[1][0]
-
+        log.write(f"Input files: {fastqs}")
+        log.write(f"Fastqs: {fastqs}")
+        log.write(f"Nnonhost Fasta: {nonhost_fasta}")
         if filename is None:
-            output_fastqs = self.output_files_local()
+            output_fastqs = self.output_files_local()[0:2]
         else:
             output_fastqs = [
                 f"{os.path.dirname(fastq)}/{filename}__{os.path.basename(self.output_files_local()[i])}"
@@ -65,9 +68,9 @@ class PipelineStepNonhostFastq(PipelineStep):
         for i in range(len(fastqs)):
             self.generate_nonhost_fastq(self.nonhost_headers[i], fastqs[i], output_fastqs[i])
 
-        # Clean up scratch files.
-        for nonhost_headers in self.nonhost_headers:
-            os.remove(nonhost_headers)
+        # # Clean up scratch files.
+        # for nonhost_headers in self.nonhost_headers:
+        #     os.remove(nonhost_headers)
 
     @staticmethod
     # Unzip files with gunzip if necessary.
@@ -150,9 +153,12 @@ class PipelineStepNonhostFastq(PipelineStep):
                 if line[0] != ">":
                     continue
                 read_index, header, annot_tax_ids = PipelineStepNonhostFastq.extract_header_from_line(line)
+                log.write(f"Header parsed: {read_index} {header} {annot_tax_ids}")
                 other_headers = clusters_dict[header][1:] if clusters_dict else []
                 if tax_ids:
+                    log.write(f"with tax ids")
                     if tax_ids.intersection(annot_tax_ids) and (header not in seen):
+                        log.write(f"write output: {header}")
                         output_file_0.write(header + "\n")
                         output_file_1.write(header + "\n")
                         seen.add(header)
@@ -165,8 +171,10 @@ class PipelineStepNonhostFastq(PipelineStep):
                     continue
                 else:
                     output_file = output_file_0 if read_index == 0 else output_file_1
+                    log.write(f"write output: {header}")
                     output_file.write(header + "\n")
                     for other_header in other_headers:
+                        log.write(f"write other header: {other_header}")
                         output_file.write(other_header + "\n")
                     continue
 
