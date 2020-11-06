@@ -22,13 +22,13 @@ class PipelineStepNonhostFastq(PipelineStep):
             clusters_dict = parse_clusters_file(self.input_files_local[2][0])
 
         self.run_with_tax_ids(None, None, clusters_dict)
-        # TODO: (gdingle): Generate taxon-specific downloads in idseq-web at
-        # time of download. See https://jira.czi.team/browse/IDSEQ-2599.
-        betacoronaviruses = {
-            2697049,  # SARS-CoV2
-            694002,  # betacoronavirus genus
-        }
-        self.run_with_tax_ids(betacoronaviruses, "betacoronavirus", clusters_dict)
+        # # TODO: (gdingle): Generate taxon-specific downloads in idseq-web at
+        # # time of download. See https://jira.czi.team/browse/IDSEQ-2599.
+        # betacoronaviruses = {
+        #     2697049,  # SARS-CoV2
+        #     694002,  # betacoronavirus genus
+        # }
+        # self.run_with_tax_ids(betacoronaviruses, "betacoronavirus", clusters_dict)
 
     def run_with_tax_ids(
         self,
