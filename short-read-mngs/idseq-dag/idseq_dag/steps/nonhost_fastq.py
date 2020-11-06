@@ -52,7 +52,8 @@ class PipelineStepNonhostFastq(PipelineStep):
         nonhost_fasta = self.input_files_local[1][0]
         log.write(f"Input files: {fastqs}")
         log.write(f"Fastqs: {fastqs}")
-        log.write(f"Nnonhost Fasta: {nonhost_fasta}")
+        log.write(f"Nonhost Fasta: {nonhost_fasta}")
+        log.write(f"Clusters dict: {clusters_dict}")
         if filename is None:
             output_fastqs = self.output_files_local()[0:2]
         else:
@@ -185,6 +186,7 @@ class PipelineStepNonhostFastq(PipelineStep):
         fastq: str,
         output_file: str
     ) -> None:
+        log.write(f"Running command 'seqtk subseq {fastq} {nonhost_headers} > {output_file}")
         command.execute(
             command_patterns.ShellScriptCommand(
                 script=r'''seqtk subseq "$1" "$2" > "$3";''',
