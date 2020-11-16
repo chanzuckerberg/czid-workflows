@@ -111,3 +111,10 @@ jobs:
               short-read-mngs-benchmarks.${{ matrix.settings }}_viral.*
               *.${{ matrix.settings }}_viral.json
               ref_libs/
+      - name: annotate deviations
+        run: |
+          if [[ -f tests/short-read-mngs/auto_benchmark/.short-read-mngs-benchmarks-deviation ]]; then
+            echo "::warning ::auto_benchmark detected >1% deviation from reference values; review the notebook and update reference library if needed."
+          else
+            echo "auto_benchmark OK (all metrics within 1% of reference values)"
+          fi
