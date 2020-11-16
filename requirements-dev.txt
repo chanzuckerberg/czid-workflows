@@ -5,3 +5,4 @@ pytest-xdist
 ruamel.yaml
 taxadb
 boto3
+requests

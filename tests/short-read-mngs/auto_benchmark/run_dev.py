@@ -20,6 +20,7 @@ import concurrent.futures
 import threading
 import json
 import time
+import requests
 from datetime import datetime
 from pathlib import Path
 from _util import load_benchmarks_yml
@@ -41,10 +42,10 @@ def main():
         help="any of: " + ", ".join(BENCHMARKS["samples"].keys()),
     )
     parser.add_argument(
-        "--workflow_version",
+        "--workflow-version",
         metavar="vX.Y.Z",
         type=str,
-        default="latest",
+        optional=True,
         help="short-read-mngs version tag",
     )
     parser.add_argument(
@@ -56,6 +57,17 @@ def main():
     )
 
     args = parser.parse_args(sys.argv[1:])
+
+    if args.workflow_version is None:
+        github_api = "https://api.github.com"
+        github_repo_api = f"{github_api}/repos/chanzuckerberg/idseq-workflows"
+        github_refs_api = f"{github_repo_api}/git/matching-refs/tags/short-read-mngs"
+        github_refs = sorted(
+            os.path.basename(ref["url"]).split("-v", 1)[1]
+            for ref in requests.get(github_refs_api).json()
+        )
+        args.workflow_version = github_refs[-1]
+
     run_samples(**vars(args))
 
 
@@ -69,6 +81,7 @@ def run_samples(samples, workflow_version, settings):
         assert sample_i in BENCHMARKS["samples"], f"unknown sample {sample_i}"
 
     failure = None
+    results = []
     with tempfile.TemporaryDirectory(prefix="idseq_short_read_mngs_auto_benchmark_") as tmpdir:
         # clone monorepo
         subprocess.run(
@@ -111,8 +124,13 @@ def run_samples(samples, workflow_version, settings):
             }
             for future in concurrent.futures.as_completed(futures):
                 exn = future.exception()
-                if exn and not failure:
-                    failure = (futures[future], exn)
+                if exn:
+                    if not failure:
+                        failure = (futures[future], exn)
+                else:
+                    results.append(future.result())
+
+    print(" \\\n".join(f"{sample}={s3path}" for sample, s3path in results))
 
     if failure:
         (failed_sample, exn) = failure
@@ -153,13 +171,18 @@ def run_sample(idseq_repo, workflow_version, settings, key_prefix, sample):
         f" --max-input-fragments {local_input['host_filter.max_input_fragments']}"
         f" --max-subsample-fragments {local_input['host_filter.max_subsample_fragments']}"
         f" --adapter-fasta {local_input['host_filter.adapter_fasta']}"
+        f" --workflow-version {workflow_version}"
     )
-    if workflow_version != "latest":
-        cmd += f" --workflow-version {workflow_version}"
     print(cmd, file=sys.stderr)
     with _timestamp_lock:
         time.sleep(1.1)
         subprocess.run(cmd, shell=True, cwd=idseq_repo, check=True)
+
+    workflow_major_version = workflow_version.split(".").lstrip("v")
+    return (
+        sample,
+        f"s3://{BUCKET}/{key_prefix}/{sample}/results/short-read-mngs-{workflow_major_version}/",
+    )
 
 
 if __name__ == "__main__":

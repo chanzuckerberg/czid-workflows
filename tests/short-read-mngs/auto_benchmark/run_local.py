@@ -47,7 +47,7 @@ def main():
         metavar="ID",
         type=str,
         default="default",
-        help="settings presets; any of: "+",".join(BENCHMARKS["settings"].keys())
+        help="settings presets; any of: " + ",".join(BENCHMARKS["settings"].keys()),
     )
     parser.add_argument(
         "--verbose", action="store_true", default=False, help="run miniwidl --verbose"
@@ -70,6 +70,7 @@ def run_local(samples, docker_image_id, dir, databases, settings, verbose):
 
     # parallelize runs on a thread pool; miniwdl itself may further restrict concurrency
     failure = None
+    results = []
     with concurrent.futures.ThreadPoolExecutor(
         max_workers=max(4, multiprocessing.cpu_count())
     ) as executor:
@@ -81,10 +82,15 @@ def run_local(samples, docker_image_id, dir, databases, settings, verbose):
         }
         for future in concurrent.futures.as_completed(futures):
             exn = future.exception()
-            if exn and not failure:
-                # on first error, record it and `killall miniwdl` to quickly abort still-outstanding runs
-                failure = (futures[future], exn)
-                subprocess.run(["killall", "miniwdl"], check=False)
+            if exn:
+                if not failure:
+                    # on first error, record it and `killall miniwdl` to quickly abort still-outstanding runs
+                    failure = (futures[future], exn)
+                    subprocess.run(["killall", "miniwdl"], check=False)
+                else:
+                    results.append(future.result())
+
+    print(" \\\n".join(f"{sample}={s3path}" for sample, s3path in results))
 
     if failure:
         (failed_sample, exn) = failure
@@ -134,6 +140,8 @@ def run_local_sample(sample, docker_image_id, dir, databases, settings, verbose)
     if verbose:
         cmd.append("--verbose")
     subprocess.run(cmd, check=True)
+
+    return (sample, str(dir / sample) + "/")
 
 
 if __name__ == "__main__":
