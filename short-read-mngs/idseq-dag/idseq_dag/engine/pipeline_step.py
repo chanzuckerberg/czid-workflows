@@ -151,13 +151,13 @@ class PipelineStep(object):
             status_file_basename = os.path.basename(self.step_status_local)
             status_file_s3_path = f"{self.output_dir_s3}/{status_file_basename}"
             try:
-                log.write(f"[DEBUG-STATUS] [DL] Uploading status file: {self.name} status={status}")
+                log.write(f"Downloading status file: step={self.name} status={status}")
                 stage_status = json.loads(idseq_dag.util.s3.get_s3_object_by_path(status_file_s3_path) or "{}")
                 stage_status.update({self.name: self.status_dict})
                 with open(self.step_status_local, 'w') as status_file:
                     json.dump(stage_status, status_file)
-                log.write(f"[DEBUG-STATUS] [UL] Uploading status file: {self.name} status={status}")
                 idseq_dag.util.s3.upload_with_retries(self.step_status_local, self.output_dir_s3 + "/")
+                log.write(f"Uploaded status file: step={self.name} status={status}")
             except:
                 # if something fails, we prefer not raising an exception to not affect the rest of the pipeline
                 # these updates are non-critical functions and *should* be replaced by a new event bus soon
