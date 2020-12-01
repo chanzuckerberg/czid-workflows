@@ -78,10 +78,10 @@ def sort_fastx_by_entry_id(fastq_path):
         with open(tmp_sorted_path, 'wb') as out_file:
             # Command based on this https://www.biostars.org/p/15011/#103041
             if input_file_type(fastq_path) == 'fastq':
-                cmd = "paste -d '|' - - - - | sort -k1,1 -S 3G | tr '|' '\n'"
+                cmd = "paste -d '`' - - - - | sort -k1,1 -S 3G | tr '`' '\n'"
             else:
                 # WARNING: does not support multiline fasta
-                cmd = "paste -d '|' - - | sort -k1,1 -S 3G | tr '|' '\n'"
+                cmd = "paste -d '`' - - | sort -k1,1 -S 3G | tr '`' '\n'"
             # By default the sort utility uses a locale-based sort, this is significantly
             #   slower than a simple byte comparison. It also produces a different
             #   order than python's default string comparisons would which makes testing
