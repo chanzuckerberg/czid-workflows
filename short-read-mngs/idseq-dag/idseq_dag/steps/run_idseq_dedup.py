@@ -2,6 +2,7 @@ import idseq_dag.util.command as command
 import idseq_dag.util.command_patterns as command_patterns
 import idseq_dag.util.count as count
 import idseq_dag.util.fasta as fasta
+import idseq_dag.util.log as log
 
 from idseq_dag.engine.pipeline_step import PipelineStep
 from idseq_dag.exceptions import InsufficientReadsError
@@ -63,8 +64,11 @@ class PipelineStepRunIDSeqDedup(PipelineStep):  # Deliberately not PipelineCount
         # This info is loaded in multiple subsequent steps using m8.load_duplicate_cluster_sizes,
         # and used to convert unique read counts to original read counts, and also to compute
         # per-taxon DCRs emitted alongside taxon_counts.
+        log.write("parsing duplicate clusters file")
         clusters_dict = parse_clusters_file(duplicate_clusters_path)
+        log.write("saving duplicate cluster sizes")
         save_duplicate_cluster_sizes(duplicate_cluster_sizes_path, clusters_dict)
+        log.write("saved duplicate cluster sizes")
 
     def count_reads(self):
         self.should_count_reads = True
