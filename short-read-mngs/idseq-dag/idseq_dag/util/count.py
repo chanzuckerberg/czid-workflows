@@ -122,8 +122,14 @@ def load_duplicate_cluster_sizes(filename):
 
 
 def save_duplicate_cluster_sizes(filename, duplicate_clusters):
-    with _DUPLICATE_CLUSTER_SIZES_LOCK:
-        _DUPLICATE_CLUSTER_SIZES_CACHE[filename] = {}
+    try:
+        acquired = _DUPLICATE_CLUSTER_SIZES_LOCK.acquire(False)
+        if acquired:
+            _DUPLICATE_CLUSTER_SIZES_CACHE[filename] = {}
+        else:
+            raise Exception("_DUPLICATE_CLUSTER_SIZES_LOCK not acquired")
+    finally:
+        _DUPLICATE_CLUSTER_SIZES_LOCK.release()
     with open(filename, "w") as tsv:
         for read_id, clusters in duplicate_clusters.items():
             cluster_size = clusters[0]
