@@ -45,7 +45,7 @@ def main():
         "--workflow-version",
         metavar="vX.Y.Z",
         type=str,
-        optional=True,
+        default=None,
         help="short-read-mngs version tag",
     )
     parser.add_argument(
@@ -80,7 +80,7 @@ def run_samples(samples, workflow_version, settings):
     for sample_i in samples:
         assert sample_i in BENCHMARKS["samples"], f"unknown sample {sample_i}"
 
-    failure = None
+    failures = []
     results = []
     with tempfile.TemporaryDirectory(prefix="idseq_short_read_mngs_auto_benchmark_") as tmpdir:
         # clone monorepo
@@ -108,9 +108,7 @@ def run_samples(samples, workflow_version, settings):
         key_prefix = f"{KEY_PREFIX}/{datetime.today().strftime('%Y%m%d_%H%M%S')}_{settings}_{workflow_version}"
 
         # parallelize run_sample on a thread pool
-        with concurrent.futures.ThreadPoolExecutor(
-            max_workers=max(4, multiprocessing.cpu_count())
-        ) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=16) as executor:
             futures = {
                 executor.submit(
                     run_sample,
@@ -125,20 +123,20 @@ def run_samples(samples, workflow_version, settings):
             for future in concurrent.futures.as_completed(futures):
                 exn = future.exception()
                 if exn:
-                    if not failure:
-                        failure = (futures[future], exn)
+                    failures.append((futures[future], exn))
                 else:
                     results.append(future.result())
 
     print(" \\\n".join(f"{sample}={s3path}" for sample, s3path in results))
 
-    if failure:
-        (failed_sample, exn) = failure
-        print(
-            f"\nsample {failed_sample} failed; see logs under s3://{BUCKET}/{key_prefix}/{sample_i}/\n",
-            file=sys.stderr,
-        )
-        raise exn from None
+    if failures:
+        for (failed_sample, exn) in failures:
+            print(
+                f"\nsample {failed_sample} failed; see logs under s3://{BUCKET}/{key_prefix}/{failed_sample}/\n",
+                file=sys.stderr,
+            )
+            print(exn, file=sys.stderr)
+        raise failures[0][1]
 
 
 _timestamp_lock = threading.Lock()

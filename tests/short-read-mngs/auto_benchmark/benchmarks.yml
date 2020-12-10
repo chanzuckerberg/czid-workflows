@@ -88,3 +88,35 @@ samples:
   unambiguouslymapped_ds_soil:
     inputs:
       fastqs_0: s3://idseq-bench/datasets/fastqs/UnAmbiguouslyMapped_ds.soil.fq.gz
+  CAMI_low:
+    inputs:
+      fastqs_0: s3://idseq-bench/datasets/fastqs/RL_S001__insert_270_R1.fq.gz
+      fastqs_1: s3://idseq-bench/datasets/fastqs/RL_S001__insert_270_R2.fq.gz
+  CAMI_med_1:
+    inputs:
+      fastqs_0: s3://idseq-bench/datasets/fastqs/RM2_S001__insert_270_R1.fq.gz
+      fastqs_1: s3://idseq-bench/datasets/fastqs/RM2_S001__insert_270_R2.fq.gz
+  CAMI_med_2:
+    inputs:
+      fastqs_0: s3://idseq-bench/datasets/fastqs/RM2_S002__insert_270_R1.fq.gz
+      fastqs_1: s3://idseq-bench/datasets/fastqs/RM2_S002__insert_270_R2.fq.gz
+  CAMI_high_1:
+    inputs:
+      fastqs_0: s3://idseq-bench/datasets/fastqs/RH_S001__insert_270_R1.fq.gz
+      fastqs_1: s3://idseq-bench/datasets/fastqs/RH_S001__insert_270_R2.fq.gz
+  CAMI_high_2:
+    inputs:
+      fastqs_0: s3://idseq-bench/datasets/fastqs/RH_S002__insert_270_R1.fq.gz
+      fastqs_1: s3://idseq-bench/datasets/fastqs/RH_S002__insert_270_R2.fq.gz
+  CAMI_high_3:
+    inputs:
+      fastqs_0: s3://idseq-bench/datasets/fastqs/RH_S003__insert_270_R1.fq.gz
+      fastqs_1: s3://idseq-bench/datasets/fastqs/RH_S003__insert_270_R2.fq.gz
+  CAMI_high_4:
+    inputs:
+      fastqs_0: s3://idseq-bench/datasets/fastqs/RH_S004__insert_270_R1.fq.gz
+      fastqs_1: s3://idseq-bench/datasets/fastqs/RH_S004__insert_270_R2.fq.gz
+  CAMI_high_5:
+    inputs:
+      fastqs_0: s3://idseq-bench/datasets/fastqs/RH_S005__insert_270_R1.fq.gz
+      fastqs_1: s3://idseq-bench/datasets/fastqs/RH_S005__insert_270_R2.fq.gz
