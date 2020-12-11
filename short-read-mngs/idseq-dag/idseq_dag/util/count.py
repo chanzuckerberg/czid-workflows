@@ -1,5 +1,4 @@
 import gzip
-import multiprocessing
 from enum import Enum
 from subprocess import run, PIPE
 
