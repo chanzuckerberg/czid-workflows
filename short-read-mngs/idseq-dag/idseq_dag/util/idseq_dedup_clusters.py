@@ -17,7 +17,6 @@ def parse_clusters_file(
             if r_read_id not in clusters_dict:
                 clusters_dict[r_read_id] = [1]
             else:
-                count, *others = clusters_dict[r_read_id]
                 clusters_dict[r_read_id][0] += 1
                 clusters_dict[r_read_id].append(read_id)
     return clusters_dict
