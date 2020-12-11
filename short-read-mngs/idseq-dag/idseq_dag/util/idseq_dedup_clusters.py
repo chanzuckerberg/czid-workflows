@@ -5,13 +5,15 @@ a cluster, and the second column contains the read id.
 """
 from csv import DictReader
 from typing import Dict, Optional, Tuple
-
+import idseq_dag.util.log as log
 
 def parse_clusters_file(
     idseq_dedup_clusters_path: str,
 ) -> Dict[str, Optional[Tuple]]:
     clusters_dict = {}
+    log.write(f"opening clusters file {idseq_dedup_clusters_path}")
     with open(idseq_dedup_clusters_path) as f:
+        log.write(f"opened clusters file {idseq_dedup_clusters_path}")
         for row in DictReader(f):
             r_read_id, read_id = row["representative read id"], row["read id"]
             if r_read_id not in clusters_dict:
