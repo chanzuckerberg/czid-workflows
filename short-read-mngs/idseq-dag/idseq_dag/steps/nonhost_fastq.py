@@ -150,7 +150,7 @@ class PipelineStepNonhostFastq(PipelineStep):
                 if line[0] != ">":
                     continue
                 read_index, header, annot_tax_ids = PipelineStepNonhostFastq.extract_header_from_line(line)
-                other_headers = clusters_dict[header][1:] if clusters_dict else []
+                other_headers = clusters_dict[header] if clusters_dict else []
                 if tax_ids:
                     if tax_ids.intersection(annot_tax_ids) and (header not in seen):
                         output_file_0.write(header + "\n")

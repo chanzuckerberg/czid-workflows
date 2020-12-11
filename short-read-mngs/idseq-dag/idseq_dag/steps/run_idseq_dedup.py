@@ -6,8 +6,6 @@ import idseq_dag.util.log as log
 
 from idseq_dag.engine.pipeline_step import PipelineStep
 from idseq_dag.exceptions import InsufficientReadsError
-from idseq_dag.util.idseq_dedup_clusters import parse_clusters_file
-from idseq_dag.util.count import save_duplicate_cluster_sizes
 
 
 class PipelineStepRunIDSeqDedup(PipelineStep):  # Deliberately not PipelineCountingStep
@@ -50,6 +48,7 @@ class PipelineStepRunIDSeqDedup(PipelineStep):  # Deliberately not PipelineCount
             '-i', input_fas[0], '-o', output_fas[0],
             '-l', '70',
             '-c', duplicate_clusters_path,
+            '--cluster-size-output', duplicate_cluster_sizes_path,
         ]
         if len(input_fas) == 2:
             idseq_dedup_params += ['-i', input_fas[1], '-o', output_fas[1]]
@@ -60,19 +59,8 @@ class PipelineStepRunIDSeqDedup(PipelineStep):  # Deliberately not PipelineCount
             )
         )
 
-        # Emit cluster sizes.  One line per cluster.  Format "<cluster_size> <cluster_read_id>".
-        # This info is loaded in multiple subsequent steps using m8.load_duplicate_cluster_sizes,
-        # and used to convert unique read counts to original read counts, and also to compute
-        # per-taxon DCRs emitted alongside taxon_counts.
-        log.write("parsing duplicate clusters file")
-        clusters_dict = parse_clusters_file(duplicate_clusters_path)
-        log.write("saving duplicate cluster sizes")
-        save_duplicate_cluster_sizes(duplicate_cluster_sizes_path, clusters_dict)
-        log.write("saved duplicate cluster sizes")
-
     def count_reads(self):
         self.should_count_reads = True
         # Here we intentionally count unique reads.
         self.counts_dict[self.name] = count.reads_in_group(
             self.output_files_local()[:-2])  # last two outputs are not fastas
-

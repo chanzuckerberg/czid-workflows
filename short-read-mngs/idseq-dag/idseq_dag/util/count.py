@@ -1,4 +1,5 @@
 import gzip
+import csv
 from enum import Enum
 from subprocess import run, PIPE
 
@@ -98,19 +99,10 @@ def get_read_cluster_size(duplicate_cluster_sizes, read_id):
 
 
 def load_duplicate_cluster_sizes(filename):
-    duplicate_cluster_sizes = {}
-    with open(filename, "r") as f:
-        for line in f:
-            cluster_size_str, read_id = line.split(None, 1)
-            duplicate_cluster_sizes[read_id.strip()] = int(cluster_size_str)
-    return duplicate_cluster_sizes
-
-
-def save_duplicate_cluster_sizes(filename, duplicate_clusters):
-    with open(filename, "w") as tsv:
-        for read_id, clusters in duplicate_clusters.items():
-            cluster_size = clusters[0]
-            tsv.write(f"{cluster_size}\t{read_id}\n")
+    with open(filename, "r") as csv_file:
+        reader = csv.reader(csv_file)
+        next(reader)
+        return {id: int(size) for id, size in reader}
 
 
 def reads_in_group(file_group, max_fragments=None, cluster_sizes=None, cluster_key=None):

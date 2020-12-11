@@ -136,7 +136,7 @@ class PipelineStepGenerateAnnotatedFasta(PipelineCountingStep):
                         assert len(read.header) == len(line) + len(header_suffix)
 
                     key = line.split(UNMAPPED_HEADER_PREFIX)[1]
-                    other_keys = clusters_dict[key][1:]  # key should always be present
+                    other_keys = clusters_dict[key]  # key should always be present
                     for other_key in other_keys:
                         other_header = UNMAPPED_HEADER_PREFIX + other_key + header_suffix
                         output_file.write(other_header + "\n")
