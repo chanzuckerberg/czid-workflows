@@ -1,6 +1,6 @@
 import os
 
-from typing import Dict, Optional, Sequence, Set, Tuple
+from typing import Dict, Optional, Sequence, Set, List
 
 import idseq_dag.util.command as command
 import idseq_dag.util.command_patterns as command_patterns
@@ -33,7 +33,7 @@ class PipelineStepNonhostFastq(PipelineStep):
         self,
         tax_ids: Optional[Set[int]],
         filename: Optional[str],
-        clusters_dict: Dict[str, Tuple] = None,
+        clusters_dict: Dict[str, List] = None,
     ) -> None:
         assert (tax_ids and filename) or not (
             tax_ids or filename), 'Must be supplied with tax_ids and filename or neither'
@@ -135,7 +135,7 @@ class PipelineStepNonhostFastq(PipelineStep):
     def generate_nonhost_headers(
         self,
         nonhost_fasta_file: str,
-        clusters_dict: Dict[str, Tuple] = None,
+        clusters_dict: Dict[str, List] = None,
         tax_ids: Set[int] = None
     ):
         # This var is only needed when tax_ids, because tax_id
