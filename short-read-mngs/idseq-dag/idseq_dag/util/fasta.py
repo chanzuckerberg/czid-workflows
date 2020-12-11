@@ -92,7 +92,7 @@ def sort_fastx_by_entry_id(fastq_path):
             #   simple byte comparison instead of a locale-based sort which is faster,
             #   produces a consistent result regardless of locale, and produces the same
             #   order python's default string comparison would.
-            run(cmd, env={'LC_ALL': 'C'}, stdin=in_file, stdout=out_file, check=True, shell=True)
+            run(["/bin/bash", "-c", cmd], env={'LC_ALL': 'C'}, stdin=in_file, stdout=out_file, check=True)
     os.rename(tmp_sorted_path, fastq_path)
 
 
