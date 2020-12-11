@@ -13,7 +13,7 @@ def parse_clusters_file(
 ) -> Dict[str, Optional[Tuple]]:
     clusters_dict = {}
     log.write(f"opening clusters file {idseq_dedup_clusters_path}")
-    lines = run(f"wc -l {idseq_dedup_clusters_path}", stdout=PIPE, check=True).stdout.split()[0]
+    lines = run(["wc", "-l", idseq_dedup_clusters_path], stdout=PIPE, check=True).stdout.split()[0]
     log.write(f"lines in cluster file: {lines}")
     with open(idseq_dedup_clusters_path) as f:
         log.write(f"opened clusters file {idseq_dedup_clusters_path}")
