@@ -14,7 +14,9 @@ def parse_clusters_file(
     log.write(f"opening clusters file {idseq_dedup_clusters_path}")
     with open(idseq_dedup_clusters_path) as f:
         log.write(f"opened clusters file {idseq_dedup_clusters_path}")
-        for row in DictReader(f):
+        for i, row in enumerate(DictReader(f)):
+            if i % 100:
+                log.write(f"parsed row {i}")
             r_read_id, read_id = row["representative read id"], row["read id"]
             if r_read_id not in clusters_dict:
                 clusters_dict[r_read_id] = (1,)
