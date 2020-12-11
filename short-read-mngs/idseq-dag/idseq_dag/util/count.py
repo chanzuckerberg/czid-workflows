@@ -98,7 +98,7 @@ def get_read_cluster_size(duplicate_cluster_sizes, read_id):
     return cluster_size
 
 
-def _load_duplicate_cluster_sizes_work(filename):
+def load_duplicate_cluster_sizes(filename):
     duplicate_cluster_sizes = {}
     with open(filename, "r") as f:
         for line in f:
@@ -107,28 +107,11 @@ def _load_duplicate_cluster_sizes_work(filename):
     return duplicate_cluster_sizes
 
 
-# Loading cluster sizes can be expensive prior to subsampling (for some exceptionally large
-# samples with over 100 million reads).  To ameliorate this cost, we make sure it is only
-# paid once per stage (not once per step).
-_DUPLICATE_CLUSTER_SIZES_CACHE = {}
-_DUPLICATE_CLUSTER_SIZES_LOCK = multiprocessing.RLock()
-
-
-def load_duplicate_cluster_sizes(filename):
-    with _DUPLICATE_CLUSTER_SIZES_LOCK:
-        if filename not in _DUPLICATE_CLUSTER_SIZES_CACHE:
-            _DUPLICATE_CLUSTER_SIZES_CACHE[filename] = _load_duplicate_cluster_sizes_work(filename)
-        return _DUPLICATE_CLUSTER_SIZES_CACHE[filename]
-
-
 def save_duplicate_cluster_sizes(filename, duplicate_clusters):
-    with _DUPLICATE_CLUSTER_SIZES_LOCK:
-        _DUPLICATE_CLUSTER_SIZES_CACHE[filename] = {}
     with open(filename, "w") as tsv:
         for read_id, clusters in duplicate_clusters.items():
             cluster_size = clusters[0]
             tsv.write(f"{cluster_size}\t{read_id}\n")
-            _DUPLICATE_CLUSTER_SIZES_CACHE[filename][read_id] = cluster_size
 
 
 def reads_in_group(file_group, max_fragments=None, cluster_sizes=None, cluster_key=None):
