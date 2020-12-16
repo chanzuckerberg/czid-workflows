@@ -146,9 +146,17 @@ class PipelineStepGeneratePhyloTree(PipelineStep):
                 args=ksnap_args
             )
         )
+        tree_output = os.path.join(ksnp_output_dir, "tree.parsimony.tre")
+
+        # kSNP3 sometimes outputs an empty file when it fails instead of
+        #   returning a non-zero code. This effectively causes the
+        #   step to silently fail which causes problems downstream
+        #   If this happens we should fail here, and not upload
+        #   the output
+        assert os.path.getsize(tree_output) > 0, "kSNP3 encountered an issue and produced a tree file of size 0"
 
         # Postprocess output names in preparation for upload:
-        command.move_file(os.path.join(ksnp_output_dir, "tree.parsimony.tre"), output_files[0])
+        command.move_file(tree_output, output_files[0])
         ksnp_vcf_file = glob.glob(f"{ksnp_output_dir}/*.vcf")
         if ksnp_vcf_file:
             target_vcf_file = f"{ksnp_output_dir}/variants_reference1.vcf"
