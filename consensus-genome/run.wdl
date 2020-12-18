@@ -1,5 +1,5 @@
 # The following pipeline was initially based on previous work at: https://github.com/czbiohub/sc2-illumina-pipeline
-# workflow version: consensus-genomes-1.4.1
+# workflow version: consensus-genomes-1.4.2
 version 1.0
 
 workflow consensus_genome {
@@ -445,6 +445,13 @@ task MakeConsensus {
         samtools mpileup -A -d 0 -Q0 "~{bam}" | ivar consensus -q "~{ivarQualThreshold}" -t "~{ivarFreqThreshold}" -m "~{minDepth}" -n N -p "~{prefix}primertrimmed.consensus"
         echo ">""~{sample}" > "~{prefix}consensus.fa"
         seqtk seq -l 50 "~{prefix}primertrimmed.consensus.fa" | tail -n +2 >> "~{prefix}consensus.fa"
+
+        # One-line file means just the fasta header with no reads
+        if [[ $(wc -l "~{prefix}consensus.fa" | cut -d' ' -f1) == 1 ]]; then
+            set +x
+            >&2 echo "{\"wdl_error_message\": true, \"error\": \"InsufficientReadsError\", \"cause\": \"No reads after MakeConsensus\"}"
+            exit 1
+        fi
     >>>
 
     output {
