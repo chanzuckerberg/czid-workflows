@@ -2,6 +2,7 @@ import json
 import math
 import os
 import random
+import csv
 
 from collections import Counter
 from collections import defaultdict
@@ -25,94 +26,103 @@ MAX_EVALUE_THRESHOLD = 1
 # blastn output format 6 as documented in
 # http://www.metagenomics.wiki/tools/blast/blastn-output-format-6
 # it's also the format of our GSNAP and RAPSEARCH2 output
-BLAST_OUTPUT_SCHEMA = {
-    "qseqid": str,
-    "sseqid": str,
-    "pident": float,
-    "length": int,
-    "mismatch": int,
-    "gapopen": int,
-    "qstart": int,
-    "qend": int,
-    "sstart": int,
-    "send": int,
-    "evalue": float,
-    "bitscore": float,
-}
+_BLAST_OUTPUT_SCHEMA = [
+    ("qseqid", str),
+    ("sseqid", str),
+    ("pident", float),
+    ("length", int),
+    ("mismatch", int),
+    ("gapopen", int),
+    ("qstart", int),
+    ("qend", int),
+    ("sstart", int),
+    ("send", int),
+    ("evalue", float),
+    ("bitscore", float),
+]
 
 
 # Additional blastn output columns.
-BLAST_OUTPUT_NT_SCHEMA = dict(BLAST_OUTPUT_SCHEMA, **{
-    "qlen": int,      # query sequence length, helpful for computing qcov
-    "slen": int,      # subject sequence length, so far unused in IDseq
-})
+_BLAST_OUTPUT_NT_SCHEMA = _BLAST_OUTPUT_SCHEMA + [
+    ("qlen", int),      # query sequence length, helpful for computing qcov
+    ("slen", int),      # subject sequence length, so far unused in IDseq
+]
 
 
 # Re-ranked output of blastn.  One row per query.  Two additional columns.
-RERANKED_BLAST_OUTPUT_NT_SCHEMA = dict(BLAST_OUTPUT_NT_SCHEMA, **{
-    "qcov": float,     # fraction of query covered by the optimal set of HSPs
-    "hsp_count": int   # cardinality of optimal fragment cover;  see BlastCandidate
-})
+_RERANKED_BLAST_OUTPUT_NT_SCHEMA = _BLAST_OUTPUT_NT_SCHEMA + [
+    ("qcov", float),     # fraction of query covered by the optimal set of HSPs
+    ("hsp_count", int),   # cardihnality of optimal fragment cover;  see BlastCandidate
+]
 
 
-RERANKED_BLAST_OUTPUT_SCHEMA = {
-    'nt': {
-        'contig_level': RERANKED_BLAST_OUTPUT_NT_SCHEMA,   # only NT contigs are reranked
-        'read_level': BLAST_OUTPUT_SCHEMA
-    },
-    'nr': {
-        'contig_level': BLAST_OUTPUT_SCHEMA,
-        'read_level': BLAST_OUTPUT_SCHEMA,
-    }
+_RERANKED_BLAST_OUTPUT_SCHEMA = {
+    'nt': [
+        ("contig_level", _RERANKED_BLAST_OUTPUT_NT_SCHEMA),   # only NT contigs are reranked
+        ("read_level", _BLAST_OUTPUT_SCHEMA),
+    ],
+    'nr': [
+        ("contig_level", _BLAST_OUTPUT_SCHEMA),
+        ("read_level", _BLAST_OUTPUT_SCHEMA),
+    ],
 }
+
+_HIT_SUMMARY_SCHEMA = [
+    ("read_id", str),
+    ("level", int),
+    ("taxid", int),
+    ("accession_id", str),
+    ("species_taxid", int),
+    ("genus_taxid", int),
+    ("family_taxid", int),
+    ("contig_id", str),
+    ("contig_accession_id", str),
+    ("contig_species_taxid", int),
+    ("contig_genus_taxid", int),
+    ("contig_family_taxid", int),
+    ("from_assembly", bool),
+]
+
+_HIT_SUMMARY_SCHEMA_MERGED = _HIT_SUMMARY_SCHEMA + [
+    ("source_count_type", str),
+]
 
 # The minimum read count for a valid contig. We ignore contigs below this read count in most downstream analyses.
 # This constant is hardcoded in at least 4 places in idseq-web.  TODO: Make it a DAG parameter.
 MIN_CONTIG_SIZE = 4
 
 
-def parse_tsv(path, schema, expect_headers=False, raw_lines=False, strict=True):
-    '''
+def _parse_tsv_with_schema(path, schema, strict=True):
+    """
     Parse TSV file with given schema, yielding a dict per line.
-    See BLAST_OUTPUT_SCHEMA, for example.
+    See _BLAST_OUTPUT_SCHEMA, for example.
     When expect_headers=True, treat the first line as column headers.
     When strict mode is True, all columns in schema are required. When strict mode is False, will return None values for column not found.
-    '''
-    assert expect_headers == False, "Headers not yet implemented."
-    schema_items = list(schema.items())
-    with open(path, "r") as stream:
-        for line_number, raw_line in enumerate(stream):
-            try:
-                row = raw_line.rstrip("\n").split("\t")
-                if strict and len(row) != len(schema):
-                    msg = f"{path}:{line_number + 1}:  Parse error.  Input line does not conform to schema: {schema}"
-                    log.write(msg, warning=True)
-                length = min(len(row), len(schema))
-                row_dict = {cname: ctype(vstr) for vstr,
-                            (cname, ctype) in zip(row[0:length], schema_items[0:length])}
-            except:
-                msg = f"{path}:{line_number + 1}:  Parse error.  Input does not conform to schema: {schema}"
-                log.write(msg, warning=True)
-                raise
-            if raw_lines:
-                yield row_dict, raw_line
-            else:
-                yield row_dict
+    """
+    with open(path, "r") as tsvfile:
+        for line_num, row in enumerate(csv.reader(tsvfile, delimiter="\t")):
+            if strict and len(row) != len(schema):
+                raise Exception(f"{path}:{line_num + 1}: Parse error. Input line does not conform to schema: {schema}")
+            yield {
+                key: _type(row[i]) if i < len(row) else None for (i, (key, _type)) in enumerate(schema)
+            }
 
+def _unparse_tsv_with_schema(path, schema, rows):
+    with open(path, "w") as tsvfile:
+        writer = csv.writer(tsvfile, delimiter="\t")
+        writer.writerows([row[key] for (key, _) in schema] for row in rows)
 
-def unparse_tsv(path, schema, rows_generator):
-    schema_keys = schema.keys()
-    with open(path, 'w') as stream:
-        for row in rows_generator:
-            stream.write("\t".join(str(row[k]) for k in schema_keys) + "\n")
+def parse_m8(path, strict=True):
+    return _parse_tsv_with_schema(path, _BLAST_OUTPUT_SCHEMA, strict=strict)
 
+def unparse_m8(path, rows):
+    return _unparse_tsv_with_schema(path, _BLAST_OUTPUT_SCHEMA, rows)
 
-def log_corrupt(m8_file, line):
-    msg = m8_file + " is corrupt at line:\n" + line + \
-        "\n----> delete it and its corrupt ancestors before restarting run"
-    log.write(msg)
-    return msg
+def parse_hit_summary_merged(path):
+    return _parse_tsv_with_schema(path, _HIT_SUMMARY_SCHEMA_MERGED, strict=False)
 
+def unparse_hit_summary_merged(path, rows):
+    return _unparse_tsv_with_schema(path, _HIT_SUMMARY_SCHEMA_MERGED, rows)
 
 def summarize_hits(hit_summary_file, min_reads_per_genus=0):
     ''' Parse the hit summary file from alignment and get the relevant into'''
