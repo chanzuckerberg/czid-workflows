@@ -4,8 +4,10 @@ import os
 import random
 import csv
 
+from abc import ABC
 from collections import Counter
 from collections import defaultdict
+from typing import Any, Callable, Generator, Iterable
 
 import idseq_dag.util.command as command
 import idseq_dag.util.lineage as lineage
@@ -92,37 +94,82 @@ _HIT_SUMMARY_SCHEMA_MERGED = _HIT_SUMMARY_SCHEMA + [
 MIN_CONTIG_SIZE = 4
 
 
-def _parse_tsv_with_schema(path, schema, strict=True):
-    """
-    Parse TSV file with given schema, yielding a dict per line.
-    See _BLAST_OUTPUT_SCHEMA, for example.
-    When expect_headers=True, treat the first line as column headers.
-    When strict mode is True, all columns in schema are required. When strict mode is False, will return None values for column not found.
-    """
-    with open(path, "r") as tsvfile:
-        for line_num, row in enumerate(csv.reader(tsvfile, delimiter="\t")):
-            if strict and len(row) != len(schema):
-                raise Exception(f"{path}:{line_num + 1}: Parse error. Input line does not conform to schema: {schema}")
-            yield {
-                key: _type(row[i]) if i < len(row) else None for (i, (key, _type)) in enumerate(schema)
-            }
+class _TSVWithSchemaReader(ABC):
+    def __init__(self, path: str, schema: list[tuple[str, Callable[[str], Any]]], strict: bool = True) -> None:
+        self.path = path
+        self.schema = schema
+        self.strict = strict
+        self._generator = self._read_all()
 
-def _unparse_tsv_with_schema(path, schema, rows):
-    with open(path, "w") as tsvfile:
-        writer = csv.writer(tsvfile, delimiter="\t")
-        writer.writerows([row[key] for (key, _) in schema] for row in rows)
+    def _read_all(self) -> Generator[dict[str, Any]]:
+        """
+        Parse TSV file with given schema, yielding a dict per line.
+        See _BLAST_OUTPUT_SCHEMA, for example.
+        When expect_headers=True, treat the first line as column headers.
+        When strict mode is True, all columns in schema are required. When strict mode is False, will return None values for column not found.
+        """
+        with open(self.path, "r") as tsvfile:
+            for line_num, row in enumerate(csv.reader(tsvfile, delimiter="\t")):
+                if self.strict and len(row) != len(self.schema):
+                    raise Exception(f"{self.path}:{line_num + 1}: Parse error. Input line does not conform to schema: {self.schema}")
+                yield {
+                    key: _type(row[i]) if i < len(row) else None for (i, (key, _type)) in enumerate(self.schema)
+                }
 
-def parse_m8(path, strict=True):
-    return _parse_tsv_with_schema(path, _BLAST_OUTPUT_SCHEMA, strict=strict)
+    def __next__(self) -> dict[str, Any]:
+        return next(self.generator)
 
-def unparse_m8(path, rows):
-    return _unparse_tsv_with_schema(path, _BLAST_OUTPUT_SCHEMA, rows)
 
-def parse_hit_summary_merged(path):
-    return _parse_tsv_with_schema(path, _HIT_SUMMARY_SCHEMA_MERGED, strict=False)
+class _TSVWithSchemaWriter(ABC):
+    def __init__(self, path: str, schema: list[tuple[str, Callable[[str], Any]]]) -> None:
+        self.path = path
+        self.schema = schema
+        self._file_obj = open(self.path, "w")
+        self._writer = csv.writer(self.file_obj, delimiter="\t")
 
-def unparse_hit_summary_merged(path, rows):
-    return _unparse_tsv_with_schema(path, _HIT_SUMMARY_SCHEMA_MERGED, rows)
+    def _dict_row_to_list(self, row: dict[str, Any]) -> list[Any]:
+        return [row[key] for (key, _) in self.schema]
+
+    def write_all(self, rows: Iterable[dict[str, Any]]) -> None:
+        self._writer.writerows(self._dict_row_to_list(row) for row in rows)
+        self._file_obj.close()
+
+    def write(self, row: dict[str, Any]) -> None:
+        self._writer.writerow(self._dict_row_to_list(row))
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self._file_obj.close()
+
+class M8Reader(_TSVWithSchemaReader):
+    def __init__(self, path, strict=True):
+        super().__init__(path, _BLAST_OUTPUT_SCHEMA, strict=strict)
+
+class M8Writer(_TSVWithSchemaWriter):
+    def __init__(self, path):
+        super().__init__(path, _BLAST_OUTPUT_SCHEMA)
+
+class HitSummaryMergedReader(_TSVWithSchemaReader):
+    def __init__(self, path: str) -> None:
+        super().__init__(path, _HIT_SUMMARY_SCHEMA_MERGED, strict=False)
+
+class HitSummaryMergedWriter(_TSVWithSchemaWriter):
+    def __init__(self, path: str) -> None:
+        super().__init__(path, _HIT_SUMMARY_SCHEMA_MERGED)
+
+class RerankedBlastOutputReader(_TSVWithSchemaReader):
+    def __init__(self, path: str, db_type: str, assembly_level: str) -> None:
+        super().__init__(path, _RERANKED_BLAST_OUTPUT_SCHEMA[db_type][assembly_level])
+
+class RerankedBlastOutputWriter(_TSVWithSchemaWriter):
+    def __init__(self, path: str, db_type: str, assembly_level: str) -> None:
+        super().__init__(path, _RERANKED_BLAST_OUTPUT_SCHEMA[db_type][assembly_level])
+
+class BlastOutputNTReader(_TSVWithSchemaReader):
+    def __init__(self, path: str) -> None:
+        super().__init__(path, _BLAST_OUTPUT_NT_SCHEMA)
 
 def summarize_hits(hit_summary_file, min_reads_per_genus=0):
     ''' Parse the hit summary file from alignment and get the relevant into'''

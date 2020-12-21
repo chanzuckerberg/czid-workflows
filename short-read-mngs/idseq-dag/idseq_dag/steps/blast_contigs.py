@@ -378,11 +378,12 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
         contig2lineage = {}
         added_reads = {}
 
-        for row, raw_line in m8.parse_tsv(blast_top_m8, m8.RERANKED_BLAST_OUTPUT_SCHEMA[db_type]['contig_level'], raw_lines=True):
-            contig_id = row["qseqid"]
-            accession_id = row["sseqid"]
-            contig2accession[contig_id] = (accession_id, raw_line)
-            contig2lineage[contig_id] = accession_dict[accession_id]
+        with open(blast_top_m8) as blast_top_m8_file:
+            for row, raw_line in zip(m8.RerankedBlastOutputReader(blast_top_m8, db_type, 'contig_level'), blast_top_m8_file):
+                contig_id = row["qseqid"]
+                accession_id = row["sseqid"]
+                contig2accession[contig_id] = (accession_id, raw_line)
+                contig2lineage[contig_id] = accession_dict[accession_id]
 
         for read_id, contig_id in read2contig.items():
             (accession, m8_line) = contig2accession.get(contig_id, (None, None))
@@ -491,8 +492,9 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
     @staticmethod
     def get_top_m8_nr(blast_output, blast_top_m8, max_evalue):
         ''' Get top m8 file entry for each contig from blast_output and output to blast_top_m8 '''
-        m8.unparse_m8(blast_top_m8,
-                      PipelineStepBlastContigs.optimal_hit_for_each_query_nr(blast_output, max_evalue))
+        m8.M8Writer(blast_top_m8).write_all(
+            PipelineStepBlastContigs.optimal_hit_for_each_query_nr(blast_output, max_evalue)
+        )
 
     @staticmethod
     def optimal_hit_for_each_query_nr(blast_output, max_evalue):
@@ -500,7 +502,7 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
         accession_counts = defaultdict(lambda: 0)
 
         # For each contig, get the alignments that have the best total score (may be multiple if there are ties).
-        for alignment in m8.parse_m8(blast_output):
+        for alignment in m8.M8Reader(blast_output):
             if alignment["evalue"] > max_evalue:
                 continue
             query = alignment["qseqid"]
@@ -536,7 +538,7 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
         current_query_hits = None
         previously_seen_queries = set()
         # Please see comments explaining the definition of "hsp" elsewhere in this file.
-        for hsp in m8.parse_tsv(blast_output, m8.BLAST_OUTPUT_NT_SCHEMA):
+        for hsp in m8.BlastOutputNTReader(blast_output):
             # filter local alignment HSPs based on minimum length and sequence similarity
             if hsp["length"] < min_alignment_length:
                 continue
@@ -616,5 +618,6 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
         # for documentation of Blast output.
 
         # Output the optimal hit for each query.
-        m8.unparse_tsv(blast_top_m8, m8.RERANKED_BLAST_OUTPUT_NT_SCHEMA,
-                       PipelineStepBlastContigs.optimal_hit_for_each_query_nt(blast_output, min_alignment_length, min_pident, max_evalue))
+        m8.RerankedBlastOutputWriter(blast_top_m8, "nt", "contig_level").write_all(
+            PipelineStepBlastContigs.optimal_hit_for_each_query_nt(blast_output, min_alignment_length, min_pident, max_evalue))
+        )
