@@ -143,6 +143,7 @@ class _TSVWithSchemaWriter(ABC):
     def __exit__(self, type, value, traceback):
         self._file_obj.close()
 
+
 class M8Reader(_TSVWithSchemaReader):
     def __init__(self, path, strict=True):
         super().__init__(path, _BLAST_OUTPUT_SCHEMA, strict=strict)
@@ -170,6 +171,7 @@ class RerankedBlastOutputWriter(_TSVWithSchemaWriter):
 class BlastOutputNTReader(_TSVWithSchemaReader):
     def __init__(self, path: str) -> None:
         super().__init__(path, _BLAST_OUTPUT_NT_SCHEMA)
+
 
 def summarize_hits(hit_summary_file, min_reads_per_genus=0):
     ''' Parse the hit summary file from alignment and get the relevant into'''
@@ -199,96 +201,6 @@ def summarize_hits(hit_summary_file, min_reads_per_genus=0):
             selected_genera[genus_taxid] = list(genus_accessions[genus_taxid])
 
     return (read_dict, accession_dict, selected_genera)
-
-
-# TODO:  Deprecate this iterate_m8() function, particularly its debug switches and modes,
-# in favor of the better encapsulated and more flexible parse_tsv() above.
-def iterate_m8(m8_file, min_alignment_length=0, debug_caller=None, logging_interval=25000000, full_line=False):
-    """Generate an iterator over the m8 file and return values for each line.
-    Work around and warn about any invalid hits detected.
-    Return a subset of values (read_id, accession_id, percent_id, alignment_length,
-    e_value, line) by default.
-    """
-    invalid_hits = 0
-    last_invalid_line = None
-    with open(m8_file, 'r', encoding='utf-8') as m8f:
-        line_count = 0
-        for line in m8f:
-            line_count += 1
-            if line and line[0] == '#':
-                # skip comment lines
-                continue
-            parts = line.split("\t")
-            # Must have at least 12 parts per line
-            assert len(parts) >= 12, log_corrupt(m8_file, line)
-
-            read_id = parts[0]
-            accession_id = parts[1]
-            percent_id = float(parts[2])
-            alignment_length = int(parts[3])
-            num_mismatches = int(parts[4])
-            num_gaps = int(parts[5])
-            query_start = int(parts[6])
-            query_end = int(parts[7])
-            subject_start = int(parts[8])
-            subject_end = int(parts[9])
-            e_value = float(parts[10])
-            bitscore = float(parts[11])
-
-            # GSNAP outputs bogus alignments (non-positive length /
-            # impossible percent identity / NaN e-value) sometimes,
-            # and usually they are not the only assignment, so rather than
-            # killing the job, we just skip them. If we don't filter these
-            # out here, they will override the good data when computing min(
-            # evalue), pollute averages computed in the json, and cause the
-            # webapp loader to crash as the Rails JSON parser cannot handle
-            # NaNs. Test if e_value != e_value to test if e_value is NaN
-            # because NaN != NaN.
-            if alignment_length <= 0 or not -0.25 < percent_id < 100.25 or e_value != e_value:
-                invalid_hits += 1
-                last_invalid_line = line
-                continue
-
-            # *** Alignment Length Filter ***
-            # Alignments with length <=35 bp are associated with false-positives in NT
-            # when the .m8 file is generated via service = "gsnap" or using blast db "nt",
-            # the min_alignment_length filter is passed to require a minimum .m8 length
-            # note:
-            #    - this is already taken care of for RAPSEARCH2 .m8 files via the -l parameter
-            #    - the -l parameter used in rapsearch2 is shorter due to shorter overall alignment lengths
-            #      produced by RAPSEARCH2
-            ###
-            if alignment_length < min_alignment_length:
-                continue
-
-            # *** E-value Filter ***
-            # Alignments with e-value > 1 are low-quality and associated with false-positives in
-            # all alignments steps (NT and NR). When the e-value is greater than 1, ignore the
-            # alignment
-            ###
-            if e_value > MAX_EVALUE_THRESHOLD:
-                continue
-
-            if debug_caller and line_count % logging_interval == 0:
-                msg = "Scanned {} m8 lines from {} for {}, and going.".format(
-                    line_count, m8_file, debug_caller)
-                log.write(msg)
-            if full_line:
-                yield (read_id, accession_id, percent_id, alignment_length, num_mismatches, num_gaps,
-                       query_start, query_end, subject_start, subject_end, e_value, bitscore, line)
-            else:
-                yield (read_id, accession_id, percent_id, alignment_length,
-                       e_value, bitscore, line)
-
-    # Warn about any invalid hits outputted by GSNAP
-    if invalid_hits:
-        msg = "Found {} invalid hits in {};  last invalid hit line: {}".format(
-            invalid_hits, m8_file, last_invalid_line)
-        log.write(msg, warning=True)
-    if debug_caller:
-        msg = "Scanned all {} m8 lines from {} for {}.".format(
-            line_count, m8_file, debug_caller)
-        log.write(msg)
 
 
 def read_file_into_set(file_name):
@@ -446,8 +358,8 @@ def _call_hits_m8_work(input_m8, lineage_map, accession2taxid_dict,
     count = 0
     LOG_INCREMENT = 50000
     log.write("Starting to summarize hits from {}.".format(input_m8))
-    for read_id, accession_id, _percent_id, _alignment_length, e_value, _bitscore, _line in iterate_m8(
-            input_m8, min_alignment_length, "call_hits_m8_scan"):
+    for row in (row for row in M8Reader(input_m8) if row["length"] > min_alignment_length):
+        read_id, accession_id, e_value = row["qseqid"], row["sseqid"], row["evalue"]
         # The Expect value (E) is a parameter that describes the number of
         # hits one can 'expect' to see by chance when searching a database of
         # a particular size. It decreases exponentially as the Score (S) of
@@ -476,46 +388,45 @@ def _call_hits_m8_work(input_m8, lineage_map, accession2taxid_dict,
     # Generate output files. outf is the main output_m8 file and outf_sum is
     # the summary level info.
     emitted = set()
-    with open(output_m8, "w") as outf:
-        with open(output_summary, "w") as outf_sum:
-            # Iterator over the lines of the m8 file. Emit the hit with the
-            # best value that provides the most specific taxonomy
-            # information. If there are multiple hits (also called multiple
-            # accession IDs) for a given read that all have the same e-value,
-            # some may provide species information and some may only provide
-            # genus information. We want to emit the one that provides the
-            # species information because from that we can infer the rest of
-            # the lineage. If we accidentally emitted the one that provided
-            # only genus info, downstream steps may have difficulty
-            # recovering the species.
+    with open(input_m8) as input_m8_f, open(output_m8, "w") as outf, open(output_summary, "w") as outf_sum:
+        # Iterator over the lines of the m8 file. Emit the hit with the
+        # best value that provides the most specific taxonomy
+        # information. If there are multiple hits (also called multiple
+        # accession IDs) for a given read that all have the same e-value,
+        # some may provide species information and some may only provide
+        # genus information. We want to emit the one that provides the
+        # species information because from that we can infer the rest of
+        # the lineage. If we accidentally emitted the one that provided
+        # only genus info, downstream steps may have difficulty
+        # recovering the species.
 
-            # TODO: Consider all hits within a fixed margin of the best e-value.
-            # This change may need to be accompanied by a change to
-            # GSNAP/RAPSearch2 parameters.
-            for read_id, accession_id, _percent_id, _alignment_length, e_value, _bitscore, line in iterate_m8(
-                    input_m8, min_alignment_length, "call_hits_m8_emit_deduped_and_summarized_hits"):
-                if read_id in emitted:
-                    continue
+        # TODO: Consider all hits within a fixed margin of the best e-value.
+        # This change may need to be accompanied by a change to
+        # GSNAP/RAPSearch2 parameters.
+        for row, line in zip((row for row in M8Reader(input_m8) if row["length"] > min_alignment_length), input_m8_f):
+            read_id, accession_id, e_value = row["qseqid"], row["sseqid"], row["evalue"]
+            if read_id in emitted:
+                continue
 
-                # Read the fields from the summary level info
-                best_e_value, _, (hit_level, taxid,
-                                  best_accession_id) = summary[read_id]
-                if best_e_value == e_value and best_accession_id in (
-                        None, accession_id):
-                    # Read out the hit with the best value that provides the
-                    # most specific taxonomy information.
-                    emitted.add(read_id)
-                    outf.write(line)
-                    species_taxid = -1
-                    genus_taxid = -1
-                    family_taxid = -1
-                    if best_accession_id != None:
-                        (species_taxid, genus_taxid, family_taxid) = get_lineage(
-                            best_accession_id)
+            # Read the fields from the summary level info
+            best_e_value, _, (hit_level, taxid,
+                              best_accession_id) = summary[read_id]
+            if best_e_value == e_value and best_accession_id in (
+                    None, accession_id):
+                # Read out the hit with the best value that provides the
+                # most specific taxonomy information.
+                emitted.add(read_id)
+                outf.write(line)
+                species_taxid = -1
+                genus_taxid = -1
+                family_taxid = -1
+                if best_accession_id != None:
+                    (species_taxid, genus_taxid, family_taxid) = get_lineage(
+                        best_accession_id)
 
-                    msg = f"{read_id}\t{hit_level}\t{taxid}\t{best_accession_id}"
-                    msg += f"\t{species_taxid}\t{genus_taxid}\t{family_taxid}\n"
-                    outf_sum.write(msg)
+                msg = f"{read_id}\t{hit_level}\t{taxid}\t{best_accession_id}"
+                msg += f"\t{species_taxid}\t{genus_taxid}\t{family_taxid}\n"
+                outf_sum.write(msg)
 
 
 @command.run_in_subprocess
