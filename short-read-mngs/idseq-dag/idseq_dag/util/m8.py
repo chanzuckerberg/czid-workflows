@@ -159,6 +159,7 @@ class M8Reader(_TSVWithSchemaReader):
             # impossible percent identity / NaN e-value) sometimes,
             # and usually they are not the only assignment, so rather than
             # killing the job, we just skip them. If we don't filter these
+            # killing the job, we just skip them. If we don't filter these
             # out here, they will override the good data when computing min(
             # evalue), pollute averages computed in the json, and cause the
             # webapp loader to crash as the Rails JSON parser cannot handle
@@ -420,7 +421,8 @@ def _call_hits_m8_work(input_m8, lineage_map, accession2taxid_dict,
     # Generate output files. outf is the main output_m8 file and outf_sum is
     # the summary level info.
     emitted = set()
-    with open(input_m8) as input_m8_f, open(output_m8, "w") as outf, open(output_summary, "w") as outf_sum:
+    # TODO: (tmorse) no more parsing
+    with M8Writer(output_m8) as out_m8, open(output_summary, "w") as outf_sum:
         # Iterator over the lines of the m8 file. Emit the hit with the
         # best value that provides the most specific taxonomy
         # information. If there are multiple hits (also called multiple
@@ -435,7 +437,7 @@ def _call_hits_m8_work(input_m8, lineage_map, accession2taxid_dict,
         # TODO: Consider all hits within a fixed margin of the best e-value.
         # This change may need to be accompanied by a change to
         # GSNAP/RAPSearch2 parameters.
-        for row, line in zip(M8Reader(input_m8).valid_rows(min_alignment_length), input_m8_f):
+        for row in M8Reader(input_m8).valid_rows(min_alignment_length):
             read_id, accession_id, e_value = row["qseqid"], row["sseqid"], row["evalue"]
             if read_id in emitted:
                 continue
@@ -448,7 +450,7 @@ def _call_hits_m8_work(input_m8, lineage_map, accession2taxid_dict,
                 # Read out the hit with the best value that provides the
                 # most specific taxonomy information.
                 emitted.add(read_id)
-                outf.write(line)
+                out_m8.write(row)
                 species_taxid = -1
                 genus_taxid = -1
                 family_taxid = -1

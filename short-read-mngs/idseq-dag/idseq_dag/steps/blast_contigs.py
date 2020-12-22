@@ -14,7 +14,7 @@ from idseq_dag.util.trace_lock import TraceLock
 from idseq_dag.steps.run_assembly import PipelineStepRunAssembly
 from idseq_dag.util.count import READ_COUNTING_MODE, ReadCountingMode, get_read_cluster_size, load_duplicate_cluster_sizes
 from idseq_dag.util.lineage import DEFAULT_BLACKLIST_S3, DEFAULT_WHITELIST_S3
-from idseq_dag.util.m8 import HitSummaryMergedReader, HitSummaryMergedWriter, MIN_CONTIG_SIZE, NT_MIN_ALIGNMENT_LEN, MAX_EVALUE_THRESHOLD
+from idseq_dag.util.m8 import HitSummaryMergedReader, HitSummaryMergedWriter, M8Reader, M8Writer, MIN_CONTIG_SIZE, NT_MIN_ALIGNMENT_LEN, MAX_EVALUE_THRESHOLD
 
 
 MIN_REF_FASTA_SIZE = 25
@@ -345,25 +345,18 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
             # add the reads that are newly blasted
             for read_id in new_read_ids:
                 refined_hit_summary_writer.write(consolidated_dict[added_reads[read_id]])
-        # TODO: (tmorse) no more parsing
         # Generate new M8
-        with open(refined_m8, 'w') as rmf:
-            with open(deduped_m8, 'r', encoding='utf-8') as mf:
-                for line in mf:
-                    read_id = line.rstrip().split("\t")[0]
-                    m8_line = read2blastm8.get(read_id)
-                    if m8_line:
-                        m8_fields = m8_line.split("\t")
-                        m8_fields[0] = read_id
-                        rmf.write("\t".join(m8_fields))
-                    else:
-                        rmf.write(line)
+        with M8Writer(refined_m8) as refined_m8_writer:
+            for row in M8Reader(deduped_m8):
+                new_row = read2blastm8.get(row["qseqid"], row)
+                new_row["qseqid"] = row["qseqid"]
+                refined_m8_writer.write(new_row)
+
             # add the reads that are newly blasted
             for read_id in new_read_ids:
-                m8_line = read2blastm8.get(read_id)
-                m8_fields = m8_line.split("\t")
-                m8_fields[0] = read_id
-                rmf.write("\t".join(m8_fields))
+                new_row = read2blastm8.get(read_id)
+                new_row["qseqid"] = read_id
+                refined_m8_writer.write(new_row)
 
     @staticmethod
     def update_read_dict(read2contig, blast_top_m8, read_dict, accession_dict, db_type):
@@ -373,15 +366,14 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
         contig2lineage = {}
         added_reads = {}
 
-        with open(blast_top_m8) as blast_top_m8_file:
-            for row, raw_line in zip(m8.RerankedBlastOutputReader(blast_top_m8, db_type, 'contig_level'), blast_top_m8_file):
-                contig_id = row["qseqid"]
-                accession_id = row["sseqid"]
-                contig2accession[contig_id] = (accession_id, raw_line)
-                contig2lineage[contig_id] = accession_dict[accession_id]
+        for row in m8.RerankedBlastOutputReader(blast_top_m8, db_type, 'contig_level'):
+            contig_id = row["qseqid"]
+            accession_id = row["sseqid"]
+            contig2accession[contig_id] = (accession_id, row)
+            contig2lineage[contig_id] = accession_dict[accession_id]
 
         for read_id, contig_id in read2contig.items():
-            (accession, m8_line) = contig2accession.get(contig_id, (None, None))
+            (accession, m8_row) = contig2accession.get(contig_id, (None, None))
             if accession:
                 (species_taxid, genus_taxid, family_taxid) = accession_dict[accession]
                 if read_id in consolidated_dict:
@@ -407,8 +399,8 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
                         "contig_family_taxid": family_taxid,
                         "from_assembly": "from_assembly",
                     }
-            if m8_line:
-                read2blastm8[read_id] = m8_line
+            if m8_row:
+                read2blastm8[read_id] = m8_row
         return (consolidated_dict, read2blastm8, contig2lineage, added_reads)
 
     @staticmethod
