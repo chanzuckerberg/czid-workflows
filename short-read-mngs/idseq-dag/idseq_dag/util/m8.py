@@ -120,7 +120,7 @@ class _TSVWithSchemaReader(ABC):
         return self
 
     def __next__(self) -> Dict[str, Any]:
-        return next(self.generator)
+        return next(self._generator)
 
 
 class _TSVWithSchemaWriter(ABC):
