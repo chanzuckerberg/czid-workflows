@@ -111,7 +111,7 @@ class _TSVWithSchemaReader(ABC):
         with open(self.path, "r") as tsvfile:
             for line_num, row in enumerate(csv.reader(tsvfile, delimiter="\t")):
                 if self.strict and len(row) != len(self.schema):
-                    raise Exception(f"{self.path}:{line_num + 1}: Parse error. Input line does not conform to schema: {self.schema}")
+                    raise Exception(f"{self.path}:{line_num + 1}: Parse error. Input line: {len(row)}, {row} does not conform to schema: {self.schema}")
                 yield {
                     key: _type(row[i]) if i < len(row) else None for (i, (key, _type)) in enumerate(self.schema)
                 }
