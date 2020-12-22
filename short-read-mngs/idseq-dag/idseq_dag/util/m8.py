@@ -349,14 +349,6 @@ def _call_hits_m8_work(input_m8, lineage_map, accession2taxid_dict,
         counts = Counter(accession_list)
         return counts.most_common(1)[0][0]
 
-    def _call_hit_level(hits):  # TODO: Remove unused function
-        for level, hits_at_level in enumerate(hits):
-            if len(hits_at_level) == 1:
-                taxid, accession_list = hits_at_level.popitem()
-                accession_id = most_frequent_accession(accession_list)
-                return level + 1, taxid, accession_id
-        return -1, "-1", None
-
     # FIXME: https://jira.czi.team/browse/IDSEQ-2738
     #  We want to move towards a general randomness solution in which
     #  all randomness is seeded based on the content of the original input.
@@ -423,6 +415,7 @@ def _call_hits_m8_work(input_m8, lineage_map, accession2taxid_dict,
     emitted = set()
     # TODO: (tmorse) no more parsing
     with M8Writer(output_m8) as out_m8, open(output_summary, "w") as outf_sum:
+        outf_sum_writer = csv.writer(outf_sum, delimiter="\t")
         # Iterator over the lines of the m8 file. Emit the hit with the
         # best value that provides the most specific taxonomy
         # information. If there are multiple hits (also called multiple
@@ -458,9 +451,15 @@ def _call_hits_m8_work(input_m8, lineage_map, accession2taxid_dict,
                     (species_taxid, genus_taxid, family_taxid) = get_lineage(
                         best_accession_id)
 
-                msg = f"{read_id}\t{hit_level}\t{taxid}\t{best_accession_id}"
-                msg += f"\t{species_taxid}\t{genus_taxid}\t{family_taxid}\n"
-                outf_sum.write(msg)
+                outf_sum_writer.writerow([
+                    read_id,
+                    hit_level,
+                    taxid,
+                    best_accession_id,
+                    species_taxid,
+                    genus_taxid,
+                    family_taxid,
+                ])
 
 
 @command.run_in_subprocess
