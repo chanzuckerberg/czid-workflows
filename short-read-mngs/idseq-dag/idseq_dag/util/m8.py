@@ -7,7 +7,7 @@ import csv
 from abc import ABC
 from collections import Counter
 from collections import defaultdict
-from typing import Any, Callable, Dict, Generator, Iterable, List, Tuple
+from typing import Any, Callable, Dict, Iterable, List, Tuple
 
 import idseq_dag.util.command as command
 import idseq_dag.util.lineage as lineage
@@ -101,7 +101,7 @@ class _TSVWithSchemaReader(ABC):
         self.strict = strict
         self._generator = self._read_all()
 
-    def _read_all(self) -> Generator[Dict[str, Any]]:
+    def _read_all(self) -> Iterable[Dict[str, Any]]:
         """
         Parse TSV file with given schema, yielding a dict per line.
         See _BLAST_OUTPUT_SCHEMA, for example.
