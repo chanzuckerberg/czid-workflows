@@ -131,7 +131,7 @@ class _TSVWithSchemaWriter(ABC):
         self.path = path
         self.schema = schema
         self._file_obj = open(self.path, "w")
-        self._writer = csv.writer(self.file_obj, delimiter="\t")
+        self._writer = csv.writer(self._file_obj, delimiter="\t")
 
     def _dict_row_to_list(self, row: Dict[str, Any]) -> List[Any]:
         return [row[key] for (key, _) in self.schema]
@@ -477,46 +477,34 @@ def generate_taxon_count_json_from_m8(
     # Setup
     aggregation = {}
     with open(hit_level_file, 'r', encoding='utf-8') as hit_f, \
-         open(m8_file, 'r', encoding='utf-8') as m8_f, \
          open_file_db_by_extension(lineage_map_path) as lineage_map:  # noqa
+
         # Lines in m8_file and hit_level_file correspond (same read_id)
-        hit_line = hit_f.readline()
-        m8_line = m8_f.readline()
+        m8_reader = M8Reader(m8_file, strict=False)
+        # TODO (tmorse): make schema
+        hit_reader = csv.reader(hit_f, delimiter="\t")
+        hit_row = next(hit_reader)
+        m8_row = next(m8_reader)
         num_ranks = len(lineage.NULL_LINEAGE)
         # See https://en.wikipedia.org/wiki/Double-precision_floating-point_format
         MIN_NORMAL_POSITIVE_DOUBLE = 2.0**-1022
 
         with log.log_context("generate_taxon_count_json_from_m8", {"substep": "loop_1"}):
-            while hit_line and m8_line:
+            while hit_row and m8_row:
                 # Retrieve data values from files
-                hit_line_columns = hit_line.rstrip("\n").split("\t")
-                read_id = hit_line_columns[0]
-                hit_level = hit_line_columns[1]
-                hit_taxid = hit_line_columns[2]
+                read_id = hit_row[0]
+                hit_level = hit_row[1]
+                hit_taxid = hit_row[2]
                 if int(hit_level) < 0:
                     log.write('int(hit_level) < 0', debug=True)
-                hit_source_count_type = hit_line_columns[13] if len(hit_line_columns) >= 14 else None
+                hit_source_count_type = hit_row[13] if len(hit_row) >= 14 else None
 
-                # m8 files correspond to BLAST tabular output format 6:
-                # Columns: read_id | _ref_id | percent_identity | alignment_length...
-                #
-                # * read_id = query (e.g., gene) sequence id
-                # * _ref_id = subject (e.g., reference genome) sequence id
-                # * percent_identity = percentage of identical matches
-                # * alignment_length = length of the alignments
-                # * e_value = the expect value
-                #
-                # See:
-                # * http://www.metagenomics.wiki/tools/blast/blastn-output-format-6
-                # * http://www.metagenomics.wiki/tools/blast/evalue
-
-                m8_line_columns = m8_line.split("\t")
                 msg = "read_ids in %s and %s do not match: %s vs. %s" % (
                     os.path.basename(m8_file), os.path.basename(hit_level_file),
-                    m8_line_columns[0], hit_line_columns[0])
-                assert m8_line_columns[0] == hit_line_columns[0], msg
-                percent_identity = float(m8_line_columns[2])
-                alignment_length = float(m8_line_columns[3])
+                    m8_row["qseqid"], hit_row[0])
+                assert m8_row["qseqid"] == hit_row[0], msg
+                percent_identity = m8_row["pident"]
+                alignment_length = m8_row["length"]
 
                 if count_type == 'merged_NT_NR' and hit_source_count_type == 'NR':
                     # NOTE: At the moment of the change, applied ONLY in the scope of the prototype of NT/NR consensus project.
@@ -524,7 +512,7 @@ def generate_taxon_count_json_from_m8(
                     # To make alignment length values comparable across NT and NR alignments (for combined statistics),
                     # the NR alignment lengths are multiplied by 3.
                     alignment_length *= 3
-                e_value = float(m8_line_columns[10])
+                e_value = m8_row["evalue"]
 
                 # These have been filtered out before the creation of m8_f and hit_f
                 assert alignment_length > 0
@@ -570,8 +558,8 @@ def generate_taxon_count_json_from_m8(
                         # Chomp off the lowest rank as we aggregate up the tree
                         agg_key = agg_key[1:]
 
-                hit_line = hit_f.readline()
-                m8_line = m8_f.readline()
+                hit_row = next(hit_reader)
+                m8_row = next(m8_reader)
 
     # Produce the final output
     taxon_counts_attributes = []
