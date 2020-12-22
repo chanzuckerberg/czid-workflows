@@ -339,7 +339,7 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
         ''' generate new m8 and hit_summary based on consolidated_dict and read2blastm8 '''
         # Generate new hit summary
         new_read_ids = added_reads.keys()
-        with HitSummaryMergedWriter(refined_hit_summary, 'w') as refined_hit_summary_writer:
+        with HitSummaryMergedWriter(refined_hit_summary) as refined_hit_summary_writer:
             for read in HitSummaryMergedReader(hit_summary):
                 refined_hit_summary_writer.write(consolidated_dict[read["read_id"]])
             # add the reads that are newly blasted
