@@ -7,7 +7,7 @@ import csv
 from abc import ABC
 from collections import Counter
 from collections import defaultdict
-from typing import Any, Callable, Generator, Iterable
+from typing import Any, Callable, Dict, Generator, Iterable, List, Tuple
 
 import idseq_dag.util.command as command
 import idseq_dag.util.lineage as lineage
@@ -95,13 +95,13 @@ MIN_CONTIG_SIZE = 4
 
 
 class _TSVWithSchemaReader(ABC):
-    def __init__(self, path: str, schema: list[tuple[str, Callable[[str], Any]]], strict: bool = True) -> None:
+    def __init__(self, path: str, schema: List[Tuple[str, Callable[[str], Any]]], strict: bool = True) -> None:
         self.path = path
         self.schema = schema
         self.strict = strict
         self._generator = self._read_all()
 
-    def _read_all(self) -> Generator[dict[str, Any]]:
+    def _read_all(self) -> Generator[Dict[str, Any]]:
         """
         Parse TSV file with given schema, yielding a dict per line.
         See _BLAST_OUTPUT_SCHEMA, for example.
@@ -127,10 +127,10 @@ class _TSVWithSchemaWriter(ABC):
         self._file_obj = open(self.path, "w")
         self._writer = csv.writer(self.file_obj, delimiter="\t")
 
-    def _dict_row_to_list(self, row: dict[str, Any]) -> list[Any]:
+    def _dict_row_to_list(self, row: Dict[str, Any]) -> List[Any]:
         return [row[key] for (key, _) in self.schema]
 
-    def write_all(self, rows: Iterable[dict[str, Any]]) -> None:
+    def write_all(self, rows: Iterable[Dict[str, Any]]) -> None:
         self._writer.writerows(self._dict_row_to_list(row) for row in rows)
         self._file_obj.close()
 
@@ -145,11 +145,11 @@ class _TSVWithSchemaWriter(ABC):
 
 
 class M8Reader(_TSVWithSchemaReader):
-    def __init__(self, path, strict=True):
+    def __init__(self, path: str, strict: bool = True):
         super().__init__(path, _BLAST_OUTPUT_SCHEMA, strict=strict)
 
 class M8Writer(_TSVWithSchemaWriter):
-    def __init__(self, path):
+    def __init__(self, path: str):
         super().__init__(path, _BLAST_OUTPUT_SCHEMA)
 
 class HitSummaryMergedReader(_TSVWithSchemaReader):
@@ -173,7 +173,7 @@ class BlastOutputNTReader(_TSVWithSchemaReader):
         super().__init__(path, _BLAST_OUTPUT_NT_SCHEMA)
 
 
-def summarize_hits(hit_summary_file, min_reads_per_genus=0):
+def summarize_hits(hit_summary_file: str, min_reads_per_genus=0):
     ''' Parse the hit summary file from alignment and get the relevant into'''
     read_dict = {}  # read_id => line
     accession_dict = {}  # accession => (species, genus)
