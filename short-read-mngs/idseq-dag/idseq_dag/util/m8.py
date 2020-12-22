@@ -119,6 +119,10 @@ class _TSVWithSchemaReader(ABC):
                     key: _type(row[i]) if i < len(row) else None for (i, (key, _type)) in enumerate(self.schema)
                 }
 
+    @property
+    def fields(self) -> List[str]:
+        return [k for k, _ in self.schema]
+
     def __iter__(self):
         return self
 

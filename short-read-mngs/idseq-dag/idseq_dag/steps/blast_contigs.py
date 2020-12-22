@@ -434,7 +434,7 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
                     "-out",
                     blast_m8,
                     "-outfmt",
-                    '6 ' + ' '.join(m8.BLAST_OUTPUT_NT_SCHEMA.keys()),
+                    '6 ' + ' '.join(m8.BlastOutputNTReader(None).fields),
                     '-evalue',
                     1e-10,
                     '-max_target_seqs',
