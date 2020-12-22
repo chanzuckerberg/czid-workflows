@@ -99,7 +99,6 @@ class _TSVWithSchemaReader(ABC):
         self.path = path
         self._schema_map = {len(schema): schema for schema in schemas}
         self._generator = self._read_all()
-        self._row_count = None
 
     def _read_all(self) -> Iterable[Dict[str, Any]]:
         """
@@ -109,23 +108,15 @@ class _TSVWithSchemaReader(ABC):
         When strict mode is True, all columns in schema are required. When strict mode is False, will return None values for column not found.
         """
         with open(self.path, "r") as tsvfile:
-            for line_num, row in enumerate(csv.reader(tsvfile, delimiter="\t")):
-                if not self._row_count:
-                    self._row_count = len(row)
+            for row in csv.reader(tsvfile, delimiter="\t"):
                 # The output of rapsearch2 contains comments that start with '#', these should be skipped
                 if row and row[0][0] == "#":
                     continue
-                if len(row) != self._row_count:
-                    raise Exception(f"{self.path}:{line_num + 1}: Parse error. Input line: \"{row}\" has a different number of columns than the previous row ({len(row)} vs {self._row_count})")
-                if self._row_count not in self.schema_map:
-                    raise Exception(f"{self.path}:{line_num + 1}: Parse error. Input line: \"{row}\" does not conform to schema: {self._schema}")
+                if len(row) not in self._schema_map:
+                    raise Exception(f"{self.path}: Parse error. Input line: \"{row}\" has {len(row)} columns, no associated schema found in {self._schema_map}")
                 yield {
-                    key: _type(row[i]) if i < len(row) else None for (i, (key, _type)) in enumerate(self._schema)
+                    key: _type(row[i]) if i < len(row) else None for (i, (key, _type)) in enumerate(self._schema_map[len(row)])
                 }
-
-    @property
-    def _schema(self):
-        return self._schema_map[self._row_count]
 
     def fields(self, columns) -> List[str]:
         return [k for k, _ in self._schema_map[columns]]
@@ -143,14 +134,11 @@ class _TSVWithSchemaWriter(ABC):
         self._schema_map = {len(schema): schema for schema in schemas}
         self._file_obj = open(self.path, "w")
         self._writer = csv.writer(self._file_obj, delimiter="\t")
-        self._row_count = None
 
     def _dict_row_to_list(self, row: Dict[str, Any]) -> List[Any]:
-        if not self._row_count:
-            self._row_count = len(row)
-        if len(row) != self._row_count:
-            raise Exception(f"{self.path}: Parse error. Input line: \"{row}\" has a different number of columns than the previous row ({len(row)} vs {self._row_count})")
-        return [row[key] for (key, _) in self._schema]
+        if len(row) not in self._schema_map:
+            raise Exception(f"{self.path}: Parse error. Input line: \"{row}\" has {len(row)} columns, no associated schema found in {self._schema_map}")
+        return [row[key] for (key, _) in self._schema_map[len(row)]]
 
     def write_all(self, rows: Iterable[Dict[str, Any]]) -> None:
         self._writer.writerows(self._dict_row_to_list(row) for row in rows)
@@ -158,10 +146,6 @@ class _TSVWithSchemaWriter(ABC):
 
     def write(self, row: Dict[str, Any]) -> None:
         self._writer.writerow(self._dict_row_to_list(row))
-
-    @property
-    def _schema(self):
-        return self._schema_map[self._row_count]
 
     def __enter__(self):
         return self
@@ -204,7 +188,7 @@ class M8Writer(_TSVWithSchemaWriter):
 
 class HitSummaryReader(_TSVWithSchemaReader):
     def __init__(self, path: str) -> None:
-        super().__init__(path, _HIT_SUMMARY_SCHEMA, _HIT_SUMMARY_SCHEMA_MERGED, strict=False)
+        super().__init__(path, _HIT_SUMMARY_SCHEMA, _HIT_SUMMARY_SCHEMA_MERGED)
 
 class HitSummaryWriter(_TSVWithSchemaWriter):
     def __init__(self, path: str) -> None:
@@ -496,7 +480,7 @@ def generate_taxon_count_json_from_m8(
          open_file_db_by_extension(lineage_map_path) as lineage_map:  # noqa
 
         # Lines in m8_file and hit_level_file correspond (same read_id)
-        m8_reader = M8Reader(m8_file, strict=False)
+        m8_reader = M8Reader(m8_file)
         # TODO (tmorse): make schema
         hit_reader = csv.reader(hit_f, delimiter="\t")
         hit_row = next(hit_reader, None)

@@ -46,7 +46,7 @@ class ComputeMergedTaxonCounts(PipelineStep):
             # first pass for NR and output to m8 files if assignment should come from NT
             for nt_hit_dict, nt_m8_dict in zip(
                 HitSummaryReader(self.inputs.nt_hitsummary2_tab),
-                M8Reader(self.inputs.nt_m8, strict=False),
+                M8Reader(self.inputs.nt_m8),
             ):
                 # assert files match
                 assert nt_hit_dict['read_id'] == nt_m8_dict["qseqid"], f"Mismatched m8 and hit summary files for nt [{nt_hit_dict['read_id']} != {nt_m8_dict['qseqid']}]"
@@ -74,7 +74,7 @@ class ComputeMergedTaxonCounts(PipelineStep):
             # dump remaining reads from NR
             for nr_hit_dict, nr_m8_dict in zip(
                 HitSummaryReader(self.inputs.nr_hitsummary2_tab),
-                M8Reader(self.inputs.nr_m8, strict=False),
+                M8Reader(self.inputs.nr_m8),
             ):
                 # assert files match
                 assert nr_hit_dict['read_id'] == nr_m8_dict["qseqid"], f"Mismatched m8 and hit summary files for NR [{nr_hit_dict['read_id']} {nr_m8_dict['qseqid']}]."
