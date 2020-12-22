@@ -14,7 +14,7 @@ from idseq_dag.util.trace_lock import TraceLock
 from idseq_dag.steps.run_assembly import PipelineStepRunAssembly
 from idseq_dag.util.count import READ_COUNTING_MODE, ReadCountingMode, get_read_cluster_size, load_duplicate_cluster_sizes
 from idseq_dag.util.lineage import DEFAULT_BLACKLIST_S3, DEFAULT_WHITELIST_S3
-from idseq_dag.util.m8 import HitSummaryMergedReader, HitSummaryMergedWriter, M8Reader, M8Writer, MIN_CONTIG_SIZE, NT_MIN_ALIGNMENT_LEN, MAX_EVALUE_THRESHOLD
+from idseq_dag.util.m8 import HitSummaryReader, HitSummaryWriter, M8Reader, M8Writer, MIN_CONTIG_SIZE, NT_MIN_ALIGNMENT_LEN, MAX_EVALUE_THRESHOLD
 
 
 MIN_REF_FASTA_SIZE = 25
@@ -339,8 +339,8 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
         ''' generate new m8 and hit_summary based on consolidated_dict and read2blastm8 '''
         # Generate new hit summary
         new_read_ids = added_reads.keys()
-        with HitSummaryMergedWriter(refined_hit_summary) as refined_hit_summary_writer:
-            for read in HitSummaryMergedReader(hit_summary):
+        with HitSummaryWriter(refined_hit_summary) as refined_hit_summary_writer:
+            for read in HitSummaryReader(hit_summary):
                 refined_hit_summary_writer.write(consolidated_dict[read["read_id"]])
             # add the reads that are newly blasted
             for read_id in new_read_ids:
@@ -434,7 +434,7 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
                     "-out",
                     blast_m8,
                     "-outfmt",
-                    '6 ' + ' '.join(m8.BlastOutputNTReader(None).fields),
+                    '6 ' + ' '.join(m8.BlastOutputReader(None).fields(14)),
                     '-evalue',
                     1e-10,
                     '-max_target_seqs',
@@ -542,7 +542,7 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
         current_query_hits = None
         previously_seen_queries = set()
         # Please see comments explaining the definition of "hsp" elsewhere in this file.
-        for hsp in m8.BlastOutputNTReader(blast_output):
+        for hsp in m8.BlastOutputReader(blast_output):
             # filter local alignment HSPs based on minimum length and sequence similarity
             if hsp["length"] < min_alignment_length:
                 continue

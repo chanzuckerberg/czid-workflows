@@ -95,11 +95,11 @@ MIN_CONTIG_SIZE = 4
 
 
 class _TSVWithSchemaReader(ABC):
-    def __init__(self, path: str, schema: List[Tuple[str, Callable[[str], Any]]], strict: bool = True) -> None:
+    def __init__(self, path: str, *schemas: List[Tuple[str, Callable[[str], Any]]]) -> None:
         self.path = path
-        self.schema = schema
-        self.strict = strict
+        self._schema_map = {len(schema): schema for schema in schemas}
         self._generator = self._read_all()
+        self._row_count = None
 
     def _read_all(self) -> Iterable[Dict[str, Any]]:
         """
@@ -110,18 +110,25 @@ class _TSVWithSchemaReader(ABC):
         """
         with open(self.path, "r") as tsvfile:
             for line_num, row in enumerate(csv.reader(tsvfile, delimiter="\t")):
+                if not self._row_count:
+                    self._row_count = len(row)
                 # The output of rapsearch2 contains comments that start with '#', these should be skipped
                 if row and row[0][0] == "#":
                     continue
-                if self.strict and len(row) != len(self.schema):
-                    raise Exception(f"{self.path}:{line_num + 1}: Parse error. Input line: {len(row)}, {row} does not conform to schema: {self.schema}")
+                if len(row) != self._row_count:
+                    raise Exception(f"{self.path}:{line_num + 1}: Parse error. Input line: \"{row}\" has a different number of columns than the previous row ({len(row)} vs {self._row_count})")
+                if self._row_count not in self.schema_map:
+                    raise Exception(f"{self.path}:{line_num + 1}: Parse error. Input line: \"{row}\" does not conform to schema: {self._schema}")
                 yield {
-                    key: _type(row[i]) if i < len(row) else None for (i, (key, _type)) in enumerate(self.schema)
+                    key: _type(row[i]) if i < len(row) else None for (i, (key, _type)) in enumerate(self._schema)
                 }
 
     @property
-    def fields(self) -> List[str]:
-        return [k for k, _ in self.schema]
+    def _schema(self):
+        return self._schema_map[self._row_count]
+
+    def fields(self, columns) -> List[str]:
+        return [k for k, _ in self._schema_map[columns]]
 
     def __iter__(self):
         return self
@@ -131,14 +138,19 @@ class _TSVWithSchemaReader(ABC):
 
 
 class _TSVWithSchemaWriter(ABC):
-    def __init__(self, path: str, schema: List[Tuple[str, Callable[[str], Any]]]) -> None:
+    def __init__(self, path: str, *schemas: List[Tuple[str, Callable[[str], Any]]]) -> None:
         self.path = path
-        self.schema = schema
+        self._schema_map = {len(schema): schema for schema in schemas}
         self._file_obj = open(self.path, "w")
         self._writer = csv.writer(self._file_obj, delimiter="\t")
+        self._row_count = None
 
     def _dict_row_to_list(self, row: Dict[str, Any]) -> List[Any]:
-        return [row[key] for (key, _) in self.schema]
+        if not self._row_count:
+            self._row_count = len(row)
+        if len(row) != self._row_count:
+            raise Exception(f"{self.path}: Parse error. Input line: \"{row}\" has a different number of columns than the previous row ({len(row)} vs {self._row_count})")
+        return [row[key] for (key, _) in self._schema]
 
     def write_all(self, rows: Iterable[Dict[str, Any]]) -> None:
         self._writer.writerows(self._dict_row_to_list(row) for row in rows)
@@ -147,6 +159,10 @@ class _TSVWithSchemaWriter(ABC):
     def write(self, row: Dict[str, Any]) -> None:
         self._writer.writerow(self._dict_row_to_list(row))
 
+    @property
+    def _schema(self):
+        return self._schema_map[self._row_count]
+
     def __enter__(self):
         return self
 
@@ -154,8 +170,8 @@ class _TSVWithSchemaWriter(ABC):
         self._file_obj.close()
 
 class M8Reader(_TSVWithSchemaReader):
-    def __init__(self, path: str, strict: bool = True):
-        super().__init__(path, _BLAST_OUTPUT_SCHEMA, strict=strict)
+    def __init__(self, path: str):
+        super().__init__(path, _BLAST_OUTPUT_SCHEMA, _BLAST_OUTPUT_NT_SCHEMA)
 
     def valid_rows(self, min_alignment_length=0) -> Iterable[Dict[str, Any]]:
         for row in self._generator:
@@ -184,15 +200,15 @@ class M8Reader(_TSVWithSchemaReader):
 
 class M8Writer(_TSVWithSchemaWriter):
     def __init__(self, path: str):
-        super().__init__(path, _BLAST_OUTPUT_SCHEMA)
+        super().__init__(path, _BLAST_OUTPUT_SCHEMA, _BLAST_OUTPUT_NT_SCHEMA)
 
-class HitSummaryMergedReader(_TSVWithSchemaReader):
+class HitSummaryReader(_TSVWithSchemaReader):
     def __init__(self, path: str) -> None:
-        super().__init__(path, _HIT_SUMMARY_SCHEMA_MERGED, strict=False)
+        super().__init__(path, _HIT_SUMMARY_SCHEMA, _HIT_SUMMARY_SCHEMA_MERGED, strict=False)
 
-class HitSummaryMergedWriter(_TSVWithSchemaWriter):
+class HitSummaryWriter(_TSVWithSchemaWriter):
     def __init__(self, path: str) -> None:
-        super().__init__(path, _HIT_SUMMARY_SCHEMA_MERGED)
+        super().__init__(path, _HIT_SUMMARY_SCHEMA, _HIT_SUMMARY_SCHEMA_MERGED)
 
 class RerankedBlastOutputReader(_TSVWithSchemaReader):
     def __init__(self, path: str, db_type: str, assembly_level: str) -> None:
@@ -201,10 +217,6 @@ class RerankedBlastOutputReader(_TSVWithSchemaReader):
 class RerankedBlastOutputWriter(_TSVWithSchemaWriter):
     def __init__(self, path: str, db_type: str, assembly_level: str) -> None:
         super().__init__(path, _RERANKED_BLAST_OUTPUT_SCHEMA[db_type][assembly_level])
-
-class BlastOutputNTReader(_TSVWithSchemaReader):
-    def __init__(self, path: str) -> None:
-        super().__init__(path, _BLAST_OUTPUT_NT_SCHEMA)
 
 
 def summarize_hits(hit_summary_file: str, min_reads_per_genus=0):
@@ -215,7 +227,7 @@ def summarize_hits(hit_summary_file: str, min_reads_per_genus=0):
     genus_species = defaultdict(set)  # genus => list of species
     genus_accessions = defaultdict(set)  # genus => list of accessions
     total_reads = 0
-    for read in HitSummaryMergedReader(hit_summary_file):
+    for read in HitSummaryReader(hit_summary_file):
         read_id = read["read_id"]
         accession_id = read["accession_id"]
         species_taxid = read["species_taxid"]
