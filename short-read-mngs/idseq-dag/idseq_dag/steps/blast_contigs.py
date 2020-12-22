@@ -14,7 +14,7 @@ from idseq_dag.util.trace_lock import TraceLock
 from idseq_dag.steps.run_assembly import PipelineStepRunAssembly
 from idseq_dag.util.count import READ_COUNTING_MODE, ReadCountingMode, get_read_cluster_size, load_duplicate_cluster_sizes
 from idseq_dag.util.lineage import DEFAULT_BLACKLIST_S3, DEFAULT_WHITELIST_S3
-from idseq_dag.util.m8 import MIN_CONTIG_SIZE, NT_MIN_ALIGNMENT_LEN, MAX_EVALUE_THRESHOLD
+from idseq_dag.util.m8 import HitSummaryMergedReader, HitSummaryMergedWriter, MIN_CONTIG_SIZE, NT_MIN_ALIGNMENT_LEN, MAX_EVALUE_THRESHOLD
 
 
 MIN_REF_FASTA_SIZE = 25
@@ -294,12 +294,12 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
                 species_taxid, genus_taxid, _family_taxid = lineage
             else:
                 # not mapping to a contig, or missing contig lineage
-                species_taxid, genus_taxid = read_info[4:6]
+                species_taxid, genus_taxid = read_info["species_taxid"], read_info["genus_taxid"]
                 contig = '*'
             if should_keep((species_taxid, genus_taxid)):
                 record_read(species_taxid, genus_taxid, contig, read_id)
 
-        for read_id, read_info in added_reads_dict.items():
+        for read_id in added_reads_dict.keys():
             contig = read2contig[read_id]
             species_taxid, genus_taxid, _family_taxid = contig2lineage[contig]
             if should_keep((species_taxid, genus_taxid)):
@@ -339,18 +339,13 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
         ''' generate new m8 and hit_summary based on consolidated_dict and read2blastm8 '''
         # Generate new hit summary
         new_read_ids = added_reads.keys()
-        with open(refined_hit_summary, 'w') as rhsf:
-            with open(hit_summary, 'r', encoding='utf-8') as hsf:
-                for line in hsf:
-                    read_id = line.rstrip().split("\t")[0]
-                    read = consolidated_dict[read_id]
-                    output_str = "\t".join(read)
-                    rhsf.write(output_str + "\n")
+        with HitSummaryMergedWriter(refined_hit_summary, 'w') as refined_hit_summary_writer:
+            for read in HitSummaryMergedReader(hit_summary):
+                refined_hit_summary_writer.write(consolidated_dict[read["read_id"]])
             # add the reads that are newly blasted
             for read_id in new_read_ids:
-                read_info = added_reads[read_id]
-                output_str = "\t".join(read_info)
-                rhsf.write(output_str + "\n")
+                refined_hit_summary_writer.write(consolidated_dict[added_reads[read_id]])
+        # TODO: (tmorse) no more parsing
         # Generate new M8
         with open(refined_m8, 'w') as rmf:
             with open(deduped_m8, 'r', encoding='utf-8') as mf:
@@ -389,12 +384,29 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
             (accession, m8_line) = contig2accession.get(contig_id, (None, None))
             if accession:
                 (species_taxid, genus_taxid, family_taxid) = accession_dict[accession]
-                if consolidated_dict.get(read_id):
-                    consolidated_dict[read_id] += [contig_id, accession, species_taxid, genus_taxid, family_taxid]
-                    consolidated_dict[read_id][2] = species_taxid
+                if read_id in consolidated_dict:
+                    consolidated_dict[read_id]["taxid"] = species_taxid
+                    consolidated_dict[read_id]["contig_id"] = contig_id
+                    consolidated_dict[read_id]["contig_accession_id"] = accession
+                    consolidated_dict[read_id]["contig_species_taxid"] = species_taxid
+                    consolidated_dict[read_id]["contig_genus_taxid"] = genus_taxid
+                    consolidated_dict[read_id]["contig_family_taxid"] = family_taxid
                 else:
-                    added_reads[read_id] = [read_id, "1", species_taxid, accession, species_taxid, genus_taxid,
-                                            family_taxid, contig_id, accession, species_taxid, genus_taxid, family_taxid, 'from_assembly']
+                    added_reads[read_id] = {
+                        "read_id": read_id,
+                        "level": 1,
+                        "taxid": species_taxid,
+                        "accession_id": accession,
+                        "species_taxid": species_taxid,
+                        "genus_taxid": genus_taxid,
+                        "family_taxid": family_taxid,
+                        "contig_id": contig_id,
+                        "contig_accession_id": accession,
+                        "contig_species_taxid": species_taxid,
+                        "contig_genus_taxid": genus_taxid,
+                        "contig_family_taxid": family_taxid,
+                        "from_assembly": "from_assembly",
+                    }
             if m8_line:
                 read2blastm8[read_id] = m8_line
         return (consolidated_dict, read2blastm8, contig2lineage, added_reads)
@@ -619,5 +631,5 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
 
         # Output the optimal hit for each query.
         m8.RerankedBlastOutputWriter(blast_top_m8, "nt", "contig_level").write_all(
-            PipelineStepBlastContigs.optimal_hit_for_each_query_nt(blast_output, min_alignment_length, min_pident, max_evalue))
+            PipelineStepBlastContigs.optimal_hit_for_each_query_nt(blast_output, min_alignment_length, min_pident, max_evalue)
         )

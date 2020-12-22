@@ -82,7 +82,7 @@ _HIT_SUMMARY_SCHEMA = [
     ("contig_species_taxid", int),
     ("contig_genus_taxid", int),
     ("contig_family_taxid", int),
-    ("from_assembly", bool),
+    ("from_assembly", str),
 ]
 
 _HIT_SUMMARY_SCHEMA_MERGED = _HIT_SUMMARY_SCHEMA + [
@@ -181,20 +181,23 @@ def summarize_hits(hit_summary_file, min_reads_per_genus=0):
     genus_species = defaultdict(set)  # genus => list of species
     genus_accessions = defaultdict(set)  # genus => list of accessions
     total_reads = 0
-    with open(hit_summary_file, 'r') as hsf:
-        for line in hsf:
-            read = line.rstrip().split("\t")
-            accession_id, species_taxid, genus_taxid, family_taxid = read[3:7]
-            read_dict[read[0]] = read
-            total_reads += 1
-            if accession_id == 'None' or accession_id == "":
-                continue
-            accession_dict[accession_id] = (
-                species_taxid, genus_taxid, family_taxid)
-            if int(genus_taxid) > 0:
-                genus_read_counts[genus_taxid] += 1
-                genus_species[genus_taxid].add(species_taxid)
-                genus_accessions[genus_taxid].add(accession_id)
+    for read in HitSummaryMergedReader(hit_summary_file):
+        read_id = read["read_id"]
+        accession_id = read["accession_id"]
+        species_taxid = read["species_taxid"]
+        genus_taxid = read["genus_taxid"]
+        family_taxid = read["family_taxid"]
+
+        read_dict[read_id] = read
+        total_reads += 1
+        if accession_id == "None" or accession_id == "":
+            continue
+        accession_dict[accession_id] = (
+            species_taxid, genus_taxid, family_taxid)
+        if int(genus_taxid) > 0:
+            genus_read_counts[genus_taxid] += 1
+            genus_species[genus_taxid].add(species_taxid)
+            genus_accessions[genus_taxid].add(accession_id)
     selected_genera = {}  # genus => accession_list
     for genus_taxid, reads in genus_read_counts.items():
         if reads >= min_reads_per_genus and len(genus_species[genus_taxid]) > 1:
