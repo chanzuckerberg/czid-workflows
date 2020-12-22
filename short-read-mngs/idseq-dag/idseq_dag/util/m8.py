@@ -110,6 +110,9 @@ class _TSVWithSchemaReader(ABC):
         """
         with open(self.path, "r") as tsvfile:
             for line_num, row in enumerate(csv.reader(tsvfile, delimiter="\t")):
+                # The output of rapsearch2 contains comments that start with '#', these should be skipped
+                if row and row[0][0] == "#":
+                    continue
                 if self.strict and len(row) != len(self.schema):
                     raise Exception(f"{self.path}:{line_num + 1}: Parse error. Input line: {len(row)}, {row} does not conform to schema: {self.schema}")
                 yield {
@@ -146,10 +149,33 @@ class _TSVWithSchemaWriter(ABC):
     def __exit__(self, type, value, traceback):
         self._file_obj.close()
 
-
 class M8Reader(_TSVWithSchemaReader):
     def __init__(self, path: str, strict: bool = True):
         super().__init__(path, _BLAST_OUTPUT_SCHEMA, strict=strict)
+
+    def valid_rows(self, min_alignment_length=0) -> Iterable[Dict[str, Any]]:
+        for row in self._generator:
+            # GSNAP outputs bogus alignments (non-positive length /
+            # impossible percent identity / NaN e-value) sometimes,
+            # and usually they are not the only assignment, so rather than
+            # killing the job, we just skip them. If we don't filter these
+            # out here, they will override the good data when computing min(
+            # evalue), pollute averages computed in the json, and cause the
+            # webapp loader to crash as the Rails JSON parser cannot handle
+            # NaNs. Test if e_value != e_value to test if e_value is NaN
+            # because NaN != NaN.
+            if row["length"] <= min_alignment_length or not -0.25 < row["pident"] < 100.25 or row["evalue"] != row["evalue"]:
+                continue
+
+            # *** E-value Filter ***
+            # Alignments with e-value > 1 are low-quality and associated with false-positives in
+            # all alignments steps (NT and NR). When the e-value is greater than 1, ignore the
+            # alignment
+            ###
+            if row["evalue"] > MAX_EVALUE_THRESHOLD:
+                continue
+
+            yield row
 
 class M8Writer(_TSVWithSchemaWriter):
     def __init__(self, path: str):
@@ -364,7 +390,7 @@ def _call_hits_m8_work(input_m8, lineage_map, accession2taxid_dict,
     count = 0
     LOG_INCREMENT = 50000
     log.write("Starting to summarize hits from {}.".format(input_m8))
-    for row in (row for row in M8Reader(input_m8) if row["length"] > min_alignment_length):
+    for row in M8Reader(input_m8).valid_rows(min_alignment_length):
         read_id, accession_id, e_value = row["qseqid"], row["sseqid"], row["evalue"]
         # The Expect value (E) is a parameter that describes the number of
         # hits one can 'expect' to see by chance when searching a database of
@@ -409,7 +435,7 @@ def _call_hits_m8_work(input_m8, lineage_map, accession2taxid_dict,
         # TODO: Consider all hits within a fixed margin of the best e-value.
         # This change may need to be accompanied by a change to
         # GSNAP/RAPSearch2 parameters.
-        for row, line in zip((row for row in M8Reader(input_m8) if row["length"] > min_alignment_length), input_m8_f):
+        for row, line in zip(M8Reader(input_m8).valid_rows(min_alignment_length), input_m8_f):
             read_id, accession_id, e_value = row["qseqid"], row["sseqid"], row["evalue"]
             if read_id in emitted:
                 continue
