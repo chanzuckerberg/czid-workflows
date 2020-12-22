@@ -116,12 +116,12 @@ class _TSVWithSchemaReader(ABC):
                     key: _type(row[i]) if i < len(row) else None for (i, (key, _type)) in enumerate(self.schema)
                 }
 
-    def __next__(self) -> dict[str, Any]:
+    def __next__(self) -> Dict[str, Any]:
         return next(self.generator)
 
 
 class _TSVWithSchemaWriter(ABC):
-    def __init__(self, path: str, schema: list[tuple[str, Callable[[str], Any]]]) -> None:
+    def __init__(self, path: str, schema: List[Tuple[str, Callable[[str], Any]]]) -> None:
         self.path = path
         self.schema = schema
         self._file_obj = open(self.path, "w")
@@ -134,7 +134,7 @@ class _TSVWithSchemaWriter(ABC):
         self._writer.writerows(self._dict_row_to_list(row) for row in rows)
         self._file_obj.close()
 
-    def write(self, row: dict[str, Any]) -> None:
+    def write(self, row: Dict[str, Any]) -> None:
         self._writer.writerow(self._dict_row_to_list(row))
 
     def __enter__(self):
