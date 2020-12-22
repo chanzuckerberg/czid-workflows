@@ -122,8 +122,8 @@ class _TSVWithSchemaReader(ABC):
     def __iter__(self):
         return self
 
-    def __next__(self) -> Dict[str, Any]:
-        return next(self._generator)
+    def __next__(self, *args) -> Dict[str, Any]:
+        return next(self._generator, *args)
 
 
 class _TSVWithSchemaWriter(ABC):
@@ -483,8 +483,8 @@ def generate_taxon_count_json_from_m8(
         m8_reader = M8Reader(m8_file, strict=False)
         # TODO (tmorse): make schema
         hit_reader = csv.reader(hit_f, delimiter="\t")
-        hit_row = next(hit_reader)
-        m8_row = next(m8_reader)
+        hit_row = next(hit_reader, None)
+        m8_row = next(m8_reader, None)
         num_ranks = len(lineage.NULL_LINEAGE)
         # See https://en.wikipedia.org/wiki/Double-precision_floating-point_format
         MIN_NORMAL_POSITIVE_DOUBLE = 2.0**-1022
@@ -558,8 +558,8 @@ def generate_taxon_count_json_from_m8(
                         # Chomp off the lowest rank as we aggregate up the tree
                         agg_key = agg_key[1:]
 
-                hit_row = next(hit_reader)
-                m8_row = next(m8_reader)
+                hit_row = next(hit_reader, None)
+                m8_row = next(m8_reader, None)
 
     # Produce the final output
     taxon_counts_attributes = []
