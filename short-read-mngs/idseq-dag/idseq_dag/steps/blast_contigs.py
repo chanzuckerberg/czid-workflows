@@ -344,7 +344,7 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
                 refined_hit_summary_writer.write(consolidated_dict[read["read_id"]])
             # add the reads that are newly blasted
             for read_id in new_read_ids:
-                refined_hit_summary_writer.write(consolidated_dict[added_reads[read_id]])
+                refined_hit_summary_writer.write(added_reads[read_id])
         # Generate new M8
         with M8Writer(refined_m8) as refined_m8_writer:
             for row in M8Reader(deduped_m8):
