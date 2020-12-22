@@ -59,14 +59,14 @@ _RERANKED_BLAST_OUTPUT_NT_SCHEMA = _BLAST_OUTPUT_NT_SCHEMA + [
 
 
 _RERANKED_BLAST_OUTPUT_SCHEMA = {
-    'nt': [
-        ("contig_level", _RERANKED_BLAST_OUTPUT_NT_SCHEMA),   # only NT contigs are reranked
-        ("read_level", _BLAST_OUTPUT_SCHEMA),
-    ],
-    'nr': [
-        ("contig_level", _BLAST_OUTPUT_SCHEMA),
-        ("read_level", _BLAST_OUTPUT_SCHEMA),
-    ],
+    "nt": {
+        "contig_level": _RERANKED_BLAST_OUTPUT_NT_SCHEMA,   # only NT contigs are reranked
+        "read_level": _BLAST_OUTPUT_SCHEMA,
+    },
+    "nr": {
+        "contig_level": _BLAST_OUTPUT_SCHEMA,
+        "read_level": _BLAST_OUTPUT_SCHEMA,
+    },
 }
 
 _HIT_SUMMARY_SCHEMA = [
