@@ -116,6 +116,9 @@ class _TSVWithSchemaReader(ABC):
                     key: _type(row[i]) if i < len(row) else None for (i, (key, _type)) in enumerate(self.schema)
                 }
 
+    def __iter__(self):
+        return self
+
     def __next__(self) -> Dict[str, Any]:
         return next(self.generator)
 
