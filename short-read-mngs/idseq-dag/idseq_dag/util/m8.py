@@ -154,9 +154,9 @@ class BlastnOutput6Reader(_TSVWithSchemaReader):
         # alignment
         ###
         return all([
-            row["length"] > min_alignment_length,
+            row["length"] >= min_alignment_length,
             -0.25 < row["pident"] < 100.25,
-            row["evalue"] != row["evalue"],
+            row["evalue"] == row["evalue"],
             row["evalue"] <= MAX_EVALUE_THRESHOLD,
         ])
 
