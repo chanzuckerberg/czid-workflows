@@ -293,7 +293,7 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
         return unassigned_reads_set
 
     @staticmethod
-    def generate_hit_data_from_m8(m8_file, valid_hits, assembly_level):
+    def generate_hit_data_from_m8(blastn_6_path, valid_hits):
         """
         Generate hit data from an m8 file.
         Only include hits whose name appears in the valid_hits collection.
@@ -304,36 +304,37 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
         hits = {}
 
         # File is empty.
-        if os.path.getsize(m8_file) < MIN_M8_FILE_SIZE:
+        if os.path.getsize(blastn_6_path) < MIN_M8_FILE_SIZE:
             return hits
 
-        for hit in m8.M8Reader(m8_file):
+        with open(blastn_6_path) as blastn_6_f:
+            for hit in m8.BlastnOutput6Reader(blastn_6_f):
 
-            if hit["qseqid"] in valid_hits:
-                # Blast output is per HSP, yet the hit represents a set of HSPs,
-                # so these fields have been aggregated across that set by
-                # function summary_row() in class CandidateHit.
-                hits[hit["qseqid"]] = {
-                    "accession": hit["sseqid"],
-                    "percent_id": hit["pident"],
-                    "alignment_length": hit["length"],
-                    "num_mismatches": hit["mismatch"],
-                    "num_gaps": hit["gapopen"],
-                    "query_start": hit["qstart"],
-                    "query_end": hit["qend"],
-                    "subject_start": hit["sstart"],
-                    "subject_end": hit["send"],
-                    "prop_mismatch": hit["mismatch"] / max(1, hit["length"]),
-                }
+                if hit["qseqid"] in valid_hits:
+                    # Blast output is per HSP, yet the hit represents a set of HSPs,
+                    # so these fields have been aggregated across that set by
+                    # function summary_row() in class CandidateHit.
+                    hits[hit["qseqid"]] = {
+                        "accession": hit["sseqid"],
+                        "percent_id": hit["pident"],
+                        "alignment_length": hit["length"],
+                        "num_mismatches": hit["mismatch"],
+                        "num_gaps": hit["gapopen"],
+                        "query_start": hit["qstart"],
+                        "query_end": hit["qend"],
+                        "subject_start": hit["sstart"],
+                        "subject_end": hit["send"],
+                        "prop_mismatch": hit["mismatch"] / max(1, hit["length"]),
+                    }
 
-        return hits
+            return hits
 
     @staticmethod
     def generate_contig_data(blast_top_m8, valid_contigs_with_read_counts):
         """
         Generate contig data from blast_top_m8.
         """
-        contigs = PipelineStepGenerateCoverageViz.generate_hit_data_from_m8(blast_top_m8, valid_contigs_with_read_counts, "contig_level")
+        contigs = PipelineStepGenerateCoverageViz.generate_hit_data_from_m8(blast_top_m8, valid_contigs_with_read_counts)
 
         # Include some additional data.
         for contig_id, contig_obj in contigs.items():
@@ -353,7 +354,7 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
         However, these contigs still get reassigned in gsnap.reassigned.m8,
         and overwrite the original read alignment to the accession, which we need. So we can't use gsnap.reassigned.m8.
         """
-        return PipelineStepGenerateCoverageViz.generate_hit_data_from_m8(gsnap_deduped_m8, unassigned_reads_set, "read_level")
+        return PipelineStepGenerateCoverageViz.generate_hit_data_from_m8(gsnap_deduped_m8, unassigned_reads_set)
 
     @staticmethod
     def augment_contig_data_with_coverage(contig_coverage_json, contig_data):

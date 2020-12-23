@@ -67,8 +67,9 @@ class PipelineStepGenerateAnnotatedFasta(PipelineCountingStep):
 
     @staticmethod
     def annotate_fasta_with_accessions(merged_input_fasta, nt_m8, nr_m8, output_fasta):
-        def get_map(m8_file):
-            return {row["qseqid"]: row["sseqid"] for row in m8.M8Reader(m8_file).valid_rows()}
+        def get_map(blastn_6_path):
+            with open(blastn_6_path) as blastn_6_f:
+                return {row["qseqid"]: row["sseqid"] for row in m8.BlastnOutput6Reader(blastn_6_f).valid_rows()}
 
         nt_map = get_map(nt_m8)
         nr_map = get_map(nr_m8)

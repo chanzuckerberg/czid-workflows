@@ -7,7 +7,7 @@ import csv
 from abc import ABC
 from collections import Counter
 from collections import defaultdict
-from typing import Any, Callable, Dict, Iterable, List, Tuple
+from typing import Any, Callable, Dict, Iterable, List, Text, TextIO, Tuple
 
 import idseq_dag.util.command as command
 import idseq_dag.util.lineage as lineage
@@ -64,9 +64,16 @@ MIN_CONTIG_SIZE = 4
 
 
 class _TSVWithSchemaReader(ABC):
-    def __init__(self, path: str, *schemas: List[Tuple[str, Callable[[str], Any]]]) -> None:
-        self.path = path
+    """
+    The _TSVWithSchemaReader class is a base class for reading TSVs without headers with schemas provided by subclasses
+
+    This class takes a path to a file for reading as well as a list of schemas.
+    """
+
+    def __init__(self, tsv_stream: TextIO, *schemas: List[Tuple[str, Callable[[str], Any]]]) -> None:
+        self._tsv_stream = tsv_stream
         self._schema_map = {len(schema): schema for schema in schemas}
+        assert len(self._schema_map) == len(schemas), f"Ambiguous set of schemas passed to _TSVWithSchemaReader: {schemas}. This means two or more schemas have the same number of fields."
         self._generator = self._read_all()
 
     def _read_all(self) -> Iterable[Dict[str, Any]]:
@@ -76,16 +83,15 @@ class _TSVWithSchemaReader(ABC):
         When expect_headers=True, treat the first line as column headers.
         When strict mode is True, all columns in schema are required. When strict mode is False, will return None values for column not found.
         """
-        with open(self.path, "r") as tsvfile:
-            for row in csv.reader(tsvfile, delimiter="\t"):
-                # The output of rapsearch2 contains comments that start with '#', these should be skipped
-                if row and row[0][0] == "#":
-                    continue
-                if len(row) not in self._schema_map:
-                    raise Exception(f"{self.path}: Parse error. Input line: \"{row}\" has {len(row)} columns, no associated schema found in {self._schema_map}")
-                yield {
-                    key: _type(value) for ((key, _type), value) in zip(self._schema_map[len(row)], row)
-                }
+        for row in csv.reader(self._tsvfile, delimiter="\t"):
+            # The output of rapsearch2 contains comments that start with '#', these should be skipped
+            if row and row[0][0] == "#":
+                continue
+            if len(row) not in self._schema_map:
+                raise Exception(f"Parse error. Input line: \"{row}\" has {len(row)} columns, no associated schema found in {self._schema_map}")
+            yield {
+                key: _type(value) for ((key, _type), value) in zip(self._schema_map[len(row)], row)
+            }
 
     def fields(self, columns) -> List[str]:
         return [k for k, _ in self._schema_map[columns]]
@@ -98,11 +104,9 @@ class _TSVWithSchemaReader(ABC):
 
 
 class _TSVWithSchemaWriter(ABC):
-    def __init__(self, path: str, *schemas: List[Tuple[str, Callable[[str], Any]]]) -> None:
-        self.path = path
+    def __init__(self, tsv_stream: TextIO, *schemas: List[Tuple[str, Callable[[str], Any]]]) -> None:
         self._schema_map = {len(schema): schema for schema in schemas}
-        self._file_obj = open(self.path, "w")
-        self._writer = csv.writer(self._file_obj, delimiter="\t")
+        self._writer = csv.writer(tsv_stream, delimiter="\t")
 
     def _dict_row_to_list(self, row: Dict[str, Any]) -> List[Any]:
         if len(row) not in self._schema_map:
@@ -114,20 +118,13 @@ class _TSVWithSchemaWriter(ABC):
 
     def write_all(self, rows: Iterable[Dict[str, Any]]) -> None:
         self._writer.writerows(self._dict_row_to_list(row) for row in rows)
-        self._file_obj.close()
 
     def write(self, row: Dict[str, Any]) -> None:
         self._writer.writerow(self._dict_row_to_list(row))
 
-    def __enter__(self):
-        return self
-
-    def __exit__(self, type, value, traceback):
-        self._file_obj.close()
-
-class M8Reader(_TSVWithSchemaReader):
-    def __init__(self, path: str):
-        super().__init__(path, _BLAST_OUTPUT_SCHEMA, _BLAST_OUTPUT_NT_SCHEMA, _RERANKED_BLAST_OUTPUT_NT_SCHEMA)
+class BlastnOutput6Reader(_TSVWithSchemaReader):
+    def __init__(self, tsv_stream: TextIO):
+        super().__init__(tsv_stream, _BLAST_OUTPUT_SCHEMA, _BLAST_OUTPUT_NT_SCHEMA, _RERANKED_BLAST_OUTPUT_NT_SCHEMA)
 
     def valid_rows(self, min_alignment_length=0) -> Iterable[Dict[str, Any]]:
         for row in self._generator:
@@ -154,9 +151,9 @@ class M8Reader(_TSVWithSchemaReader):
 
             yield row
 
-class M8Writer(_TSVWithSchemaWriter):
-    def __init__(self, path: str):
-        super().__init__(path, _BLAST_OUTPUT_SCHEMA, _BLAST_OUTPUT_NT_SCHEMA, _RERANKED_BLAST_OUTPUT_NT_SCHEMA)
+class BlastnOutput6Writer(_TSVWithSchemaWriter):
+    def __init__(self, tsv_stream: TextIO):
+        super().__init__(tsv_stream, _BLAST_OUTPUT_SCHEMA, _BLAST_OUTPUT_NT_SCHEMA, _RERANKED_BLAST_OUTPUT_NT_SCHEMA)
 
 
 _HIT_SUMMARY_SCHEMA = [
@@ -186,9 +183,9 @@ _HIT_SUMMARY_SCHEMA_MERGED = _HIT_SUMMARY_SCHEMA_WITH_ASSEMBLY_SOURCE + [
 ]
 
 class HitSummaryReader(_TSVWithSchemaReader):
-    def __init__(self, path: str) -> None:
+    def __init__(self, tsv_stream: TextIO) -> None:
         super().__init__(
-            path,
+            tsv_stream,
             _HIT_SUMMARY_SCHEMA,
             _HIT_SUMMARY_SCHEMA_WITH_CONTIG,
             _HIT_SUMMARY_SCHEMA_WITH_ASSEMBLY_SOURCE,
@@ -196,9 +193,9 @@ class HitSummaryReader(_TSVWithSchemaReader):
         )
 
 class HitSummaryWriter(_TSVWithSchemaWriter):
-    def __init__(self, path: str) -> None:
+    def __init__(self, tsv_stream: TextIO) -> None:
         super().__init__(
-            path,
+            tsv_stream,
             _HIT_SUMMARY_SCHEMA,
             _HIT_SUMMARY_SCHEMA_WITH_CONTIG,
             _HIT_SUMMARY_SCHEMA_WITH_ASSEMBLY_SOURCE,
@@ -206,7 +203,7 @@ class HitSummaryWriter(_TSVWithSchemaWriter):
         )
 
 
-def summarize_hits(hit_summary_file: str, min_reads_per_genus=0):
+def summarize_hits(hit_summary_file_path: str, min_reads_per_genus=0):
     ''' Parse the hit summary file from alignment and get the relevant into'''
     read_dict = {}  # read_id => line
     accession_dict = {}  # accession => (species, genus)
@@ -214,29 +211,30 @@ def summarize_hits(hit_summary_file: str, min_reads_per_genus=0):
     genus_species = defaultdict(set)  # genus => list of species
     genus_accessions = defaultdict(set)  # genus => list of accessions
     total_reads = 0
-    for read in HitSummaryReader(hit_summary_file):
-        read_id = read["read_id"]
-        accession_id = read["accession_id"]
-        species_taxid = read["species_taxid"]
-        genus_taxid = read["genus_taxid"]
-        family_taxid = read["family_taxid"]
+    with open(hit_summary_file_path) as hit_summary_f:
+        for read in HitSummaryReader(hit_summary_f):
+            read_id = read["read_id"]
+            accession_id = read["accession_id"]
+            species_taxid = read["species_taxid"]
+            genus_taxid = read["genus_taxid"]
+            family_taxid = read["family_taxid"]
 
-        read_dict[read_id] = read
-        total_reads += 1
-        if accession_id == "None" or accession_id == "":
-            continue
-        accession_dict[accession_id] = (
-            species_taxid, genus_taxid, family_taxid)
-        if int(genus_taxid) > 0:
-            genus_read_counts[genus_taxid] += 1
-            genus_species[genus_taxid].add(species_taxid)
-            genus_accessions[genus_taxid].add(accession_id)
-    selected_genera = {}  # genus => accession_list
-    for genus_taxid, reads in genus_read_counts.items():
-        if reads >= min_reads_per_genus and len(genus_species[genus_taxid]) > 1:
-            selected_genera[genus_taxid] = list(genus_accessions[genus_taxid])
+            read_dict[read_id] = read
+            total_reads += 1
+            if accession_id == "None" or accession_id == "":
+                continue
+            accession_dict[accession_id] = (
+                species_taxid, genus_taxid, family_taxid)
+            if int(genus_taxid) > 0:
+                genus_read_counts[genus_taxid] += 1
+                genus_species[genus_taxid].add(species_taxid)
+                genus_accessions[genus_taxid].add(accession_id)
+        selected_genera = {}  # genus => accession_list
+        for genus_taxid, reads in genus_read_counts.items():
+            if reads >= min_reads_per_genus and len(genus_species[genus_taxid]) > 1:
+                selected_genera[genus_taxid] = list(genus_accessions[genus_taxid])
 
-    return (read_dict, accession_dict, selected_genera)
+        return (read_dict, accession_dict, selected_genera)
 
 
 def read_file_into_set(file_name):
@@ -314,8 +312,8 @@ def call_hits_m8(input_m8, lineage_map_path, accession2taxid_dict_path,
                            output_m8, output_summary, min_alignment_length)
 
 
-def _call_hits_m8_work(input_m8, lineage_map, accession2taxid_dict,
-                       output_m8, output_summary, min_alignment_length):
+def _call_hits_m8_work(input_blastn_6_path, lineage_map, accession2taxid_dict,
+                       output_blastn_6_path, output_summary, min_alignment_length):
     lineage_cache = {}
 
     # Helper functions
@@ -385,8 +383,8 @@ def _call_hits_m8_work(input_m8, lineage_map, accession2taxid_dict,
     summary = {}
     count = 0
     LOG_INCREMENT = 50000
-    log.write("Starting to summarize hits from {}.".format(input_m8))
-    for row in M8Reader(input_m8).valid_rows(min_alignment_length):
+    log.write(f"Starting to summarize hits from {input_blastn_6_path}.")
+    for row in BlastnOutput6Reader(input_blastn_6_path).valid_rows(min_alignment_length):
         read_id, accession_id, e_value = row["qseqid"], row["sseqid"], row["evalue"]
         # The Expect value (E) is a parameter that describes the number of
         # hits one can 'expect' to see by chance when searching a database of
@@ -406,18 +404,16 @@ def _call_hits_m8_work(input_m8, lineage_map, accession2taxid_dict,
         summary[read_id] = my_best_evalue, hits, call_hit_level_v2(hits)
         count += 1
         if count % LOG_INCREMENT == 0:
-            msg = "Summarized hits for {} read ids from {}, and counting.".format(
-                count, input_m8)
-            log.write(msg)
+            log.write(f"Summarized hits for {count} read ids from {input_blastn_6_path}, and counting.")
 
-    log.write("Summarized hits for all {} read ids from {}.".format(
-        count, input_m8))
+    log.write(f"Summarized hits for all {count} read ids from {input_blastn_6_path}.")
 
     # Generate output files. outf is the main output_m8 file and outf_sum is
     # the summary level info.
     emitted = set()
-    # TODO: (tmorse) no more parsing
-    with M8Writer(output_m8) as out_m8, open(output_summary, "w") as outf_sum:
+    with open(output_blastn_6_path, "w") as blastn_6_out_f, open(output_summary, "w") as outf_sum, open(input_blastn_6_path) as input_blastn_6_f:
+        blastn_6_writer = BlastnOutput6Writer(blastn_6_out_f)
+        # TODO: (tmorse) create sum file parser
         outf_sum_writer = csv.writer(outf_sum, delimiter="\t")
         # Iterator over the lines of the m8 file. Emit the hit with the
         # best value that provides the most specific taxonomy
@@ -433,7 +429,7 @@ def _call_hits_m8_work(input_m8, lineage_map, accession2taxid_dict,
         # TODO: Consider all hits within a fixed margin of the best e-value.
         # This change may need to be accompanied by a change to
         # GSNAP/RAPSearch2 parameters.
-        for row in M8Reader(input_m8).valid_rows(min_alignment_length):
+        for row in BlastnOutput6Reader(input_blastn_6_f).valid_rows(min_alignment_length):
             read_id, accession_id, e_value = row["qseqid"], row["sseqid"], row["evalue"]
             if read_id in emitted:
                 continue
@@ -446,7 +442,7 @@ def _call_hits_m8_work(input_m8, lineage_map, accession2taxid_dict,
                 # Read out the hit with the best value that provides the
                 # most specific taxonomy information.
                 emitted.add(read_id)
-                out_m8.write(row)
+                blastn_6_writer.write(row)
                 species_taxid = -1
                 genus_taxid = -1
                 family_taxid = -1
@@ -467,7 +463,7 @@ def _call_hits_m8_work(input_m8, lineage_map, accession2taxid_dict,
 
 @command.run_in_subprocess
 def generate_taxon_count_json_from_m8(
-        m8_file, hit_level_file, count_type, lineage_map_path,
+        blastn_6_path, hit_level_file, count_type, lineage_map_path,
         deuterostome_path, taxon_whitelist_path, taxon_blacklist_path,
         duplicate_cluster_sizes_path, output_json_file):
     # Parse through hit file and m8 input file and format a JSON file with
@@ -480,20 +476,21 @@ def generate_taxon_count_json_from_m8(
     # Setup
     aggregation = {}
     with open(hit_level_file, 'r', encoding='utf-8') as hit_f, \
-         open_file_db_by_extension(lineage_map_path) as lineage_map:  # noqa
+         open_file_db_by_extension(lineage_map_path) as lineage_map, \
+         open(blastn_6_path) as blastn_6_f:
 
         # Lines in m8_file and hit_level_file correspond (same read_id)
-        m8_reader = M8Reader(m8_file)
-        # TODO (tmorse): make schema
+        blastn_6_reader = BlastnOutput6Reader(blastn_6_f)
+        # TODO (tmorse): make schema for hit reader
         hit_reader = csv.reader(hit_f, delimiter="\t")
         hit_row = next(hit_reader, None)
-        m8_row = next(m8_reader, None)
+        blastn_6_row = next(blastn_6_reader, None)
         num_ranks = len(lineage.NULL_LINEAGE)
         # See https://en.wikipedia.org/wiki/Double-precision_floating-point_format
         MIN_NORMAL_POSITIVE_DOUBLE = 2.0**-1022
 
         with log.log_context("generate_taxon_count_json_from_m8", {"substep": "loop_1"}):
-            while hit_row and m8_row:
+            while hit_row and blastn_6_row:
                 # Retrieve data values from files
                 read_id = hit_row[0]
                 hit_level = hit_row[1]
@@ -504,10 +501,10 @@ def generate_taxon_count_json_from_m8(
 
                 msg = "read_ids in %s and %s do not match: %s vs. %s" % (
                     os.path.basename(m8_file), os.path.basename(hit_level_file),
-                    m8_row["qseqid"], hit_row[0])
-                assert m8_row["qseqid"] == hit_row[0], msg
-                percent_identity = m8_row["pident"]
-                alignment_length = m8_row["length"]
+                    blastn_6_row["qseqid"], hit_row[0])
+                assert blastn_6_row["qseqid"] == hit_row[0], msg
+                percent_identity = blastn_6_row["pident"]
+                alignment_length = blastn_6_row["length"]
 
                 if count_type == 'merged_NT_NR' and hit_source_count_type == 'NR':
                     # NOTE: At the moment of the change, applied ONLY in the scope of the prototype of NT/NR consensus project.
@@ -515,7 +512,7 @@ def generate_taxon_count_json_from_m8(
                     # To make alignment length values comparable across NT and NR alignments (for combined statistics),
                     # the NR alignment lengths are multiplied by 3.
                     alignment_length *= 3
-                e_value = m8_row["evalue"]
+                e_value = blastn_6_row["evalue"]
 
                 # These have been filtered out before the creation of m8_f and hit_f
                 assert alignment_length > 0
@@ -562,7 +559,7 @@ def generate_taxon_count_json_from_m8(
                         agg_key = agg_key[1:]
 
                 hit_row = next(hit_reader, None)
-                m8_row = next(m8_reader, None)
+                blastn_6_row = next(blastn_6_reader, None)
 
     # Produce the final output
     taxon_counts_attributes = []

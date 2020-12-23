@@ -7,7 +7,7 @@ import idseq_dag.util.log as log
 
 from idseq_dag.engine.pipeline_step import PipelineStep
 from idseq_dag.util.lineage import DEFAULT_BLACKLIST_S3, DEFAULT_WHITELIST_S3
-from idseq_dag.util.m8 import HitSummaryWriter, M8Writer, generate_taxon_count_json_from_m8, HitSummaryReader, M8Reader
+from idseq_dag.util.m8 import HitSummaryWriter, BlastnOutput6Writer, generate_taxon_count_json_from_m8, HitSummaryReader, BlastnOutput6Reader
 from idseq_dag.util.s3 import fetch_reference
 
 
@@ -32,59 +32,65 @@ class ComputeMergedTaxonCounts(PipelineStep):
     def merge_taxon_counts(self):
         # Create new merged m8 and hit summary files
         nr_alignment_per_read = {}
-        # if this is a bottleneck, consider
-        # (1) if processing time bottleneck, load all the data to memory
-        # (2) if memory bottleneck, going through nt first, since that will save us from storing
-        #     results in memory for all the reads that get their hit from NT contigs
-        for nr_hit_dict in HitSummaryReader(self.inputs.nr_hitsummary2_tab):
-            nr_alignment_per_read[nr_hit_dict["read_id"]] = SpeciesAlignmentResults(
-                contig=nr_hit_dict.get("contig_species_taxid"),
-                read=nr_hit_dict.get("species_taxid"),
-            )
-
-        with M8Writer(self.outputs.merged_m8_filename) as output_m8, HitSummaryWriter(self.outputs.merged_hit_filename) as output_hit:
-            # first pass for NR and output to m8 files if assignment should come from NT
-            for nt_hit_dict, nt_m8_dict in zip(
-                HitSummaryReader(self.inputs.nt_hitsummary2_tab),
-                M8Reader(self.inputs.nt_m8),
-            ):
-                # assert files match
-                assert nt_hit_dict['read_id'] == nt_m8_dict["qseqid"], f"Mismatched m8 and hit summary files for nt [{nt_hit_dict['read_id']} != {nt_m8_dict['qseqid']}]"
-
-                nr_alignment = nr_alignment_per_read.get(nt_hit_dict["read_id"])
-                nt_alignment = SpeciesAlignmentResults(
-                    contig=nt_hit_dict.get("contig_species_taxid"),
-                    read=nt_hit_dict.get("species_taxid")
+        with open(self.inputs.nr_hitsummary2_tab) as nr_hit_summary_f:
+            # if this is a bottleneck, consider
+            # (1) if processing time bottleneck, load all the data to memory
+            # (2) if memory bottleneck, going through nt first, since that will save us from storing
+            #     results in memory for all the reads that get their hit from NT contigs
+            for nr_hit_dict in HitSummaryReader(nr_hit_summary_f):
+                nr_alignment_per_read[nr_hit_dict["read_id"]] = SpeciesAlignmentResults(
+                    contig=nr_hit_dict.get("contig_species_taxid"),
+                    read=nr_hit_dict.get("species_taxid"),
                 )
-                has_nt_contig_hit = nt_alignment.contig
-                has_nr_contig_hit = nr_alignment and nr_alignment.contig
-                has_nt_read_hit = nt_alignment.read
-                has_nr_read_hit = nr_alignment and nr_alignment.read
-                if has_nt_contig_hit or (not has_nr_contig_hit and has_nt_read_hit):
-                    output_m8.write(nt_m8_dict)
-                    nt_hit_dict["source_count_type"] = "NT"
-                    output_hit.write(nt_hit_dict)
+
+        with open(self.outputs.merged_m8_filename, "w") as output_blastn_6_f, open(self.outputs.merged_hit_filename, "w") as output_hit_summary_f:
+            output_blastn_6_writer = BlastnOutput6Writer(output_blastn_6_f)
+            output_hit_summary_writer = HitSummaryWriter(output_hit_summary_f)
+
+            with open(self.inputs.nt_m8) as input_nt_blastn_6_f, open(self.inputs.nt_hitsummary2_tab) as input_nt_hit_summary_f:
+                # first pass for NR and output to m8 files if assignment should come from NT
+                for nt_hit_dict, nt_m8_dict in zip(
+                    HitSummaryReader(input_nt_hit_summary_f),
+                    BlastnOutput6Reader(input_nt_blastn_6_f),
+                ):
+                    # assert files match
+                    assert nt_hit_dict['read_id'] == nt_m8_dict["qseqid"], f"Mismatched m8 and hit summary files for nt [{nt_hit_dict['read_id']} != {nt_m8_dict['qseqid']}]"
+
+                    nr_alignment = nr_alignment_per_read.get(nt_hit_dict["read_id"])
+                    nt_alignment = SpeciesAlignmentResults(
+                        contig=nt_hit_dict.get("contig_species_taxid"),
+                        read=nt_hit_dict.get("species_taxid")
+                    )
+                    has_nt_contig_hit = nt_alignment.contig
+                    has_nr_contig_hit = nr_alignment and nr_alignment.contig
+                    has_nt_read_hit = nt_alignment.read
+                    has_nr_read_hit = nr_alignment and nr_alignment.read
+                    if has_nt_contig_hit or (not has_nr_contig_hit and has_nt_read_hit):
+                        output_blastn_6_writer.write(nt_m8_dict)
+                        nt_hit_dict["source_count_type"] = "NT"
+                        output_hit_summary_writer.write(nt_hit_dict)
+                        if nr_alignment:
+                            del nr_alignment_per_read[nt_hit_dict["read_id"]]
+                    elif has_nr_contig_hit or has_nr_read_hit:
+                        continue
+                    else:
+                        raise Exception("NO ALIGNMENTS FOUND - Should not be here")
+
+            with open(self.inputs.nt_m8) as input_nt_blastn_6_f, open(self.inputs.nt_hitsummary2_tab) as input_nt_hit_summary_f:
+                # dump remaining reads from NR
+                for nr_hit_dict, nr_m8_dict in zip(
+                    HitSummaryReader(input_nt_hit_summary_f),
+                    BlastnOutput6Reader(input_nt_blastn_6_f),
+                ):
+                    # assert files match
+                    assert nr_hit_dict['read_id'] == nr_m8_dict["qseqid"], f"Mismatched m8 and hit summary files for NR [{nr_hit_dict['read_id']} {nr_m8_dict['qseqid']}]."
+
+                    nr_alignment = nr_alignment_per_read.get(nr_hit_dict["read_id"])
+
                     if nr_alignment:
-                        del nr_alignment_per_read[nt_hit_dict["read_id"]]
-                elif has_nr_contig_hit or has_nr_read_hit:
-                    continue
-                else:
-                    raise Exception("NO ALIGNMENTS FOUND - Should not be here")
-
-            # dump remaining reads from NR
-            for nr_hit_dict, nr_m8_dict in zip(
-                HitSummaryReader(self.inputs.nr_hitsummary2_tab),
-                M8Reader(self.inputs.nr_m8),
-            ):
-                # assert files match
-                assert nr_hit_dict['read_id'] == nr_m8_dict["qseqid"], f"Mismatched m8 and hit summary files for NR [{nr_hit_dict['read_id']} {nr_m8_dict['qseqid']}]."
-
-                nr_alignment = nr_alignment_per_read.get(nr_hit_dict["read_id"])
-
-                if nr_alignment:
-                    output_m8.write(nr_m8_dict)
-                    nr_hit_dict["source_count_type"] = "NR"
-                    output_hit.write(nr_hit_dict)
+                        output_blastn_6_writer.write(nr_m8_dict)
+                        nr_hit_dict["source_count_type"] = "NR"
+                        output_hit_summary_writer.write(nr_hit_dict)
 
         # Create new merged m8 and hit summary files
         self.create_taxon_count_file()
