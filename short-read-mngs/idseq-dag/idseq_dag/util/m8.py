@@ -83,7 +83,7 @@ class _TSVWithSchemaReader(ABC):
         When expect_headers=True, treat the first line as column headers.
         When strict mode is True, all columns in schema are required. When strict mode is False, will return None values for column not found.
         """
-        for row in csv.reader(self._tsvfile, delimiter="\t"):
+        for row in csv.reader(self._tsv_stream, delimiter="\t"):
             # The output of rapsearch2 contains comments that start with '#', these should be skipped
             if row and row[0][0] == "#":
                 continue
@@ -123,33 +123,35 @@ class _TSVWithSchemaWriter(ABC):
         self._writer.writerow(self._dict_row_to_list(row))
 
 class BlastnOutput6Reader(_TSVWithSchemaReader):
-    def __init__(self, tsv_stream: TextIO):
+    def __init__(self, tsv_stream: TextIO, filter_invalid: bool = False, min_alignment_length: int = 0):
         super().__init__(tsv_stream, _BLAST_OUTPUT_SCHEMA, _BLAST_OUTPUT_NT_SCHEMA, _RERANKED_BLAST_OUTPUT_NT_SCHEMA)
+        if filter_invalid:
+            self._generator = (row for row in self._generator if self.row_is_valid(row, min_alignment_length))
 
-    def valid_rows(self, min_alignment_length=0) -> Iterable[Dict[str, Any]]:
-        for row in self._generator:
-            # GSNAP outputs bogus alignments (non-positive length /
-            # impossible percent identity / NaN e-value) sometimes,
-            # and usually they are not the only assignment, so rather than
-            # killing the job, we just skip them. If we don't filter these
-            # killing the job, we just skip them. If we don't filter these
-            # out here, they will override the good data when computing min(
-            # evalue), pollute averages computed in the json, and cause the
-            # webapp loader to crash as the Rails JSON parser cannot handle
-            # NaNs. Test if e_value != e_value to test if e_value is NaN
-            # because NaN != NaN.
-            if row["length"] <= min_alignment_length or not -0.25 < row["pident"] < 100.25 or row["evalue"] != row["evalue"]:
-                continue
+    @staticmethod
+    def row_is_valid(row, min_alignment_length) -> bool:
+        # GSNAP outputs bogus alignments (non-positive length /
+        # impossible percent identity / NaN e-value) sometimes,
+        # and usually they are not the only assignment, so rather than
+        # killing the job, we just skip them. If we don't filter these
+        # killing the job, we just skip them. If we don't filter these
+        # out here, they will override the good data when computing min(
+        # evalue), pollute averages computed in the json, and cause the
+        # webapp loader to crash as the Rails JSON parser cannot handle
+        # NaNs. Test if e_value != e_value to test if e_value is NaN
+        # because NaN != NaN.
+        # *** E-value Filter ***
+        # Alignments with e-value > 1 are low-quality and associated with false-positives in
+        # all alignments steps (NT and NR). When the e-value is greater than 1, ignore the
+        # alignment
+        ###
+        return all([
+            row["length"] > min_alignment_length,
+            -0.25 < row["pident"] < 100.25,
+            row["evalue"] != row["evalue"],
+            row["evalue"] <= MAX_EVALUE_THRESHOLD,
+        ])
 
-            # *** E-value Filter ***
-            # Alignments with e-value > 1 are low-quality and associated with false-positives in
-            # all alignments steps (NT and NR). When the e-value is greater than 1, ignore the
-            # alignment
-            ###
-            if row["evalue"] > MAX_EVALUE_THRESHOLD:
-                continue
-
-            yield row
 
 class BlastnOutput6Writer(_TSVWithSchemaWriter):
     def __init__(self, tsv_stream: TextIO):
@@ -384,7 +386,7 @@ def _call_hits_m8_work(input_blastn_6_path, lineage_map, accession2taxid_dict,
     count = 0
     LOG_INCREMENT = 50000
     log.write(f"Starting to summarize hits from {input_blastn_6_path}.")
-    for row in BlastnOutput6Reader(input_blastn_6_path).valid_rows(min_alignment_length):
+    for row in BlastnOutput6Reader(input_blastn_6_path, filter_invalid=True, min_alignment_length=min_alignment_length):
         read_id, accession_id, e_value = row["qseqid"], row["sseqid"], row["evalue"]
         # The Expect value (E) is a parameter that describes the number of
         # hits one can 'expect' to see by chance when searching a database of
@@ -429,7 +431,7 @@ def _call_hits_m8_work(input_blastn_6_path, lineage_map, accession2taxid_dict,
         # TODO: Consider all hits within a fixed margin of the best e-value.
         # This change may need to be accompanied by a change to
         # GSNAP/RAPSearch2 parameters.
-        for row in BlastnOutput6Reader(input_blastn_6_f).valid_rows(min_alignment_length):
+        for row in BlastnOutput6Reader(input_blastn_6_f, filter_invalid=True, min_alignment_length=min_alignment_length):
             read_id, accession_id, e_value = row["qseqid"], row["sseqid"], row["evalue"]
             if read_id in emitted:
                 continue
