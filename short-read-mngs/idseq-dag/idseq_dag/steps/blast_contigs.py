@@ -438,7 +438,7 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
                     blast_m8,
                     "-outfmt",
                     # TODO: (tmorse) make this sensible
-                    '6 ' + ' '.join(m8.BlastnOutput6Reader(None).fields(14)),
+                    '6 ' + ' '.join(m8.BlastnOutput6Reader.fields(14)),
                     '-evalue',
                     1e-10,
                     '-max_target_seqs',

@@ -4,7 +4,7 @@ import os
 import random
 import csv
 
-from abc import ABC
+from abc import ABC, abstractstaticmethod
 from collections import Counter
 from collections import defaultdict
 from typing import Any, Callable, Dict, Iterable, List, TextIO, Tuple
@@ -77,23 +77,36 @@ class _TSVWithSchmaBase(ABC):
         tsv_stream (TextIO): a text stream to write to/read from
         *schemas (List[Tuple[str, Callable[[str], Any]]]): partial schemas
     """
-    def __init__(self, tsv_stream: TextIO, *schemas: List[Tuple[str, Callable[[str], Any]]]) -> None:
-        self._tsv_stream = tsv_stream
+
+    @abstractstaticmethod
+    def _schemas() -> List[Tuple[str, Callable[[str], Any]]]:
+        pass
+
+    @classmethod
+    def _build_schema_map(cls) -> Dict[int, List[Tuple[str, Callable[[str], Any]]]]:
+        schemas = cls._schemas
         assert schemas, "_TSVWithSchemaReader requires at least one schema"
         n = len(schemas[0])
-        self._schema_map = {n: schemas[0]}
+        schema_map = {n: schemas[0]}
         for schema in schemas[1:]:
             assert schema, "_TSVWithSchemaBase does not support empty schemas"
-            self._schema_map[n + len(schema)] = self._schema_map[n] + schema
+            schema_map[n + len(schema)] = schema_map[n] + schema
             n += len(schema)
+        return schema_map
+
+    @classmethod
+    def fields(cls, num_columns) -> List[str]:
+        return [k for k, _ in cls._schema_map[num_columns]]
+
+    def __init__(self, tsv_stream: TextIO) -> None:
+        self._tsv_stream = tsv_stream
+        self._schema_map = self._build_schema_map()
 
     def _schema(self, row):
         if len(row) not in self._schema_map:
             raise Exception(f"TSVWithSchema read/write error. Input: \"{row}\" has {len(row)} fields, no associated schema found in {self._schema_map}")
         return self._schema_map[len(row)]
 
-    def fields(self, columns) -> List[str]:
-        return [k for k, _ in self._schema_map[columns]]
 
 class _TSVWithSchemaReader(_TSVWithSchmaBase, ABC):
     def __init__(self, tsv_stream: TextIO, *schemas: List[Tuple[str, Callable[[str], Any]]]) -> None:
@@ -127,12 +140,13 @@ class _TSVWithSchemaWriter(_TSVWithSchmaBase, ABC):
 
 
 class BlastnOutput6Reader(_TSVWithSchemaReader):
+    @staticmethod
+    def _schemas():
+        return [_BLAST_OUTPUT_SCHEMA, _BLAST_OUTPUT_NT_SCHEMA, _RERANKED_BLAST_OUTPUT_NT_SCHEMA]
+
     def __init__(self, tsv_stream: TextIO, filter_invalid: bool = False, min_alignment_length: int = 0):
-        _tsv_stream = tsv_stream
-        if filter_invalid:
-            # The output of rapsearch2 contains comments that start with '#', these should be skipped
-            _tsv_stream = (line for line in tsv_stream if line and line[0] != "#")
-        super().__init__(_tsv_stream, _BLAST_OUTPUT_SCHEMA, _BLAST_OUTPUT_NT_SCHEMA, _RERANKED_BLAST_OUTPUT_NT_SCHEMA)
+        # The output of rapsearch2 contains comments that start with '#', these should be skipped
+        super().__init__((line for line in tsv_stream if line and line[0] != "#") if filter_invalid else tsv_stream)
         if filter_invalid:
             self._generator = (row for row in self._generator if self.row_is_valid(row, min_alignment_length))
 
@@ -161,8 +175,9 @@ class BlastnOutput6Reader(_TSVWithSchemaReader):
         ])
 
 class BlastnOutput6Writer(_TSVWithSchemaWriter):
-    def __init__(self, tsv_stream: TextIO):
-        super().__init__(tsv_stream, _BLAST_OUTPUT_SCHEMA, _BLAST_OUTPUT_NT_SCHEMA, _RERANKED_BLAST_OUTPUT_NT_SCHEMA)
+    @staticmethod
+    def _schemas():
+        return [_BLAST_OUTPUT_SCHEMA, _BLAST_OUTPUT_NT_SCHEMA, _RERANKED_BLAST_OUTPUT_NT_SCHEMA]
 
 
 _HIT_SUMMARY_SCHEMA = [
@@ -192,24 +207,24 @@ _HIT_SUMMARY_SCHEMA_MERGED = [
 ]
 
 class HitSummaryReader(_TSVWithSchemaReader):
-    def __init__(self, tsv_stream: TextIO) -> None:
-        super().__init__(
-            tsv_stream,
+    @staticmethod
+    def _schemas():
+        return [
             _HIT_SUMMARY_SCHEMA,
             _HIT_SUMMARY_SCHEMA_WITH_CONTIG,
             _HIT_SUMMARY_SCHEMA_WITH_ASSEMBLY_SOURCE,
             _HIT_SUMMARY_SCHEMA_MERGED,
-        )
+        ]
 
 class HitSummaryWriter(_TSVWithSchemaWriter):
-    def __init__(self, tsv_stream: TextIO) -> None:
-        super().__init__(
-            tsv_stream,
+    @staticmethod
+    def _schemas():
+        return [
             _HIT_SUMMARY_SCHEMA,
             _HIT_SUMMARY_SCHEMA_WITH_CONTIG,
             _HIT_SUMMARY_SCHEMA_WITH_ASSEMBLY_SOURCE,
             _HIT_SUMMARY_SCHEMA_MERGED,
-        )
+        ]
 
 
 def summarize_hits(hit_summary_file_path: str, min_reads_per_genus=0):
