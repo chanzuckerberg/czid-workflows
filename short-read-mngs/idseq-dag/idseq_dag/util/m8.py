@@ -7,7 +7,7 @@ import csv
 from abc import ABC
 from collections import Counter
 from collections import defaultdict
-from typing import Any, Callable, Dict, Iterable, List, Text, TextIO, Tuple
+from typing import Any, Callable, Dict, Iterable, List, TextIO, Tuple
 
 import idseq_dag.util.command as command
 import idseq_dag.util.lineage as lineage
@@ -45,14 +45,14 @@ _BLAST_OUTPUT_SCHEMA = [
 
 
 # Additional blastn output columns.
-_BLAST_OUTPUT_NT_SCHEMA = _BLAST_OUTPUT_SCHEMA + [
+_BLAST_OUTPUT_NT_SCHEMA = [
     ("qlen", int),      # query sequence length, helpful for computing qcov
     ("slen", int),      # subject sequence length, so far unused in IDseq
 ]
 
 
 # Re-ranked output of blastn.  One row per query.  Two additional columns.
-_RERANKED_BLAST_OUTPUT_NT_SCHEMA = _BLAST_OUTPUT_NT_SCHEMA + [
+_RERANKED_BLAST_OUTPUT_NT_SCHEMA = [
     ("qcov", float),     # fraction of query covered by the optimal set of HSPs
     ("hsp_count", int),   # cardihnality of optimal fragment cover;  see BlastCandidate
 ]
@@ -67,13 +67,22 @@ class _TSVWithSchemaReader(ABC):
     """
     The _TSVWithSchemaReader class is a base class for reading TSVs without headers with schemas provided by subclasses
 
-    This class takes a path to a file for reading as well as a list of schemas.
+    This class takes a stream for reading as well as a list of partial schemas. These schemas are used to construct a
+    map from the number of fields to the appropriate schema. The first partial schema becomes the first complete schema
+    and each subsequent schema is appended to the previous complete schema to make a complete schema. This guaruntees that
+    there is exactly one schema for each field count. This schema recognition is necessary because previously we were using
+    optional fields to capture a finite set of different variants.
     """
 
     def __init__(self, tsv_stream: TextIO, *schemas: List[Tuple[str, Callable[[str], Any]]]) -> None:
         self._tsv_stream = tsv_stream
-        self._schema_map = {len(schema): schema for schema in schemas}
-        assert len(self._schema_map) == len(schemas), f"Ambiguous set of schemas passed to _TSVWithSchemaReader: {schemas}. This means two or more schemas have the same number of fields."
+        assert schemas, "_TSVWithSchemaReader requires at least one schema"
+        n = len(schemas[0])
+        self._schema_map = {n: schemas[0]}
+        for schema in schemas[1:]:
+            assert schema, "_TSVWithSchemaReader does not support empty schemas"
+            self._schema_map[n + len(schema)] = schemas[n] + schema
+            n += len(schema)
         self._generator = self._read_all()
 
     def _read_all(self) -> Iterable[Dict[str, Any]]:
@@ -168,7 +177,7 @@ _HIT_SUMMARY_SCHEMA = [
     ("family_taxid", int),
 ]
 
-_HIT_SUMMARY_SCHEMA_WITH_CONTIG = _HIT_SUMMARY_SCHEMA + [
+_HIT_SUMMARY_SCHEMA_WITH_CONTIG = [
     ("contig_id", str),
     ("contig_accession_id", str),
     ("contig_species_taxid", int),
@@ -176,11 +185,11 @@ _HIT_SUMMARY_SCHEMA_WITH_CONTIG = _HIT_SUMMARY_SCHEMA + [
     ("contig_family_taxid", int),
 ]
 
-_HIT_SUMMARY_SCHEMA_WITH_ASSEMBLY_SOURCE = _HIT_SUMMARY_SCHEMA_WITH_CONTIG + [
+_HIT_SUMMARY_SCHEMA_WITH_ASSEMBLY_SOURCE = [
     ("from_assembly", str),
 ]
 
-_HIT_SUMMARY_SCHEMA_MERGED = _HIT_SUMMARY_SCHEMA_WITH_ASSEMBLY_SOURCE + [
+_HIT_SUMMARY_SCHEMA_MERGED = [
     ("source_count_type", str),
 ]
 
@@ -386,27 +395,28 @@ def _call_hits_m8_work(input_blastn_6_path, lineage_map, accession2taxid_dict,
     count = 0
     LOG_INCREMENT = 50000
     log.write(f"Starting to summarize hits from {input_blastn_6_path}.")
-    for row in BlastnOutput6Reader(input_blastn_6_path, filter_invalid=True, min_alignment_length=min_alignment_length):
-        read_id, accession_id, e_value = row["qseqid"], row["sseqid"], row["evalue"]
-        # The Expect value (E) is a parameter that describes the number of
-        # hits one can 'expect' to see by chance when searching a database of
-        # a particular size. It decreases exponentially as the Score (S) of
-        # the match increases. Essentially, the E value describes the random
-        # background noise. https://blast.ncbi.nlm.nih.gov/Blast.cgi?CMD=Web
-        # &PAGE_TYPE=BlastDocs&DOC_TYPE=FAQ
-        my_best_evalue, hits, _ = summary.get(read_id, (float("inf"), [{}, {}, {}], None))
-        if my_best_evalue > e_value:
-            # If we find a new better e value we want to start accumulation over
-            hits = [{}, {}, {}]
-            accumulate(hits, accession_id)
-            my_best_evalue = e_value
-        elif my_best_evalue == e_value:
-            # If we find another accession with the same e value we want to accumulate it
-            accumulate(hits, accession_id)
-        summary[read_id] = my_best_evalue, hits, call_hit_level_v2(hits)
-        count += 1
-        if count % LOG_INCREMENT == 0:
-            log.write(f"Summarized hits for {count} read ids from {input_blastn_6_path}, and counting.")
+    with open(input_blastn_6_path) as input_blastn_6_f:
+        for row in BlastnOutput6Reader(input_blastn_6_f, filter_invalid=True, min_alignment_length=min_alignment_length):
+            read_id, accession_id, e_value = row["qseqid"], row["sseqid"], row["evalue"]
+            # The Expect value (E) is a parameter that describes the number of
+            # hits one can 'expect' to see by chance when searching a database of
+            # a particular size. It decreases exponentially as the Score (S) of
+            # the match increases. Essentially, the E value describes the random
+            # background noise. https://blast.ncbi.nlm.nih.gov/Blast.cgi?CMD=Web
+            # &PAGE_TYPE=BlastDocs&DOC_TYPE=FAQ
+            my_best_evalue, hits, _ = summary.get(read_id, (float("inf"), [{}, {}, {}], None))
+            if my_best_evalue > e_value:
+                # If we find a new better e value we want to start accumulation over
+                hits = [{}, {}, {}]
+                accumulate(hits, accession_id)
+                my_best_evalue = e_value
+            elif my_best_evalue == e_value:
+                # If we find another accession with the same e value we want to accumulate it
+                accumulate(hits, accession_id)
+            summary[read_id] = my_best_evalue, hits, call_hit_level_v2(hits)
+            count += 1
+            if count % LOG_INCREMENT == 0:
+                log.write(f"Summarized hits for {count} read ids from {input_blastn_6_path}, and counting.")
 
     log.write(f"Summarized hits for all {count} read ids from {input_blastn_6_path}.")
 
