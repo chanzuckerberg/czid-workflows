@@ -58,18 +58,6 @@ _RERANKED_BLAST_OUTPUT_NT_SCHEMA = _BLAST_OUTPUT_NT_SCHEMA + [
 ]
 
 
-_RERANKED_BLAST_OUTPUT_SCHEMA = {
-    "nt": {
-        "contig_level": _RERANKED_BLAST_OUTPUT_NT_SCHEMA,   # only NT contigs are reranked
-        "read_level": _BLAST_OUTPUT_SCHEMA,
-    },
-    "nr": {
-        "contig_level": _BLAST_OUTPUT_SCHEMA,
-        "read_level": _BLAST_OUTPUT_SCHEMA,
-    },
-}
-
-
 # The minimum read count for a valid contig. We ignore contigs below this read count in most downstream analyses.
 # This constant is hardcoded in at least 4 places in idseq-web.  TODO: Make it a DAG parameter.
 MIN_CONTIG_SIZE = 4
@@ -139,7 +127,7 @@ class _TSVWithSchemaWriter(ABC):
 
 class M8Reader(_TSVWithSchemaReader):
     def __init__(self, path: str):
-        super().__init__(path, _BLAST_OUTPUT_SCHEMA, _BLAST_OUTPUT_NT_SCHEMA)
+        super().__init__(path, _BLAST_OUTPUT_SCHEMA, _BLAST_OUTPUT_NT_SCHEMA, _RERANKED_BLAST_OUTPUT_NT_SCHEMA)
 
     def valid_rows(self, min_alignment_length=0) -> Iterable[Dict[str, Any]]:
         for row in self._generator:
@@ -168,16 +156,7 @@ class M8Reader(_TSVWithSchemaReader):
 
 class M8Writer(_TSVWithSchemaWriter):
     def __init__(self, path: str):
-        super().__init__(path, _BLAST_OUTPUT_SCHEMA, _BLAST_OUTPUT_NT_SCHEMA)
-
-
-class RerankedM8Reader(_TSVWithSchemaReader):
-    def __init__(self, path: str, db_type: str, assembly_level: str) -> None:
-        super().__init__(path, _RERANKED_BLAST_OUTPUT_SCHEMA[db_type][assembly_level])
-
-class RerankedM8Writer(_TSVWithSchemaWriter):
-    def __init__(self, path: str, db_type: str, assembly_level: str) -> None:
-        super().__init__(path, _RERANKED_BLAST_OUTPUT_SCHEMA[db_type][assembly_level])
+        super().__init__(path, _BLAST_OUTPUT_SCHEMA, _BLAST_OUTPUT_NT_SCHEMA, _RERANKED_BLAST_OUTPUT_NT_SCHEMA)
 
 
 _HIT_SUMMARY_SCHEMA = [
