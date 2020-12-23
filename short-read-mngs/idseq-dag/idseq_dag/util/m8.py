@@ -77,6 +77,9 @@ _HIT_SUMMARY_SCHEMA = [
     ("species_taxid", int),
     ("genus_taxid", int),
     ("family_taxid", int),
+]
+
+_HIT_SUMMARY_SCHEMA_WITH_CONTIG = _HIT_SUMMARY_SCHEMA + [
     ("contig_id", str),
     ("contig_accession_id", str),
     ("contig_species_taxid", int),
@@ -85,7 +88,7 @@ _HIT_SUMMARY_SCHEMA = [
     ("from_assembly", str),
 ]
 
-_HIT_SUMMARY_SCHEMA_MERGED = _HIT_SUMMARY_SCHEMA + [
+_HIT_SUMMARY_SCHEMA_MERGED = _HIT_SUMMARY_SCHEMA_WITH_CONTIG + [
     ("source_count_type", str),
 ]
 
@@ -115,7 +118,7 @@ class _TSVWithSchemaReader(ABC):
                 if len(row) not in self._schema_map:
                     raise Exception(f"{self.path}: Parse error. Input line: \"{row}\" has {len(row)} columns, no associated schema found in {self._schema_map}")
                 yield {
-                    key: _type(row[i]) if i < len(row) else None for (i, (key, _type)) in enumerate(self._schema_map[len(row)])
+                    key: _type(value) for ((key, _type), value) in zip(self._schema_map[len(row)], row)
                 }
 
     def fields(self, columns) -> List[str]:
@@ -188,11 +191,11 @@ class M8Writer(_TSVWithSchemaWriter):
 
 class HitSummaryReader(_TSVWithSchemaReader):
     def __init__(self, path: str) -> None:
-        super().__init__(path, _HIT_SUMMARY_SCHEMA, _HIT_SUMMARY_SCHEMA_MERGED)
+        super().__init__(path, _HIT_SUMMARY_SCHEMA, _HIT_SUMMARY_SCHEMA_WITH_CONTIG, _HIT_SUMMARY_SCHEMA_MERGED)
 
 class HitSummaryWriter(_TSVWithSchemaWriter):
     def __init__(self, path: str) -> None:
-        super().__init__(path, _HIT_SUMMARY_SCHEMA, _HIT_SUMMARY_SCHEMA_MERGED)
+        super().__init__(path, _HIT_SUMMARY_SCHEMA, _HIT_SUMMARY_SCHEMA_WITH_CONTIG, _HIT_SUMMARY_SCHEMA_MERGED)
 
 class RerankedBlastOutputReader(_TSVWithSchemaReader):
     def __init__(self, path: str, db_type: str, assembly_level: str) -> None:
