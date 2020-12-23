@@ -198,12 +198,11 @@ _HIT_SUMMARY_SCHEMA_WITH_CONTIG = _HIT_SUMMARY_SCHEMA + [
     ("contig_family_taxid", int),
 ]
 
-_HIT_SUMMARY_SCHEMA_MERGED = _HIT_SUMMARY_SCHEMA_WITH_CONTIG + [
-    ("source_count_type", str),
+_HIT_SUMMARY_SCHEMA_WITH_ASSEMBLY_SOURCE = _HIT_SUMMARY_SCHEMA_WITH_CONTIG + [
+    ("from_assembly", str),
 ]
 
-_HIT_SUMMARY_SCHEMA_MERGED_ASSEMBLY_SOURCE = _HIT_SUMMARY_SCHEMA_WITH_CONTIG + [
-    ("from_assembly", str),
+_HIT_SUMMARY_SCHEMA_MERGED = _HIT_SUMMARY_SCHEMA_WITH_ASSEMBLY_SOURCE + [
     ("source_count_type", str),
 ]
 
@@ -213,8 +212,8 @@ class HitSummaryReader(_TSVWithSchemaReader):
             path,
             _HIT_SUMMARY_SCHEMA,
             _HIT_SUMMARY_SCHEMA_WITH_CONTIG,
+            _HIT_SUMMARY_SCHEMA_WITH_ASSEMBLY_SOURCE,
             _HIT_SUMMARY_SCHEMA_MERGED,
-            _HIT_SUMMARY_SCHEMA_MERGED_ASSEMBLY_SOURCE,
         )
 
 class HitSummaryWriter(_TSVWithSchemaWriter):
@@ -223,8 +222,8 @@ class HitSummaryWriter(_TSVWithSchemaWriter):
             path,
             _HIT_SUMMARY_SCHEMA,
             _HIT_SUMMARY_SCHEMA_WITH_CONTIG,
+            _HIT_SUMMARY_SCHEMA_WITH_ASSEMBLY_SOURCE,
             _HIT_SUMMARY_SCHEMA_MERGED,
-            _HIT_SUMMARY_SCHEMA_MERGED_ASSEMBLY_SOURCE,
         )
 
 
