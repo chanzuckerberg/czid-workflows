@@ -84,7 +84,7 @@ class _TSVWithSchmaBase(ABC):
 
     @classmethod
     def _build_schema_map(cls) -> Dict[int, List[Tuple[str, Callable[[str], Any]]]]:
-        schemas = cls._schemas
+        schemas = cls._schemas()
         assert schemas, "_TSVWithSchemaReader requires at least one schema"
         n = len(schemas[0])
         schema_map = {n: schemas[0]}
@@ -96,7 +96,7 @@ class _TSVWithSchmaBase(ABC):
 
     @classmethod
     def fields(cls, num_columns) -> List[str]:
-        return [k for k, _ in cls._schema_map[num_columns]]
+        return [k for k, _ in cls._build_schema_map()[num_columns]]
 
     def __init__(self, tsv_stream: TextIO) -> None:
         self._tsv_stream = tsv_stream
