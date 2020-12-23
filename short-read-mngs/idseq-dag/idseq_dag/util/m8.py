@@ -510,7 +510,7 @@ def generate_taxon_count_json_from_m8(
                 hit_source_count_type = hit_row[13] if len(hit_row) >= 14 else None
 
                 msg = "read_ids in %s and %s do not match: %s vs. %s" % (
-                    os.path.basename(m8_file), os.path.basename(hit_level_file),
+                    os.path.basename(blastn_6_path), os.path.basename(hit_level_file),
                     blastn_6_row["qseqid"], hit_row[0])
                 assert blastn_6_row["qseqid"] == hit_row[0], msg
                 percent_identity = blastn_6_row["pident"]

@@ -139,7 +139,7 @@ class ComputeMergedTaxonCounts(PipelineStep):
         if self.additional_files.get("deuterostome_db"):
             # TODO: (tmorse) get rid of s3mi reference
             deuterostome_db = fetch_reference(self.additional_files["deuterostome_db"],
-                                                 self.ref_dir_local, allow_s3mi=False)  # Too small for s3mi
+                                              self.ref_dir_local, allow_s3mi=False)  # Too small for s3mi
         taxon_whitelist = None
         if self.additional_attributes.get("use_taxon_whitelist"):
             taxon_whitelist = fetch_reference(self.additional_files.get("taxon_whitelist", DEFAULT_WHITELIST_S3),
