@@ -72,6 +72,10 @@ class _TSVWithSchmaBase(ABC):
     there is exactly one schema for each field count. This schema recognition is necessary because previously we were using
     optional fields to capture a finite set of different variants. This base class just handles constructing the schema map
     and accessing schemas and fields.
+
+    Args:
+        tsv_stream (TextIO): a text stream to write to/read from
+        *schemas (List[Tuple[str, Callable[[str], Any]]]): partial schemas
     """
     def __init__(self, tsv_stream: TextIO, *schemas: List[Tuple[str, Callable[[str], Any]]]) -> None:
         self._tsv_stream = tsv_stream
@@ -94,13 +98,9 @@ class _TSVWithSchmaBase(ABC):
 class _TSVWithSchemaReader(_TSVWithSchmaBase, ABC):
     def __init__(self, tsv_stream: TextIO, *schemas: List[Tuple[str, Callable[[str], Any]]]) -> None:
         super().__init__(tsv_stream, *schemas)
-        self._generator = self._read_all()
-
-    def _read_all(self) -> Iterable[Dict[str, Any]]:
-        for row in csv.reader(self._tsv_stream, delimiter="\t"):
-            yield {
-                key: _type(value) for ((key, _type), value) in zip(self._schema(row), row)
-            }
+        self._generator = ({
+            key: _type(value) for ((key, _type), value) in zip(self._schema(row), row)
+        } for row in csv.reader(self._tsv_stream, delimiter="\t"))
 
     def __iter__(self):
         return self
@@ -117,7 +117,7 @@ class _TSVWithSchemaWriter(_TSVWithSchmaBase, ABC):
         try:
             return [row[key] for (key, _) in self._schema(row)]
         except KeyError as e:
-            raise Exception(f"{self.path}: Write error. Input: \"{row}\" has {len(row)} fields, associated schema: {self._schema_map[len(row)]} does not have key: {e}")
+            raise Exception(f"_TSVWithSchemaWriter write error. Input: \"{row}\" has {len(row)} fields, associated schema: {self._schema_map[len(row)]} does not have key: {e}")
 
     def write_all(self, rows: Iterable[Dict[str, Any]]) -> None:
         self._writer.writerows(self._dict_row_to_list(row) for row in rows)
