@@ -25,39 +25,6 @@ NT_MIN_ALIGNMENT_LEN = 36
 # a high rate of false-positives. These should be filtered at all alignment steps.
 MAX_EVALUE_THRESHOLD = 1
 
-# blastn output format 6 as documented in
-# http://www.metagenomics.wiki/tools/blast/blastn-output-format-6
-# it's also the format of our GSNAP and RAPSEARCH2 output
-_BLAST_OUTPUT_SCHEMA = [
-    ("qseqid", str),
-    ("sseqid", str),
-    ("pident", float),
-    ("length", int),
-    ("mismatch", int),
-    ("gapopen", int),
-    ("qstart", int),
-    ("qend", int),
-    ("sstart", int),
-    ("send", int),
-    ("evalue", float),
-    ("bitscore", float),
-]
-
-
-# Additional blastn output columns.
-_BLAST_OUTPUT_NT_SCHEMA = [
-    ("qlen", int),      # query sequence length, helpful for computing qcov
-    ("slen", int),      # subject sequence length, so far unused in IDseq
-]
-
-
-# Re-ranked output of blastn.  One row per query.  Two additional columns.
-_RERANKED_BLAST_OUTPUT_NT_SCHEMA = [
-    ("qcov", float),     # fraction of query covered by the optimal set of HSPs
-    ("hsp_count", int),   # cardihnality of optimal fragment cover;  see BlastCandidate
-]
-
-
 # The minimum read count for a valid contig. We ignore contigs below this read count in most downstream analyses.
 # This constant is hardcoded in at least 4 places in idseq-web.  TODO: Make it a DAG parameter.
 MIN_CONTIG_SIZE = 4
@@ -139,16 +106,51 @@ class _TSVWithSchemaWriter(_TSVWithSchmaBase, ABC):
         self._writer.writerow(self._dict_row_to_list(row))
 
 
-class BlastnOutput6Reader(_TSVWithSchemaReader):
+# blastn output format 6 as documented in
+# http://www.metagenomics.wiki/tools/blast/blastn-output-format-6
+# it's also the format of our GSNAP and RAPSEARCH2 output
+_BLAST_OUTPUT_SCHEMA = [
+    ("qseqid", str),
+    ("sseqid", str),
+    ("pident", float),
+    ("length", int),
+    ("mismatch", int),
+    ("gapopen", int),
+    ("qstart", int),
+    ("qend", int),
+    ("sstart", int),
+    ("send", int),
+    ("evalue", float),
+    ("bitscore", float),
+]
+
+
+# Additional blastn output columns.
+_BLAST_OUTPUT_NT_SCHEMA = [
+    ("qlen", int),      # query sequence length, helpful for computing qcov
+    ("slen", int),      # subject sequence length, so far unused in IDseq
+]
+
+
+# Re-ranked output of blastn.  One row per query.  Two additional columns.
+_RERANKED_BLAST_OUTPUT_NT_SCHEMA = [
+    ("qcov", float),     # fraction of query covered by the optimal set of HSPs
+    ("hsp_count", int),   # cardihnality of optimal fragment cover;  see BlastCandidate
+]
+
+class _BlastnOutput6Base(ABC):
     @staticmethod
     def _schemas():
         return [_BLAST_OUTPUT_SCHEMA, _BLAST_OUTPUT_NT_SCHEMA, _RERANKED_BLAST_OUTPUT_NT_SCHEMA]
 
+class BlastnOutput6Reader(_TSVWithSchemaReader, _BlastnOutput6Base):
     def __init__(self, tsv_stream: TextIO, filter_invalid: bool = False, min_alignment_length: int = 0):
-        # The output of rapsearch2 contains comments that start with '#', these should be skipped
-        super().__init__((line for line in tsv_stream if line and line[0] != "#") if filter_invalid else tsv_stream)
         if filter_invalid:
+            # The output of rapsearch2 contains comments that start with '#', these should be skipped
+            super().__init__(line for line in tsv_stream if line and line[0] != "#")
             self._generator = (row for row in self._generator if self.row_is_valid(row, min_alignment_length))
+        else:
+            super().__init__(tsv_stream)
 
     @staticmethod
     def row_is_valid(row, min_alignment_length) -> bool:
@@ -174,10 +176,8 @@ class BlastnOutput6Reader(_TSVWithSchemaReader):
             row["evalue"] <= MAX_EVALUE_THRESHOLD,
         ])
 
-class BlastnOutput6Writer(_TSVWithSchemaWriter):
-    @staticmethod
-    def _schemas():
-        return [_BLAST_OUTPUT_SCHEMA, _BLAST_OUTPUT_NT_SCHEMA, _RERANKED_BLAST_OUTPUT_NT_SCHEMA]
+class BlastnOutput6Writer(_TSVWithSchemaWriter, _BlastnOutput6Base):
+    pass
 
 
 _HIT_SUMMARY_SCHEMA = [
@@ -206,7 +206,7 @@ _HIT_SUMMARY_SCHEMA_MERGED = [
     ("source_count_type", str),
 ]
 
-class HitSummaryReader(_TSVWithSchemaReader):
+class _HitSummaryBase(ABC):
     @staticmethod
     def _schemas():
         return [
@@ -216,15 +216,11 @@ class HitSummaryReader(_TSVWithSchemaReader):
             _HIT_SUMMARY_SCHEMA_MERGED,
         ]
 
-class HitSummaryWriter(_TSVWithSchemaWriter):
-    @staticmethod
-    def _schemas():
-        return [
-            _HIT_SUMMARY_SCHEMA,
-            _HIT_SUMMARY_SCHEMA_WITH_CONTIG,
-            _HIT_SUMMARY_SCHEMA_WITH_ASSEMBLY_SOURCE,
-            _HIT_SUMMARY_SCHEMA_MERGED,
-        ]
+class HitSummaryReader(_TSVWithSchemaReader, _HitSummaryBase):
+    pass
+
+class HitSummaryWriter(_TSVWithSchemaWriter, _HitSummaryBase):
+    pass
 
 
 def summarize_hits(hit_summary_file_path: str, min_reads_per_genus=0):

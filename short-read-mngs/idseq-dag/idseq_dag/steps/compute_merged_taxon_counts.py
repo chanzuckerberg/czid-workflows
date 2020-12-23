@@ -67,6 +67,8 @@ class ComputeMergedTaxonCounts(PipelineStep):
                     has_nr_read_hit = nr_alignment and nr_alignment.read
                     if has_nt_contig_hit or (not has_nr_contig_hit and has_nt_read_hit):
                         output_blastn_6_writer.write(nt_m8_dict)
+                        # 'from_assembly' is mandatory in hit summary row variants with 'source_count_type'
+                        nt_hit_dict["from_assembly"] = nt_hit_dict["from_assembly"] or None
                         nt_hit_dict["source_count_type"] = "NT"
                         output_hit_summary_writer.write(nt_hit_dict)
                         if nr_alignment:
@@ -89,6 +91,8 @@ class ComputeMergedTaxonCounts(PipelineStep):
 
                     if nr_alignment:
                         output_blastn_6_writer.write(nr_m8_dict)
+                        # 'from_assembly' is mandatory in hit summary row variants with 'source_count_type'
+                        nr_hit_dict["from_assembly"] = nr_hit_dict["from_assembly"] or None
                         nr_hit_dict["source_count_type"] = "NR"
                         output_hit_summary_writer.write(nr_hit_dict)
 
