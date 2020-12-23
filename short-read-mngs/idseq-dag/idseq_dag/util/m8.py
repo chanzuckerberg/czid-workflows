@@ -118,8 +118,11 @@ class _TSVWithSchemaWriter(ABC):
 
     def _dict_row_to_list(self, row: Dict[str, Any]) -> List[Any]:
         if len(row) not in self._schema_map:
-            raise Exception(f"{self.path}: Parse error. Input line: \"{row}\" has {len(row)} columns, no associated schema found in {self._schema_map}")
-        return [row[key] for (key, _) in self._schema_map[len(row)]]
+            raise Exception(f"{self.path}: Write error. Input line: \"{row}\" has {len(row)} columns, no associated schema found in {self._schema_map}")
+        try:
+            return [row[key] for (key, _) in self._schema_map[len(row)]]
+        except KeyError as e:
+            raise Exception(f"{self.path}: Write error. Input line: \"{row}\" has {len(row)} columns, associated schema: {self._schema_map[len(row)]} does not have key: {e}")
 
     def write_all(self, rows: Iterable[Dict[str, Any]]) -> None:
         self._writer.writerows(self._dict_row_to_list(row) for row in rows)
@@ -168,6 +171,15 @@ class M8Writer(_TSVWithSchemaWriter):
         super().__init__(path, _BLAST_OUTPUT_SCHEMA, _BLAST_OUTPUT_NT_SCHEMA)
 
 
+class RerankedM8Reader(_TSVWithSchemaReader):
+    def __init__(self, path: str, db_type: str, assembly_level: str) -> None:
+        super().__init__(path, _RERANKED_BLAST_OUTPUT_SCHEMA[db_type][assembly_level])
+
+class RerankedM8Writer(_TSVWithSchemaWriter):
+    def __init__(self, path: str, db_type: str, assembly_level: str) -> None:
+        super().__init__(path, _RERANKED_BLAST_OUTPUT_SCHEMA[db_type][assembly_level])
+
+
 _HIT_SUMMARY_SCHEMA = [
     ("read_id", str),
     ("level", int),
@@ -214,14 +226,6 @@ class HitSummaryWriter(_TSVWithSchemaWriter):
             _HIT_SUMMARY_SCHEMA_MERGED,
             _HIT_SUMMARY_SCHEMA_MERGED_ASSEMBLY_SOURCE,
         )
-
-class RerankedBlastOutputReader(_TSVWithSchemaReader):
-    def __init__(self, path: str, db_type: str, assembly_level: str) -> None:
-        super().__init__(path, _RERANKED_BLAST_OUTPUT_SCHEMA[db_type][assembly_level])
-
-class RerankedBlastOutputWriter(_TSVWithSchemaWriter):
-    def __init__(self, path: str, db_type: str, assembly_level: str) -> None:
-        super().__init__(path, _RERANKED_BLAST_OUTPUT_SCHEMA[db_type][assembly_level])
 
 
 def summarize_hits(hit_summary_file: str, min_reads_per_genus=0):

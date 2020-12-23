@@ -307,7 +307,7 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
         if os.path.getsize(m8_file) < MIN_M8_FILE_SIZE:
             return hits
 
-        for hit in m8.RerankedBlastOutputReader(m8_file, "nt", assembly_level):
+        for hit in m8.RerankedM8Reader(m8_file, "nt", assembly_level):
 
             if hit["qseqid"] in valid_hits:
                 # Blast output is per HSP, yet the hit represents a set of HSPs,

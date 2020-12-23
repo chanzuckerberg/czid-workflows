@@ -366,7 +366,7 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
         contig2lineage = {}
         added_reads = {}
 
-        for row in m8.RerankedBlastOutputReader(blast_top_m8, db_type, 'contig_level'):
+        for row in m8.RerankedM8Reader(blast_top_m8, db_type, 'contig_level'):
             contig_id = row["qseqid"]
             accession_id = row["sseqid"]
             contig2accession[contig_id] = (accession_id, row)
@@ -434,7 +434,7 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
                     "-out",
                     blast_m8,
                     "-outfmt",
-                    '6 ' + ' '.join(m8.BlastOutputReader(None).fields(14)),
+                    '6 ' + ' '.join(m8.M8Reader(None).fields(14)),
                     '-evalue',
                     1e-10,
                     '-max_target_seqs',
@@ -542,7 +542,7 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
         current_query_hits = None
         previously_seen_queries = set()
         # Please see comments explaining the definition of "hsp" elsewhere in this file.
-        for hsp in m8.BlastOutputReader(blast_output):
+        for hsp in m8.M8Reader(blast_output):
             # filter local alignment HSPs based on minimum length and sequence similarity
             if hsp["length"] < min_alignment_length:
                 continue
@@ -622,6 +622,6 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
         # for documentation of Blast output.
 
         # Output the optimal hit for each query.
-        m8.RerankedBlastOutputWriter(blast_top_m8, "nt", "contig_level").write_all(
+        m8.RerankedM8Writer(blast_top_m8, "nt", "contig_level").write_all(
             PipelineStepBlastContigs.optimal_hit_for_each_query_nt(blast_output, min_alignment_length, min_pident, max_evalue)
         )
