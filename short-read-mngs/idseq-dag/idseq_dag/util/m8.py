@@ -62,48 +62,45 @@ _RERANKED_BLAST_OUTPUT_NT_SCHEMA = [
 # This constant is hardcoded in at least 4 places in idseq-web.  TODO: Make it a DAG parameter.
 MIN_CONTIG_SIZE = 4
 
-
-class _TSVWithSchemaReader(ABC):
+class _TSVWithSchmaBase(ABC):
     """
-    The _TSVWithSchemaReader class is a base class for reading TSVs without headers with schemas provided by subclasses
+    The _TSVWithSchemaBase class is a base class for reading and writing TSVs without headers with schemas provided by subclasses
 
-    This class takes a stream for reading as well as a list of partial schemas. These schemas are used to construct a
+    This class takes a stream for reading or writing as well as a list of partial schemas. These schemas are used to construct a
     map from the number of fields to the appropriate schema. The first partial schema becomes the first complete schema
     and each subsequent schema is appended to the previous complete schema to make a complete schema. This guaruntees that
     there is exactly one schema for each field count. This schema recognition is necessary because previously we were using
-    optional fields to capture a finite set of different variants.
+    optional fields to capture a finite set of different variants. This base class just handles constructing the schema map
+    and accessing schemas and fields.
     """
-
     def __init__(self, tsv_stream: TextIO, *schemas: List[Tuple[str, Callable[[str], Any]]]) -> None:
         self._tsv_stream = tsv_stream
         assert schemas, "_TSVWithSchemaReader requires at least one schema"
         n = len(schemas[0])
         self._schema_map = {n: schemas[0]}
         for schema in schemas[1:]:
-            assert schema, "_TSVWithSchemaReader does not support empty schemas"
-            self._schema_map[n + len(schema)] = schemas[n] + schema
+            assert schema, "_TSVWithSchemaBase does not support empty schemas"
+            self._schema_map[n + len(schema)] = self._schema_map[n] + schema
             n += len(schema)
-        self._generator = self._read_all()
 
-    def _read_all(self) -> Iterable[Dict[str, Any]]:
-        """
-        Parse TSV file with given schema, yielding a dict per line.
-        See _BLAST_OUTPUT_SCHEMA, for example.
-        When expect_headers=True, treat the first line as column headers.
-        When strict mode is True, all columns in schema are required. When strict mode is False, will return None values for column not found.
-        """
-        for row in csv.reader(self._tsv_stream, delimiter="\t"):
-            # The output of rapsearch2 contains comments that start with '#', these should be skipped
-            if row and row[0][0] == "#":
-                continue
-            if len(row) not in self._schema_map:
-                raise Exception(f"Parse error. Input line: \"{row}\" has {len(row)} columns, no associated schema found in {self._schema_map}")
-            yield {
-                key: _type(value) for ((key, _type), value) in zip(self._schema_map[len(row)], row)
-            }
+    def _schema(self, row):
+        if len(row) not in self._schema_map:
+            raise Exception(f"TSVWithSchema read/write error. Input: \"{row}\" has {len(row)} fields, no associated schema found in {self._schema_map}")
+        return self._schema_map[len(row)]
 
     def fields(self, columns) -> List[str]:
         return [k for k, _ in self._schema_map[columns]]
+
+class _TSVWithSchemaReader(_TSVWithSchmaBase, ABC):
+    def __init__(self, tsv_stream: TextIO, *schemas: List[Tuple[str, Callable[[str], Any]]]) -> None:
+        super().__init__(tsv_stream, *schemas)
+        self._generator = self._read_all()
+
+    def _read_all(self) -> Iterable[Dict[str, Any]]:
+        for row in csv.reader(self._tsv_stream, delimiter="\t"):
+            yield {
+                key: _type(value) for ((key, _type), value) in zip(self._schema(row), row)
+            }
 
     def __iter__(self):
         return self
@@ -111,19 +108,16 @@ class _TSVWithSchemaReader(ABC):
     def __next__(self, *args) -> Dict[str, Any]:
         return next(self._generator, *args)
 
-
-class _TSVWithSchemaWriter(ABC):
+class _TSVWithSchemaWriter(_TSVWithSchmaBase, ABC):
     def __init__(self, tsv_stream: TextIO, *schemas: List[Tuple[str, Callable[[str], Any]]]) -> None:
-        self._schema_map = {len(schema): schema for schema in schemas}
+        super().__init__(tsv_stream, *schemas)
         self._writer = csv.writer(tsv_stream, delimiter="\t")
 
     def _dict_row_to_list(self, row: Dict[str, Any]) -> List[Any]:
-        if len(row) not in self._schema_map:
-            raise Exception(f"{self.path}: Write error. Input line: \"{row}\" has {len(row)} columns, no associated schema found in {self._schema_map}")
         try:
-            return [row[key] for (key, _) in self._schema_map[len(row)]]
+            return [row[key] for (key, _) in self._schema(row)]
         except KeyError as e:
-            raise Exception(f"{self.path}: Write error. Input line: \"{row}\" has {len(row)} columns, associated schema: {self._schema_map[len(row)]} does not have key: {e}")
+            raise Exception(f"{self.path}: Write error. Input: \"{row}\" has {len(row)} fields, associated schema: {self._schema_map[len(row)]} does not have key: {e}")
 
     def write_all(self, rows: Iterable[Dict[str, Any]]) -> None:
         self._writer.writerows(self._dict_row_to_list(row) for row in rows)
@@ -131,9 +125,14 @@ class _TSVWithSchemaWriter(ABC):
     def write(self, row: Dict[str, Any]) -> None:
         self._writer.writerow(self._dict_row_to_list(row))
 
+
 class BlastnOutput6Reader(_TSVWithSchemaReader):
     def __init__(self, tsv_stream: TextIO, filter_invalid: bool = False, min_alignment_length: int = 0):
-        super().__init__(tsv_stream, _BLAST_OUTPUT_SCHEMA, _BLAST_OUTPUT_NT_SCHEMA, _RERANKED_BLAST_OUTPUT_NT_SCHEMA)
+        _tsv_stream = tsv_stream
+        if filter_invalid:
+            # The output of rapsearch2 contains comments that start with '#', these should be skipped
+            _tsv_stream = (line for line in tsv_stream if line and line[0] != "#")
+        super().__init__(_tsv_stream, _BLAST_OUTPUT_SCHEMA, _BLAST_OUTPUT_NT_SCHEMA, _RERANKED_BLAST_OUTPUT_NT_SCHEMA)
         if filter_invalid:
             self._generator = (row for row in self._generator if self.row_is_valid(row, min_alignment_length))
 
@@ -160,7 +159,6 @@ class BlastnOutput6Reader(_TSVWithSchemaReader):
             row["evalue"] != row["evalue"],
             row["evalue"] <= MAX_EVALUE_THRESHOLD,
         ])
-
 
 class BlastnOutput6Writer(_TSVWithSchemaWriter):
     def __init__(self, tsv_stream: TextIO):
