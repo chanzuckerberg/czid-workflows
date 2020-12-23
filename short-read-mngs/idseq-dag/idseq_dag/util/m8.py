@@ -69,28 +69,6 @@ _RERANKED_BLAST_OUTPUT_SCHEMA = {
     },
 }
 
-_HIT_SUMMARY_SCHEMA = [
-    ("read_id", str),
-    ("level", int),
-    ("taxid", int),
-    ("accession_id", str),
-    ("species_taxid", int),
-    ("genus_taxid", int),
-    ("family_taxid", int),
-]
-
-_HIT_SUMMARY_SCHEMA_WITH_CONTIG = _HIT_SUMMARY_SCHEMA + [
-    ("contig_id", str),
-    ("contig_accession_id", str),
-    ("contig_species_taxid", int),
-    ("contig_genus_taxid", int),
-    ("contig_family_taxid", int),
-    ("from_assembly", str),
-]
-
-_HIT_SUMMARY_SCHEMA_MERGED = _HIT_SUMMARY_SCHEMA_WITH_CONTIG + [
-    ("source_count_type", str),
-]
 
 # The minimum read count for a valid contig. We ignore contigs below this read count in most downstream analyses.
 # This constant is hardcoded in at least 4 places in idseq-web.  TODO: Make it a DAG parameter.
@@ -189,13 +167,53 @@ class M8Writer(_TSVWithSchemaWriter):
     def __init__(self, path: str):
         super().__init__(path, _BLAST_OUTPUT_SCHEMA, _BLAST_OUTPUT_NT_SCHEMA)
 
+
+_HIT_SUMMARY_SCHEMA = [
+    ("read_id", str),
+    ("level", int),
+    ("taxid", int),
+    ("accession_id", str),
+    ("species_taxid", int),
+    ("genus_taxid", int),
+    ("family_taxid", int),
+]
+
+_HIT_SUMMARY_SCHEMA_WITH_CONTIG = _HIT_SUMMARY_SCHEMA + [
+    ("contig_id", str),
+    ("contig_accession_id", str),
+    ("contig_species_taxid", int),
+    ("contig_genus_taxid", int),
+    ("contig_family_taxid", int),
+]
+
+_HIT_SUMMARY_SCHEMA_MERGED = _HIT_SUMMARY_SCHEMA_WITH_CONTIG + [
+    ("source_count_type", str),
+]
+
+_HIT_SUMMARY_SCHEMA_MERGED_ASSEMBLY_SOURCE = _HIT_SUMMARY_SCHEMA_WITH_CONTIG + [
+    ("from_assembly", str),
+    ("source_count_type", str),
+]
+
 class HitSummaryReader(_TSVWithSchemaReader):
     def __init__(self, path: str) -> None:
-        super().__init__(path, _HIT_SUMMARY_SCHEMA, _HIT_SUMMARY_SCHEMA_WITH_CONTIG, _HIT_SUMMARY_SCHEMA_MERGED)
+        super().__init__(
+            path,
+            _HIT_SUMMARY_SCHEMA,
+            _HIT_SUMMARY_SCHEMA_WITH_CONTIG,
+            _HIT_SUMMARY_SCHEMA_MERGED,
+            _HIT_SUMMARY_SCHEMA_MERGED_ASSEMBLY_SOURCE,
+        )
 
 class HitSummaryWriter(_TSVWithSchemaWriter):
     def __init__(self, path: str) -> None:
-        super().__init__(path, _HIT_SUMMARY_SCHEMA, _HIT_SUMMARY_SCHEMA_WITH_CONTIG, _HIT_SUMMARY_SCHEMA_MERGED)
+        super().__init__(
+            path,
+            _HIT_SUMMARY_SCHEMA,
+            _HIT_SUMMARY_SCHEMA_WITH_CONTIG,
+            _HIT_SUMMARY_SCHEMA_MERGED,
+            _HIT_SUMMARY_SCHEMA_MERGED_ASSEMBLY_SOURCE,
+        )
 
 class RerankedBlastOutputReader(_TSVWithSchemaReader):
     def __init__(self, path: str, db_type: str, assembly_level: str) -> None:
