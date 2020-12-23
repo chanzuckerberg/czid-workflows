@@ -14,7 +14,7 @@ from idseq_dag.util.trace_lock import TraceLock
 from idseq_dag.steps.run_assembly import PipelineStepRunAssembly
 from idseq_dag.util.count import READ_COUNTING_MODE, ReadCountingMode, get_read_cluster_size, load_duplicate_cluster_sizes
 from idseq_dag.util.lineage import DEFAULT_BLACKLIST_S3, DEFAULT_WHITELIST_S3
-from idseq_dag.util.m8 import HitSummaryReader, HitSummaryWriter, M8Reader, M8Writer, MIN_CONTIG_SIZE, NT_MIN_ALIGNMENT_LEN, MAX_EVALUE_THRESHOLD
+from idseq_dag.util.m8 import HitSummaryReader, HitSummaryWriter, M8Reader, MIN_CONTIG_SIZE, NT_MIN_ALIGNMENT_LEN, MAX_EVALUE_THRESHOLD, RerankedM8Writer
 
 
 MIN_REF_FASTA_SIZE = 25
@@ -346,7 +346,7 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
             for read_id in new_read_ids:
                 refined_hit_summary_writer.write(added_reads[read_id])
         # Generate new M8
-        with M8Writer(refined_m8) as refined_m8_writer:
+        with RerankedM8Writer(refined_m8, "nt", "contig_level") as refined_m8_writer:
             for row in M8Reader(deduped_m8):
                 new_row = read2blastm8.get(row["qseqid"], row)
                 new_row["qseqid"] = row["qseqid"]
