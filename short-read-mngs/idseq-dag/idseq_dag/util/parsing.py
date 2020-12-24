@@ -86,10 +86,10 @@ class _TSVWithSchemaWriter(_TSVWithSchmaBase, ABC):
         if self._schema:
             return self._schema
         first_inclusive_variant = max(
-            (self._field_to_first_variant.get(field, '') for field in row.keys()),
+            (self._field_to_first_variant.get(field) for field in row.keys()),
             key=lambda variant: len(self._name_to_variant[variant] if variant else 0)
         )
-        if first_inclusive_variant:
+        if not first_inclusive_variant:
             raise Exception(f"_TSVWithSchemaWriter error. Input: \"{row}\" has {len(row)} fields, no associated schema or common fields found in {self._name_to_variant}")
         return self._name_to_variant[first_inclusive_variant]
 
