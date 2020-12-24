@@ -77,12 +77,13 @@ class _TSVWithSchmaBase(ABC):
     def __init__(self, tsv_stream: TextIO) -> None:
         self._tsv_stream = tsv_stream
         self._variants, self._num_fields_to_variant, self._field_to_first_variant = self._build_variant_map()
+        self._schema = None
 
 class _TSVWithSchemaReader(_TSVWithSchmaBase, ABC):
     def __init__(self, tsv_stream: TextIO, *schemas: List[Tuple[str, Callable[[str], Any]]]) -> None:
         super().__init__(tsv_stream, *schemas)
         self._generator = ({
-            key: _type(value) for ((key, _type), value) in zip(self._schema(row), row)
+            key: _type(value) for ((key, _type), value) in zip(self._get_schema(row), row)
         } for row in csv.reader(self._tsv_stream, delimiter="\t"))
 
     def __iter__(self):
@@ -91,7 +92,9 @@ class _TSVWithSchemaReader(_TSVWithSchmaBase, ABC):
     def __next__(self, *args) -> Dict[str, Any]:
         return next(self._generator, *args)
 
-    def _schema(self, row):
+    def _get_schema(self, row):
+        if self._schema:
+            return self._schema
         if len(row) not in self._num_fields_to_variant:
             raise Exception(f"_TSVWithSchemaReader error. Input: \"{row}\" has {len(row)} fields, no associated schema found in {self._variants}")
         return self._variants[self._num_fields_to_variant[len(row)]]
@@ -101,7 +104,9 @@ class _TSVWithSchemaWriter(_TSVWithSchmaBase, ABC):
         super().__init__(tsv_stream, *schemas)
         self._writer = csv.writer(tsv_stream, delimiter="\t")
 
-    def _schema(self, row):
+    def _get_schema(self, row):
+        if self._schema:
+            return self._schema
         if len(row) in self._num_fields_to_variant:
             return self._variants[self._num_fields_to_variant[len(row)]]
         first_inclusive_variant = max(
@@ -113,7 +118,7 @@ class _TSVWithSchemaWriter(_TSVWithSchmaBase, ABC):
         return self._variants[first_inclusive_variant]
 
     def _dict_row_to_list(self, row: Dict[str, Any]) -> List[Any]:
-        return [row.get(key) for (key, _) in self._schema(row)]
+        return [row.get(key) for (key, _) in self._get_schema(row)]
 
     def write_all(self, rows: Iterable[Dict[str, Any]]) -> None:
         self._writer.writerows(self._dict_row_to_list(row) for row in rows)
