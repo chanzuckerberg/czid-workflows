@@ -14,8 +14,8 @@ from idseq_dag.util.trace_lock import TraceLock
 from idseq_dag.steps.run_assembly import PipelineStepRunAssembly
 from idseq_dag.util.count import READ_COUNTING_MODE, ReadCountingMode, get_read_cluster_size, load_duplicate_cluster_sizes
 from idseq_dag.util.lineage import DEFAULT_BLACKLIST_S3, DEFAULT_WHITELIST_S3
-from idseq_dag.util.m8 import MIN_CONTIG_SIZE, NT_MIN_ALIGNMENT_LEN, MAX_EVALUE_THRESHOLD
-from idseq_dag.util.parsing import HitSummaryReader, HitSummaryWriter, BlastnOutput6Reader, BlastnOutput6Writer
+from idseq_dag.util.m8 import MIN_CONTIG_SIZE, NT_MIN_ALIGNMENT_LEN
+from idseq_dag.util.parsing import HitSummaryReader, HitSummaryWriter, BlastnOutput6Reader, BlastnOutput6Writer, MAX_EVALUE_THRESHOLD
 
 
 MIN_REF_FASTA_SIZE = 25

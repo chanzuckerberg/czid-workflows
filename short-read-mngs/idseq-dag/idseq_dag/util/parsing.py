@@ -2,8 +2,11 @@
 import csv
 
 from abc import ABC, abstractstaticmethod
-from idseq_dag.util.m8 import MAX_EVALUE_THRESHOLD
 from typing import Any, Callable, Dict, Iterable, List, TextIO, Tuple
+
+# Alignments with e-values greater than 1 are low-quality alignments and associated with
+# a high rate of false-positives. These should be filtered at all alignment steps.
+MAX_EVALUE_THRESHOLD = 1
 
 Schema = List[Tuple[str, type]]
 

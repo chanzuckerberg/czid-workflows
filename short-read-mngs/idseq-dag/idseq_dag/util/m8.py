@@ -19,10 +19,6 @@ from idseq_dag.util.parsing import BlastnOutput6Reader, BlastnOutput6Writer, Hit
 # Nevertheless, it may be useful to re-filter blastx results.
 NT_MIN_ALIGNMENT_LEN = 36
 
-# Alignments with e-values greater than 1 are low-quality alignments and associated with
-# a high rate of false-positives. These should be filtered at all alignment steps.
-MAX_EVALUE_THRESHOLD = 1
-
 # The minimum read count for a valid contig. We ignore contigs below this read count in most downstream analyses.
 # This constant is hardcoded in at least 4 places in idseq-web.  TODO: Make it a DAG parameter.
 MIN_CONTIG_SIZE = 4
