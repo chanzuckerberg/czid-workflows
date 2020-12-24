@@ -143,7 +143,7 @@ class _BlastnOutput6Base(ABC):
     def _schemas():
         return [_BLAST_OUTPUT_SCHEMA, _BLAST_OUTPUT_NT_SCHEMA, _RERANKED_BLAST_OUTPUT_NT_SCHEMA]
 
-class BlastnOutput6Reader(_TSVWithSchemaReader, _BlastnOutput6Base):
+class BlastnOutput6Reader(_BlastnOutput6Base, _TSVWithSchemaReader):
     def __init__(self, tsv_stream: TextIO, filter_invalid: bool = False, min_alignment_length: int = 0):
         if filter_invalid:
             # The output of rapsearch2 contains comments that start with '#', these should be skipped
@@ -176,7 +176,7 @@ class BlastnOutput6Reader(_TSVWithSchemaReader, _BlastnOutput6Base):
             row["evalue"] <= MAX_EVALUE_THRESHOLD,
         ])
 
-class BlastnOutput6Writer(_TSVWithSchemaWriter, _BlastnOutput6Base):
+class BlastnOutput6Writer(_BlastnOutput6Base, _TSVWithSchemaWriter):
     pass
 
 
@@ -216,10 +216,10 @@ class _HitSummaryBase(ABC):
             _HIT_SUMMARY_SCHEMA_MERGED,
         ]
 
-class HitSummaryReader(_TSVWithSchemaReader, _HitSummaryBase):
+class HitSummaryReader(_HitSummaryBase, _TSVWithSchemaReader):
     pass
 
-class HitSummaryWriter(_TSVWithSchemaWriter, _HitSummaryBase):
+class HitSummaryWriter(_HitSummaryBase, _TSVWithSchemaWriter):
     pass
 
 
