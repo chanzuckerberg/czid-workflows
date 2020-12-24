@@ -26,18 +26,17 @@ DEFAULT_WHITELIST_S3 = 's3://idseq-public-references/taxonomy/2020-02-10/respira
 # See also comments under call_hits_m8().
 
 
-def cleaned_taxid_lineage(taxid_lineage, hit_taxid_str, hit_level_str):
+def cleaned_taxid_lineage(taxid_lineage, hit_taxid: int, hit_level: int):
     """Take the taxon lineage and mark meaningless calls with fake taxids."""
     # This assumption is being made in postprocessing
     assert len(taxid_lineage) == 3
     result = [None, None, None]
-    hit_tax_level = int(hit_level_str)
     for tax_level, taxid in enumerate(taxid_lineage, 1):
-        if tax_level >= hit_tax_level:
+        if tax_level >= hit_level:
             taxid_str = str(taxid)
         else:
             taxid_str = str(
-                tax_level * INVALID_CALL_BASE_ID - int(hit_taxid_str))
+                tax_level * INVALID_CALL_BASE_ID - hit_taxid)
         result[tax_level - 1] = taxid_str
     return result
 

@@ -29,6 +29,8 @@ MAX_EVALUE_THRESHOLD = 1
 # This constant is hardcoded in at least 4 places in idseq-web.  TODO: Make it a DAG parameter.
 MIN_CONTIG_SIZE = 4
 
+Schema = List[Tuple[str, type]]
+
 class _TSVWithSchmaBase(ABC):
     """
     The _TSVWithSchemaBase class is a base class for reading and writing TSVs without headers with schemas provided by subclasses
@@ -46,32 +48,35 @@ class _TSVWithSchmaBase(ABC):
     """
 
     @abstractstaticmethod
-    def _schemas() -> List[Tuple[str, Callable[[str], Any]]]:
+    def _variants() -> List[Tuple[str, Schema]]:
         pass
 
     @classmethod
-    def _build_schema_map(cls) -> Tuple[Dict[int, List[Tuple[str, Callable[[str], Any]]]], Dict[str, int]]:
-        schemas = cls._schemas()
+    def _build_variant_map(cls) -> Tuple[Dict[str, Schema], Dict[int, str], Dict[str, str]]:
+        schemas = cls._variants()
         assert schemas, "_TSVWithSchemaReader requires at least one schema"
         n = 0
-        schema_map = {0: []}
-        field_to_schema = {}
-        for schema in schemas:
+        variants = {"dummy": []}
+        num_fields_to_variant = {0: "dummy"}
+        field_to_first_variant = {}
+        for (variant_name, schema) in schemas:
             assert schema, "_TSVWithSchemaBase does not support empty schemas"
             n += len(schema)
-            schema_map[n] = schema_map[n - len(schema)] + schema
+            variants[variant_name] = variants[num_fields_to_variant[n - len(schema)]] + schema
+            num_fields_to_variant[n] = variant_name
             for field, _ in schema:
-                field_to_schema[field] = n
-        del schema_map[0]
-        return schema_map, field_to_schema
+                field_to_first_variant[field] = variant_name
+        del variants["dummy"]
+        del num_fields_to_variant[0]
+        return variants, num_fields_to_variant, field_to_first_variant
 
     @classmethod
-    def fields(cls, num_columns) -> List[str]:
-        return [k for k, _ in cls._build_schema_map()[0][num_columns]]
+    def fields(cls, variant_name) -> List[str]:
+        return [k for k, _ in cls._build_variant_map()[0][variant_name]]
 
     def __init__(self, tsv_stream: TextIO) -> None:
         self._tsv_stream = tsv_stream
-        self._schema_map, self._field_to_schema = self._build_schema_map()
+        self._variants, self._num_fields_to_variant, self._field_to_first_variant = self._build_variant_map()
 
 class _TSVWithSchemaReader(_TSVWithSchmaBase, ABC):
     def __init__(self, tsv_stream: TextIO, *schemas: List[Tuple[str, Callable[[str], Any]]]) -> None:
@@ -87,9 +92,9 @@ class _TSVWithSchemaReader(_TSVWithSchmaBase, ABC):
         return next(self._generator, *args)
 
     def _schema(self, row):
-        if len(row) not in self._schema_map:
-            raise Exception(f"_TSVWithSchemaReader error. Input: \"{row}\" has {len(row)} fields, no associated schema found in {self._schema_map}")
-        return self._schema_map[len(row)]
+        if len(row) not in self._num_fields_to_variant:
+            raise Exception(f"_TSVWithSchemaReader error. Input: \"{row}\" has {len(row)} fields, no associated schema found in {self._variants}")
+        return self._variants[self._num_fields_to_variant[len(row)]]
 
 class _TSVWithSchemaWriter(_TSVWithSchmaBase, ABC):
     def __init__(self, tsv_stream: TextIO, *schemas: List[Tuple[str, Callable[[str], Any]]]) -> None:
@@ -97,12 +102,15 @@ class _TSVWithSchemaWriter(_TSVWithSchmaBase, ABC):
         self._writer = csv.writer(tsv_stream, delimiter="\t")
 
     def _schema(self, row):
-        if len(row) in self._schema_map:
-            return self._schema_map[len(row)]
-        inclusive_schema = max(self._field_to_schema.get(field, 0) for field in row.keys())
-        if inclusive_schema not in self._schema_map:
-            raise Exception(f"_TSVWithSchemaWriter error. Input: \"{row}\" has {len(row)} fields, no associated schema or common fields found in {self._schema_map}")
-        return self._schema_map[inclusive_schema]
+        if len(row) in self._num_fields_to_variant:
+            return self._variants[self._num_fields_to_variant[len(row)]]
+        first_inclusive_variant = max(
+            (self._field_to_first_variant.get(field, '') for field in row.keys()),
+            key=lambda variant: len(self._variants[variant] if variant else 0)
+        )
+        if first_inclusive_variant:
+            raise Exception(f"_TSVWithSchemaWriter error. Input: \"{row}\" has {len(row)} fields, no associated schema or common fields found in {self._variants}")
+        return self._variants[first_inclusive_variant]
 
     def _dict_row_to_list(self, row: Dict[str, Any]) -> List[Any]:
         return [row.get(key) for (key, _) in self._schema(row)]
@@ -148,8 +156,12 @@ _RERANKED_BLAST_OUTPUT_NT_SCHEMA = [
 
 class _BlastnOutput6Base(ABC):
     @staticmethod
-    def _schemas():
-        return [_BLAST_OUTPUT_SCHEMA, _BLAST_OUTPUT_NT_SCHEMA, _RERANKED_BLAST_OUTPUT_NT_SCHEMA]
+    def _variants():
+        return [
+            ("base", _BLAST_OUTPUT_SCHEMA),
+            ("nt", _BLAST_OUTPUT_NT_SCHEMA),
+            ("reranked_nt", _RERANKED_BLAST_OUTPUT_NT_SCHEMA),
+        ]
 
 class BlastnOutput6Reader(_BlastnOutput6Base, _TSVWithSchemaReader):
     def __init__(self, tsv_stream: TextIO, filter_invalid: bool = False, min_alignment_length: int = 0):
@@ -198,7 +210,7 @@ _HIT_SUMMARY_SCHEMA = [
     ("family_taxid", int),
 ]
 
-_HIT_SUMMARY_SCHEMA_WITH_CONTIG = [
+_HIT_SUMMARY_CONTIG_SCHEMA = [
     ("contig_id", str),
     ("contig_accession_id", str),
     ("contig_species_taxid", int),
@@ -206,11 +218,11 @@ _HIT_SUMMARY_SCHEMA_WITH_CONTIG = [
     ("contig_family_taxid", int),
 ]
 
-_HIT_SUMMARY_SCHEMA_WITH_ASSEMBLY_SOURCE = [
+_HIT_SUMMARY_ASSEMBLY_SOURCE_SCHEMA = [
     ("from_assembly", str),
 ]
 
-_HIT_SUMMARY_SCHEMA_MERGED = [
+_HIT_SUMMARY_MERGED_SCHEMA = [
     ("source_count_type", str),
 ]
 
@@ -218,10 +230,10 @@ class _HitSummaryBase(ABC):
     @staticmethod
     def _schemas():
         return [
-            _HIT_SUMMARY_SCHEMA,
-            _HIT_SUMMARY_SCHEMA_WITH_CONTIG,
-            _HIT_SUMMARY_SCHEMA_WITH_ASSEMBLY_SOURCE,
-            _HIT_SUMMARY_SCHEMA_MERGED,
+            ("base", _HIT_SUMMARY_SCHEMA),
+            ("contig", _HIT_SUMMARY_CONTIG_SCHEMA),
+            ("assembly_source", _HIT_SUMMARY_ASSEMBLY_SOURCE_SCHEMA),
+            ("merged", _HIT_SUMMARY_MERGED_SCHEMA),
         ]
 
 class HitSummaryReader(_HitSummaryBase, _TSVWithSchemaReader):
@@ -550,8 +562,9 @@ def generate_taxon_count_json_from_m8(
 
                 # Retrieve the taxon lineage and mark meaningless calls with fake
                 # taxids.
+                # lineage_map expects string ids
                 hit_taxids_all_levels = lineage_map.get(
-                    hit_taxid, lineage.NULL_LINEAGE)
+                    str(hit_taxid), lineage.NULL_LINEAGE)
                 cleaned_hit_taxids_all_levels = lineage.validate_taxid_lineage(
                     hit_taxids_all_levels, hit_taxid, hit_level)
                 assert num_ranks == len(cleaned_hit_taxids_all_levels)
