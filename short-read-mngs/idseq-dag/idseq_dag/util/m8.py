@@ -56,7 +56,7 @@ class _TSVWithSchmaBase(ABC):
         n = 0
         schema_map = {0: []}
         field_to_schema = {}
-        for schema in schemas[1:]:
+        for schema in schemas:
             assert schema, "_TSVWithSchemaBase does not support empty schemas"
             n += len(schema)
             schema_map[n] = schema_map[n - len(schema)] + schema
