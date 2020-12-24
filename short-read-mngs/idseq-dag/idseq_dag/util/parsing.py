@@ -61,7 +61,7 @@ class _TSVWithSchemaReader(_TSVWithSchmaBase, ABC):
     def __init__(self, tsv_stream: TextIO, *schemas: List[Tuple[str, Callable[[str], Any]]]) -> None:
         super().__init__(tsv_stream, *schemas)
         self._generator = ({
-            key: _type(value) for ((key, _type), value) in zip(self._get_schema(row), row)
+            key: value and _type(value) for ((key, _type), value) in zip(self._get_schema(row), row)
         } for row in csv.reader(self._tsv_stream, delimiter="\t"))
 
     def __iter__(self):
@@ -72,6 +72,7 @@ class _TSVWithSchemaReader(_TSVWithSchmaBase, ABC):
 
     def _get_schema(self, row):
         if self._schema:
+            assert len(row) == len(self._schema), f"_TSVWithSchemaReader error. Uneven field counts within a file. Previous {len(self._schema)}, current {len(row)}"
             return self._schema
         if len(row) not in self._num_fields_to_variant:
             raise Exception(f"_TSVWithSchemaReader error. Input: \"{row}\" has {len(row)} fields, no associated schema found in {self._name_to_variant}")
