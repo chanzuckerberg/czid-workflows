@@ -15,6 +15,13 @@ class PipelineStepGenerateTaxidFasta(PipelineStep):
 
     def run(self):
         input_fa_name = self.input_files_local[0][0]
+        if len(self.input_files_local) > 1:
+            input_fa_name = self.input_files_local[0][0]
+            nt_hit_summary_path, nr_hit_summary_path = self.input_files_local[1][2], self.input_files_local[2][2]
+        else:
+            # This is used in `short-read-mngs/experimental.wdl`
+            input_fa_name = self.input_files_local[0][0]
+            nt_hit_summary_path, nr_hit_summary_path = self.input_files_local[0][1], self.input_files_local[0][2]
 
         # Open lineage db
         lineage_db = s3.fetch_reference(
@@ -22,7 +29,7 @@ class PipelineStepGenerateTaxidFasta(PipelineStep):
             self.ref_dir_local,
             allow_s3mi=True)
 
-        with open(self.input_files_local[1][2]) as nt_hit_summary_f, open(self.input_files_local[2][2]) as nr_hit_summary_f:
+        with open(nt_hit_summary_path) as nt_hit_summary_f, open(nr_hit_summary_path) as nr_hit_summary_f:
             nr_hits_by_read_id = {row["read_id"]: (row["taxid"], row["level"]) for row in HitSummaryReader(nr_hit_summary_f)}
             nt_hits_by_read_id = {row["read_id"]: (row["taxid"], row["level"]) for row in HitSummaryReader(nt_hit_summary_f)}
 
