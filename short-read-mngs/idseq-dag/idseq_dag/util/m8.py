@@ -50,30 +50,28 @@ class _TSVWithSchmaBase(ABC):
         pass
 
     @classmethod
-    def _build_schema_map(cls) -> Dict[int, List[Tuple[str, Callable[[str], Any]]]]:
+    def _build_schema_map(cls) -> Tuple[Dict[int, List[Tuple[str, Callable[[str], Any]]]], Dict[str, int]]:
         schemas = cls._schemas()
         assert schemas, "_TSVWithSchemaReader requires at least one schema"
-        n = len(schemas[0])
-        schema_map = {n: schemas[0]}
+        n = 0
+        schema_map = {0: []}
+        field_to_schema = {}
         for schema in schemas[1:]:
             assert schema, "_TSVWithSchemaBase does not support empty schemas"
-            schema_map[n + len(schema)] = schema_map[n] + schema
             n += len(schema)
-        return schema_map
+            schema_map[n] = schema_map[n - len(schema)] + schema
+            for field in schema:
+                field_to_schema[field] = n
+        del schema_map[0]
+        return schema_map, field_to_schema
 
     @classmethod
     def fields(cls, num_columns) -> List[str]:
-        return [k for k, _ in cls._build_schema_map()[num_columns]]
+        return [k for k, _ in cls._build_schema_map()[0][num_columns]]
 
     def __init__(self, tsv_stream: TextIO) -> None:
         self._tsv_stream = tsv_stream
-        self._schema_map = self._build_schema_map()
-
-    def _schema(self, row):
-        if len(row) not in self._schema_map:
-            raise Exception(f"TSVWithSchema read/write error. Input: \"{row}\" has {len(row)} fields, no associated schema found in {self._schema_map}")
-        return self._schema_map[len(row)]
-
+        self._schema_map, self._field_to_schema = self._build_schema_map()
 
 class _TSVWithSchemaReader(_TSVWithSchmaBase, ABC):
     def __init__(self, tsv_stream: TextIO, *schemas: List[Tuple[str, Callable[[str], Any]]]) -> None:
@@ -88,16 +86,26 @@ class _TSVWithSchemaReader(_TSVWithSchmaBase, ABC):
     def __next__(self, *args) -> Dict[str, Any]:
         return next(self._generator, *args)
 
+    def _schema(self, row):
+        if len(row) not in self._schema_map:
+            raise Exception(f"_TSVWithSchemaReader error. Input: \"{row}\" has {len(row)} fields, no associated schema found in {self._schema_map}")
+        return self._schema_map[len(row)]
+
 class _TSVWithSchemaWriter(_TSVWithSchmaBase, ABC):
     def __init__(self, tsv_stream: TextIO, *schemas: List[Tuple[str, Callable[[str], Any]]]) -> None:
         super().__init__(tsv_stream, *schemas)
         self._writer = csv.writer(tsv_stream, delimiter="\t")
 
+    def _schema(self, row):
+        if len(row) in self._schema_map:
+            return self._schema_map[len(row)]
+        inclusive_schema = max(self._field_to_schema.get(field, 0) for field in row.keys())
+        if inclusive_schema not in self._schema_map:
+            raise Exception(f"_TSVWithSchemaWriter error. Input: \"{row}\" has {len(row)} fields, no associated schema or common fields found in {self._schema_map}")
+        return self._schema_map[inclusive_schema]
+
     def _dict_row_to_list(self, row: Dict[str, Any]) -> List[Any]:
-        try:
-            return [row[key] for (key, _) in self._schema(row)]
-        except KeyError as e:
-            raise Exception(f"_TSVWithSchemaWriter write error. Input: \"{row}\" has {len(row)} fields, associated schema: {self._schema_map[len(row)]} does not have key: {e}")
+        return [row.get(key) for (key, _) in self._schema(row)]
 
     def write_all(self, rows: Iterable[Dict[str, Any]]) -> None:
         self._writer.writerows(self._dict_row_to_list(row) for row in rows)
