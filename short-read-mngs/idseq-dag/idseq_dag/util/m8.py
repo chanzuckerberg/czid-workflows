@@ -440,10 +440,9 @@ def _call_hits_m8_work(input_blastn_6_path, lineage_map, accession2taxid_dict,
     # Generate output files. outf is the main output_m8 file and outf_sum is
     # the summary level info.
     emitted = set()
-    with open(output_blastn_6_path, "w") as blastn_6_out_f, open(output_summary, "w") as outf_sum, open(input_blastn_6_path) as input_blastn_6_f:
+    with open(output_blastn_6_path, "w") as blastn_6_out_f, open(output_summary, "w") as hit_summary_out_f, open(input_blastn_6_path) as input_blastn_6_f:
         blastn_6_writer = BlastnOutput6Writer(blastn_6_out_f)
-        # TODO: (tmorse) create sum file parser
-        outf_sum_writer = csv.writer(outf_sum, delimiter="\t")
+        hit_summary_writer = HitSummaryWriter(hit_summary_out_f)
         # Iterator over the lines of the m8 file. Emit the hit with the
         # best value that provides the most specific taxonomy
         # information. If there are multiple hits (also called multiple
@@ -479,20 +478,20 @@ def _call_hits_m8_work(input_blastn_6_path, lineage_map, accession2taxid_dict,
                     (species_taxid, genus_taxid, family_taxid) = get_lineage(
                         best_accession_id)
 
-                outf_sum_writer.writerow([
-                    read_id,
-                    hit_level,
-                    taxid,
-                    best_accession_id,
-                    species_taxid,
-                    genus_taxid,
-                    family_taxid,
-                ])
+                hit_summary_writer.write({
+                    "read_id": read_id,
+                    "level": hit_level,
+                    "taxid": taxid,
+                    "accession_id": best_accession_id,
+                    "species_taxid": species_taxid,
+                    "genus_taxid": genus_taxid,
+                    "family_taxid": family_taxid,
+                })
 
 
 @command.run_in_subprocess
 def generate_taxon_count_json_from_m8(
-        blastn_6_path, hit_level_file, count_type, lineage_map_path,
+        blastn_6_path, hit_level_path, count_type, lineage_map_path,
         deuterostome_path, taxon_whitelist_path, taxon_blacklist_path,
         duplicate_cluster_sizes_path, output_json_file):
     # Parse through hit file and m8 input file and format a JSON file with
@@ -504,34 +503,29 @@ def generate_taxon_count_json_from_m8(
         deuterostome_path, taxon_whitelist_path, taxon_blacklist_path)
     # Setup
     aggregation = {}
-    with open(hit_level_file, 'r', encoding='utf-8') as hit_f, \
-         open_file_db_by_extension(lineage_map_path) as lineage_map, \
-         open(blastn_6_path) as blastn_6_f:
+    with open(hit_level_path) as hit_level_f, \
+         open(blastn_6_path) as blastn_6_f, \
+         open_file_db_by_extension(lineage_map_path) as lineage_map:
 
-        # Lines in m8_file and hit_level_file correspond (same read_id)
-        blastn_6_reader = BlastnOutput6Reader(blastn_6_f)
-        # TODO (tmorse): make schema for hit reader
-        hit_reader = csv.reader(hit_f, delimiter="\t")
-        hit_row = next(hit_reader, None)
-        blastn_6_row = next(blastn_6_reader, None)
         num_ranks = len(lineage.NULL_LINEAGE)
         # See https://en.wikipedia.org/wiki/Double-precision_floating-point_format
         MIN_NORMAL_POSITIVE_DOUBLE = 2.0**-1022
 
         with log.log_context("generate_taxon_count_json_from_m8", {"substep": "loop_1"}):
-            while hit_row and blastn_6_row:
+            # Lines in m8_file and hit_level_file correspond (same read_id)
+            for hit_row, blastn_6_row in zip(HitSummaryReader(hit_level_f), BlastnOutput6Reader(blastn_6_f)):
                 # Retrieve data values from files
-                read_id = hit_row[0]
-                hit_level = hit_row[1]
-                hit_taxid = hit_row[2]
-                if int(hit_level) < 0:
-                    log.write('int(hit_level) < 0', debug=True)
-                hit_source_count_type = hit_row[13] if len(hit_row) >= 14 else None
+                read_id = hit_row["read_id"]
+                hit_level = hit_row["level"]
+                hit_taxid = hit_row["taxid"]
+                if hit_level < 0:
+                    log.write('hit_level < 0', debug=True)
+                hit_source_count_type = hit_row.get("source_count_type")
 
                 msg = "read_ids in %s and %s do not match: %s vs. %s" % (
-                    os.path.basename(blastn_6_path), os.path.basename(hit_level_file),
-                    blastn_6_row["qseqid"], hit_row[0])
-                assert blastn_6_row["qseqid"] == hit_row[0], msg
+                    os.path.basename(blastn_6_path), os.path.basename(hit_level_path),
+                    blastn_6_row["qseqid"], read_id)
+                assert blastn_6_row["qseqid"] == read_id, msg
                 percent_identity = blastn_6_row["pident"]
                 alignment_length = blastn_6_row["length"]
 
@@ -543,7 +537,7 @@ def generate_taxon_count_json_from_m8(
                     alignment_length *= 3
                 e_value = blastn_6_row["evalue"]
 
-                # These have been filtered out before the creation of m8_f and hit_f
+                # These have been filtered out before the creation of blastn_6_f and hit_level_f
                 assert alignment_length > 0
                 assert -0.25 < percent_identity < 100.25
                 assert e_value == e_value
@@ -586,9 +580,6 @@ def generate_taxon_count_json_from_m8(
                             agg_bucket.setdefault('source_count_type', set()).add(hit_source_count_type)
                         # Chomp off the lowest rank as we aggregate up the tree
                         agg_key = agg_key[1:]
-
-                hit_row = next(hit_reader, None)
-                blastn_6_row = next(blastn_6_reader, None)
 
     # Produce the final output
     taxon_counts_attributes = []
