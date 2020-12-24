@@ -14,7 +14,8 @@ from idseq_dag.util.trace_lock import TraceLock
 from idseq_dag.steps.run_assembly import PipelineStepRunAssembly
 from idseq_dag.util.count import READ_COUNTING_MODE, ReadCountingMode, get_read_cluster_size, load_duplicate_cluster_sizes
 from idseq_dag.util.lineage import DEFAULT_BLACKLIST_S3, DEFAULT_WHITELIST_S3
-from idseq_dag.util.m8 import HitSummaryReader, HitSummaryWriter, BlastnOutput6Reader, BlastnOutput6Writer, MIN_CONTIG_SIZE, NT_MIN_ALIGNMENT_LEN, MAX_EVALUE_THRESHOLD
+from idseq_dag.util.m8 import MIN_CONTIG_SIZE, NT_MIN_ALIGNMENT_LEN, MAX_EVALUE_THRESHOLD
+from idseq_dag.util.parsing import HitSummaryReader, HitSummaryWriter, BlastnOutput6Reader, BlastnOutput6Writer
 
 
 MIN_REF_FASTA_SIZE = 25
@@ -369,7 +370,7 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
         added_reads = {}
 
         with open(blast_top_blastn_6_path) as blast_top_blastn_6_f:
-            for row in m8.BlastnOutput6Reader(blast_top_blastn_6_f):
+            for row in BlastnOutput6Reader(blast_top_blastn_6_f):
                 contig_id = row["qseqid"]
                 accession_id = row["sseqid"]
                 contig2accession[contig_id] = (accession_id, row)
@@ -438,7 +439,7 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
                     blast_m8,
                     "-outfmt",
                     # TODO: (tmorse) make this sensible
-                    '6 ' + ' '.join(m8.BlastnOutput6Reader.fields("nt")),
+                    '6 ' + ' '.join(BlastnOutput6Reader.fields("nt")),
                     '-evalue',
                     1e-10,
                     '-max_target_seqs',
@@ -501,7 +502,7 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
     def get_top_m8_nr(blast_output, blast_top_blastn_6_path, max_evalue):
         ''' Get top m8 file entry for each contig from blast_output and output to blast_top_m8 '''
         with open(blast_top_blastn_6_path, "w") as blast_top_blastn_6_f:
-            m8.BlastnOutput6Writer(blast_top_blastn_6_f).write_all(
+            BlastnOutput6Writer(blast_top_blastn_6_f).write_all(
                 PipelineStepBlastContigs.optimal_hit_for_each_query_nr(blast_output, max_evalue)
             )
 
@@ -512,7 +513,7 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
 
         with open(blast_output_path) as blastn_6_f:
             # For each contig, get the alignments that have the best total score (may be multiple if there are ties).
-            for alignment in m8.BlastnOutput6Reader(blastn_6_f):
+            for alignment in BlastnOutput6Reader(blastn_6_f):
                 if alignment["evalue"] > max_evalue:
                     continue
                 query = alignment["qseqid"]
@@ -549,7 +550,7 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
         previously_seen_queries = set()
         with open(blast_output_path) as blastn_6_f:
             # Please see comments explaining the definition of "hsp" elsewhere in this file.
-            for hsp in m8.BlastnOutput6Reader(blastn_6_f):
+            for hsp in BlastnOutput6Reader(blastn_6_f):
                 # filter local alignment HSPs based on minimum length and sequence similarity
                 if hsp["length"] < min_alignment_length:
                     continue
@@ -630,6 +631,6 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
 
         # Output the optimal hit for each query.
         with open(blast_top_blastn_6_path, "w") as blast_top_blastn_6_f:
-            m8.BlastnOutput6Writer(blast_top_blastn_6_f).write_all(
+            BlastnOutput6Writer(blast_top_blastn_6_f).write_all(
                 PipelineStepBlastContigs.optimal_hit_for_each_query_nt(blast_output, min_alignment_length, min_pident, max_evalue)
             )

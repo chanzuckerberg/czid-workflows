@@ -7,7 +7,8 @@ import idseq_dag.util.log as log
 
 from idseq_dag.engine.pipeline_step import PipelineStep
 from idseq_dag.util.lineage import DEFAULT_BLACKLIST_S3, DEFAULT_WHITELIST_S3
-from idseq_dag.util.m8 import HitSummaryWriter, BlastnOutput6Writer, generate_taxon_count_json_from_m8, HitSummaryReader, BlastnOutput6Reader
+from idseq_dag.util.m8 import generate_taxon_count_json_from_m8
+from idseq_dag.util.parsing import HitSummaryWriter, BlastnOutput6Writer, HitSummaryReader, BlastnOutput6Reader
 from idseq_dag.util.s3 import fetch_reference
 
 

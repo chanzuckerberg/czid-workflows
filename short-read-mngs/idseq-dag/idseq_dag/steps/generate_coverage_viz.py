@@ -6,12 +6,12 @@ from collections import defaultdict
 
 import idseq_dag.util.command as command
 import idseq_dag.util.log as log
-import idseq_dag.util.m8 as m8
 import idseq_dag.util.s3 as s3
 
 from idseq_dag.engine.pipeline_step import PipelineStep
 from idseq_dag.util.dict import open_file_db_by_extension
 from idseq_dag.util.m8 import MIN_CONTIG_SIZE
+from idseq_dag.util.parsing import BlastnOutput6Reader
 
 # These constants can be overridden with the additional_attributes dict:
 # The maximum number of bins to divide the accession length into when computing coverage.
@@ -308,7 +308,7 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
             return hits
 
         with open(blastn_6_path) as blastn_6_f:
-            for hit in m8.BlastnOutput6Reader(blastn_6_f):
+            for hit in BlastnOutput6Reader(blastn_6_f):
 
                 if hit["qseqid"] in valid_hits:
                     # Blast output is per HSP, yet the hit represents a set of HSPs,
