@@ -45,7 +45,7 @@ class PipelineStepGenerateTaxidFasta(PipelineStep):
                 fields += ["genus_nr", nr_taxid_genus, "genus_nt", nt_taxid_genus]
                 fields += ["species_nr", nr_taxid_species, "species_nt", nt_taxid_species]
                 fields += [annotated_read_id]
-                new_read_name = ('>' + ':'.join(fields) + '\n').encode()
+                new_read_name = ('>' + ':'.join(fields) + '\n')
 
                 output_fa.write(new_read_name)
                 output_fa.write(read.sequence)
