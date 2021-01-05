@@ -24,11 +24,11 @@ import idseq_dag.util.count as count
 import idseq_dag.util.log as log
 import idseq_dag.util.m8 as m8
 
-from idseq_dag.util.s3 import fetch_reference
+from idseq_dag.util.s3 import fetch_from_s3, fetch_reference
 from idseq_dag.util.trace_lock import TraceLock
 
 from idseq_dag.util.lineage import DEFAULT_BLACKLIST_S3, DEFAULT_WHITELIST_S3
-from idseq_dag.util.parsing import NT_MIN_ALIGNMENT_LEN
+from idseq_dag.util.m8 import NT_MIN_ALIGNMENT_LEN
 
 MAX_CHUNKS_IN_FLIGHT = 16
 CHUNK_MAX_ATTEMPTS = 3

@@ -14,6 +14,10 @@ from idseq_dag.util.count import READ_COUNTING_MODE, ReadCountingMode, get_read_
 from idseq_dag.util.dict import open_file_db_by_extension
 from idseq_dag.util.parsing import BlastnOutput6NTRerankedReader, BlastnOutput6Reader, BlastnOutput6Writer, HitSummaryMergedReader, HitSummaryReader, HitSummaryWriter
 
+# NT alginments with shorter length are associated with a high rate of false positives.
+# NR doesn't have this problem because Rapsearch2 contains an equivalent filter.
+# Nevertheless, it may be useful to re-filter blastx results.
+NT_MIN_ALIGNMENT_LEN = 36
 
 # The minimum read count for a valid contig. We ignore contigs below this read count in most downstream analyses.
 # This constant is hardcoded in at least 4 places in idseq-web.  TODO: Make it a DAG parameter.
