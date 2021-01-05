@@ -4,7 +4,25 @@ from typing import Any, Iterable, Optional, Sequence, Text, TextIO, Tuple
 
 # Alignments with e-values greater than 1 are low-quality alignments and associated with
 # a high rate of false-positives. These should be filtered at all alignment steps.
-MAX_EVALUE_THRESHOLD = 1
+_MAX_EVALUE_THRESHOLD = 1
+
+# NT alginments with shorter length are associated with a high rate of false positives.
+# NR doesn't have this problem because Rapsearch2 contains an equivalent filter.
+# Nevertheless, it may be useful to re-filter blastx results.
+NT_MIN_ALIGNMENT_LENGTH = 36
+
+# Ignore NT local alignments (in blastn) with sequence similarity below 80%.
+#
+# Considerations:
+#
+#   Should not exceed the equivalent threshold for GSNAP.  Otherwise, contigs that
+#   fail the higher BLAST standard would fall back on inferior results from GSNAP.
+#
+#   Experts agree that any NT match with less than 80% identity can be safely ignored.
+#   For such highly divergent sequences, we should hope protein search finds a better
+#   match than nucleotide search.
+#
+_NT_MIN_PIDENT = 80
 
 
 class _TypedDictTSVReader(DictReader):
@@ -77,9 +95,19 @@ class _BlastnOutput6ReaderBase(_TypedDictTSVReader):
     1. Ignores comments (lines starting with '#') in tsv files, rapsearch2 adds them
     2. Supports filtering rows that we consider invalid
     """
-    def __init__(self, f: Iterable[Text], schema: Sequence[Tuple[str, type]], filter_invalid: bool = False, min_alignment_length: int = 0):
+    def __init__(
+        self,
+        f: Iterable[Text],
+        schema: Sequence[Tuple[str, type]],
+        filter_invalid: bool = False,
+        min_alignment_length: int = 0,
+        min_pident: float = -0.25,
+        max_pident: float = 100.25,
+    ):
         self._filter_invalid = filter_invalid
         self._min_alignment_length = min_alignment_length
+        self._min_pident = min_pident
+        self._max_pident = max_pident
 
         # The output of rapsearch2 contains comments that start with '#', these should be skipped
         filtered_stream = (line for line in f if not line.startswith("#"))
@@ -110,9 +138,9 @@ class _BlastnOutput6ReaderBase(_TypedDictTSVReader):
         ###
         return all([
             row["length"] >= self._min_alignment_length,
-            -0.25 < row["pident"] < 100.25,
+            self._min_pident < row["pident"] < self._max_pident,
             row["evalue"] == row["evalue"],
-            row["evalue"] <= MAX_EVALUE_THRESHOLD,
+            row["evalue"] <= _MAX_EVALUE_THRESHOLD,
         ])
 
 
@@ -133,8 +161,14 @@ class BlastnOutput6Writer(_TypedDictTSVWriter):
 
 
 class BlastnOutput6NTReader(_BlastnOutput6ReaderBase):
-    def __init__(self, f: Iterable[Text], filter_invalid: bool = False, min_alignment_length: int = 0):
-        super().__init__(f, _BLASTN_OUTPUT_6_NT_SCHEMA, filter_invalid, min_alignment_length)
+    def __init__(self, f: Iterable[Text]):
+        super().__init__(
+            f,
+            _BLASTN_OUTPUT_6_NT_SCHEMA,
+            filter_invalid=True,
+            min_alignment_length=NT_MIN_ALIGNMENT_LENGTH,
+            min_pident=_NT_MIN_PIDENT,
+        )
 
 
 class BlastnOutput6NTWriter(_TypedDictTSVWriter):

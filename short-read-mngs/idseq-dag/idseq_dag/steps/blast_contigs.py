@@ -14,12 +14,12 @@ from idseq_dag.util.trace_lock import TraceLock
 from idseq_dag.steps.run_assembly import PipelineStepRunAssembly
 from idseq_dag.util.count import READ_COUNTING_MODE, ReadCountingMode, get_read_cluster_size, load_duplicate_cluster_sizes
 from idseq_dag.util.lineage import DEFAULT_BLACKLIST_S3, DEFAULT_WHITELIST_S3
-from idseq_dag.util.m8 import MIN_CONTIG_SIZE, NT_MIN_ALIGNMENT_LEN
+from idseq_dag.util.m8 import MIN_CONTIG_SIZE
 from idseq_dag.util.parsing import BlastnOutput6Reader, BlastnOutput6Writer
 from idseq_dag.util.parsing import BlastnOutput6NTReader
 from idseq_dag.util.parsing import BlastnOutput6NTRerankedReader, BlastnOutput6NTRerankedWriter
 from idseq_dag.util.parsing import HitSummaryReader, HitSummaryMergedWriter
-from idseq_dag.util.parsing import BLASTN_OUTPUT_6_NT_FIELDS, MAX_EVALUE_THRESHOLD
+from idseq_dag.util.parsing import BLASTN_OUTPUT_6_NT_FIELDS
 
 
 MIN_REF_FASTA_SIZE = 25
@@ -28,19 +28,6 @@ MIN_ASSEMBLED_CONTIG_SIZE = 25
 # When composing a query cover from non-overlapping fragments, consider fragments
 # that overlap less than this fraction to be disjoint.
 NT_MIN_OVERLAP_FRACTION = 0.1
-
-# Ignore NT local alignments (in blastn) with sequence similarity below 80%.
-#
-# Considerations:
-#
-#   Should not exceed the equivalent threshold for GSNAP.  Otherwise, contigs that
-#   fail the higher BLAST standard would fall back on inferior results from GSNAP.
-#
-#   Experts agree that any NT match with less than 80% identity can be safely ignored.
-#   For such highly divergent sequences, we should hope protein search finds a better
-#   match than nucleotide search.
-#
-NT_MIN_PIDENT = 80
 
 
 def intervals_overlap(p, q):
@@ -416,9 +403,6 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
     def run_blast_nt(blast_index_path, blast_m8, assembled_contig, reference_fasta, blast_top_m8):
         blast_type = 'nucl'
         blast_command = 'blastn'
-        min_alignment_length = NT_MIN_ALIGNMENT_LEN
-        min_pident = NT_MIN_PIDENT
-        max_evalue = MAX_EVALUE_THRESHOLD
         command.execute(
             command_patterns.SingleCommand(
                 cmd="makeblastdb",
@@ -460,13 +444,12 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
             )
         )
         # further processing of getting the top m8 entry for each contig.
-        PipelineStepBlastContigs.get_top_m8_nt(blast_m8, blast_top_m8, min_alignment_length, min_pident, max_evalue)
+        PipelineStepBlastContigs.get_top_m8_nt(blast_m8, blast_top_m8)
 
     @staticmethod
     def run_blast_nr(blast_index_path, blast_m8, assembled_contig, reference_fasta, blast_top_m8):
         blast_type = 'prot'
         blast_command = 'blastx'
-        max_evalue = MAX_EVALUE_THRESHOLD
         command.execute(
             command_patterns.SingleCommand(
                 cmd="makeblastdb",
@@ -500,26 +483,24 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
             )
         )
         # further processing of getting the top m8 entry for each contig.
-        PipelineStepBlastContigs.get_top_m8_nr(blast_m8, blast_top_m8, max_evalue)
+        PipelineStepBlastContigs.get_top_m8_nr(blast_m8, blast_top_m8)
 
     @staticmethod
-    def get_top_m8_nr(blast_output, blast_top_blastn_6_path, max_evalue):
+    def get_top_m8_nr(blast_output, blast_top_blastn_6_path):
         ''' Get top m8 file entry for each contig from blast_output and output to blast_top_m8 '''
         with open(blast_top_blastn_6_path, "w") as blast_top_blastn_6_f:
             BlastnOutput6Writer(blast_top_blastn_6_f).writerows(
-                PipelineStepBlastContigs.optimal_hit_for_each_query_nr(blast_output, max_evalue)
+                PipelineStepBlastContigs.optimal_hit_for_each_query_nr(blast_output)
             )
 
     @staticmethod
-    def optimal_hit_for_each_query_nr(blast_output_path, max_evalue):
+    def optimal_hit_for_each_query_nr(blast_output_path):
         contigs_to_best_alignments = defaultdict(list)
         accession_counts = defaultdict(lambda: 0)
 
         with open(blast_output_path) as blastn_6_f:
             # For each contig, get the alignments that have the best total score (may be multiple if there are ties).
-            for alignment in BlastnOutput6Reader(blastn_6_f):
-                if alignment["evalue"] > max_evalue:
-                    continue
+            for alignment in BlastnOutput6Reader(blastn_6_f, filter_invalid=True):
                 query = alignment["qseqid"]
                 best_alignments = contigs_to_best_alignments[query]
 
@@ -545,7 +526,7 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
                 yield optimal_alignment
 
     @staticmethod
-    def filter_and_group_hits_by_query(blast_output_path, min_alignment_length, min_pident, max_evalue):
+    def filter_and_group_hits_by_query(blast_output_path):
         # Filter and group results by query, yielding one result group at a time.
         # A result group consists of all hits for a query, grouped by subject.
         # Please see comment in get_top_m8_nt for more context.
@@ -555,13 +536,6 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
         with open(blast_output_path) as blastn_6_f:
             # Please see comments explaining the definition of "hsp" elsewhere in this file.
             for hsp in BlastnOutput6NTReader(blastn_6_f):
-                # filter local alignment HSPs based on minimum length and sequence similarity
-                if hsp["length"] < min_alignment_length:
-                    continue
-                if hsp["pident"] < min_pident:
-                    continue
-                if hsp["evalue"] > max_evalue:
-                    continue
                 query, subject = hsp["qseqid"], hsp["sseqid"]
                 if query != current_query:
                     assert query not in previously_seen_queries, "blastn output appears out of order, please resort by (qseqid, sseqid, score)"
@@ -576,12 +550,12 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
 
     @staticmethod
     # An iterator that, for contig, yields to optimal hit for the contig in the nt blast_output.
-    def optimal_hit_for_each_query_nt(blast_output, min_alignment_length, min_pident, max_evalue):
+    def optimal_hit_for_each_query_nt(blast_output):
         contigs_to_blast_candidates = {}
         accession_counts = defaultdict(lambda: 0)
 
         # For each contig, get the collection of blast candidates that have the best total score (may be multiple if there are ties).
-        for query_hits in PipelineStepBlastContigs.filter_and_group_hits_by_query(blast_output, min_alignment_length, min_pident, max_evalue):
+        for query_hits in PipelineStepBlastContigs.filter_and_group_hits_by_query(blast_output):
             best_hits = []
             for _subject, hit_fragments in query_hits.items():
                 # For NT, we take a special approach where we try to find a subset of disjoint HSPs
@@ -613,7 +587,7 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
             yield optimal_hit.summary()
 
     @staticmethod
-    def get_top_m8_nt(blast_output, blast_top_blastn_6_path, min_alignment_length, min_pident, max_evalue):
+    def get_top_m8_nt(blast_output, blast_top_blastn_6_path):
         '''
         For each contig Q (query) and reference S (subject), extend the highest-scoring
         fragment alignment of Q to S with other *non-overlapping* fragments as far as
@@ -636,5 +610,5 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
         # Output the optimal hit for each query.
         with open(blast_top_blastn_6_path, "w") as blast_top_blastn_6_f:
             BlastnOutput6NTRerankedWriter(blast_top_blastn_6_f).writerows(
-                PipelineStepBlastContigs.optimal_hit_for_each_query_nt(blast_output, min_alignment_length, min_pident, max_evalue)
+                PipelineStepBlastContigs.optimal_hit_for_each_query_nt(blast_output)
             )
