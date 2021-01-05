@@ -8,7 +8,7 @@ import idseq_dag.util.log as log
 from idseq_dag.engine.pipeline_step import PipelineStep
 from idseq_dag.util.lineage import DEFAULT_BLACKLIST_S3, DEFAULT_WHITELIST_S3
 from idseq_dag.util.m8 import generate_taxon_count_json_from_m8
-from idseq_dag.util.parsing import HitSummaryWriter, BlastnOutput6Writer, HitSummaryReader, BlastnOutput6Reader
+from idseq_dag.util.parsing import HitSummaryMergedReader, HitSummaryMergedWriter, BlastnOutput6NTRerankedReader, BlastnOutput6NTRerankedWriter
 from idseq_dag.util.s3 import fetch_reference
 
 
@@ -38,21 +38,21 @@ class ComputeMergedTaxonCounts(PipelineStep):
             # (1) if processing time bottleneck, load all the data to memory
             # (2) if memory bottleneck, going through nt first, since that will save us from storing
             #     results in memory for all the reads that get their hit from NT contigs
-            for nr_hit_dict in HitSummaryReader(nr_hit_summary_f):
+            for nr_hit_dict in HitSummaryMergedReader(nr_hit_summary_f):
                 nr_alignment_per_read[nr_hit_dict["read_id"]] = SpeciesAlignmentResults(
                     contig=nr_hit_dict.get("contig_species_taxid"),
                     read=nr_hit_dict.get("species_taxid"),
                 )
 
         with open(self.outputs.merged_m8_filename, "w") as output_blastn_6_f, open(self.outputs.merged_hit_filename, "w") as output_hit_summary_f:
-            output_blastn_6_writer = BlastnOutput6Writer(output_blastn_6_f)
-            output_hit_summary_writer = HitSummaryWriter(output_hit_summary_f)
+            output_blastn_6_writer = BlastnOutput6NTRerankedWriter(output_blastn_6_f)
+            output_hit_summary_writer = HitSummaryMergedWriter(output_hit_summary_f)
 
             with open(self.inputs.nt_m8) as input_nt_blastn_6_f, open(self.inputs.nt_hitsummary2_tab) as input_nt_hit_summary_f:
                 # first pass for NR and output to m8 files if assignment should come from NT
                 for nt_hit_dict, nt_m8_dict in zip(
-                    HitSummaryReader(input_nt_hit_summary_f),
-                    BlastnOutput6Reader(input_nt_blastn_6_f),
+                    HitSummaryMergedReader(input_nt_hit_summary_f),
+                    BlastnOutput6NTRerankedReader(input_nt_blastn_6_f),
                 ):
                     # assert files match
                     assert nt_hit_dict['read_id'] == nt_m8_dict["qseqid"], f"Mismatched m8 and hit summary files for nt [{nt_hit_dict['read_id']} != {nt_m8_dict['qseqid']}]"
@@ -67,9 +67,9 @@ class ComputeMergedTaxonCounts(PipelineStep):
                     has_nt_read_hit = nt_alignment.read
                     has_nr_read_hit = nr_alignment and nr_alignment.read
                     if has_nt_contig_hit or (not has_nr_contig_hit and has_nt_read_hit):
-                        output_blastn_6_writer.write(nt_m8_dict)
+                        output_blastn_6_writer.writerow(nt_m8_dict)
                         nt_hit_dict["source_count_type"] = "NT"
-                        output_hit_summary_writer.write(nt_hit_dict)
+                        output_hit_summary_writer.writerow(nt_hit_dict)
                         if nr_alignment:
                             del nr_alignment_per_read[nt_hit_dict["read_id"]]
                     elif has_nr_contig_hit or has_nr_read_hit:
@@ -80,8 +80,8 @@ class ComputeMergedTaxonCounts(PipelineStep):
             with open(self.inputs.nt_m8) as input_nt_blastn_6_f, open(self.inputs.nt_hitsummary2_tab) as input_nt_hit_summary_f:
                 # dump remaining reads from NR
                 for nr_hit_dict, nr_m8_dict in zip(
-                    HitSummaryReader(input_nt_hit_summary_f),
-                    BlastnOutput6Reader(input_nt_blastn_6_f),
+                    HitSummaryMergedReader(input_nt_hit_summary_f),
+                    BlastnOutput6NTRerankedReader(input_nt_blastn_6_f),
                 ):
                     # assert files match
                     assert nr_hit_dict['read_id'] == nr_m8_dict["qseqid"], f"Mismatched m8 and hit summary files for NR [{nr_hit_dict['read_id']} {nr_m8_dict['qseqid']}]."
@@ -89,9 +89,9 @@ class ComputeMergedTaxonCounts(PipelineStep):
                     nr_alignment = nr_alignment_per_read.get(nr_hit_dict["read_id"])
 
                     if nr_alignment:
-                        output_blastn_6_writer.write(nr_m8_dict)
+                        output_blastn_6_writer.writerow(nr_m8_dict)
                         nr_hit_dict["source_count_type"] = "NR"
-                        output_hit_summary_writer.write(nr_hit_dict)
+                        output_hit_summary_writer.writerow(nr_hit_dict)
 
         # Create new merged m8 and hit summary files
         self.create_taxon_count_file()

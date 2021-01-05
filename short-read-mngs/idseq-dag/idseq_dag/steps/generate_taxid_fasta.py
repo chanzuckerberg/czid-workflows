@@ -1,5 +1,5 @@
 from typing import List
-from idseq_dag.util.parsing import HitSummaryReader
+from idseq_dag.util.parsing import HitSummaryMergedReader
 from idseq_dag.engine.pipeline_step import PipelineStep
 import idseq_dag.util.lineage as lineage
 import idseq_dag.util.s3 as s3
@@ -30,8 +30,8 @@ class PipelineStepGenerateTaxidFasta(PipelineStep):
             allow_s3mi=True)
 
         with open(nt_hit_summary_path) as nt_hit_summary_f, open(nr_hit_summary_path) as nr_hit_summary_f:
-            nr_hits_by_read_id = {row["read_id"]: (row["taxid"], row["level"]) for row in HitSummaryReader(nr_hit_summary_f)}
-            nt_hits_by_read_id = {row["read_id"]: (row["taxid"], row["level"]) for row in HitSummaryReader(nt_hit_summary_f)}
+            nr_hits_by_read_id = {row["read_id"]: (row["taxid"], row["level"]) for row in HitSummaryMergedReader(nr_hit_summary_f)}
+            nt_hits_by_read_id = {row["read_id"]: (row["taxid"], row["level"]) for row in HitSummaryMergedReader(nt_hit_summary_f)}
 
         with open(self.output_files_local()[0], "w") as output_fa, \
              open_file_db_by_extension(lineage_db) as lineage_map:  # noqa
@@ -40,6 +40,7 @@ class PipelineStepGenerateTaxidFasta(PipelineStep):
                 # :12720:8743/2"
                 # Translate the read information into our custom format with fake
                 # taxids at non-specific hit levels.
+                # TODO: (tmorse) fasta parsing
                 annotated_read_id = read.header.lstrip('>')
                 read_id = annotated_read_id.split(":", 4)[-1]
 

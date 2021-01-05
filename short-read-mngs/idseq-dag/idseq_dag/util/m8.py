@@ -12,7 +12,7 @@ import idseq_dag.util.log as log
 
 from idseq_dag.util.count import READ_COUNTING_MODE, ReadCountingMode, get_read_cluster_size, load_duplicate_cluster_sizes
 from idseq_dag.util.dict import open_file_db_by_extension
-from idseq_dag.util.parsing import BlastnOutput6Reader, BlastnOutput6Writer, HitSummaryReader, HitSummaryWriter
+from idseq_dag.util.parsing import BlastnOutput6NTRerankedReader, BlastnOutput6Reader, BlastnOutput6Writer, HitSummaryMergedReader, HitSummaryReader, HitSummaryWriter
 
 # NT alginments with shorter length are associated with a high rate of false positives.
 # NR doesn't have this problem because Rapsearch2 contains an equivalent filter.
@@ -263,7 +263,7 @@ def _call_hits_m8_work(input_blastn_6_path, lineage_map, accession2taxid_dict,
                 # Read out the hit with the best value that provides the
                 # most specific taxonomy information.
                 emitted.add(read_id)
-                blastn_6_writer.write(row)
+                blastn_6_writer.writerow(row)
                 species_taxid = -1
                 genus_taxid = -1
                 family_taxid = -1
@@ -271,7 +271,7 @@ def _call_hits_m8_work(input_blastn_6_path, lineage_map, accession2taxid_dict,
                     (species_taxid, genus_taxid, family_taxid) = get_lineage(
                         best_accession_id)
 
-                hit_summary_writer.write({
+                hit_summary_writer.writerow({
                     "read_id": read_id,
                     "level": hit_level,
                     "taxid": taxid,
@@ -306,7 +306,7 @@ def generate_taxon_count_json_from_m8(
 
         with log.log_context("generate_taxon_count_json_from_m8", {"substep": "loop_1"}):
             # Lines in m8_file and hit_level_file correspond (same read_id)
-            for hit_row, blastn_6_row in zip(HitSummaryReader(hit_level_f), BlastnOutput6Reader(blastn_6_f)):
+            for hit_row, blastn_6_row in zip(HitSummaryMergedReader(hit_level_f), BlastnOutput6NTRerankedReader(blastn_6_f)):
                 # Retrieve data values from files
                 read_id = hit_row["read_id"]
                 hit_level = hit_row["level"]
