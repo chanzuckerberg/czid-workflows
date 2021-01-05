@@ -1,6 +1,5 @@
 import unittest
 from tempfile import TemporaryFile
-from os.path import dirname, join
 
 from idseq_dag.util.parsing import BlastnOutput6Reader, BlastnOutput6Writer
 
@@ -13,6 +12,7 @@ class TestBlastn6Reader(unittest.TestCase):
         with open(blastn_input_6) as blastn_input_6_f:
             rows = list(BlastnOutput6Reader(blastn_input_6_f))
             self.assertEqual(len(rows), 50)
+            self.assertEqual(rows[0]["pident"], 100.0)
 
     def test_writing(self):
         with TemporaryFile("w") as f:
@@ -50,3 +50,7 @@ class TestBlastn6Reader(unittest.TestCase):
         rows = list(BlastnOutput6Reader(blastn_input_6, filter_invalid=True))
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]["qseqid"], "1")
+
+    def test_read_error(self):
+        blastn_input_6 = [""]
+        self.assertRaises(Exception, lambda : next(BlastnOutput6Reader(blastn_input_6)))
