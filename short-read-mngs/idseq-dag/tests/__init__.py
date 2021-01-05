@@ -9,7 +9,6 @@ from .run_gsnap_filter import RunGsnapFilterTest
 from .generate_taxid_fasta import GenerateTaxidFastaTest
 from .generate_taxid_locator import GenerateTaxidLocatorTest
 from .generate_alignment_viz import GenerateAlignmentVizTest
-from .test_samples_on_local_steps import TestSamplesOnLocalSteps
 
 import idseq_dag.util.log as log
 
