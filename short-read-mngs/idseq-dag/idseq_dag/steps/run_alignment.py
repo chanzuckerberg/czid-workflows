@@ -28,7 +28,7 @@ from idseq_dag.util.s3 import fetch_reference
 from idseq_dag.util.trace_lock import TraceLock
 
 from idseq_dag.util.lineage import DEFAULT_BLACKLIST_S3, DEFAULT_WHITELIST_S3
-from idseq_dag.util.parsing import NT_MIN_ALIGNMENT_LEN
+from idseq_dag.util.parsing import NT_MIN_ALIGNMENT_LENGTH
 
 MAX_CHUNKS_IN_FLIGHT = 16
 CHUNK_MAX_ATTEMPTS = 3
@@ -167,7 +167,7 @@ class PipelineStepRunAlignment(PipelineStep):
         lineage_db = fetch_reference(self.additional_files["lineage_db"], self.ref_dir_local)
         accession2taxid_db = fetch_reference(self.additional_files["accession2taxid_db"], self.ref_dir_local, allow_s3mi=True)
 
-        min_alignment_length = NT_MIN_ALIGNMENT_LEN if self.alignment_algorithm == 'gsnap' else 0
+        min_alignment_length = NT_MIN_ALIGNMENT_LENGTH if self.alignment_algorithm == 'gsnap' else 0
         m8.call_hits_m8(output_m8, lineage_db, accession2taxid_db,
                         deduped_output_m8, output_hitsummary, min_alignment_length)
 
