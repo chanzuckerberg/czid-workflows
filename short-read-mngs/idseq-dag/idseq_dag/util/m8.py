@@ -264,6 +264,10 @@ def _call_hits_m8_work(input_blastn_6_path, lineage_map, accession2taxid_dict,
             # Read the fields from the summary level info
             best_e_value, _, (hit_level, taxid,
                               best_accession_id) = summary[read_id]
+            try:
+                int(taxid)
+            except:
+                raise Exception(f"AAAAAAAAAAAAAAAAAAAAAAAA '{taxid}', {hit_level}, {best_accession_id}")
             if best_e_value == e_value and best_accession_id in (None, accession_id) and should_keep(taxid):
                 # Read out the hit with the best value that provides the
                 # most specific taxonomy information.
