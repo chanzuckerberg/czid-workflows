@@ -168,23 +168,26 @@ class PipelineStepRunAlignment(PipelineStep):
         accession2taxid_db = fetch_reference(self.additional_files["accession2taxid_db"], self.ref_dir_local, allow_s3mi=True)
 
         min_alignment_length = NT_MIN_ALIGNMENT_LEN if self.alignment_algorithm == 'gsnap' else 0
-        m8.call_hits_m8(output_m8, lineage_db, accession2taxid_db,
-                        deduped_output_m8, output_hitsummary, min_alignment_length)
 
-        db_type = 'NT' if self.alignment_algorithm == 'gsnap' else 'NR'
+        blacklist_s3_file = self.additional_files.get('taxon_blacklist', DEFAULT_BLACKLIST_S3)
+        taxon_blacklist = fetch_reference(blacklist_s3_file, self.ref_dir_local)
+
+        taxon_whitelist = None
+
+        if self.additional_attributes.get("use_taxon_whitelist"):
+            taxon_whitelist = fetch_reference(self.additional_files.get("taxon_whitelist", DEFAULT_WHITELIST_S3),
+                                              self.ref_dir_local)
 
         deuterostome_db = None
         if self.additional_files.get("deuterostome_db"):
             deuterostome_db = fetch_reference(self.additional_files["deuterostome_db"],
                                               self.ref_dir_local, allow_s3mi=True)
 
-        blacklist_s3_file = self.additional_files.get('taxon_blacklist', DEFAULT_BLACKLIST_S3)
-        taxon_blacklist = fetch_reference(blacklist_s3_file, self.ref_dir_local)
+        m8.call_hits_m8(output_m8, lineage_db, accession2taxid_db,
+                        deduped_output_m8, output_hitsummary, min_alignment_length,
+                        deuterostome_db, taxon_whitelist, taxon_blacklist)
 
-        taxon_whitelist = None
-        if self.additional_attributes.get("use_taxon_whitelist"):
-            taxon_whitelist = fetch_reference(self.additional_files.get("taxon_whitelist", DEFAULT_WHITELIST_S3),
-                                              self.ref_dir_local)
+        db_type = 'NT' if self.alignment_algorithm == 'gsnap' else 'NR'
 
         m8.generate_taxon_count_json_from_m8(
             deduped_output_m8, output_hitsummary, db_type,

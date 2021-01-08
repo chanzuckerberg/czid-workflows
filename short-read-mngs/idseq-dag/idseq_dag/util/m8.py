@@ -67,7 +67,8 @@ def read_file_into_set(file_name):
 
 @command.run_in_subprocess
 def call_hits_m8(input_m8, lineage_map_path, accession2taxid_dict_path,
-                 output_m8, output_summary, min_alignment_length):
+                 output_m8, output_summary, min_alignment_length,
+                 deuterostome_path, taxon_whitelist_path, taxon_blacklist_path):
     """
     Determine the optimal taxon assignment for each read from the alignment
     results. When a read aligns to multiple distinct references, we need to
@@ -130,11 +131,16 @@ def call_hits_m8(input_m8, lineage_map_path, accession2taxid_dict_path,
     with open_file_db_by_extension(lineage_map_path) as lineage_map, \
          open_file_db_by_extension(accession2taxid_dict_path) as accession2taxid_dict:  # noqa
         _call_hits_m8_work(input_m8, lineage_map, accession2taxid_dict,
-                           output_m8, output_summary, min_alignment_length)
+                           output_m8, output_summary, min_alignment_length,
+                           deuterostome_path, taxon_whitelist_path, taxon_blacklist_path)
 
 
 def _call_hits_m8_work(input_blastn_6_path, lineage_map, accession2taxid_dict,
-                       output_blastn_6_path, output_summary, min_alignment_length):
+                       output_blastn_6_path, output_summary, min_alignment_length,
+                       deuterostome_path, taxon_whitelist_path, taxon_blacklist_path):
+    should_keep = build_should_keep_filter(
+        deuterostome_path, taxon_whitelist_path, taxon_blacklist_path)
+
     lineage_cache = {}
 
     # Helper functions
@@ -258,8 +264,7 @@ def _call_hits_m8_work(input_blastn_6_path, lineage_map, accession2taxid_dict,
             # Read the fields from the summary level info
             best_e_value, _, (hit_level, taxid,
                               best_accession_id) = summary[read_id]
-            if best_e_value == e_value and best_accession_id in (
-                    None, accession_id):
+            if best_e_value == e_value and best_accession_id in (None, accession_id) and should_keep(taxid):
                 # Read out the hit with the best value that provides the
                 # most specific taxonomy information.
                 emitted.add(read_id)

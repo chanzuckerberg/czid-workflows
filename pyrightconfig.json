@@ -1,0 +1,7 @@
+{
+    "executionEnvironments": [
+        {
+            "root": "short-read-mngs/idseq-dag"
+        }
+    ]
+}
