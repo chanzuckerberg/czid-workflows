@@ -1,3 +1,5 @@
+from typing import List
+
 INVALID_CALL_BASE_ID = -(10**8)
 NULL_SPECIES_ID = -100
 NULL_GENUS_ID = -200
@@ -26,23 +28,22 @@ DEFAULT_WHITELIST_S3 = 's3://idseq-public-references/taxonomy/2020-02-10/respira
 # See also comments under call_hits_m8().
 
 
-def cleaned_taxid_lineage(taxid_lineage, hit_taxid_str, hit_level_str):
+def cleaned_taxid_lineage(taxid_lineage: str, hit_taxid: int, hit_level: int) -> List[str]:
     """Take the taxon lineage and mark meaningless calls with fake taxids."""
     # This assumption is being made in postprocessing
     assert len(taxid_lineage) == 3
     result = [None, None, None]
-    hit_tax_level = int(hit_level_str)
     for tax_level, taxid in enumerate(taxid_lineage, 1):
-        if tax_level >= hit_tax_level:
+        if tax_level >= hit_level:
             taxid_str = str(taxid)
         else:
             taxid_str = str(
-                tax_level * INVALID_CALL_BASE_ID - int(hit_taxid_str))
+                tax_level * INVALID_CALL_BASE_ID - hit_taxid)
         result[tax_level - 1] = taxid_str
     return result
 
 
-def fill_missing_calls(cleaned_lineage):
+def fill_missing_calls(cleaned_lineage: List[str]) -> List[str]:
     """Replace missing calls with virtual taxids as shown in
     fill_missing_calls_tests. Replaces the negative call IDs with a
     calculated negative value that embeds the next higher positive call in it
@@ -84,7 +85,6 @@ def fill_missing_calls_tests():
     assert fill_missing_calls((55, -200, -300)) == [55, -200, -300]
 
 
-def validate_taxid_lineage(taxid_lineage, hit_taxid_str, hit_level_str):
-    cleaned = cleaned_taxid_lineage(taxid_lineage, hit_taxid_str,
-                                    hit_level_str)
+def validate_taxid_lineage(taxid_lineage: str, hit_taxid: int, hit_level: int) -> List[str]:
+    cleaned = cleaned_taxid_lineage(taxid_lineage, hit_taxid, hit_level)
     return fill_missing_calls(cleaned)

@@ -14,7 +14,12 @@ from idseq_dag.util.trace_lock import TraceLock
 from idseq_dag.steps.run_assembly import PipelineStepRunAssembly
 from idseq_dag.util.count import READ_COUNTING_MODE, ReadCountingMode, get_read_cluster_size, load_duplicate_cluster_sizes
 from idseq_dag.util.lineage import DEFAULT_BLACKLIST_S3, DEFAULT_WHITELIST_S3
-from idseq_dag.util.m8 import MIN_CONTIG_SIZE, NT_MIN_ALIGNMENT_LEN, MAX_EVALUE_THRESHOLD
+from idseq_dag.util.m8 import MIN_CONTIG_SIZE, NT_MIN_ALIGNMENT_LEN
+from idseq_dag.util.parsing import BlastnOutput6Reader, BlastnOutput6Writer
+from idseq_dag.util.parsing import BlastnOutput6NTReader
+from idseq_dag.util.parsing import BlastnOutput6NTRerankedReader, BlastnOutput6NTRerankedWriter
+from idseq_dag.util.parsing import HitSummaryReader, HitSummaryMergedWriter
+from idseq_dag.util.parsing import MAX_EVALUE_THRESHOLD
 
 
 MIN_REF_FASTA_SIZE = 25
@@ -294,12 +299,12 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
                 species_taxid, genus_taxid, _family_taxid = lineage
             else:
                 # not mapping to a contig, or missing contig lineage
-                species_taxid, genus_taxid = read_info[4:6]
+                species_taxid, genus_taxid = read_info["species_taxid"], read_info["genus_taxid"]
                 contig = '*'
             if should_keep((species_taxid, genus_taxid)):
                 record_read(species_taxid, genus_taxid, contig, read_id)
 
-        for read_id, read_info in added_reads_dict.items():
+        for read_id in added_reads_dict.keys():
             contig = read2contig[read_id]
             species_taxid, genus_taxid, _family_taxid = contig2lineage[contig]
             if should_keep((species_taxid, genus_taxid)):
@@ -334,69 +339,78 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
 
     @staticmethod
     def generate_m8_and_hit_summary(consolidated_dict, added_reads, read2blastm8,
-                                    hit_summary, deduped_m8,
-                                    refined_hit_summary, refined_m8):
+                                    hit_summary_path, deduped_blastn_6_path,
+                                    refined_hit_summary_path, refined_blastn_6_path):
         ''' generate new m8 and hit_summary based on consolidated_dict and read2blastm8 '''
         # Generate new hit summary
         new_read_ids = added_reads.keys()
-        with open(refined_hit_summary, 'w') as rhsf:
-            with open(hit_summary, 'r', encoding='utf-8') as hsf:
-                for line in hsf:
-                    read_id = line.rstrip().split("\t")[0]
-                    read = consolidated_dict[read_id]
-                    output_str = "\t".join(read)
-                    rhsf.write(output_str + "\n")
+        with open(hit_summary_path) as hit_summary_f, open(refined_hit_summary_path, "w") as refined_hit_summary_f:
+            refined_hit_summary_writer = HitSummaryMergedWriter(refined_hit_summary_f)
+            for read in HitSummaryReader(hit_summary_f):
+                refined_hit_summary_writer.writerow(consolidated_dict[read["read_id"]])
             # add the reads that are newly blasted
             for read_id in new_read_ids:
-                read_info = added_reads[read_id]
-                output_str = "\t".join(read_info)
-                rhsf.write(output_str + "\n")
+                refined_hit_summary_writer.writerow(added_reads[read_id])
         # Generate new M8
-        with open(refined_m8, 'w') as rmf:
-            with open(deduped_m8, 'r', encoding='utf-8') as mf:
-                for line in mf:
-                    read_id = line.rstrip().split("\t")[0]
-                    m8_line = read2blastm8.get(read_id)
-                    if m8_line:
-                        m8_fields = m8_line.split("\t")
-                        m8_fields[0] = read_id
-                        rmf.write("\t".join(m8_fields))
-                    else:
-                        rmf.write(line)
+        with open(deduped_blastn_6_path) as deduped_blastn_6_f, open(refined_blastn_6_path, "w") as refined_blastn_6_f:
+            refined_blastn_6_writer = BlastnOutput6NTRerankedWriter(refined_blastn_6_f)
+            for row in BlastnOutput6Reader(deduped_blastn_6_f):
+                new_row = read2blastm8.get(row["qseqid"], row)
+                new_row["qseqid"] = row["qseqid"]
+                refined_blastn_6_writer.writerow(new_row)
+
             # add the reads that are newly blasted
             for read_id in new_read_ids:
-                m8_line = read2blastm8.get(read_id)
-                m8_fields = m8_line.split("\t")
-                m8_fields[0] = read_id
-                rmf.write("\t".join(m8_fields))
+                new_row = read2blastm8.get(read_id)
+                new_row["qseqid"] = read_id
+                refined_blastn_6_writer.writerow(new_row)
 
     @staticmethod
-    def update_read_dict(read2contig, blast_top_m8, read_dict, accession_dict, db_type):
+    def update_read_dict(read2contig, blast_top_blastn_6_path, read_dict, accession_dict, db_type):
         consolidated_dict = read_dict
         read2blastm8 = {}
         contig2accession = {}
         contig2lineage = {}
         added_reads = {}
 
-        for row, raw_line in m8.parse_tsv(blast_top_m8, m8.RERANKED_BLAST_OUTPUT_SCHEMA[db_type]['contig_level'], raw_lines=True):
-            contig_id = row["qseqid"]
-            accession_id = row["sseqid"]
-            contig2accession[contig_id] = (accession_id, raw_line)
-            contig2lineage[contig_id] = accession_dict[accession_id]
+        with open(blast_top_blastn_6_path) as blast_top_blastn_6_f:
+            blastn_6_reader = BlastnOutput6NTRerankedReader(blast_top_blastn_6_f) if db_type == 'nt' else BlastnOutput6Reader(blast_top_blastn_6_f)
+            for row in blastn_6_reader:
+                contig_id = row["qseqid"]
+                accession_id = row["sseqid"]
+                contig2accession[contig_id] = (accession_id, row)
+                contig2lineage[contig_id] = accession_dict[accession_id]
 
-        for read_id, contig_id in read2contig.items():
-            (accession, m8_line) = contig2accession.get(contig_id, (None, None))
-            if accession:
-                (species_taxid, genus_taxid, family_taxid) = accession_dict[accession]
-                if consolidated_dict.get(read_id):
-                    consolidated_dict[read_id] += [contig_id, accession, species_taxid, genus_taxid, family_taxid]
-                    consolidated_dict[read_id][2] = species_taxid
-                else:
-                    added_reads[read_id] = [read_id, "1", species_taxid, accession, species_taxid, genus_taxid,
-                                            family_taxid, contig_id, accession, species_taxid, genus_taxid, family_taxid, 'from_assembly']
-            if m8_line:
-                read2blastm8[read_id] = m8_line
-        return (consolidated_dict, read2blastm8, contig2lineage, added_reads)
+            for read_id, contig_id in read2contig.items():
+                (accession, m8_row) = contig2accession.get(contig_id, (None, None))
+                if accession:
+                    (species_taxid, genus_taxid, family_taxid) = accession_dict[accession]
+                    if read_id in consolidated_dict:
+                        consolidated_dict[read_id]["taxid"] = species_taxid
+                        consolidated_dict[read_id]["contig_id"] = contig_id
+                        consolidated_dict[read_id]["contig_accession_id"] = accession
+                        consolidated_dict[read_id]["contig_species_taxid"] = species_taxid
+                        consolidated_dict[read_id]["contig_genus_taxid"] = genus_taxid
+                        consolidated_dict[read_id]["contig_family_taxid"] = family_taxid
+                    else:
+                        added_reads[read_id] = {
+                            "read_id": read_id,
+                            "level": 1,
+                            "taxid": species_taxid,
+                            "accession_id": accession,
+                            "species_taxid": species_taxid,
+                            "genus_taxid": genus_taxid,
+                            "family_taxid": family_taxid,
+                            "contig_id": contig_id,
+                            "contig_accession_id": accession,
+                            "contig_species_taxid": species_taxid,
+                            "contig_genus_taxid": genus_taxid,
+                            "contig_family_taxid": family_taxid,
+                            "from_assembly": "from_assembly",
+                        }
+                if m8_row:
+                    read2blastm8[read_id] = m8_row
+            return (consolidated_dict, read2blastm8, contig2lineage, added_reads)
 
     @staticmethod
     def run_blast_nt(blast_index_path, blast_m8, assembled_contig, reference_fasta, blast_top_m8):
@@ -429,14 +443,14 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
                     "-out",
                     blast_m8,
                     "-outfmt",
-                    '6 ' + ' '.join(m8.BLAST_OUTPUT_NT_SCHEMA.keys()),
+                    '6 ' + ' '.join(field for field, _ in BlastnOutput6NTReader.SCHEMA),
                     '-evalue',
                     1e-10,
                     '-max_target_seqs',
                     5000,
                     "-num_threads",
                     16
-                ],
+                ], # type: ignore
                 # We can only pass BATCH_SIZE as an env var.  The default is 100,000 for blastn;  10,000 for blastp.
                 # Blast concatenates input queries until they exceed this size, then runs them together, for efficiency.
                 # Unfortunately if too many short and low complexity queries are in the input, this can expand too
@@ -489,72 +503,76 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
         PipelineStepBlastContigs.get_top_m8_nr(blast_m8, blast_top_m8, max_evalue)
 
     @staticmethod
-    def get_top_m8_nr(blast_output, blast_top_m8, max_evalue):
+    def get_top_m8_nr(blast_output, blast_top_blastn_6_path, max_evalue):
         ''' Get top m8 file entry for each contig from blast_output and output to blast_top_m8 '''
-        m8.unparse_tsv(blast_top_m8, m8.BLAST_OUTPUT_SCHEMA,
-                       PipelineStepBlastContigs.optimal_hit_for_each_query_nr(blast_output, max_evalue))
+        with open(blast_top_blastn_6_path, "w") as blast_top_blastn_6_f:
+            BlastnOutput6Writer(blast_top_blastn_6_f).writerows(
+                PipelineStepBlastContigs.optimal_hit_for_each_query_nr(blast_output, max_evalue)
+            )
 
     @staticmethod
-    def optimal_hit_for_each_query_nr(blast_output, max_evalue):
+    def optimal_hit_for_each_query_nr(blast_output_path, max_evalue):
         contigs_to_best_alignments = defaultdict(list)
         accession_counts = defaultdict(lambda: 0)
 
-        # For each contig, get the alignments that have the best total score (may be multiple if there are ties).
-        for alignment in m8.parse_tsv(blast_output, m8.BLAST_OUTPUT_SCHEMA):
-            if alignment["evalue"] > max_evalue:
-                continue
-            query = alignment["qseqid"]
-            best_alignments = contigs_to_best_alignments[query]
+        with open(blast_output_path) as blastn_6_f:
+            # For each contig, get the alignments that have the best total score (may be multiple if there are ties).
+            for alignment in BlastnOutput6Reader(blastn_6_f):
+                if alignment["evalue"] > max_evalue:
+                    continue
+                query = alignment["qseqid"]
+                best_alignments = contigs_to_best_alignments[query]
 
-            if len(best_alignments) == 0 or best_alignments[0]["bitscore"] < alignment["bitscore"]:
-                contigs_to_best_alignments[query] = [alignment]
-            # Add all ties to best_hits.
-            elif len(best_alignments) > 0 and best_alignments[0]["bitscore"] == alignment["bitscore"]:
-                contigs_to_best_alignments[query].append(alignment)
+                if len(best_alignments) == 0 or best_alignments[0]["bitscore"] < alignment["bitscore"]:
+                    contigs_to_best_alignments[query] = [alignment]
+                # Add all ties to best_hits.
+                elif len(best_alignments) > 0 and best_alignments[0]["bitscore"] == alignment["bitscore"]:
+                    contigs_to_best_alignments[query].append(alignment)
 
-        # Create a map of accession to best alignment count.
-        for _contig_id, alignments in contigs_to_best_alignments.items():
-            for alignment in alignments:
-                accession_counts[alignment["sseqid"]] += 1
+            # Create a map of accession to best alignment count.
+            for _contig_id, alignments in contigs_to_best_alignments.items():
+                for alignment in alignments:
+                    accession_counts[alignment["sseqid"]] += 1
 
-        # For each contig, pick the optimal alignment based on the accession that has the most best alignments.
-        # If there is still a tie, arbitrarily pick the first one (later we could factor in which taxid has the most blast candidates)
-        for contig_id, alignments in contigs_to_best_alignments.items():
-            optimal_alignment = None
-            for alignment in alignments:
-                if not optimal_alignment or accession_counts[optimal_alignment["sseqid"]] < accession_counts[alignment["sseqid"]]:
-                    optimal_alignment = alignment
+            # For each contig, pick the optimal alignment based on the accession that has the most best alignments.
+            # If there is still a tie, arbitrarily pick the first one (later we could factor in which taxid has the most blast candidates)
+            for contig_id, alignments in contigs_to_best_alignments.items():
+                optimal_alignment = None
+                for alignment in alignments:
+                    if not optimal_alignment or accession_counts[optimal_alignment["sseqid"]] < accession_counts[alignment["sseqid"]]:
+                        optimal_alignment = alignment
 
-            yield optimal_alignment
+                yield optimal_alignment
 
     @staticmethod
-    def filter_and_group_hits_by_query(blast_output, min_alignment_length, min_pident, max_evalue):
+    def filter_and_group_hits_by_query(blast_output_path, min_alignment_length, min_pident, max_evalue):
         # Filter and group results by query, yielding one result group at a time.
         # A result group consists of all hits for a query, grouped by subject.
         # Please see comment in get_top_m8_nt for more context.
         current_query = None
         current_query_hits = None
         previously_seen_queries = set()
-        # Please see comments explaining the definition of "hsp" elsewhere in this file.
-        for hsp in m8.parse_tsv(blast_output, m8.BLAST_OUTPUT_NT_SCHEMA):
-            # filter local alignment HSPs based on minimum length and sequence similarity
-            if hsp["length"] < min_alignment_length:
-                continue
-            if hsp["pident"] < min_pident:
-                continue
-            if hsp["evalue"] > max_evalue:
-                continue
-            query, subject = hsp["qseqid"], hsp["sseqid"]
-            if query != current_query:
-                assert query not in previously_seen_queries, "blastn output appears out of order, please resort by (qseqid, sseqid, score)"
-                previously_seen_queries.add(query)
-                if current_query_hits:
-                    yield current_query_hits
-                current_query = query
-                current_query_hits = defaultdict(list)
-            current_query_hits[subject].append(hsp)
-        if current_query_hits:
-            yield current_query_hits
+        with open(blast_output_path) as blastn_6_f:
+            # Please see comments explaining the definition of "hsp" elsewhere in this file.
+            for hsp in BlastnOutput6NTReader(blastn_6_f):
+                # filter local alignment HSPs based on minimum length and sequence similarity
+                if hsp["length"] < min_alignment_length:
+                    continue
+                if hsp["pident"] < min_pident:
+                    continue
+                if hsp["evalue"] > max_evalue:
+                    continue
+                query, subject = hsp["qseqid"], hsp["sseqid"]
+                if query != current_query:
+                    assert query not in previously_seen_queries, "blastn output appears out of order, please resort by (qseqid, sseqid, score)"
+                    previously_seen_queries.add(query)
+                    if current_query_hits:
+                        yield current_query_hits
+                    current_query = query
+                    current_query_hits = defaultdict(list)
+                current_query_hits[subject].append(hsp)
+            if current_query_hits:
+                yield current_query_hits
 
     @staticmethod
     # An iterator that, for contig, yields to optimal hit for the contig in the nt blast_output.
@@ -595,7 +613,7 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
             yield optimal_hit.summary()
 
     @staticmethod
-    def get_top_m8_nt(blast_output, blast_top_m8, min_alignment_length, min_pident, max_evalue):
+    def get_top_m8_nt(blast_output, blast_top_blastn_6_path, min_alignment_length, min_pident, max_evalue):
         '''
         For each contig Q (query) and reference S (subject), extend the highest-scoring
         fragment alignment of Q to S with other *non-overlapping* fragments as far as
@@ -616,5 +634,7 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
         # for documentation of Blast output.
 
         # Output the optimal hit for each query.
-        m8.unparse_tsv(blast_top_m8, m8.RERANKED_BLAST_OUTPUT_NT_SCHEMA,
-                       PipelineStepBlastContigs.optimal_hit_for_each_query_nt(blast_output, min_alignment_length, min_pident, max_evalue))
+        with open(blast_top_blastn_6_path, "w") as blast_top_blastn_6_f:
+            BlastnOutput6NTRerankedWriter(blast_top_blastn_6_f).writerows(
+                PipelineStepBlastContigs.optimal_hit_for_each_query_nt(blast_output, min_alignment_length, min_pident, max_evalue)
+            )
