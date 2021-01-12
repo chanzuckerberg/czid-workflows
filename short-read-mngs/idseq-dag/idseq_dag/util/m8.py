@@ -667,8 +667,6 @@ def build_should_keep_filter(
         return False
 
     def should_keep(hits):
-        non_strings = [h for h in hits if type(h) != str]
-        assert not non_strings, f"non-string inputs to should_keep: {hits}"
         return is_whitelisted(hits) and not is_blacklisted(hits)
 
     return should_keep
