@@ -1,0 +1,9 @@
+{
+    "venvPath": "/home/todd/venvs",
+    "venv": "idseq-dag",
+    "executionEnvironments": [
+        {
+            "root": "short-read-mngs/idseq-dag"
+        }
+    ]
+}
