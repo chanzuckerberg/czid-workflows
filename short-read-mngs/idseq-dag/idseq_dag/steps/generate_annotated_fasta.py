@@ -6,7 +6,6 @@ import idseq_dag.util.m8 as m8
 from idseq_dag.engine.pipeline_step import PipelineCountingStep
 from idseq_dag.util.idseq_dedup_clusters import parse_clusters_file
 from idseq_dag.util.count import READ_COUNTING_MODE, ReadCountingMode
-from idseq_dag.util.parsing import BlastnOutput6NTRerankedReader
 
 UNMAPPED_HEADER_PREFIX = '>NR::NT::'
 
@@ -68,9 +67,11 @@ class PipelineStepGenerateAnnotatedFasta(PipelineCountingStep):
 
     @staticmethod
     def annotate_fasta_with_accessions(merged_input_fasta, nt_m8, nr_m8, output_fasta):
-        def get_map(blastn_6_path):
-            with open(blastn_6_path) as blastn_6_f:
-                return {row["qseqid"]: row["sseqid"] for row in BlastnOutput6NTRerankedReader(blastn_6_f, filter_invalid=True)}
+        def get_map(m8_file):
+            return dict((read_id, accession_id)
+                        for read_id, accession_id, _percent_id,
+                        _alignment_length, _e_value, _bitscore, _line in m8.iterate_m8(
+                            m8_file, 0, "annotate_fasta_with_accessions"))
 
         nt_map = get_map(nt_m8)
         nr_map = get_map(nr_m8)
@@ -80,7 +81,6 @@ class PipelineStepGenerateAnnotatedFasta(PipelineCountingStep):
                 sequence_name = input_fasta_f.readline()
                 sequence_data = input_fasta_f.readline()
 
-                # TODO: (tmorse) fasta parsing
                 while sequence_name and sequence_data:
                     read_id = sequence_name.rstrip().lstrip('>')
                     # Need to annotate NR then NT in this order for alignment viz

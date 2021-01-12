@@ -6,12 +6,12 @@ from collections import defaultdict
 
 import idseq_dag.util.command as command
 import idseq_dag.util.log as log
+import idseq_dag.util.m8 as m8
 import idseq_dag.util.s3 as s3
 
 from idseq_dag.engine.pipeline_step import PipelineStep
 from idseq_dag.util.dict import open_file_db_by_extension
 from idseq_dag.util.m8 import MIN_CONTIG_SIZE
-from idseq_dag.util.parsing import BlastnOutput6NTRerankedReader
 
 # These constants can be overridden with the additional_attributes dict:
 # The maximum number of bins to divide the accession length into when computing coverage.
@@ -293,7 +293,7 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
         return unassigned_reads_set
 
     @staticmethod
-    def generate_hit_data_from_m8(blastn_6_path, valid_hits):
+    def generate_hit_data_from_m8(m8_file, valid_hits, assembly_level):
         """
         Generate hit data from an m8 file.
         Only include hits whose name appears in the valid_hits collection.
@@ -304,37 +304,38 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
         hits = {}
 
         # File is empty.
-        if os.path.getsize(blastn_6_path) < MIN_M8_FILE_SIZE:
+        if os.path.getsize(m8_file) < MIN_M8_FILE_SIZE:
             return hits
 
-        with open(blastn_6_path) as blastn_6_f:
-            for hit in BlastnOutput6NTRerankedReader(blastn_6_f):
+        # See m8.BLAST_OUTPUT_SCHEMA for the m8_file format.
+        m8_schema = m8.RERANKED_BLAST_OUTPUT_SCHEMA['nt'][assembly_level]  # Only runs for NT
+        for hit in m8.parse_tsv(m8_file, m8_schema):
 
-                if hit["qseqid"] in valid_hits:
-                    # Blast output is per HSP, yet the hit represents a set of HSPs,
-                    # so these fields have been aggregated across that set by
-                    # function summary_row() in class CandidateHit.
-                    hits[hit["qseqid"]] = {
-                        "accession": hit["sseqid"],
-                        "percent_id": hit["pident"],
-                        "alignment_length": hit["length"],
-                        "num_mismatches": hit["mismatch"],
-                        "num_gaps": hit["gapopen"],
-                        "query_start": hit["qstart"],
-                        "query_end": hit["qend"],
-                        "subject_start": hit["sstart"],
-                        "subject_end": hit["send"],
-                        "prop_mismatch": hit["mismatch"] / max(1, hit["length"]),
-                    }
+            if hit["qseqid"] in valid_hits:
+                # Blast output is per HSP, yet the hit represents a set of HSPs,
+                # so these fields have been aggregated across that set by
+                # function summary_row() in class CandidateHit.
+                hits[hit["qseqid"]] = {
+                    "accession": hit["sseqid"],
+                    "percent_id": hit["pident"],
+                    "alignment_length": hit["length"],
+                    "num_mismatches": hit["mismatch"],
+                    "num_gaps": hit["gapopen"],
+                    "query_start": hit["qstart"],
+                    "query_end": hit["qend"],
+                    "subject_start": hit["sstart"],
+                    "subject_end": hit["send"],
+                    "prop_mismatch": hit["mismatch"] / max(1, hit["length"]),
+                }
 
-            return hits
+        return hits
 
     @staticmethod
     def generate_contig_data(blast_top_m8, valid_contigs_with_read_counts):
         """
         Generate contig data from blast_top_m8.
         """
-        contigs = PipelineStepGenerateCoverageViz.generate_hit_data_from_m8(blast_top_m8, valid_contigs_with_read_counts)
+        contigs = PipelineStepGenerateCoverageViz.generate_hit_data_from_m8(blast_top_m8, valid_contigs_with_read_counts, "contig_level")
 
         # Include some additional data.
         for contig_id, contig_obj in contigs.items():
@@ -354,7 +355,7 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
         However, these contigs still get reassigned in gsnap.reassigned.m8,
         and overwrite the original read alignment to the accession, which we need. So we can't use gsnap.reassigned.m8.
         """
-        return PipelineStepGenerateCoverageViz.generate_hit_data_from_m8(gsnap_deduped_m8, unassigned_reads_set)
+        return PipelineStepGenerateCoverageViz.generate_hit_data_from_m8(gsnap_deduped_m8, unassigned_reads_set, "read_level")
 
     @staticmethod
     def augment_contig_data_with_coverage(contig_coverage_json, contig_data):
