@@ -1,5 +1,5 @@
 # The following pipeline was initially based on previous work at: https://github.com/czbiohub/sc2-illumina-pipeline
-# workflow version: consensus-genomes-1.4.2
+# workflow version: consensus-genomes-1.5.0
 version 1.0
 
 workflow consensus_genome {
@@ -25,6 +25,7 @@ workflow consensus_genome {
 
         # all of the following seem to be parameters in params.* of the nextflow pipeline;
         # could they be extracted to a separate params file? put in .json input to wdl?
+        Boolean filter_reads = true
         Boolean trim_adapters = true
 
         Float ivarFreqThreshold = 0.9
@@ -57,19 +58,21 @@ workflow consensus_genome {
             docker_image_id = docker_image_id
     }
 
-    call FilterReads {
-        input:
-            prefix = prefix,
-            fastqs = RemoveHost.host_removed_fastqs,
-            ref_fasta = ref_fasta,
-            kraken2_db_tar_gz = kraken2_db_tar_gz,
-            docker_image_id = docker_image_id
+    if (filter_reads) {
+        call FilterReads {
+            input:
+                prefix = prefix,
+                fastqs = RemoveHost.host_removed_fastqs,
+                ref_fasta = ref_fasta,
+                kraken2_db_tar_gz = kraken2_db_tar_gz,
+                docker_image_id = docker_image_id
+        }
     }
 
     if (trim_adapters) {
         call TrimReads {
             input:
-                fastqs = FilterReads.filtered_fastqs,
+                fastqs = select_first([FilterReads.filtered_fastqs, RemoveHost.host_removed_fastqs]),
                 docker_image_id = docker_image_id
         }
     }
@@ -78,8 +81,9 @@ workflow consensus_genome {
         input:
             prefix = prefix,
             sample = sample,
-            # use trimReads output if we ran it; otherwise fall back to FilterReads output
-            fastqs = select_first([TrimReads.trimmed_fastqs, FilterReads.filtered_fastqs]),
+            # use trimReads output if we ran it; otherwise fall back to FilterReads output if we ran it; 
+            # otherwise fall back to RemoveHost output
+            fastqs = select_first([TrimReads.trimmed_fastqs, FilterReads.filtered_fastqs, RemoveHost.host_removed_fastqs]),
             ref_fasta = ref_fasta,
             docker_image_id = docker_image_id
     }
@@ -164,7 +168,7 @@ workflow consensus_genome {
     output {
         Array[File] remove_host_out_host_removed_fastqs = RemoveHost.host_removed_fastqs
         File quantify_erccs_out_ercc_out = QuantifyERCCs.ercc_out
-        Array[File]+ filter_reads_out_filtered_fastqs = FilterReads.filtered_fastqs
+        Array[File]+? filter_reads_out_filtered_fastqs = FilterReads.filtered_fastqs
         Array[File]+? trim_reads_out_trimmed_fastqs = TrimReads.trimmed_fastqs
         File? align_reads_out_alignments = AlignReads.alignments
         File? trim_primers_out_trimmed_bam_ch = TrimPrimers.trimmed_bam_ch

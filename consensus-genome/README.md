@@ -21,7 +21,7 @@ miniwdl run --verbose consensus-genome/run.wdl \
 
 Where:
 
-* `docker_image_id=` should be set to the docker image tag you used when building the image (in our example, `idseq-consensus-genone`)
+* `docker_image_id=` should be set to the docker image tag you used when building the image (in our example, `idseq-consensus-genome`)
 * `consensus-genome/run.wdl` is the WDL for the consensus genome sequencing workflow.
 * `fastqs_0` and `fastqs_1` are the pair of FASTQ files. The ones referred to are small files to run locally.
 * `sample` is the name to use where referencing the sample in the output files.
