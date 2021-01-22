@@ -271,6 +271,9 @@ class PipelineStepRunStar(PipelineStep):
         #  when we update the rest of our rng seeds.
         rng_seed = '777'
 
+        # default is 1000000, this caused a crash so it was doubled
+        limit_out_sj_collapsed = '2000000'
+
         cpus = str(multiprocessing.cpu_count())
         cd = output_dir
         cmd = 'STARlong' if use_starlong else 'STAR'
@@ -281,6 +284,7 @@ class PipelineStepRunStar(PipelineStep):
             '--outReadsUnmapped', 'Fastx',
             '--outFilterMismatchNmax', '999',
             '--clip3pNbases', '0',
+            '--limitOutSJcollapsed', limit_out_sj_collapsed,
             '--runThreadN', cpus,
             '--runRNGseed', rng_seed,
             '--genomeDir', genome_dir,
