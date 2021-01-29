@@ -5,6 +5,7 @@ import random
 
 from collections import Counter
 from collections import defaultdict
+from typing import Iterable
 
 import idseq_dag.util.command as command
 import idseq_dag.util.lineage as lineage
@@ -67,7 +68,8 @@ def read_file_into_set(file_name):
 
 @command.run_in_subprocess
 def call_hits_m8(input_m8, lineage_map_path, accession2taxid_dict_path,
-                 output_m8, output_summary, min_alignment_length):
+                 output_m8, output_summary, min_alignment_length,
+                 deuterostome_path, taxon_whitelist_path, taxon_blacklist_path):
     """
     Determine the optimal taxon assignment for each read from the alignment
     results. When a read aligns to multiple distinct references, we need to
@@ -107,7 +109,7 @@ def call_hits_m8(input_m8, lineage_map_path, accession2taxid_dict_path,
         negative ID. The artificial ID is defined based on a negative base (
         INVALID_CALL_BASE_ID), the taxon level (e.g. 2 for genus), and the
         valid parent ID (e.g. genus Escherichia's taxon ID): see helper
-        function cleaned_taxid_lineage for the precise formula.
+        function _cleaned_taxid_lineage for the precise formula.
 
         - Certain entries in NCBI may not have a full lineage classification;
         for example species and family will be defined but genus will be
@@ -130,12 +132,17 @@ def call_hits_m8(input_m8, lineage_map_path, accession2taxid_dict_path,
     with open_file_db_by_extension(lineage_map_path) as lineage_map, \
          open_file_db_by_extension(accession2taxid_dict_path) as accession2taxid_dict:  # noqa
         _call_hits_m8_work(input_m8, lineage_map, accession2taxid_dict,
-                           output_m8, output_summary, min_alignment_length)
+                           output_m8, output_summary, min_alignment_length,
+                           deuterostome_path, taxon_whitelist_path, taxon_blacklist_path)
 
 
 def _call_hits_m8_work(input_blastn_6_path, lineage_map, accession2taxid_dict,
-                       output_blastn_6_path, output_summary, min_alignment_length):
+                       output_blastn_6_path, output_summary, min_alignment_length,
+                       deuterostome_path, taxon_whitelist_path, taxon_blacklist_path):
     lineage_cache = {}
+
+    should_keep = build_should_keep_filter(
+        deuterostome_path, taxon_whitelist_path, taxon_blacklist_path)
 
     # Helper functions
     def get_lineage(accession_id):
@@ -258,8 +265,7 @@ def _call_hits_m8_work(input_blastn_6_path, lineage_map, accession2taxid_dict,
             # Read the fields from the summary level info
             best_e_value, _, (hit_level, taxid,
                               best_accession_id) = summary[read_id]
-            if best_e_value == e_value and best_accession_id in (
-                    None, accession_id):
+            if best_e_value == e_value and best_accession_id in (None, accession_id) and should_keep([taxid]):
                 # Read out the hit with the best value that provides the
                 # most specific taxonomy information.
                 emitted.add(read_id)
@@ -455,13 +461,13 @@ def build_should_keep_filter(
         with log.log_context("generate_taxon_count_json_from_m8", {"substep": "read_whitelist_into_set"}):
             taxids_to_keep = read_file_into_set(taxon_whitelist_path)
 
-    def is_blacklisted(hits):
+    def is_blacklisted(hits: Iterable[str]):
         for taxid in hits:
             if int(taxid) >= 0 and taxid in taxids_to_remove:
                 return True
         return False
 
-    def is_whitelisted(hits):
+    def is_whitelisted(hits: Iterable[str]):
         if not taxon_whitelist_path:
             return True
         for taxid in hits:
@@ -469,7 +475,12 @@ def build_should_keep_filter(
                 return True
         return False
 
-    def should_keep(hits):
+    def should_keep(hits: Iterable[str]):
+        # In some places in the code taxids are ints rather than strings, this would lead
+        # to a silent failure here so it is worth the explicit check.
+        non_strings = [h for h in hits if type(h) != str]
+        assert not non_strings, f"should_keep recieved non-string inputs {non_strings}"
         return is_whitelisted(hits) and not is_blacklisted(hits)
 
     return should_keep
+

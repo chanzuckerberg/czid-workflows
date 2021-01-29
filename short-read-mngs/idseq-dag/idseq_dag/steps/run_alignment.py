@@ -1,7 +1,6 @@
 import multiprocessing
 import os
 import random
-import shlex
 import shutil
 import threading
 import time
@@ -24,7 +23,7 @@ import idseq_dag.util.count as count
 import idseq_dag.util.log as log
 import idseq_dag.util.m8 as m8
 
-from idseq_dag.util.s3 import fetch_from_s3, fetch_reference
+from idseq_dag.util.s3 import fetch_reference
 from idseq_dag.util.trace_lock import TraceLock
 
 from idseq_dag.util.lineage import DEFAULT_BLACKLIST_S3, DEFAULT_WHITELIST_S3
@@ -167,12 +166,6 @@ class PipelineStepRunAlignment(PipelineStep):
         lineage_db = fetch_reference(self.additional_files["lineage_db"], self.ref_dir_local)
         accession2taxid_db = fetch_reference(self.additional_files["accession2taxid_db"], self.ref_dir_local, allow_s3mi=True)
 
-        min_alignment_length = NT_MIN_ALIGNMENT_LEN if self.alignment_algorithm == 'gsnap' else 0
-        m8.call_hits_m8(output_m8, lineage_db, accession2taxid_db,
-                        deduped_output_m8, output_hitsummary, min_alignment_length)
-
-        db_type = 'NT' if self.alignment_algorithm == 'gsnap' else 'NR'
-
         deuterostome_db = None
         if self.additional_files.get("deuterostome_db"):
             deuterostome_db = fetch_reference(self.additional_files["deuterostome_db"],
@@ -185,6 +178,13 @@ class PipelineStepRunAlignment(PipelineStep):
         if self.additional_attributes.get("use_taxon_whitelist"):
             taxon_whitelist = fetch_reference(self.additional_files.get("taxon_whitelist", DEFAULT_WHITELIST_S3),
                                               self.ref_dir_local)
+
+        min_alignment_length = NT_MIN_ALIGNMENT_LEN if self.alignment_algorithm == 'gsnap' else 0
+        m8.call_hits_m8(output_m8, lineage_db, accession2taxid_db,
+                        deduped_output_m8, output_hitsummary, min_alignment_length,
+                        deuterostome_db, taxon_whitelist, taxon_blacklist)
+
+        db_type = 'NT' if self.alignment_algorithm == 'gsnap' else 'NR'
 
         m8.generate_taxon_count_json_from_m8(
             deduped_output_m8, output_hitsummary, db_type,

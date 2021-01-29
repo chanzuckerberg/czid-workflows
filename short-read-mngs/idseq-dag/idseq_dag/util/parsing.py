@@ -155,11 +155,11 @@ class _HitSummarySchema:
     SCHEMA = [
         ("read_id", str),
         ("level", int),
-        ("taxid", int),
+        ("taxid", str),
         ("accession_id", str),
-        ("species_taxid", int),
-        ("genus_taxid", int),
-        ("family_taxid", int),
+        ("species_taxid", str),
+        ("genus_taxid", str),
+        ("family_taxid", str),
     ]
 
 class HitSummaryReader(_HitSummarySchema, _TypedDictTSVReader):
@@ -175,9 +175,9 @@ class _HitSummaryMergedSchema:
     SCHEMA = _HitSummarySchema.SCHEMA + [
         ("contig_id", str),
         ("contig_accession_id", str),
-        ("contig_species_taxid", int),
-        ("contig_genus_taxid", int),
-        ("contig_family_taxid", int),
+        ("contig_species_taxid", str),
+        ("contig_genus_taxid", str),
+        ("contig_family_taxid", str),
         ("from_assembly", str),
         ("source_count_type", str),
     ]

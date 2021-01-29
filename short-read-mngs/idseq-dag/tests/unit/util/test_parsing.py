@@ -253,8 +253,8 @@ class TestBlastnOutput6NTRerankedWriter(unittest.TestCase):
 class TestHitSummaryReader(unittest.TestCase):
     def test_read(self):
         hit_summary_input = [
-            "read_id_1	10	20	accession_id_1	30	40	50",
-            "read_id_2	11	21		31	41	51", # missing accession_id
+            "read_id_1	10	taxid_1	accession_id_1	species_taxid_1	genus_taxid_1	family_taxid_1",
+            "read_id_2	11	taxid_2		species_taxid_2	genus_taxid_2	family_taxid_2", # missing accession_id
         ]
         rows = list(HitSummaryReader(hit_summary_input))
         self.assertEqual(len(rows), 2)
@@ -268,14 +268,14 @@ class TestHitSummaryReader(unittest.TestCase):
 
     def test_read_error_too_many_columns(self):
         hit_summary_input = [
-            "read_id_1	10	20	accession_id_1	30	40	50	60",
+            "read_id_1	10	taxid_1	accession_id_1	species_taxid_1	genus_taxid_1	family_taxid_1	60",
         ]
         with self.assertRaises(Exception):
             next(HitSummaryReader(hit_summary_input))
     
     def test_read_error_wrong_data_type(self):
         hit_summary_input = [
-            "read_id_1	10	not_num	accession_id_1	30	40	50",
+            "read_id_1	not_num	taxid_1	accession_id_1	species_taxid_1	genus_taxid_1	family_taxid_1",
         ]
         with self.assertRaises(Exception):
             next(HitSummaryReader(hit_summary_input))
@@ -288,11 +288,11 @@ class TestHitSummaryWriter(unittest.TestCase):
             writer.writerow({
                 "read_id": "read_id_1",
                 "level": 10,
-                "taxid": 20,
+                "taxid": "taxid_1",
                 "accession_id": "accession_id_1",
-                "species_taxid": 30,
-                "genus_taxid": 40,
-                "family_taxid": 60,
+                "species_taxid": "species_taxid_1",
+                "genus_taxid": "genus_taxid_1",
+                "family_taxid": "family_taxid_1",
             })
             writer.writerow({
                 "read_id": "2",

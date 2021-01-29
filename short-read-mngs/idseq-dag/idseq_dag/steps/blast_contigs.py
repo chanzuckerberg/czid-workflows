@@ -383,7 +383,10 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
 
             for read_id, contig_id in read2contig.items():
                 (accession, m8_row) = contig2accession.get(contig_id, (None, None))
-                if accession:
+                # accession_dict comes from hit_summary, which comes from alignment and is filtered for taxids
+                # this means that we don't need to filter here because we will never get unfiltered taxids from
+                # accession_dict, however it may be missing accessions so we must handle that case.
+                if accession and accession in accession_dict:
                     (species_taxid, genus_taxid, family_taxid) = accession_dict[accession]
                     if read_id in consolidated_dict:
                         consolidated_dict[read_id]["taxid"] = species_taxid
