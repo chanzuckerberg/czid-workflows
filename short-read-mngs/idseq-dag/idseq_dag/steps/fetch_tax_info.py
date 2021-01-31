@@ -25,7 +25,7 @@ class PipelineStepFetchTaxInfo(PipelineStep):
         (taxid2wiki, taxid2desc) = self.output_files_local()
 
         taxid2wikidict = {}
-        Entrez.email = self.additional_attributes.get("entrez_email", "yunfang@chanzuckerberg.com")
+        Entrez.email = self.additional_attributes.get("entrez_email", "idseq-tech@chanzuckerberg.com")
         num_threads = self.additional_attributes.get("threads", 16)
         batch_size = self.additional_attributes.get("batch_size", 100)
         namecsv = self.additional_files.get("taxon2name")
