@@ -66,7 +66,7 @@ def run_local(samples, docker_image_id, dir, databases, settings, verbose):
         assert sample_i in BENCHMARKS["samples"], f"unknown sample {sample_i}"
 
     dir = Path(dir)
-    assert not dir.exists(), "--dir must't already exist"
+    assert not dir.exists(), "--dir must not already exist"
 
     # parallelize runs on a thread pool; miniwdl itself may further restrict concurrency
     failure = None

@@ -58,65 +58,83 @@ samples:
       s3_fastqs_1: s3://idseq-bench/5/norg_13__nacc_35__uniform_weight_per_organism__hiseq_reads__v10__R2.fastq.gz
   atcc_staggered:
     inputs:
-      fastqs_0: s3://idseq-bench/datasets/fastqs/atcc_even_R1.fastq.gz
-      fastqs_1: s3://idseq-bench/datasets/fastqs/atcc_even_R2.fastq.gz
-  atcc_even:
-    inputs:
       fastqs_0: s3://idseq-bench/datasets/fastqs/atcc_staggered_R1.fastq.gz
       fastqs_1: s3://idseq-bench/datasets/fastqs/atcc_staggered_R2.fastq.gz
+    truth: s3://idseq-bench/datasets/truth_files/atcc_staggered_TRUTH.txt
+  atcc_even:
+    inputs:
+      fastqs_0: s3://idseq-bench/datasets/fastqs/atcc_even_R1.fastq.gz
+      fastqs_1: s3://idseq-bench/datasets/fastqs/atcc_even_R2.fastq.gz
+    truth: s3://idseq-bench/datasets/truth_files/atcc_even_TRUTH.txt
   unambiguouslymapped_ds_7:
     inputs:
       fastqs_0: s3://idseq-bench/datasets/fastqs/UnAmbiguouslyMapped_ds.7.fq.gz
+    truth: s3://idseq-bench/datasets/truth_files/UnAmbiguouslyMapped_ds.7_TRUTH.txt
   unambiguouslymapped_ds_buccal:
     inputs:
       fastqs_0: s3://idseq-bench/datasets/fastqs/UnAmbiguouslyMapped_ds.buccal.fq.gz
+    truth: s3://idseq-bench/datasets/truth_files/UnAmbiguouslyMapped_ds.buccal_TRUTH.txt
   unambiguouslymapped_ds_cityparks:
     inputs:
       fastqs_0: s3://idseq-bench/datasets/fastqs/UnAmbiguouslyMapped_ds.cityparks.fq.gz
+    truth: s3://idseq-bench/datasets/truth_files/UnAmbiguouslyMapped_ds.cityparks_TRUTH.txt
   unambiguouslymapped_ds_gut:
     inputs:
       fastqs_0: s3://idseq-bench/datasets/fastqs/UnAmbiguouslyMapped_ds.gut.fq.gz
+    truth: s3://idseq-bench/datasets/truth_files/UnAmbiguouslyMapped_ds.gut_TRUTH.txt
   unambiguouslymapped_ds_hous1:
     inputs:
       fastqs_0: s3://idseq-bench/datasets/fastqs/UnAmbiguouslyMapped_ds.hous1.fq.gz
+    truth: s3://idseq-bench/datasets/truth_files/UnAmbiguouslyMapped_ds.hous1_TRUTH.txt
   unambiguouslymapped_ds_hous2:
     inputs:
       fastqs_0: s3://idseq-bench/datasets/fastqs/UnAmbiguouslyMapped_ds.hous2.fq.gz
+    truth: s3://idseq-bench/datasets/truth_files/UnAmbiguouslyMapped_ds.hous2_TRUTH.txt
   unambiguouslymapped_ds_nycsm:
     inputs:
       fastqs_0: s3://idseq-bench/datasets/fastqs/UnAmbiguouslyMapped_ds.nycsm.fq.gz
+    truth: s3://idseq-bench/datasets/truth_files/UnAmbiguouslyMapped_ds.nycsm_TRUTH.txt
   unambiguouslymapped_ds_soil:
     inputs:
       fastqs_0: s3://idseq-bench/datasets/fastqs/UnAmbiguouslyMapped_ds.soil.fq.gz
+    truth: s3://idseq-bench/datasets/truth_files/UnAmbiguouslyMapped_ds.soil_TRUTH.txt
   CAMI_low:
     inputs:
       fastqs_0: s3://idseq-bench/datasets/fastqs/RL_S001__insert_270_R1.fq.gz
       fastqs_1: s3://idseq-bench/datasets/fastqs/RL_S001__insert_270_R2.fq.gz
+    truth: s3://idseq-bench/datasets/truth_files/goldstandard_low_1.profile_TRUTH.txt
   CAMI_med_1:
     inputs:
       fastqs_0: s3://idseq-bench/datasets/fastqs/RM2_S001__insert_270_R1.fq.gz
       fastqs_1: s3://idseq-bench/datasets/fastqs/RM2_S001__insert_270_R2.fq.gz
+    truth: s3://idseq-bench/datasets/truth_files/goldstandard_medium_1.profile_TRUTH.txt
   CAMI_med_2:
     inputs:
       fastqs_0: s3://idseq-bench/datasets/fastqs/RM2_S002__insert_270_R1.fq.gz
       fastqs_1: s3://idseq-bench/datasets/fastqs/RM2_S002__insert_270_R2.fq.gz
+    truth: s3://idseq-bench/datasets/truth_files/goldstandard_medium_2.profile_TRUTH.txt
   CAMI_high_1:
     inputs:
       fastqs_0: s3://idseq-bench/datasets/fastqs/RH_S001__insert_270_R1.fq.gz
       fastqs_1: s3://idseq-bench/datasets/fastqs/RH_S001__insert_270_R2.fq.gz
+    truth: s3://idseq-bench/datasets/truth_files/goldstandard_high_1.profile_TRUTH.txt
   CAMI_high_2:
     inputs:
       fastqs_0: s3://idseq-bench/datasets/fastqs/RH_S002__insert_270_R1.fq.gz
       fastqs_1: s3://idseq-bench/datasets/fastqs/RH_S002__insert_270_R2.fq.gz
+    truth: s3://idseq-bench/datasets/truth_files/goldstandard_high_2.profile_TRUTH.txt
   CAMI_high_3:
     inputs:
       fastqs_0: s3://idseq-bench/datasets/fastqs/RH_S003__insert_270_R1.fq.gz
       fastqs_1: s3://idseq-bench/datasets/fastqs/RH_S003__insert_270_R2.fq.gz
+    truth: s3://idseq-bench/datasets/truth_files/goldstandard_high_3.profile_TRUTH.txt
   CAMI_high_4:
     inputs:
       fastqs_0: s3://idseq-bench/datasets/fastqs/RH_S004__insert_270_R1.fq.gz
       fastqs_1: s3://idseq-bench/datasets/fastqs/RH_S004__insert_270_R2.fq.gz
+    truth: s3://idseq-bench/datasets/truth_files/goldstandard_high_4.profile_TRUTH.txt
   CAMI_high_5:
     inputs:
       fastqs_0: s3://idseq-bench/datasets/fastqs/RH_S005__insert_270_R1.fq.gz
       fastqs_1: s3://idseq-bench/datasets/fastqs/RH_S005__insert_270_R2.fq.gz
+    truth: s3://idseq-bench/datasets/truth_files/goldstandard_high_5.profile_TRUTH.txt
