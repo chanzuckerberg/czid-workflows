@@ -16,7 +16,7 @@ import boto3
 from pathlib import Path
 from contextlib import ExitStack
 from urllib.parse import urlparse
-from _util import load_benchmarks_yml
+from _util import load_benchmarks_yml, adjusted_aupr
 from taxadb.taxid import TaxID
 
 BENCHMARKS = load_benchmarks_yml()
@@ -142,7 +142,9 @@ def harvest_sample(sample, outputs_json, taxadb):
     ans["taxa"]["NR"] = harvest_sample_taxon_counts(
         sample, outputs_json, contig_summary, contig_lengths, "NR", taxadb
     )
-
+    ans["truth"] = read_truth_file(BENCHMARKS["samples"][sample]["truth"])
+    ans["aupr"] = 0.0
+    ans["l2"] = 1e100
     return ans
 
 
@@ -271,6 +273,17 @@ def contigs_stats(contig_lengths, ids=None):
             break
         cumlen += length_i
     return {"contigs": len(lengths), "contigs_nt": total_nt, "contigs_N50": N50}
+
+
+def read_truth_file(path):
+    taxon_abundances = {}
+    for line in s3object(path).get()["Body"].read().decode().splitlines():
+        taxid, _, abundance, rank, species_name = line.split("\t")[:5]
+        # All current benchmark datasets have truth data on species level only,
+        # so we use this as a simplifying assumption downstream
+        assert rank == "species"
+        taxon_abundances[int(taxid)] = float(abundance)
+    return taxon_abundances
 
 
 if __name__ == "__main__":
