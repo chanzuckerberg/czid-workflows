@@ -1,5 +1,6 @@
 ''' Generate Phylogenetic tree '''
 import os
+import json
 
 from idseq_dag.engine.pipeline_step import PipelineStep
 import idseq_dag.util.command as command
@@ -13,27 +14,30 @@ class PipelineStepPrepareTaxonFasta(PipelineStep):
     To be used as input for phylo_trees.
     '''
     def run(self):
-        output_file = self.output_files_local()[0]
-        byterange_dict = self.additional_attributes["taxon_byteranges"]
+        os.mkdir("taxon_fastas")
+        json_input_path = self.input_files_local[0][0]
+        with open(json_input_path) as f:
+            json_input = json.load(f)
+        for sample in json_input:
+            output_file = os.path.join("taxon_fastas", str(sample["run_id"]) + ".fasta")
+            # Retrieve IDseq taxon fasta files
+            partial_fasta_files = []
+            for hit_type in ["nr", "nt"]:
+                byterange = sample[f"taxon_byterange_{hit_type}"]
+                first_byte = byterange["first_byte"]
+                last_byte = byterange["last_byte"]
+                s3_file = byterange["refined_taxid_annotated_sorted_fasta_s3_path"]
+                local_file = f"{hit_type}_{os.path.basename(output_file)}"
+                bucket, key = s3.split_identifiers(s3_file)
+                s3.fetch_byterange(first_byte, last_byte, bucket, key, local_file)
+                partial_fasta_files.append(local_file)
+            self.fasta_union(partial_fasta_files, output_file)
+            for fasta in partial_fasta_files + [output_file]:
+                print(f"{count.reads(fasta)} unique reads in {fasta}")
 
-        # Retrieve IDseq taxon fasta files
-        partial_fasta_files = []
-        for hit_type, byterange in byterange_dict.items():
-            first_byte = byterange[0]
-            last_byte = byterange[1]
-            s3_file = byterange[2]
-            local_basename = f"{hit_type}_{os.path.basename(output_file)}.fasta"
-            bucket, key = s3.split_identifiers(s3_file)
-            local_file = os.path.join(self.output_dir_local, local_basename)
-            s3.fetch_byterange(first_byte, last_byte, bucket, key, local_file)
-            partial_fasta_files.append(local_file)
-        self.fasta_union(partial_fasta_files, output_file)
-        for fasta in partial_fasta_files + [output_file]:
-            print(f"{count.reads(fasta)} unique reads in {fasta}")
-
-        # Trim Illumina adapters
-        # TODO: consider moving this to the beginning of the main pipeline
-        self.trim_adapters_in_place(output_file)
+            # Trim Illumina adapters
+            # TODO: consider moving this to the beginning of the main pipeline
+            self.trim_adapters_in_place(output_file)
 
     def count_reads(self):
         pass

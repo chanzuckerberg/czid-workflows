@@ -42,7 +42,9 @@ RUN apt-get -q install -y \
         samtools \
         fastx-toolkit \
         seqtk \
-        bedtools
+        bedtools \
+        cutadapt \
+        tcsh
 
 # The following packages pull in python2.7
 RUN apt-get -q install -y \
@@ -72,7 +74,6 @@ RUN curl -L -o /usr/bin/idseq-dedup https://github.com/chanzuckerberg/idseq-dedu
 
 # Note: bsdtar is available in libarchive-tools
 # Note: python3-scipy pulls in gcc (fixed in Ubuntu 19.10)
-# TODO: kSNP3 (separate phylotree image?)
 
 # Note: the NonHostAlignment stage uses a different version of gmap custom to IDseq, installed here:
 # https://github.com/chanzuckerberg/idseq/blob/master/workflows/docker/gsnap/Dockerfile#L16-L20
@@ -136,6 +137,16 @@ RUN make
 ENV PATH="${PATH}:/rapsearch2/Src/"
 # Uninstall build only dependencies
 RUN apt-get purge -y g++ libperl4-corelibs-perl make
+WORKDIR /
+
+# For phylogenetic trees
+WORKDIR /tmp
+RUN wget https://sourceforge.net/projects/ksnp/files/kSNP3.1_Linux_package.zip
+RUN unzip -o kSNP3.1_Linux_package.zip
+WORKDIR /tmp/kSNP3.1_Linux_package/kSNP3
+RUN cp -r * /usr/local/bin/
+RUN sed -i 's:set kSNP=/usr/local/kSNP3:set kSNP=/usr/local/bin:g' /usr/local/bin/kSNP3 # edit the kSNP3 executable so it looks for other executables in /usr/local/bin
+RUN apt-get install -y tcsh
 WORKDIR /
 
 COPY idseq-dag /tmp/idseq-dag

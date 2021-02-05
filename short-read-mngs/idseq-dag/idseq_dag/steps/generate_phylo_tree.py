@@ -9,6 +9,7 @@ from collections import defaultdict
 
 from idseq_dag.engine.pipeline_step import PipelineStep
 from idseq_dag.steps.generate_alignment_viz import PipelineStepGenerateAlignmentViz
+from idseq_dag.util.parsing import HitSummaryMergedReader
 import idseq_dag.util.command as command
 import idseq_dag.util.command_patterns as command_patterns
 import idseq_dag.util.s3 as s3
@@ -28,11 +29,13 @@ class PipelineStepGeneratePhyloTree(PipelineStep):
     '''
     def run(self):
         output_files = self.output_files_local()
-        local_taxon_fasta_files = [f for input_item in self.input_files_local for f in input_item]
+        local_taxon_fasta_files = self.input_files_local[0]
+        with open(self.input_files_local[1][0]) as f:
+            self.samples = json.load(f)
         taxid = self.additional_attributes["taxid"]
         reference_taxids = self.additional_attributes.get("reference_taxids", [taxid])  # Note: will only produce a result if species-level or below
         # During phylo tree creation, if the taxon is in an unknown superkingdom then the k selected from k_config is supposed to be from the key None.
-        superkingdom_name = self.additional_attributes.get("superkingdom_name") if self.additional_attributes.get("superkingdom_name") != '' else None
+        superkingdom_name = self.additional_attributes.get("superkingdom_name") or None  # handle the '' case
 
         # knsp3 has a command (MakeKSNP3infile) for making a ksnp3-compatible input file from a directory of fasta files.
         # Before we can use the command, we symlink all fasta files to a dedicated directory.
@@ -131,8 +134,6 @@ class PipelineStepGeneratePhyloTree(PipelineStep):
                 os.path.basename(annotated_genome_input)
             ])
             snps_all_annotated = f"{ksnp_output_dir}/SNPs_all_annotated"
-            if os.path.isfile(snps_all_annotated):
-                self.additional_output_files_hidden.append(snps_all_annotated)
 
         # Produce VCF file with respect to first reference genome in annotated_genome_input:
         if os.path.isfile(annotated_genome_input):
@@ -161,13 +162,6 @@ class PipelineStepGeneratePhyloTree(PipelineStep):
         if ksnp_vcf_file:
             target_vcf_file = f"{ksnp_output_dir}/variants_reference1.vcf"
             self.name_samples_vcf(ksnp_vcf_file[0], target_vcf_file)
-            self.additional_output_files_hidden.append(target_vcf_file)
-
-        # Upload all kSNP3 output files for potential future reference
-        supplementary_files = [f for f in glob.glob(f"{ksnp_output_dir}/*")
-                               if os.path.isfile(f) and
-                               f not in self.additional_output_files_hidden]
-        self.additional_output_files_hidden.extend(supplementary_files)
 
     def count_reads(self):
         pass
@@ -291,32 +285,24 @@ class PipelineStepGeneratePhyloTree(PipelineStep):
         if n == 0:
             return {}
 
-        # Retrieve files
         nt_db = self.additional_attributes["nt_db"]
-        nt_loc_db = s3.fetch_reference(
-            self.additional_files["nt_loc_db"],
-            self.ref_dir_local,
-            allow_s3mi=True)
+        nt_loc_db = self.additional_attributes["nt_loc_db"]
 
         # Choose accessions to process.
-        s3_hitsummary2_files = self.additional_attributes["hitsummary2_files"].values()
-        accessions = defaultdict(lambda: 0)
+        accessions = defaultdict(int)
         # TODO: Address issue where accessions in nr can be chosen in the following code.
         # These accessions will not be found in nt_loc and will be subsequently omitted.
-        for file_list in s3_hitsummary2_files:
-            tally = defaultdict(lambda: 0)
-            for s3_file in file_list:
-                local_basename = s3_file.replace("/", "-").replace(":", "-")
-                local_file = s3.fetch_from_s3(
-                    s3_file,
-                    os.path.join(self.output_dir_local, local_basename))
-                if local_file is None:
-                    continue
-                with open(local_file, 'r') as f:
-                    for line in f:
-                        acc, species_taxid, genus_taxid, family_taxid = line.rstrip().split("\t")[3:7]
+        for sample in self.samples:
+            tally = defaultdict(int)
+            for hit_type in ["nr", "nt"]:
+                with open(sample[f"hitsummary2_{hit_type}"]) as f:
+                    for row in HitSummaryMergedReader(f):
+                        accession_id = row["accession_id"]
+                        species_taxid = row["species_taxid"]
+                        genus_taxid = row["genus_taxid"]
+                        family_taxid = row["family_taxid"]
                         if any(int(hit_taxid) == taxid for hit_taxid in [species_taxid, genus_taxid, family_taxid]):
-                            tally[acc] += 1
+                            tally[accession_id] += 1
             if tally:
                 best_acc, max_count = max(tally.items(), key=lambda x: x[1])
                 accessions[best_acc] += max_count
@@ -327,6 +313,7 @@ class PipelineStepGeneratePhyloTree(PipelineStep):
         # Make map of accession to sequence file
         accession2info = dict((acc, {}) for acc in accessions)
         with open_file_db_by_extension(nt_loc_db) as nt_loc_dict:
+            # TODO: (tmorse)
             PipelineStepGenerateAlignmentViz.get_sequences_by_accession_list_from_s3(
                 accession2info, nt_loc_dict, nt_db)
 
@@ -464,7 +451,7 @@ class PipelineStepGeneratePhyloTree(PipelineStep):
         # The VCF has standard columns CHROM, POS, ID, REF, ALT, QUAL, FILTER, INFO, FORMAT,
         # followed by 1 column for each of the pipeline_run_ids. This function replaces the pipeline_run)_ids
         # by the corresponding sample names so that users can understand the file.
-        sample_names_by_run_ids = self.additional_attributes["sample_names_by_run_ids"]
+        sample_names_by_run_ids = { sample["run_id"]: sample["sample_name"] for sample in self.samples }
         new_column_description = self._vcf_new_column_description(input_file, sample_names_by_run_ids)
         self._vcf_replace_column_description(input_file, output_file, new_column_description)
 
