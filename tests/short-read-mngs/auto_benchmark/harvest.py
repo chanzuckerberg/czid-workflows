@@ -18,6 +18,7 @@ from contextlib import ExitStack
 from urllib.parse import urlparse
 from _util import load_benchmarks_yml, adjusted_aupr
 from taxadb.taxid import TaxID
+import numpy as np
 
 BENCHMARKS = load_benchmarks_yml()
 
@@ -143,8 +144,75 @@ def harvest_sample(sample, outputs_json, taxadb):
         sample, outputs_json, contig_summary, contig_lengths, "NR", taxadb
     )
     ans["truth"] = read_truth_file(BENCHMARKS["samples"][sample]["truth"])
-    ans["aupr"] = 0.0
-    ans["l2"] = 1e100
+
+    '''
+    From Ye et al. 2019:
+    Precision is the proportion of true positive species identified in the sample divided by the number of total species
+    identified.
+    Recall is the proportion of true positive species divided by the number of distinct species actually in the sample.
+    A potential drawback of AUPR is that it is biased toward low-precision, high-recall classifiers.
+    Classifiers that do not recall all of the ground-truth taxa are penalized with zero AUPR from the highest achieved
+    recall to 100% recall. For classifiers that do reach 100% recall, additional false positive taxon calls do not
+    further penalize the AUPR score.
+
+    In addition to considering the number of correctly identified species, it is also important to evaluate how
+    accurately the abundance of each species or genera in the resulting classification reflects the abundance of each
+    species in the original biological sample ("ground truth"). This is especially critical for applications such as
+    microbiome sequencing studies, where changes in population composition can confer phenotypic effects. Abundance can
+    be considered either as the relative abundance of reads from each taxa ("raw") or by inferring abundance of the
+    number of individuals from each taxa by correcting read counts for genome size ("corrected"). Some programs
+    incorporate a correction for genome length into abundance estimates; this calculation can also be manually performed
+    by reweighting the read counts after classification. Here we use raw abundance profiles unless correction is
+    performed automatically by the software, as in the case of PathSeq and Bracken.
+
+    To evaluate the accuracy of abundance profiles, we can calculate the pairwise distances between ground-truth
+    abundances and normalized abundance counts for each identified taxon at a given taxonomic level (e.g., species or
+    genus). For this, we calculate the L2 distance for a given dataset’s classified output as the straight-line distance
+    between the observed and true abundance vectors. We can also use this measure to compare abundance profiles between
+    classifiers by instead computing L2 distances between classified abundances for pairs of classifiers. Abundance
+    profile distance is more sensitive to accurate quantification of the highly abundant taxa present in the sample
+    (Aitchison, 1982; Quinn et al., 2018). High numbers of very-low-abundance false positives will not dramatically
+    affect the measure because they comprise only a small portion of the total abundance. For this reason, using such a
+    measure alongside AUPR, which is highly sensitive to classifiers’ performance in correctly identifying low-abundance
+    taxa, allows comprehensive evaluation of classifier performance.
+
+    The L2 distance should be considered as a representation of the abundance profiles. Because metagenomic abundance
+    profiles are proportional data and not absolute data, it is important to remember that many common distance metrics
+    (including L2 distance) are not true mathematical metrics in proportional space. Generally, in proportional data
+    analysis, a common method is to normalize proportions by using the centered log-ratio transform to calculate
+    distances. However, the output of these metagenomic classifiers includes many low-abundance false positives, leading
+    to sparse zero counts for many taxa across the different reports. The log-transform of these zero counts is
+    undefined unless arbitrary pseudocounts are added to each taxa, which can negatively bias accurate classifiers
+    because false positive taxa will have added counts. Another commonly used metric to compare abundance profiles is
+    the UniFrac distance, which considers both the abundance proportion of component taxa as well as the evolutionary
+    distance for incorrectly called taxa. However, using this metric is complicated by the difficulty in assessing
+    evolutionary distance between microbial species’ whole genomes.
+    '''
+
+    nt_missed_taxa = [
+        tax_id for tax_id in ans["truth"]
+        if tax_id not in ans["taxa"]["NT"]
+    ]
+    nt_correctness_labels = [
+        1 if tax_id in ans["truth"] else 0
+        for tax_id in ans["taxa"]["NT"]
+    ]
+    nt_correctness_labels += [1] * len(nt_missed_taxa)
+    total_reads = sum([i["reads_dedup"] for i in ans["taxa"]["NT"].values()])
+    # Using raw abundances as proxies for confidence score per Ye2009 methodology
+    # https://www.cell.com/cell/fulltext/S0092-8674(19)30775-5#fig2
+    nt_confidence_scores = [i["reads_dedup"] / total_reads for i in ans["taxa"]["NT"].values()]
+    # TODO: what's the correct placeholder value here? Setting it to 0 causes AUPR to blow out to 0.
+    nt_confidence_scores += [1e-100] * len(nt_missed_taxa)
+    ans["aupr"] = adjusted_aupr(nt_correctness_labels, nt_confidence_scores, force_monotonic=False)["aupr"]
+
+    truth_sum = sum(ans["truth"].values())
+    relative_abundances_diff = [
+        ans["truth"][taxon]/truth_sum - ans["taxa"]["NT"].get(taxon, {}).get("reads_dedup", 1e-100)/total_reads
+        for taxon in ans["truth"]
+    ]
+
+    ans["l2_norm"] = np.linalg.norm(relative_abundances_diff, ord=2)
     return ans
 
 
