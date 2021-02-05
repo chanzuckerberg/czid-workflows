@@ -191,7 +191,7 @@ def harvest_sample(sample, outputs_json, taxadb):
     the UniFrac distance, which considers both the abundance proportion of component taxa as well as the evolutionary
     distance for incorrectly called taxa. However, using this metric is complicated by the difficulty in assessing
     evolutionary distance between microbial species’ whole genomes.
-    '''
+x    '''
 
     nt_missed_taxa = [
         tax_id for tax_id in ans["truth"]
@@ -350,7 +350,7 @@ def contigs_stats(contig_lengths, ids=None):
 def read_truth_file(path):
     taxon_abundances = {}
     s3url = urlparse(path)
-    s3 = boto3.client('s3', config=BotocoreConfig(signature_version=BOTOCORE_UNSIGNED))
+    s3 = boto3.resource('s3', config=BotocoreConfig(signature_version=BOTOCORE_UNSIGNED))
     for line in s3.Object(s3url.netloc, s3url.path.lstrip("/")).get()["Body"].read().decode().splitlines():
         taxid, _, abundance, rank, species_name = line.split("\t")[:5]
         # All current benchmark datasets have truth data on species level only,
