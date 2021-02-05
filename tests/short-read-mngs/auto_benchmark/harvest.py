@@ -12,13 +12,17 @@ import os
 import argparse
 import json
 import itertools
-import boto3
 from pathlib import Path
 from contextlib import ExitStack
 from urllib.parse import urlparse
-from _util import load_benchmarks_yml, adjusted_aupr
+
+import boto3
+from botocore import UNSIGNED as BOTOCORE_UNSIGNED
+from botocore.config import Config as BotocoreConfig
 from taxadb.taxid import TaxID
 import numpy as np
+
+from _util import load_benchmarks_yml, adjusted_aupr
 
 BENCHMARKS = load_benchmarks_yml()
 
@@ -345,7 +349,9 @@ def contigs_stats(contig_lengths, ids=None):
 
 def read_truth_file(path):
     taxon_abundances = {}
-    for line in s3object(path).get()["Body"].read().decode().splitlines():
+    s3url = urlparse(path)
+    s3 = boto3.client('s3', config=BotocoreConfig(signature_version=BOTOCORE_UNSIGNED))
+    for line in s3.Object(s3url.netloc, s3url.path.lstrip("/")).get()["Body"].read().decode().splitlines():
         taxid, _, abundance, rank, species_name = line.split("\t")[:5]
         # All current benchmark datasets have truth data on species level only,
         # so we use this as a simplifying assumption downstream
