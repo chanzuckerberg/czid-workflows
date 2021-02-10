@@ -28,9 +28,11 @@ workflow consensus_genome {
         Boolean filter_reads = true
         Boolean trim_adapters = true
 
+        # MakeRefFasta
         Boolean make_ref_fasta = true
-        File? nt_db
+        String? nt_db_path
         File? nt_loc_db
+        String? accession_id
 
         Float ivarFreqThreshold = 0.9
         Int   ivarQualTreshold  = 20
@@ -65,9 +67,11 @@ workflow consensus_genome {
     if (make_ref_fasta) {
         call MakeRefFasta {
             input:
-                nt_db = nt_db
-                nt_loc_db = nt_loc_db
-                docker_image_id = docker_image_id
+                prefix = prefix,
+                nt_db_path = nt_db_path,
+                nt_loc_db = nt_loc_db,
+                docker_image_id = docker_image_id,
+                accession_id = accession_id
         }
     }
 
@@ -201,18 +205,20 @@ workflow consensus_genome {
 
 task MakeRefFasta {
     input {
-        File? nt_db
+        String prefix
+        String? nt_db_path
         File? nt_loc_db
+        String? accession_id
 
         String docker_image_id
     }
 
     command <<<
-        echo "HELLO WORLD"
+        >&2 echo "HELLO WORLD"
     >>>
 
     output {
-        File ref_fasta_out = "~{prefix}ref_fasta..fa"
+        File ref_fasta_out = "~{prefix}ref_fasta.fa"
     }
 
     runtime {
