@@ -28,6 +28,10 @@ workflow consensus_genome {
         Boolean filter_reads = true
         Boolean trim_adapters = true
 
+        Boolean make_ref_fasta = true
+        File? nt_db
+        File? nt_loc_db
+
         Float ivarFreqThreshold = 0.9
         Int   ivarQualTreshold  = 20
         Int   minDepth          = 10
@@ -56,6 +60,15 @@ workflow consensus_genome {
             fastqs = RemoveHost.host_removed_fastqs,
             ercc_fasta = ercc_fasta,
             docker_image_id = docker_image_id
+    }
+
+    if (make_ref_fasta) {
+        call MakeRefFasta {
+            input:
+                nt_db = nt_db
+                nt_loc_db = nt_loc_db
+                docker_image_id = docker_image_id
+        }
     }
 
     if (filter_reads) {
@@ -185,6 +198,27 @@ workflow consensus_genome {
 }
 
 # TODO: task to validate input
+
+task MakeRefFasta {
+    input {
+        File? nt_db
+        File? nt_loc_db
+
+        String docker_image_id
+    }
+
+    command <<<
+        echo "HELLO WORLD"
+    >>>
+
+    output {
+        File ref_fasta_out = "~{prefix}ref_fasta..fa"
+    }
+
+    runtime {
+        docker: docker_image_id
+    }
+}
 
 task RemoveHost {
     input {
