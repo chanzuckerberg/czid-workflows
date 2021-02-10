@@ -233,14 +233,6 @@ class PipelineFlow(object):
 
         idseq_dag.util.s3.upload_with_retries(local_input_errors_file, self.output_dir_s3 + "/")
 
-    def create_status_json_file(self):
-        """Create [stage name]_status.json, which will include step-level job status updates to be used in idseq-web."""
-        log.write(f"Creating {self.step_status_local}")
-
-        with open(self.step_status_local, 'w') as status_file:
-            json.dump({}, status_file)
-        idseq_dag.util.s3.upload_with_retries(self.step_status_local, self.output_dir_s3 + "/")
-
     def manage_reference_downloads_cache(self):
         command.make_dirs(PURGE_SENTINEL_DIR)
         command.touch(PURGE_SENTINEL)
@@ -283,7 +275,6 @@ class PipelineFlow(object):
                 if target_info['s3_downloadable']:
                     threading.Thread(target=self.fetch_target_from_s3, args=(target,)).start()
 
-        self.create_status_json_file()
         # Start initializing all the steps and start running them and wait until all of them are done
         step_instances = []
         step_status_lock = TraceLock(

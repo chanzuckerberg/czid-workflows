@@ -30,6 +30,7 @@ task RunAlignment_gsnap_out {
     --additional-attributes '{"alignment_algorithm": "gsnap", "index_dir_suffix": "~{index_dir_suffix}", "use_taxon_whitelist": ~{use_taxon_whitelist}, "run_locally": ~{run_locally} ~{if defined(genome_name) then ' , "genome_name": "~{genome_name}"' else ''} }'
   >>>
   output {
+    String step_description_md = read_string("gsnap_out.description.md")
     File gsnap_m8 = "gsnap.m8"
     File gsnap_deduped_m8 = "gsnap.deduped.m8"
     File gsnap_hitsummary_tab = "gsnap.hitsummary.tab"
@@ -68,6 +69,7 @@ task RunAlignment_rapsearch2_out {
     --additional-attributes '{"alignment_algorithm": "rapsearch2", "index_dir_suffix": "~{index_dir_suffix}", "use_taxon_whitelist": ~{use_taxon_whitelist}, "run_locally": ~{run_locally} }'
   >>>
   output {
+    String step_description_md = read_string("rapsearch2_out.description.md")
     File rapsearch2_m8 = "rapsearch2.m8"
     File rapsearch2_deduped_m8 = "rapsearch2.deduped.m8"
     File rapsearch2_hitsummary_tab = "rapsearch2.hitsummary.tab"
@@ -98,6 +100,7 @@ task CombineTaxonCounts {
     --additional-attributes '{}'
   >>>
   output {
+    String step_description_md = read_string("taxon_count_out.description.md")
     File taxon_counts_with_dcr_json = "taxon_counts_with_dcr.json"
     File? output_read_count = "taxon_count_out.count"
   }
@@ -135,6 +138,7 @@ task GenerateAnnotatedFasta {
     --additional-attributes '{}'
   >>>
   output {
+    String step_description_md = read_string("annotated_out.description.md")
     File annotated_merged_fa = "annotated_merged.fa"
     File unidentified_fa = "unidentified.fa"
     File? output_read_count = "annotated_out.count"

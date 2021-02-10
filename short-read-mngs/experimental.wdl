@@ -22,6 +22,7 @@ task GenerateTaxidFasta {
     --additional-attributes '{}'
   >>>
   output {
+    String step_description_md = read_string("taxid_fasta_out.description.md")
     File taxid_annot_fasta = "taxid_annot.fasta"
     File? output_read_count = "taxid_fasta_out.count"
   }
@@ -49,6 +50,7 @@ task GenerateTaxidLocator {
     --additional-attributes '{}'
   >>>
   output {
+    String step_description_md = read_string("taxid_locator_out.description.md")
     File taxid_annot_sorted_nt_fasta = "taxid_annot_sorted_nt.fasta"
     File taxid_locations_nt_json = "taxid_locations_nt.json"
     File taxid_annot_sorted_nr_fasta = "taxid_annot_sorted_nr.fasta"
@@ -103,6 +105,7 @@ task GenerateAlignmentViz {
     --additional-attributes '{"nt_db": "~{nt_db}"}'
   >>>
   output {
+    String step_description_md = read_string("alignment_viz_out.description.md")
     File align_viz_summary = "align_viz.summary"
     File? output_read_count = "alignment_viz_out.count"
     Array[File] align_viz = glob("align_viz/*.align_viz.json")
@@ -134,6 +137,7 @@ task RunSRST2 {
     --additional-attributes '{"min_cov": 0, "n_threads": 16, "file_ext": "~{file_ext}"}'
   >>>
   output {
+    String step_description_md = read_string("srst2_out.description.md")
     File out_log = "out.log"
     File out__genes__ARGannot_r2__results_txt = "out__genes__ARGannot_r2__results.txt"
     File out__fullgenes__ARGannot_r2__results_txt = "out__fullgenes__ARGannot_r2__results.txt"
@@ -173,6 +177,7 @@ task GenerateCoverageViz {
     --additional-attributes '{}'
   >>>
   output {
+    String step_description_md = read_string("coverage_viz_out.description.md")
     File coverage_viz_summary_json = "coverage_viz_summary.json"
     File? output_read_count = "coverage_viz_out.count"
     Array[File] coverage_viz = glob("coverage_viz/*_coverage_viz.json")
@@ -204,6 +209,7 @@ task NonhostFastq {
     --additional-attributes '{"use_taxon_whitelist": ~{use_taxon_whitelist}}'
   >>>
   output {
+    String step_description_md = read_string("nonhost_fastq_out.description.md")
     File nonhost_R1_fastq = "nonhost_R1.fastq"
     File? nonhost_R2_fastq = "nonhost_R2.fastq"
     File? output_read_count = "nonhost_fastq_out.count"

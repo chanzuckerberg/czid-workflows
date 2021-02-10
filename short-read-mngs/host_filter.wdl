@@ -21,6 +21,7 @@ task RunValidateInput {
     --additional-attributes '{"truncate_fragments_to": ~{max_input_fragments}, "file_ext": "~{file_ext}"}'
   >>>
   output {
+    String step_description_md = read_string("validate_input_out.description.md")
     File validate_input_summary_json = "validate_input_summary.json"
     File valid_input1_fastq = "valid_input1.fastq"
     File? valid_input2_fastq = "valid_input2.fastq"
@@ -55,6 +56,7 @@ task RunStar {
     --additional-attributes '{"output_gene_file": "reads_per_gene.star.tab", "nucleotide_type": "~{nucleotide_type}", "host_genome": "~{host_genome}", "output_metrics_file": "picard_insert_metrics.txt", "output_histogram_file": "insert_size_histogram.pdf"}'
   >>>
   output {
+    String step_description_md = read_string("star_out.description.md")
     File unmapped1_fastq = "unmapped1.fastq"
     File? unmapped2_fastq = "unmapped2.fastq"
     File? output_read_count = "star_out.count"
@@ -87,6 +89,7 @@ task RunTrimmomatic {
     --additional-attributes '{}'
   >>>
   output {
+    String step_description_md = read_string("trimmomatic_out.description.md")
     File trimmomatic1_fastq = "trimmomatic1.fastq"
     File? trimmomatic2_fastq = "trimmomatic2.fastq"
     File? output_read_count = "trimmomatic_out.count"
@@ -115,6 +118,7 @@ task RunPriceSeq {
     --additional-attributes '{}'
   >>>
   output {
+    String step_description_md = read_string("priceseq_out.description.md")
     File priceseq1_fa = "priceseq1.fa"
     File? priceseq2_fa = "priceseq2.fa"
     File? output_read_count = "priceseq_out.count"
@@ -143,6 +147,7 @@ task RunIDSeqDedup {
     --additional-attributes '{}'
   >>>
   output {
+    String step_description_md = read_string("idseq_dedup_out.description.md")
     File dedup1_fa = "dedup1.fa"
     File? dedup2_fa = "dedup2.fa"
     File duplicate_clusters_csv = "clusters.csv"
@@ -175,6 +180,7 @@ task RunLZW {
     --additional-attributes '{"thresholds": [0.45, 0.42], "threshold_readlength": 150}'
   >>>
   output {
+    String step_description_md = read_string("lzw_out.description.md")
     File lzw1_fa = "lzw1.fa"
     File? lzw2_fa = "lzw2.fa"
     File? output_read_count = "lzw_out.count"
@@ -207,6 +213,7 @@ task RunBowtie2_bowtie2_out {
     --additional-attributes '{"output_sam_file": "bowtie2.sam"}'
   >>>
   output {
+    String step_description_md = read_string("bowtie2_out.description.md")
     File bowtie2_1_fa = "bowtie2_1.fa"
     File? bowtie2_2_fa = "bowtie2_2.fa"
     File? bowtie2_merged_fa = "bowtie2_merged.fa"
@@ -240,6 +247,7 @@ task RunSubsample {
     --additional-attributes '{"max_fragments": ~{max_subsample_fragments}}'
   >>>
   output {
+    String step_description_md = read_string("subsampled_out.description.md")
     File subsampled_1_fa = "subsampled_1.fa"
     File? subsampled_2_fa = "subsampled_2.fa"
     File? subsampled_merged_fa = "subsampled_merged.fa"
@@ -275,6 +283,7 @@ task RunStarDownstream {
     --additional-attributes '{}'
   >>>
   output {
+    String step_description_md = read_string("star_human_out.description.md")
     File unmapped_human_1_fa = "unmapped_human_1.fa"
     File? unmapped_human_2_fa = "unmapped_human_2.fa"
     File? output_read_count = "star_human_out.count"
@@ -307,6 +316,7 @@ task RunBowtie2_bowtie2_human_out {
     --additional-attributes '{"output_sam_file": "bowtie2_human.sam"}'
   >>>
   output {
+    String step_description_md = read_string("bowtie2_human_out.description.md")
     File bowtie2_human_1_fa = "bowtie2_human_1.fa"
     File? bowtie2_human_2_fa = "bowtie2_human_2.fa"
     File? bowtie2_human_merged_fa = "bowtie2_human_merged.fa"
@@ -340,6 +350,7 @@ task RunGsnapFilter {
     --additional-attributes '{"output_sam_file": "gsnap_filter.sam"}'
   >>>
   output {
+    String step_description_md = read_string("gsnap_filter_out.description.md")
     File gsnap_filter_1_fa = "gsnap_filter_1.fa"
     File? gsnap_filter_2_fa = "gsnap_filter_2.fa"
     File? gsnap_filter_merged_fa = "gsnap_filter_merged.fa"

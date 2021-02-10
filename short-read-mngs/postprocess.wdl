@@ -20,6 +20,7 @@ task RunAssembly {
     --additional-attributes '{"memory": 200}'
   >>>
   output {
+    String step_description_md = read_string("assembly_out.description.md")
     File assembly_contigs_fasta = "assembly/contigs.fasta"
     File assembly_scaffolds_fasta = "assembly/scaffolds.fasta"
     File assembly_read_contig_sam = "assembly/read-contig.sam"
@@ -53,6 +54,7 @@ task GenerateCoverageStats {
     --additional-attributes '{}'
   >>>
   output {
+    String step_description_md = read_string("coverage_out.description.md")
     File assembly_contig_coverage_json = "assembly/contig_coverage.json"
     File assembly_contig_coverage_summary_csv = "assembly/contig_coverage_summary.csv"
     File? output_read_count = "coverage_out.count"
@@ -87,6 +89,7 @@ task DownloadAccessions_gsnap_accessions_out {
     --additional-attributes '{"db": "~{nt_db}", "db_type": "nt"}'
   >>>
   output {
+    String step_description_md = read_string("gsnap_accessions_out.description.md")
     File assembly_nt_refseq_fasta = "assembly/nt.refseq.fasta"
     File? output_read_count = "gsnap_accessions_out.count"
   }
@@ -120,6 +123,7 @@ task DownloadAccessions_rapsearch2_accessions_out {
     --additional-attributes '{"db": "~{nr_db}", "db_type": "nr"}'
   >>>
   output {
+    String step_description_md = read_string("rapsearch2_accessions_out.description.md")
     File assembly_nr_refseq_fasta = "assembly/nr.refseq.fasta"
     File? output_read_count = "rapsearch2_accessions_out.count"
   }
@@ -161,6 +165,7 @@ task BlastContigs_refined_gsnap_out {
     --additional-attributes '{"db_type": "nt", "use_taxon_whitelist": ~{use_taxon_whitelist}}'
   >>>
   output {
+    String step_description_md = read_string("refined_gsnap_out.description.md")
     File assembly_gsnap_blast_m8 = "assembly/gsnap.blast.m8"
     File assembly_gsnap_reassigned_m8 = "assembly/gsnap.reassigned.m8"
     File assembly_gsnap_hitsummary2_tab = "assembly/gsnap.hitsummary2.tab"
@@ -205,6 +210,7 @@ task BlastContigs_refined_rapsearch2_out {
     --additional-attributes '{"db_type": "nr", "use_taxon_whitelist": ~{use_taxon_whitelist}}'
   >>>
   output {
+    String step_description_md = read_string("refined_rapsearch2_out.description.md")
     File assembly_rapsearch2_blast_m8 = "assembly/rapsearch2.blast.m8"
     File assembly_rapsearch2_reassigned_m8 = "assembly/rapsearch2.reassigned.m8"
     File assembly_rapsearch2_hitsummary2_tab = "assembly/rapsearch2.hitsummary2.tab"
@@ -253,6 +259,7 @@ task ComputeMergedTaxonCounts {
   >>>
 
   output {
+    String step_description_md = read_string("compute_merged_taxon_counts_out.description.md")
     File merged_m8 = "merged.m8"
     File merged_hitsummary2_tab = "merged.hitsummary2.tab"
     File merged_taxon_counts_with_dcr_json = "merged_taxon_counts_with_dcr.json"
@@ -283,6 +290,7 @@ task CombineTaxonCounts {
     --additional-attributes '{}'
   >>>
   output {
+    String step_description_md = read_string("refined_taxon_count_out.description.md")
     File assembly_refined_taxon_counts_with_dcr_json = "assembly/refined_taxon_counts_with_dcr.json"
     File? output_read_count = "refined_taxon_count_out.count"
   }
@@ -310,6 +318,7 @@ task CombineJson {
     --additional-attributes '{}'
   >>>
   output {
+    String step_description_md = read_string("contig_summary_out.description.md")
     File assembly_combined_contig_summary_json = "assembly/combined_contig_summary.json"
     File? output_read_count = "contig_summary_out.count"
   }
@@ -351,6 +360,7 @@ task GenerateAnnotatedFasta {
     --additional-attributes '{}'
   >>>
   output {
+    String step_description_md = read_string("refined_annotated_out.description.md")
     File assembly_refined_annotated_merged_fa = "assembly/refined_annotated_merged.fa"
     File assembly_refined_unidentified_fa = "assembly/refined_unidentified.fa"
     File? output_read_count = "refined_annotated_out.count"
@@ -393,6 +403,7 @@ task GenerateTaxidFasta {
     --additional-attributes '{}'
   >>>
   output {
+    String step_description_md = read_string("refined_taxid_fasta_out.description.md")
     File assembly_refined_taxid_annot_fasta = "assembly/refined_taxid_annot.fasta"
     File? output_read_count = "refined_taxid_fasta_out.count"
   }
@@ -420,6 +431,7 @@ task GenerateTaxidLocator {
     --additional-attributes '{}'
   >>>
   output {
+    String step_description_md = read_string("refined_taxid_locator_out.description.md")
     File assembly_refined_taxid_annot_sorted_nt_fasta = "assembly/refined_taxid_annot_sorted_nt.fasta"
     File assembly_refined_taxid_locations_nt_json = "assembly/refined_taxid_locations_nt.json"
     File assembly_refined_taxid_annot_sorted_nr_fasta = "assembly/refined_taxid_annot_sorted_nr.fasta"
