@@ -215,6 +215,36 @@ task MakeRefFasta {
 
     command <<<
         >&2 echo "HELLO WORLD"
+
+        python <<CODE
+
+        print("YO")
+
+        import shelve
+        import sys
+        import os
+
+        db_path = "~{nt_loc_db}"
+
+        print(f"db_path is {db_path}", file=sys.stderr)
+
+        print(f"Size: {os.path.getsize(db_path)}", file=sys.stderr)
+
+        replaced = db_path.replace('.db', '')
+        print(f"replaced is {replaced}", file=sys.stderr)
+        with shelve.open(replaced, 'r') as loc_dict:
+            print("inside here")
+
+        # entry = loc_dict.get("~{accession_id}")
+        # if entry:
+        #     range_start = int(entry[0])
+        #     seq_len = int(entry[1]) + int(entry[2])
+        #     if seq_len <= MAX_ACCESSION_SEQUENCE_LEN:
+        #         db_file.seek(range_start, 0)
+        #         return db_file.read(seq_len)
+        # return None
+
+        CODE
     >>>
 
     output {
