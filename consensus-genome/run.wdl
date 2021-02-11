@@ -223,6 +223,10 @@ task MakeRefFasta {
         import shelve
         import sys
         import os
+        import dbm
+
+        # import gdbm
+        # from _gdbm import *
 
         db_path = "~{nt_loc_db}"
 
@@ -232,8 +236,18 @@ task MakeRefFasta {
 
         replaced = db_path.replace('.db', '')
         print(f"replaced is {replaced}", file=sys.stderr)
-        with shelve.open(replaced, 'r') as loc_dict:
-            print("inside here")
+
+        print("dbm: ", dbm, file=sys.stderr)
+        print("dbm.ndbm: ", dbm.ndbm, file=sys.stderr)
+        # print("dbm.dumb: ", dbm.dumb, file=sys.stderr)
+        # print("dbm.gnu: ", dbm.gnu, file=sys.stderr)
+
+        loc_dict = shelve.open(replaced, 'r')
+
+        # loc_dict = shelve.open(replaced, 'r')
+
+        # with shelve.open(replaced, 'r') as loc_dict:
+            # print("inside here")
 
         # entry = loc_dict.get("~{accession_id}")
         # if entry:
