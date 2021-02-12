@@ -5,7 +5,7 @@ LABEL maintainer="IDseq Team idseq-tech@chanzuckerberg.com"
 LABEL description = "Image for consensus genome by metagenomic sequencing with spiked primer enrichment or amplicon sequencing"
 
 
-RUN apt-get -qq update && apt-get -qq -y install curl locales zip python3-gdbm python3.7-gdbm \
+RUN apt-get -qq update && apt-get -qq -y install curl locales zip python3-gdbm \
   && locale-gen en_US.UTF-8
 
 # Install miniconda and configure it
@@ -26,5 +26,5 @@ RUN conda config --add channels defaults \
   && conda clean -a
 
 RUN conda install -y bcftools=1.9 biopython=1.76 freebayes=1.3.2 ivar=1.2 kraken2=2.0.8_beta minimap2=2.17 \
-  multiqc=1.8 pysam=0.15.4 quast=5.0.2 samtools=1.9 seaborn=0.10.0 seqtk=1.3 trim-galore=0.6.5 gdbm \
+  multiqc=1.8 pysam=0.15.4 quast=5.0.2 samtools=1.9 seaborn=0.10.0 seqtk=1.3 trim-galore=0.6.5 \
   && conda clean -a
