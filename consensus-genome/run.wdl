@@ -216,7 +216,7 @@ task MakeRefFasta {
     command <<<
         >&2 echo "HELLO WORLD"
 
-        python <<CODE
+        /usr/bin/python3 <<CODE
 
         print("YO")
 
