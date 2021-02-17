@@ -1,6 +1,6 @@
 FROM ubuntu:18.04
 ARG DEBIAN_FRONTEND=noninteractive
-ARG MINIWDL_VERSION=0.7.5
+ARG MINIWDL_VERSION=0.11.2
 
 LABEL maintainer="IDseq Team idseq-tech@chanzuckerberg.com"
 
@@ -54,7 +54,8 @@ RUN apt-get -q install -y \
 
 # Match versions from Ubuntu 20.04 LTS (please do not upgrade except to fix bugs)
 RUN pip3 install awscli==1.17.14 boto3==1.9.253
-RUN pip3 install miniwdl==${MINIWDL_VERSION} miniwdl-s3parcp==0.0.5 miniwdl-s3upload==0.0.4
+RUN pip3 install miniwdl==${MINIWDL_VERSION} miniwdl-s3parcp==0.0.5
+RUN pip3 install https://github.com/chanzuckerberg/miniwdl-plugins/archive/300da48.zip#subdirectory=s3upload
 RUN pip3 install https://github.com/chanzuckerberg/miniwdl-plugins/archive/f0465b0.zip#subdirectory=sfn-wdl
 RUN pip3 install https://github.com/chanzuckerberg/s3mi/archive/v0.8.0.tar.gz
 

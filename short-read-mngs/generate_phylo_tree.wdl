@@ -1,4 +1,4 @@
-version 1.0
+version development
 
 struct TaxonByteRange {
   Int first_byte
@@ -49,7 +49,7 @@ task GeneratePhyloTree {
     Int taxid
     Array[Int] reference_taxids
     File nt_loc_db
-    File nt_db
+    String nt_db
   }
   command<<<
   set -euxo pipefail
@@ -57,15 +57,15 @@ task GeneratePhyloTree {
     --step-module idseq_dag.steps.generate_phylo_tree \
     --step-class PipelineStepGeneratePhyloTree \
     --step-name generate_phylo_tree \
-    --input-files '[["~{sep='","' taxon_fastas}"], ["~{write_json(samples)}"]]' \
+    --input-files '[["~{sep('", "', taxon_fastas)}"], ["~{write_json(samples)}"]]' \
     --output-files '["phylo_tree.newick", "ncbi_metadata.json"]' \
     --output-dir-s3 '~{s3_wd_uri}' \
-    --additional-attributes '{"superkingdom_name": "~{superkingdom_name}", "taxid": ~{taxid}, "reference_taxids": [~{sep=", " reference_taxids}], "nt_loc_db": "~{nt_loc_db}", "nt_db": "~{nt_db}"}'
+    --additional-attributes '{"superkingdom_name": "~{superkingdom_name}", "taxid": ~{taxid}, "reference_taxids": [~{sep(", ", prefix("", reference_taxids))}], "nt_loc_db": "~{nt_loc_db}", "nt_db": "~{nt_db}"}'
   >>>
   output {
     File phylo_tree_newick = "phylo_tree.newick"
     File ncbi_metadata_json = "ncbi_metadata.json"
-    Array[File] ksnp3_outputs = glob("ksnp3_outputs/*")
+    Directory ksnp3_outputs = "ksnp3_outputs/"
   }
   runtime {
     docker: docker_image_id
@@ -81,7 +81,7 @@ workflow idseq_generate_phylo_tree {
     Int taxid
     Array[Int] reference_taxids
     File nt_loc_db
-    File nt_db
+    String nt_db
   }
 
   call PrepareTaxonFasta {
@@ -108,6 +108,6 @@ workflow idseq_generate_phylo_tree {
     Array[File] taxon_fastas = PrepareTaxonFasta.taxon_fastas
     File phylo_tree_newick = GeneratePhyloTree.phylo_tree_newick
     File ncbi_metadata_json = GeneratePhyloTree.ncbi_metadata_json
-    Array[File] ksnp3_outputs = GeneratePhyloTree.ksnp3_outputs
+    Directory ksnp3_outputs = GeneratePhyloTree.ksnp3_outputs
   }
 }
