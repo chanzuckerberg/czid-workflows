@@ -81,7 +81,7 @@ workflow consensus_genome {
     }
 
     # These step becomes conditional - only run for Illumina: 
-    #     QuantifyERCCs, FilterReads, TrimReads, AlignReads, TrimPrimers, MakeConsensus
+    #     QuantifyERCCs, FilterReads, TrimReads, AlignReads, TrimPrimers, MakeConsensus, CallVariants
     if (technology == "Illumina"){
         call QuantifyERCCs {
             input:
