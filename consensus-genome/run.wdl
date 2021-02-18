@@ -1,5 +1,5 @@
 # The following pipeline was initially based on previous work at: https://github.com/czbiohub/sc2-illumina-pipeline
-# workflow version: consensus-genomes-1.5.0
+# workflow version: consensus-genomes-1.5.1
 version 1.0
 
 workflow consensus_genome {
@@ -209,7 +209,7 @@ task RemoveHost {
             samtools fastq -@ $CORES -1 "~{prefix}no_host_1.fq.gz" -2 "~{prefix}no_host_2.fq.gz" -0 /dev/null -s /dev/null -n -c 6 -
         fi
 
-        if [ -z $(gzip -cd "~{prefix}no_host_1.fq.gz" | head -c1) ] && ([-z "~{prefix}no_host_2.fq.gz"] || [ -z $(gzip -cd "~{prefix}no_host_2.fq.gz" | head -c1) ]); then
+        if [ -z $(gzip -cd "~{prefix}no_host_1.fq.gz" | head -c1) ] && ([[ "~{length(fastqs)}" == 1 ]] || [ -z $(gzip -cd "~{prefix}no_host_2.fq.gz" | head -c1) ]); then
             set +x
             >&2 echo "{\"wdl_error_message\": true, \"error\": \"InsufficientReadsError\", \"cause\": \"No reads after RemoveHost\"}"
             exit 1
