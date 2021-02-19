@@ -43,7 +43,7 @@ def main():
     )
     parser.add_argument(
         "--workflow-version",
-        metavar="vX.Y.Z",
+        metavar="X.Y.Z",
         type=str,
         default=None,
         help="short-read-mngs version tag",
@@ -68,6 +68,7 @@ def main():
         )
         args.workflow_version = github_refs[-1]
 
+    args.workflow_version = args.workflow_version.lstrip("v")
     run_samples(**vars(args))
 
 
@@ -176,7 +177,7 @@ def run_sample(idseq_repo, workflow_version, settings, key_prefix, sample):
         time.sleep(1.1)
         subprocess.run(cmd, shell=True, cwd=idseq_repo, check=True)
 
-    workflow_major_version = workflow_version.split(".").lstrip("v")
+    workflow_major_version = workflow_version.split(".")[0]
     return (
         sample,
         f"s3://{BUCKET}/{key_prefix}/{sample}/results/short-read-mngs-{workflow_major_version}/",
