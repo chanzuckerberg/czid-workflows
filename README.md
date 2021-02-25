@@ -11,11 +11,12 @@ data.
 IDseq is a collaborative open project of [Chan Zuckerberg Initiative](https://www.chanzuckerberg.com/) and
 [Chan Zuckerberg Biohub](https://czbiohub.org).
 
+## Running these workflows
 This repository contains [WDL](https://openwdl.org/) workflows that the [IDseq](https://idseq.net/) platform uses in
 production. See [Running WDL workflows locally](https://github.com/chanzuckerberg/idseq-workflows/wiki/Running-WDL-workflows-locally)
 to get started with them.
 
-# CI/CD
+## CI/CD
 
 We use GitHub Actions for CI/CD. Lint and unit tests run on GitHub from jobs in `.github/workflows/wdl-ci.yml`
 (triggered on every commit).
