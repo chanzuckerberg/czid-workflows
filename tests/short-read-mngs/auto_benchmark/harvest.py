@@ -12,12 +12,17 @@ import os
 import argparse
 import json
 import itertools
-import boto3
 from pathlib import Path
 from contextlib import ExitStack
 from urllib.parse import urlparse
-from _util import load_benchmarks_yml
+
+import boto3
+from botocore import UNSIGNED as BOTOCORE_UNSIGNED
+from botocore.config import Config as BotocoreConfig
 from taxadb.taxid import TaxID
+import numpy as np
+
+from _util import load_benchmarks_yml, adjusted_aupr
 
 BENCHMARKS = load_benchmarks_yml()
 
@@ -142,6 +147,23 @@ def harvest_sample(sample, outputs_json, taxadb):
     ans["taxa"]["NR"] = harvest_sample_taxon_counts(
         sample, outputs_json, contig_summary, contig_lengths, "NR", taxadb
     )
+
+    # compute figures of merit vs. truth dataset
+    ans["truth"] = read_truth_file(BENCHMARKS["samples"][sample]["truth"])
+
+    total_reads = ans["counts"]["subsampled_reads"] * (2 if ans["counts"]["paired"] else 1)
+
+    nt_aupr = truth_aupr(ans["taxa"]["NT"], ans["truth"], total_reads)
+    ans["NT_aupr"] = nt_aupr["aupr"]
+    ans["NT_precision"] = list(nt_aupr["precision"])
+    ans["NT_recall"] = list(nt_aupr["recall"])
+    ans["NT_l2_norm"] = truth_l2_norm(ans["taxa"]["NT"], ans["truth"], total_reads)
+
+    nr_aupr = truth_aupr(ans["taxa"]["NR"], ans["truth"], total_reads)
+    ans["NR_aupr"] = nr_aupr["aupr"]
+    ans["NR_precision"] = list(nr_aupr["precision"])
+    ans["NR_recall"] = list(nr_aupr["recall"])
+    ans["NR_l2_norm"] = truth_l2_norm(ans["taxa"]["NR"], ans["truth"], total_reads)
 
     return ans
 
@@ -271,6 +293,93 @@ def contigs_stats(contig_lengths, ids=None):
             break
         cumlen += length_i
     return {"contigs": len(lengths), "contigs_nt": total_nt, "contigs_N50": N50}
+
+
+def read_truth_file(path):
+    taxon_abundances = {}
+    s3url = urlparse(path)
+    s3 = boto3.resource("s3", config=BotocoreConfig(signature_version=BOTOCORE_UNSIGNED))
+    for line in (
+        s3.Object(s3url.netloc, s3url.path.lstrip("/")).get()["Body"].read().decode().splitlines()
+    ):
+        taxid, _, abundance, rank, species_name = line.split("\t")[:5]
+        # All current benchmark datasets have truth data on species level only,
+        # so we use this as a simplifying assumption downstream
+        assert rank == "species"
+        taxon_abundances[taxid] = float(abundance)
+    return taxon_abundances
+
+
+"""
+From Ye et al. 2019:
+Precision is the proportion of true positive species identified in the sample divided by the number of total species
+identified.
+Recall is the proportion of true positive species divided by the number of distinct species actually in the sample.
+A potential drawback of AUPR is that it is biased toward low-precision, high-recall classifiers.
+Classifiers that do not recall all of the ground-truth taxa are penalized with zero AUPR from the highest achieved
+recall to 100% recall. For classifiers that do reach 100% recall, additional false positive taxon calls do not
+further penalize the AUPR score.
+
+In addition to considering the number of correctly identified species, it is also important to evaluate how
+accurately the abundance of each species or genera in the resulting classification reflects the abundance of each
+species in the original biological sample ("ground truth"). This is especially critical for applications such as
+microbiome sequencing studies, where changes in population composition can confer phenotypic effects. Abundance can
+be considered either as the relative abundance of reads from each taxa ("raw") or by inferring abundance of the
+number of individuals from each taxa by correcting read counts for genome size ("corrected"). Some programs
+incorporate a correction for genome length into abundance estimates; this calculation can also be manually performed
+by reweighting the read counts after classification. Here we use raw abundance profiles unless correction is
+performed automatically by the software, as in the case of PathSeq and Bracken.
+
+To evaluate the accuracy of abundance profiles, we can calculate the pairwise distances between ground-truth
+abundances and normalized abundance counts for each identified taxon at a given taxonomic level (e.g., species or
+genus). For this, we calculate the L2 distance for a given dataset’s classified output as the straight-line distance
+between the observed and true abundance vectors. We can also use this measure to compare abundance profiles between
+classifiers by instead computing L2 distances between classified abundances for pairs of classifiers. Abundance
+profile distance is more sensitive to accurate quantification of the highly abundant taxa present in the sample
+(Aitchison, 1982; Quinn et al., 2018). High numbers of very-low-abundance false positives will not dramatically
+affect the measure because they comprise only a small portion of the total abundance. For this reason, using such a
+measure alongside AUPR, which is highly sensitive to classifiers’ performance in correctly identifying low-abundance
+taxa, allows comprehensive evaluation of classifier performance.
+
+The L2 distance should be considered as a representation of the abundance profiles. Because metagenomic abundance
+profiles are proportional data and not absolute data, it is important to remember that many common distance metrics
+(including L2 distance) are not true mathematical metrics in proportional space. Generally, in proportional data
+analysis, a common method is to normalize proportions by using the centered log-ratio transform to calculate
+distances. However, the output of these metagenomic classifiers includes many low-abundance false positives, leading
+to sparse zero counts for many taxa across the different reports. The log-transform of these zero counts is
+undefined unless arbitrary pseudocounts are added to each taxa, which can negatively bias accurate classifiers
+because false positive taxa will have added counts. Another commonly used metric to compare abundance profiles is
+the UniFrac distance, which considers both the abundance proportion of component taxa as well as the evolutionary
+distance for incorrectly called taxa. However, using this metric is complicated by the difficulty in assessing
+evolutionary distance between microbial species’ whole genomes.
+"""
+
+
+def truth_aupr(classified_taxa, truth_taxa, total_reads):
+    """
+    Compute AUPR (and other metrics) of taxon classifications vs. truth data
+    """
+    missed_taxa = [tax_id for tax_id in truth_taxa if tax_id not in classified_taxa]
+    correctness_labels = [1 if tax_id in truth_taxa else 0 for tax_id in classified_taxa]
+    correctness_labels += [1] * len(missed_taxa)
+    # Using raw abundances as proxies for confidence score per Ye2009 methodology
+    # https://www.cell.com/cell/fulltext/S0092-8674(19)30775-5#fig2
+    confidence_scores = [i["reads_dedup"] / total_reads for i in classified_taxa.values()]
+    confidence_scores += [0] * len(missed_taxa)
+    return adjusted_aupr(correctness_labels, confidence_scores, force_monotonic=False)
+
+
+def truth_l2_norm(classified_taxa, truth_taxa, total_reads):
+    """
+    Measure accuracy of taxa relative abundance (L2 norm of vector difference from truth vector)
+    """
+    truth_sum = sum(truth_taxa.values())
+    relative_abundances_diff = [
+        truth_taxa[taxon] / truth_sum
+        - classified_taxa.get(taxon, {}).get("reads_dedup", 1e-100) / total_reads
+        for taxon in truth_taxa
+    ]
+    return np.linalg.norm(relative_abundances_diff, ord=2)
 
 
 if __name__ == "__main__":

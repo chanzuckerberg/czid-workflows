@@ -1,8 +1,10 @@
 # short-read-mngs auto benchmarks
 
-This subdirectory has scripts and reference materials for "drift detection" in short-read-mngs pipeline results.
+This subdirectory has scripts and reference materials for benchmarking the short-read-mngs pipeline. On the one hand, it compares the identified taxa to respective "truth" for a set of test samples sourced from simulation tools and the metagenomics literature. On the other hand, it compares detailed results (read counts, rPM, etc.) between different versions of the pipeline, to detect more-subtle changes that might not be obvious in the truth comparison.
 
-1. [**benchmarks.yml**](benchmarks.yml): catalogue of test scenarios, including benchmark samples (FASTQs), reference databases, and pipeline settings
+The moving parts include:
+
+1. [**benchmarks.yml**](benchmarks.yml): catalogue of test scenarios, including benchmark samples (FASTQs), taxa truth sets, reference databases, and pipeline settings
 2. **run_local.py**: run one or more of the scenarios locally
 3. **run_dev.py**: submit one or more of the scenarios to the idseq-dev SFN-WDL backend
 4. **harvest.py**: summarize results of either runner script into a JSON file
@@ -98,20 +100,20 @@ Finally, run the Jupyter notebook to compare the generated results with the refe
 
 ```bash
 docker run -v $(pwd):/mnt \
-    --env HARVEST_DATA=/mnt/y_benchmarks.json \
+    --env HARVEST_DATA=/mnt/my_benchmarks.json \
     --env REF_LIB=/mnt/idseq-workflows/tests/short-read-mngs/auto_benchmark/ref_libs/default_viral \
     --env "RUN_NAME=default_viral_vA.B.C" \
     jupyter/scipy-notebook:latest jupyter nbconvert --execute --to html --no-input --output-dir /mnt \
         /mnt/idseq-workflows/tests/short-read-mngs/auto_benchmark/short-read-mngs-benchmarks.ipynb
 ```
 
-Then find `idseq-short-read-mngs-benchmarks.html` in your working directory!
+Then find `idseq-short-read-mngs-benchmarks.html` in your working directory! (Note: when using the viral databases, the precision-recall curves compared to the truth sets are very poor, correctly so because the simulated datasets include non-viral species.)
 
 Change "viral" to "full" if you used the full-sized databases. Strike `--no-input` to include the notebook's Python code in the HTML report.
 
 ## Updating reference library
 
-Suppose the results in `my_benchmarks.json` differ in an expected way due to pipeline code changes. You can update a sample in the reference library like so:
+Suppose the results in `my_benchmarks.json` differ from the reference library in an expected way due to pipeline code changes. You can update the reference values like so:
 
 ```bash
 jq .idseq_bench_3 my_benchmarks.json > idseq-workflows/tests/short-read-mngs/auto_benchmark/ref_libs/default_viral/idseq_bench_3.json
