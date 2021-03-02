@@ -239,6 +239,7 @@ task MakeRefFasta {
 
         print("dbm: ", dbm, file=sys.stderr)
         print("dbm.ndbm: ", dbm.ndbm, file=sys.stderr)
+        print("dbm.whichdb: ", dbm.whichdb(replaced), file=sys.stderr)
         # print("dbm.dumb: ", dbm.dumb, file=sys.stderr)
         # print("dbm.gnu: ", dbm.gnu, file=sys.stderr)
 
@@ -246,10 +247,18 @@ task MakeRefFasta {
 
         # loc_dict = shelve.open(replaced, 'r')
 
-        # with shelve.open(replaced, 'r') as loc_dict:
-            # print("inside here")
+        accession_id = "~{accession_id}"
 
-        # entry = loc_dict.get("~{accession_id}")
+        with shelve.open(replaced, 'r') as loc_dict:
+            print("inside here", file=sys.stderr)
+            print("accession: ", accession_id, file=sys.stderr)
+
+            entry = loc_dict.get(accession_id)
+            print("ENTRY: ", entry, file=sys.stderr)
+            entry = loc_dict.get("NC_000913.3")
+            print("ENTRY: ", entry, file=sys.stderr)
+            entry = loc_dict.get("NC_000002.12")
+            print("ENTRY: ", entry, file=sys.stderr)
         # if entry:
         #     range_start = int(entry[0])
         #     seq_len = int(entry[1]) + int(entry[2])
