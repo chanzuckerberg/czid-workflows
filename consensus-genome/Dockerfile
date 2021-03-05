@@ -19,6 +19,7 @@ RUN apt-get -qq update && apt-get -qq -y install \
   httpie \
   zlib1g-dev \
   libfreetype6-dev \
+  libhts3 \
   pkg-config \
   apt-utils \
   ncbi-blast+ \
