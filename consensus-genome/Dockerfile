@@ -45,6 +45,7 @@ RUN apt-get -qq update && apt-get -qq -y install \
   bedtools \
   build-essential \
   autoconf \
+  tabix \
   && locale-gen en_US.UTF-8
 
 RUN curl -O -L http://ftp.osuosl.org/pub/ubuntu/pool/universe/i/ivar/ivar_1.2.2+dfsg-3_amd64.deb && \
@@ -85,4 +86,4 @@ RUN /bin/bash -c "set -e; mkdir -p /usr/local/lib/site_perl; \
   VADREASELDIR=/usr/local/bin \
   VADRBIOEASELDIR=/usr/local/bin > /etc/profile.d/vadr.sh"
 
-RUN apt-get remove -y autoconf build-essential python3-dev && apt-get autoremove -y
+RUN apt-get purge -y autoconf build-essential python3-dev && apt-get autoremove -y
