@@ -22,7 +22,6 @@ RUN apt-get -qq update && apt-get -qq -y install \
   libhts3 \
   pkg-config \
   apt-utils \
-  ncbi-blast+ \
   libinline-c-perl \
   libwww-perl \
   bcftools \
@@ -48,12 +47,23 @@ RUN apt-get -qq update && apt-get -qq -y install \
   tabix \
   && locale-gen en_US.UTF-8
 
-RUN curl -O -L http://ftp.osuosl.org/pub/ubuntu/pool/universe/i/ivar/ivar_1.2.2+dfsg-3_amd64.deb && \
-  dpkg -i ivar_1.2.2+dfsg-3_amd64.deb && \
- curl -O -L http://ftp.osuosl.org/pub/ubuntu/pool/universe/i/infernal/infernal_1.1.4-1_amd64.deb && \
- dpkg -i infernal_1.1.4-1_amd64.deb
+# These newer versions of infernal and ncbi-blast+ are required by VADR
+RUN curl -O -L https://ftp.osuosl.org/pub/ubuntu/pool/universe/i/infernal/infernal_1.1.4-1_amd64.deb && \
+  dpkg -i infernal_1.1.4-1_amd64.deb && \
+  curl -O -L https://ftp.osuosl.org/pub/ubuntu/pool/universe/n/ncbi-blast+/ncbi-blast+_2.10.1-2_amd64.deb && \
+  dpkg -i ncbi-blast+_2.10.1-2_amd64.deb
 
-RUN pip3 install multiqc==1.8 quast==5.0.2
+# See https://github.com/ablab/quast/issues/157
+RUN pip3 install multiqc==1.8 quast==5.0.2 && \
+  sed -i 's/cgi/html/' /usr/local/lib/python3.8/dist-packages/quast_libs/site_packages/jsontemplate/jsontemplate.py
+
+RUN /bin/bash -c "set -e; mkdir ivar; pushd ivar; \
+  curl -L https://github.com/andersen-lab/ivar/archive/v1.3.1.tar.gz | tar -xvz --strip-components 1; \
+  ./autogen.sh; \
+  ./configure; \
+  make -j8; \
+  make install; \
+  popd; rm -rf ivar"
 
 RUN /bin/bash -c "set -e; mkdir -p /usr/local/lib/site_perl; \
   curl -L https://github.com/nawrockie/sequip/archive/sequip-0.08.tar.gz | tar -xz --strip-components 1 -C /usr/local/lib/site_perl; \
