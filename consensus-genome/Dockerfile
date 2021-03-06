@@ -19,7 +19,7 @@ RUN apt-get -qq update && apt-get -qq -y install \
   httpie \
   zlib1g-dev \
   libfreetype6-dev \
-  libhts3 \
+  libhts-dev \
   pkg-config \
   apt-utils \
   libinline-c-perl \
@@ -43,7 +43,7 @@ RUN apt-get -qq update && apt-get -qq -y install \
   seqtk \
   bedtools \
   build-essential \
-  autoconf \
+  automake \
   tabix \
   && locale-gen en_US.UTF-8
 
@@ -96,4 +96,4 @@ RUN /bin/bash -c "set -e; mkdir -p /usr/local/lib/site_perl; \
   VADREASELDIR=/usr/local/bin \
   VADRBIOEASELDIR=/usr/local/bin > /etc/profile.d/vadr.sh"
 
-RUN apt-get purge -y autoconf build-essential python3-dev && apt-get autoremove -y
+RUN apt-get purge -y automake build-essential python3-dev && apt-get autoremove -y
