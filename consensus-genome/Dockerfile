@@ -100,3 +100,6 @@ RUN /bin/bash -c "set -e; mkdir -p /usr/local/lib/site_perl; \
 RUN apt-get install -y python3-cffi python3-h5py python3-intervaltree python3-edlib muscle
 RUN pip3 install ont-fast5-api parasail mappy pyspoa tensorflow https://github.com/artic-network/fieldbioinformatics/archive/1.2.1.tar.gz
 RUN pip3 install medaka --no-deps
+
+# General CG dependencies
+RUN pip3 install taxoniq==0.4.0 && pip3 install --upgrade $(http GET $(http GET https://api.github.com/repos/chanzuckerberg/taxoniq/releases/tags/v0.4.0 | jq -r .assets_url) | jq -r .[].browser_download_url)
