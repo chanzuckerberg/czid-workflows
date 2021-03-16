@@ -96,4 +96,7 @@ RUN /bin/bash -c "set -e; mkdir -p /usr/local/lib/site_perl; \
   VADREASELDIR=/usr/local/bin \
   VADRBIOEASELDIR=/usr/local/bin > /etc/profile.d/vadr.sh"
 
-RUN apt-get purge -y automake build-essential python3-dev && apt-get autoremove -y
+# ARTIC, Medaka and dependencies
+RUN apt-get install -y python3-cffi python3-h5py python3-intervaltree python3-edlib muscle
+RUN pip3 install ont-fast5-api parasail mappy pyspoa tensorflow https://github.com/artic-network/fieldbioinformatics/archive/1.2.1.tar.gz
+RUN pip3 install medaka --no-deps

@@ -28,3 +28,10 @@ Where:
 * `local_test.yml` supplies boilerplate workflow inputs, such as the S3 paths for the reference databases. For local run purposes, we use lighter references:
   * The human database for host removal only contains chromosome 1.
   * The kraken db used locally only has coronavirus sequences.
+
+## Reference files
+Filename | Provenance
+---------|-----------
+s3://idseq-public-references/consensus-genome/vadr-models-corona-1.1.3-1.tar.gz | Downloaded from https://ftp.ncbi.nlm.nih.gov/pub/nawrocki/vadr-models/coronaviridae/1.2-1/vadr-models-corona-1.2-1.tar.gz on 2021-03-05
+s3://idseq-public-references/consensus-genome/artic-primer-schemes.tar.gz | `primer_schemes` directory of https://github.com/artic-network/artic-ncov2019/commit/7e359dae37d894b40ae7e35c3582f14244ef4d36
+`test/MT007544.fastq.gz` | Copied from https://github.com/artic-network/fieldbioinformatics/blob/master/test-data/MT007544/MT007544.fastq on 2021-03-06

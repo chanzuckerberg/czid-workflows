@@ -1,5 +1,9 @@
-# The following pipeline was initially based on previous work at: https://github.com/czbiohub/sc2-illumina-pipeline
-# workflow version: consensus-genomes-1.5.1
+# IDseq Consensus Genome workflow
+# Based on original work at:
+# - CZ Biohub SARS-CoV-2 pipeline, https://github.com/czbiohub/sc2-illumina-pipeline
+# - ARTIC Oxford Nanopore MinION SARS-CoV-2 SOP, https://artic.network/ncov-2019/ncov2019-bioinformatics-sop.html
+# With enhancements and additional modules by the CZI Infectious Disease team
+
 version 1.0
 
 workflow consensus_genome {
@@ -9,22 +13,30 @@ workflow consensus_genome {
         File? fastqs_1
 
         String docker_image_id
-        File ercc_fasta
-        File kraken2_db_tar_gz
-        File primer_bed
-        File ref_fasta
+        File ercc_fasta = "s3://idseq-public-references/consensus-genome/ercc_sequences.fasta"
+        File kraken2_db_tar_gz  # TODO: make this optional; only required if filter_reads == true, even for Illumina
+        File primer_bed = "s3://idseq-public-references/consensus-genome/artic_v3_primers.bed" # Only required for Illumina
+        File ref_fasta # Only required for Illumina
         File ref_host
+        String technology # Input sequencing technology ("Illumina" or "ONT")
 
-        # Sample name : include in tags and files
+        # Sample name: include in tags and files
         String sample
 
         # Optional prefix to add to the output filenames
         String prefix = ""
 
-        # Step parameters
+        # ONT-specific inputs
+        File primer_schemes = "s3://idseq-public-references/consensus-genome/artic-primer-schemes.tar.gz"
+        # normalise: default is set in accordance with recommendation in ARTIC biox protocol here: https://artic.network/ncov-2019/ncov2019-bioinformatics-sop.html
+        Int normalise  = 200
+        # medaka_model: default is selected to support current ClearLabs workflow
+        String medaka_model = "r941_min_fast_g303"
+        String vadr_options = "-s -r --nomisc --mkey NC_045512 --lowsim5term 2 --lowsim3term 2 --fstlowthr 0.0 --alt_fail lowscore,fsthicnf,fstlocnf"
+        File vadr_model = "s3://idseq-public-references/consensus-genome/vadr-models-corona-1.1.3-1.tar.gz"
 
-        # all of the following seem to be parameters in params.* of the nextflow pipeline;
-        # could they be extracted to a separate params file? put in .json input to wdl?
+        # Illumina-specific parameters
+        # Step parameters
         Boolean filter_reads = true
         Boolean trim_adapters = true
 
@@ -32,6 +44,9 @@ workflow consensus_genome {
         Int   ivarQualTreshold  = 20
         Int   minDepth          = 10
 
+        # If no_reads_quast is true, quast runs without considering the raw reads (only considering the reference genome and the consensus.fa).
+        # This reduces the number of informative metrics that quast provides, but speeds up the step since quast is faster when it doesn't consider raw reads.
+        # (Not expected to be used in idseq production)
         String no_reads_quast = false
 
         # assumes about 20 mutations between 2 random samples
@@ -42,90 +57,121 @@ workflow consensus_genome {
         String s3_wd_uri = ""
     }
 
-    call RemoveHost {
+    call ValidateInput {
         input:
             prefix = prefix,
             fastqs = select_all([fastqs_0, fastqs_1]),
-            ref_host = ref_host,
+            technology = technology,
             docker_image_id = docker_image_id
     }
 
-    call QuantifyERCCs {
+    if (technology == "ONT") {
+        call ApplyLengthFilter {
+            input:
+                prefix = prefix,
+                fastqs_0 = fastqs_0,
+                normalise = normalise,
+                docker_image_id = docker_image_id
+        }    
+    }
+
+    call RemoveHost {
         input:
             prefix = prefix,
-            fastqs = RemoveHost.host_removed_fastqs,
-            ercc_fasta = ercc_fasta,
+            fastqs = select_first([ApplyLengthFilter.filtered_fastqs, ValidateInput.validated_fastqs]),
+            ref_host = ref_host,
+            technology = technology,
             docker_image_id = docker_image_id
     }
 
-    if (filter_reads) {
-        call FilterReads {
+    if (technology == "Illumina") {
+        call QuantifyERCCs {
             input:
                 prefix = prefix,
                 fastqs = RemoveHost.host_removed_fastqs,
-                ref_fasta = ref_fasta,
-                kraken2_db_tar_gz = kraken2_db_tar_gz,
+                ercc_fasta = ercc_fasta,
                 docker_image_id = docker_image_id
+        }    
+        if (filter_reads) {
+            call FilterReads {
+                input:
+                    prefix = prefix,
+                    fastqs = RemoveHost.host_removed_fastqs,
+                    ref_fasta = ref_fasta,
+                    kraken2_db_tar_gz = kraken2_db_tar_gz,
+                    docker_image_id = docker_image_id
+            }
         }
-    }
-
-    if (trim_adapters) {
-        call TrimReads {
+        if (trim_adapters) {
+            call TrimReads {
+                input:
+                    fastqs = select_first([FilterReads.filtered_fastqs, RemoveHost.host_removed_fastqs]),
+                    docker_image_id = docker_image_id
+            }
+        }
+        call AlignReads {
             input:
-                fastqs = select_first([FilterReads.filtered_fastqs, RemoveHost.host_removed_fastqs]),
+                prefix = prefix,
+                sample = sample,
+                # use trimReads output if we ran it; otherwise fall back to FilterReads output if we ran it; 
+                # otherwise fall back to RemoveHost output
+                fastqs = select_first([TrimReads.trimmed_fastqs, FilterReads.filtered_fastqs, RemoveHost.host_removed_fastqs]),
+                ref_fasta = ref_fasta,
+                docker_image_id = docker_image_id
+        }
+        call TrimPrimers {
+            input:
+                prefix = prefix,
+                alignments = AlignReads.alignments,
+                primer_bed = primer_bed,
+                docker_image_id = docker_image_id
+        }
+        call MakeConsensus {
+            input:
+                prefix = prefix,
+                sample = sample,
+                bam = TrimPrimers.trimmed_bam_ch,
+                ivarFreqThreshold = ivarFreqThreshold,
+                minDepth = minDepth,
+                ivarQualThreshold = ivarQualTreshold,
+                docker_image_id = docker_image_id
+        }
+        # this step does not rely on outputs of QUAST, so we can move it here to avoid complex logic
+        call CallVariants {
+            input:
+                prefix = prefix,
+                call_variants_bam = TrimPrimers.trimmed_bam_ch,
+                ref_fasta = ref_fasta,
+                bcftoolsCallTheta = bcftoolsCallTheta,
+                minDepth = minDepth,
                 docker_image_id = docker_image_id
         }
     }
 
-    call AlignReads {
-        input:
-            prefix = prefix,
-            sample = sample,
-            # use trimReads output if we ran it; otherwise fall back to FilterReads output if we ran it; 
-            # otherwise fall back to RemoveHost output
-            fastqs = select_first([TrimReads.trimmed_fastqs, FilterReads.filtered_fastqs, RemoveHost.host_removed_fastqs]),
-            ref_fasta = ref_fasta,
-            docker_image_id = docker_image_id
-    }
-
-    call TrimPrimers {
-        input:
-            prefix = prefix,
-            alignments = AlignReads.alignments,
-            primer_bed = primer_bed,
-            docker_image_id = docker_image_id
-    }
-
-    call MakeConsensus {
-        input:
-            prefix = prefix,
-            sample = sample,
-            bam = TrimPrimers.trimmed_bam_ch,
-            ivarFreqThreshold = ivarFreqThreshold,
-            minDepth = minDepth,
-            ivarQualThreshold = ivarQualTreshold,
-            docker_image_id = docker_image_id
+    if (technology == "ONT"){
+        call RunMinion {
+            input:
+                prefix = prefix,
+                sample = sample,
+                fastqs = RemoveHost.host_removed_fastqs,
+                primer_schemes = primer_schemes,
+                normalise = normalise,
+                medaka_model = medaka_model,
+                docker_image_id = docker_image_id
+        }
     }
 
     call Quast {
         input:
             prefix = prefix,
-            assembly = MakeConsensus.consensus_fa,
-            bam = TrimPrimers.trimmed_bam_ch,
-            # use trimReads output if we ran it; otherwise fall back to FilterReads output
-            fastqs = select_first([TrimReads.trimmed_fastqs, FilterReads.filtered_fastqs]),
-            ref_fasta = ref_fasta,
+            assembly = select_first([MakeConsensus.consensus_fa, RunMinion.consensus_fa]),
+            bam = select_first([TrimPrimers.trimmed_bam_ch, RunMinion.primertrimmedbam]),
+            # use trimReads output if we ran it; otherwise fall back to FilterReads output, or RemoveHost for ONT
+            fastqs = select_first([TrimReads.trimmed_fastqs, FilterReads.filtered_fastqs, RemoveHost.host_removed_fastqs]),
+            ref_fasta = ref_fasta,                     # FIXME: (AK) primer_schemes/nCoV-2019.reference.fasta
             no_reads_quast = no_reads_quast,
-            docker_image_id = docker_image_id
-    }
-
-    call CallVariants {
-        input:
-            prefix = prefix,
-            call_variants_bam = TrimPrimers.trimmed_bam_ch,
-            ref_fasta = ref_fasta,
-            bcftoolsCallTheta = bcftoolsCallTheta,
-            minDepth = minDepth,
+            technology = technology,
+            primer_schemes = primer_schemes, # Only required for ONT; contains reference genome for ARTIC
             docker_image_id = docker_image_id
     }
 
@@ -133,12 +179,23 @@ workflow consensus_genome {
         input:
             prefix = prefix,
             sample = sample,
-            cleaned_bam = TrimPrimers.trimmed_bam_ch,
-            assembly = MakeConsensus.consensus_fa,
-            ercc_stats = QuantifyERCCs.ercc_out,
-            vcf = CallVariants.variants_ch,
-            fastqs = select_all([fastqs_0, fastqs_1]),
-            ref_host = ref_host,
+            cleaned_bam = select_first([TrimPrimers.trimmed_bam_ch, RunMinion.primertrimmedbam]),
+            assembly = select_first([MakeConsensus.consensus_fa, RunMinion.consensus_fa]),
+            ercc_stats = QuantifyERCCs.ercc_out,       # does not exist - NO ERCC results for ONT, this argument must be optional
+            vcf = select_first([CallVariants.variants_ch, RunMinion.vcf_pass]),
+            fastqs = RemoveHost.host_removed_fastqs, # select_all([fastqs_0, fastqs_1]), # FIXME: (AK) verify the correct value for this
+            ref_host = ref_host,                       # FIXME: (AK) primer_schemes/nCoV-2019.reference.fasta?
+            technology = technology,
+            docker_image_id = docker_image_id
+    }
+
+    # TODO: (Generalized CG implementer) VADR should only be called for SARS-CoV-2
+    call Vadr {
+        input:
+            prefix = prefix,
+            assembly = select_first([MakeConsensus.consensus_fa, RunMinion.consensus_fa]),
+            vadr_options = vadr_options,
+            vadr_model = vadr_model,
             docker_image_id = docker_image_id
     }
 
@@ -149,48 +206,115 @@ workflow consensus_genome {
                 RemoveHost.host_removed_fastqs,
                 select_all([
                     MakeConsensus.consensus_fa,
+                    RunMinion.consensus_fa,
                     ComputeStats.depths_fig,
                     TrimPrimers.trimmed_bam_ch,
+                    RunMinion.primertrimmedbam,
                     TrimPrimers.trimmed_bam_bai,
+                    RunMinion.primertrimmedbai,
                     Quast.quast_txt,
                     Quast.quast_tsv,
                     AlignReads.alignments,
-                    QuantifyERCCs.ercc_out,
-                    QuantifyERCCs.ercc_out,
+                    RunMinion.alignedbam,
+                    QuantifyERCCs.ercc_out,            # No ERCC results for ONT
+                    QuantifyERCCs.ercc_out,            # No ERCC results for ONT
                     ComputeStats.output_stats,
                     ComputeStats.sam_depths,
                     CallVariants.variants_ch,
+                    RunMinion.vcf,
+                    Vadr.vadr_quality,                 # NOTE: optional, only if we include .vadr step - filename equivalent between Illumina and ONT
+                    Vadr.vadr_alerts                   # NOTE: optional, only if we include .vadr step - filename equivalent between Illumina and ONT
                 ])
             ])),
             docker_image_id = docker_image_id
     }
 
     output {
-        Array[File] remove_host_out_host_removed_fastqs = RemoveHost.host_removed_fastqs
-        File quantify_erccs_out_ercc_out = QuantifyERCCs.ercc_out
-        Array[File]+? filter_reads_out_filtered_fastqs = FilterReads.filtered_fastqs
-        Array[File]+? trim_reads_out_trimmed_fastqs = TrimReads.trimmed_fastqs
-        File? align_reads_out_alignments = AlignReads.alignments
-        File? trim_primers_out_trimmed_bam_ch = TrimPrimers.trimmed_bam_ch
-        File? trim_primers_out_trimmed_bam_bai = TrimPrimers.trimmed_bam_bai
-        File? make_consensus_out_consensus_fa = MakeConsensus.consensus_fa
+        Array[File] remove_host_out_host_removed_fastqs = RemoveHost.host_removed_fastqs 
+        File? quantify_erccs_out_ercc_out = QuantifyERCCs.ercc_out # does not exist for ONT
+        Array[File]+? filter_reads_out_filtered_fastqs = FilterReads.filtered_fastqs # does not exist for ONT
+        Array[File]+? trim_reads_out_trimmed_fastqs = TrimReads.trimmed_fastqs # does not exist for ONT
+        File? align_reads_out_alignments = select_first([AlignReads.alignments, RunMinion.alignedbam])
+        File? trim_primers_out_trimmed_bam_ch = select_first([TrimPrimers.trimmed_bam_ch, RunMinion.primertrimmedbam])
+        File? trim_primers_out_trimmed_bam_bai = select_first([TrimPrimers.trimmed_bam_bai, RunMinion.primertrimmedbai])
+        File? make_consensus_out_consensus_fa = select_first([MakeConsensus.consensus_fa, RunMinion.consensus_fa])
         File? quast_out_quast_txt = Quast.quast_txt
         File? quast_out_quast_tsv = Quast.quast_tsv
-        File? call_variants_out_variants_ch = CallVariants.variants_ch
+        File? call_variants_out_variants_ch = select_first([CallVariants.variants_ch, RunMinion.vcf_pass])
         File? compute_stats_out_depths_fig = ComputeStats.depths_fig
         File? compute_stats_out_output_stats = ComputeStats.output_stats
         File? compute_stats_out_sam_depths = ComputeStats.sam_depths
+        File? vadr_quality_out = Vadr.vadr_quality    # NOTE: optional, only if we include .vadr step
+        File? vadr_alerts_out = Vadr.vadr_alerts      # NOTE: optional, only if we include .vadr step
+        File? minion_log = RunMinion.log
         File zip_outputs_out_output_zip = ZipOutputs.output_zip
     }
 }
 
-# TODO: task to validate input
+task ValidateInput{
+    # This step is still a placeholder - it does not have any logic yet.
+    # It should validate that "Illumina" pipeline reads are short (<300bp), perform other simple sanity checks, and
+    # check that only one input fastq is present for ONT.
+    input {
+        String prefix
+        Array[File]+ fastqs
+        String technology
+
+        String docker_image_id
+    }
+
+    command <<<
+    # TODO: Check if the input files from Illumina have reads with length < 300;
+    # if not, throw an error and do not proceed - the user has likely selected the wrong input analysis type
+    if [[ "~{technology}" == "ONT" ]]; then
+        if [[ ~{length(fastqs)} -gt 1 ]]; then
+            export error=InsufficientReadsError cause="No reads after RemoveHost"
+            jq -nc ".wdl_error_message=true | .error=env.error | .cause=env.cause" > /dev/stderr
+            exit 1
+        fi
+    fi
+    >>>
+
+    output {
+        Array[File]+ validated_fastqs = fastqs
+    }
+
+    runtime {
+        docker: docker_image_id
+    }
+
+}
+
+task ApplyLengthFilter {
+    input {
+        String prefix
+        File fastqs_0
+        Int normalise
+        Int min_length = 400 # default filters in accordance with recommended parameters in ARTIC SARS-CoV-2 bioinformatics protocol...
+        Int max_length = 700 # ...these are intended to remove obviously chimeric reads.
+
+        String docker_image_id
+    }
+
+    command <<<
+        artic guppyplex --min-length ~{min_length} --max-length ~{max_length} --directory $(dirname "~{fastqs_0}") --output filtered.fastq
+    >>>
+
+    output {
+        Array[File]+ filtered_fastqs = ["filtered.fastq"]
+    }
+
+    runtime {
+        docker: docker_image_id
+    }
+}
 
 task RemoveHost {
     input {
         String prefix
-        Array[File]+ fastqs
+        Array[File]+ fastqs  
         File ref_host
+        String technology
 
         String docker_image_id
     }
@@ -200,18 +324,25 @@ task RemoveHost {
 
         export CORES=`nproc --all`
         if [[ "~{length(fastqs)}" == 1 ]]; then
-            minimap2 -t $CORES -ax sr ~{ref_host} ~{fastqs[0]} | \
-            samtools view -@ $CORES -b -f 4 | \
-            samtools fastq -@ $CORES -0 "~{prefix}no_host_1.fq.gz" -n -c 6 -
+            if [[ "~{technology}" == "Illumina" ]]; then
+                minimap2 -t $CORES -ax sr ~{ref_host} ~{fastqs[0]} | \
+                samtools view --no-PG -@ $CORES -b -f 4 | \
+                samtools fastq -@ $CORES -0 "~{prefix}no_host_1.fq.gz" -n -c 6 -
+            else # if technology == ONT
+                minimap2 -t $CORES -ax map-ont ~{ref_host} ~{fastqs[0]} | \
+                samtools view --no-PG -@ $CORES -b -f 4 | \
+                samtools fastq -@ $CORES -0 "~{prefix}no_host_1.fq.gz" -n -c 6 -
+            fi
         else
             minimap2 -t $CORES -ax sr ~{ref_host} ~{sep=' ' fastqs} | \
-            samtools view -@ $CORES -b -f 4 | \
+            samtools view --no-PG -@ $CORES -b -f 4 | \
             samtools fastq -@ $CORES -1 "~{prefix}no_host_1.fq.gz" -2 "~{prefix}no_host_2.fq.gz" -0 /dev/null -s /dev/null -n -c 6 -
         fi
 
-        if [ -z $(gzip -cd "~{prefix}no_host_1.fq.gz" | head -c1) ] && ([[ "~{length(fastqs)}" == 1 ]] || [ -z $(gzip -cd "~{prefix}no_host_2.fq.gz" | head -c1) ]); then
+        if [[ -z $(gzip -cd "~{prefix}no_host_1.fq.gz" | head -c1) ]]; then
             set +x
-            >&2 echo "{\"wdl_error_message\": true, \"error\": \"InsufficientReadsError\", \"cause\": \"No reads after RemoveHost\"}"
+            export error=InsufficientReadsError cause="No reads after RemoveHost"
+            jq -nc ".wdl_error_message=true | .error=env.error | .cause=env.cause" > /dev/stderr
             exit 1
         fi
     >>>
@@ -237,7 +368,7 @@ task QuantifyERCCs {
     command <<<
         set -euxo pipefail
 
-        minimap2 -ax sr ~{ercc_fasta} ~{sep=' ' fastqs} | samtools view -bo ercc_mapped.bam
+        minimap2 -ax sr ~{ercc_fasta} ~{sep=' ' fastqs} | samtools view --no-PG -bo ercc_mapped.bam
         samtools stats ercc_mapped.bam > "~{prefix}ercc_stats.txt"
     >>>
 
@@ -266,7 +397,8 @@ task FilterReads {
     command <<<
         _no_reads_error() {
             set +x
-            >&2 echo "{\"wdl_error_message\": true, \"error\": \"InsufficientReadsError\", \"cause\": \"No reads after FilterReads\"}"
+            export error=InsufficientReadsError cause="No reads after FilterReads"
+            jq -nc ".wdl_error_message=true | .error=env.error | .cause=env.cause" > /dev/stderr
             exit 1
         }
 
@@ -318,8 +450,7 @@ task FilterReads {
             [[ "~{length(fastqs)}" == 1 ]] || mv "${TMPDIR}/paired2.fq.gz" "~{prefix}filtered_2.fq.gz"
         fi
 
-        echo `gzip -cd "~{prefix}filtered_1.fq.gz" | head -c1`
-        if [ -z $(gzip -cd "~{prefix}filtered_1.fq.gz" | head -c1) ] && ([[ "~{length(fastqs)}" == 1 ]] || [ -z $(gzip -cd "~{prefix}filtered_2.fq.gz" | head -c1) ]); then
+        if [[ -z $(gzip -cd "~{prefix}filtered_1.fq.gz" | head -c1) ]]; then
             _no_reads_error
         fi
     >>>
@@ -351,9 +482,10 @@ task TrimReads {
             trim_galore --gzip --fastqc --paired --basename $BASENAME ~{sep=' ' fastqs}
         fi
 
-        if [ -z $(gzip -cd "${BASENAME}_val_1.fq.gz" | head -c1) ] && ([[ "~{length(fastqs)}" == 1 ]] || [ -z $(gzip -cd "${BASENAME}_val_2.fq.gz" | head -c1) ]); then
+        if [[ -z $(gzip -cd "${BASENAME}_val_1.fq.gz" | head -c1) ]]; then
             set +x
-            >&2 echo "{\"wdl_error_message\": true, \"error\": \"InsufficientReadsError\", \"cause\": \"No reads after TrimReads\"}"
+            export error=InsufficientReadsError cause="No reads after TrimReads"
+            jq -nc ".wdl_error_message=true | .error=env.error | .cause=env.cause" > /dev/stderr
             exit 1
         fi
     >>>
@@ -453,61 +585,14 @@ task MakeConsensus {
         # One-line file means just the fasta header with no reads
         if [[ $(wc -l "~{prefix}consensus.fa" | cut -d' ' -f1) == 1 ]]; then
             set +x
-            >&2 echo "{\"wdl_error_message\": true, \"error\": \"InsufficientReadsError\", \"cause\": \"No reads after MakeConsensus\"}"
+            export error=InsufficientReadsError cause="No reads after MakeConsensus"
+            jq -nc ".wdl_error_message=true | .error=env.error | .cause=env.cause" > /dev/stderr
             exit 1
         fi
     >>>
 
     output {
         File consensus_fa = "~{prefix}consensus.fa"
-    }
-
-    runtime {
-        docker: docker_image_id
-    }
-}
-
-task Quast {
-    input {
-        String prefix
-        File assembly   # same as consensus_fa
-        File bam
-        Array[File]+ fastqs
-        File ref_fasta
-
-        String no_reads_quast
-
-        Int threads = 4
-
-        String docker_image_id
-    }
-
-    command <<<
-        set -euxo pipefail
-
-        export CORES=`nproc --all`
-        a=`cat "~{assembly}" | wc -l`
-
-        if [ $a -ne 0 ]; then
-            if [ ~{no_reads_quast} = true ]; then
-                quast --min-contig 0 -o quast -r "~{ref_fasta}" -t $CORES --ref-bam "~{bam}" "~{assembly}"
-            else
-                if [[ "~{length(fastqs)}" == 1 ]]; then
-                    quast --min-contig 0 -o quast -r "~{ref_fasta}" -t $CORES --ref-bam "~{bam}" "~{assembly}" --single "~{fastqs[0]}"
-                else
-                    quast --min-contig 0 -o quast -r "~{ref_fasta}" -t $CORES --ref-bam "~{bam}" "~{assembly}" -1 ~{sep=' -2 ' fastqs}
-                fi
-            fi
-        else
-            mkdir quast
-            echo "quast folder is empty" > "quast/report.txt"
-        fi
-    >>>
-
-    output {
-        Array[File] quast_dir = glob("quast/*")
-        File quast_txt = "quast/report.txt"
-        File? quast_tsv = "quast/report.tsv"
     }
 
     runtime {
@@ -546,17 +631,123 @@ task CallVariants {
     }
 }
 
+task RunMinion {
+    input {
+        String prefix
+        String sample
+        Array[File]+ fastqs
+        File primer_schemes
+        Int normalise
+        String medaka_model
+        String docker_image_id
+    }
+
+    command <<<
+        set -euxo pipefail
+
+        export CORES=`nproc --all`
+
+        tar -xzf "~{primer_schemes}"
+
+        # TODO: upgrade to artic 1.3.0 when released (https://github.com/artic-network/fieldbioinformatics/pull/70)
+        artic minion --medaka --no-longshot --normalise "~{normalise}" --threads 4 --scheme-directory primer_schemes --read-file ~{sep=' ' fastqs} --medaka-model "~{medaka_model}" nCoV-2019/V3 "~{sample}"
+        # the .bam file doesn't seem to be sorted when it comes out, so explicitly sorting it here because a
+        # ...sorted .bam is necessary for ComputeStats step downstream
+        samtools sort "~{sample}.primertrimmed.rg.sorted.bam" > "~{sample}.primertrimmed.rg.resorted.bam"
+        mv "~{sample}.primertrimmed.rg.resorted.bam" "~{sample}.primertrimmed.rg.sorted.bam"
+        samtools index "~{sample}.primertrimmed.rg.sorted.bam" # to create "~{sample}.primertrimmed.rg.sorted.bai"
+        gunzip "~{sample}.pass.vcf.gz"
+    >>>
+
+    output {
+        File primertrimmedbam = "~{sample}.primertrimmed.rg.sorted.bam"
+        File primertrimmedbai = "~{sample}.primertrimmed.rg.sorted.bam.bai"
+        File alignedbam = "~{sample}.sorted.bam"
+        File vcf_pass = "~{sample}.pass.vcf"
+        File vcf = "~{sample}.merged.vcf"
+        File consensus_fa = "~{sample}.consensus.fasta"
+        File log = "~{sample}.minion.log.txt"
+    }
+
+    runtime {
+        docker: docker_image_id
+    }
+}
+
+
+task Quast {
+    input {
+        String prefix
+        File assembly   # same as consensus_fa
+        File bam
+        Array[File]+ fastqs
+        File ref_fasta
+        File? primer_schemes
+        String no_reads_quast
+        String technology
+
+        Int threads = 4
+
+        String docker_image_id
+    }
+
+    command <<<
+        set -euxo pipefail
+
+        export CORES=`nproc --all`
+        a=`cat "~{assembly}" | wc -l`
+        cp "~{bam}" .
+        export BAM=$(basename "~{bam}")
+        cp "~{assembly}" .
+        export ASSEMBLY=$(basename "~{assembly}")
+
+        if [[ $a -ne 0 ]]; then
+            if [[ ~{no_reads_quast} = true ]]; then
+                quast.py --min-contig 0 -o quast -r "~{ref_fasta}" -t $CORES --ref-bam "~{bam}" "~{assembly}"
+            else
+                if [[ "~{technology}" == "Illumina" ]]; then
+                    if [[ "~{length(fastqs)}" == 1 ]]; then
+                        quast.py --min-contig 0 -o quast -r "~{ref_fasta}" -t $CORES --ref-bam "$BAM" "$ASSEMBLY" --single "~{fastqs[0]}"
+                    else
+                        quast.py --min-contig 0 -o quast -r "~{ref_fasta}" -t $CORES --ref-bam "$BAM" "$ASSEMBLY" -1 ~{sep=' -2 ' fastqs}
+                    fi
+                else # technology == "ONT"
+                    # Currently, the ONT branch only supports the ARTIC SARS-CoV-2 SOP, which bundles its own reference genome.
+                    # The ref_fasta parameter is ignored and the bundled genome reference from ARTIC primer_schemes is used instead.
+                    tar -xzf ~{primer_schemes}
+                    quast.py --min-contig 0 -o quast -r "primer_schemes/nCoV-2019/V3/nCoV-2019.reference.fasta" -t $CORES --ref-bam "$BAM" "$ASSEMBLY" --nanopore "~{fastqs[0]}"
+                fi
+            fi
+        else
+            mkdir quast
+            echo "quast folder is empty" > "quast/report.txt"
+        fi
+    >>>
+
+    output {
+        Array[File] quast_dir = glob("quast/*")
+        File quast_txt = "quast/report.txt"
+        File? quast_tsv = "quast/report.tsv"
+    }
+
+    runtime {
+        docker: docker_image_id
+    }
+}
+
 task ComputeStats {
     input {
         String prefix
         String sample
         File cleaned_bam
         File assembly
-        File ercc_stats
+        File? ercc_stats  # optional, will only exist for Illumina runs
         File vcf
 
         Array[File]+ fastqs
         File ref_host
+
+        String technology
 
         String docker_image_id
     }
@@ -568,8 +759,7 @@ task ComputeStats {
         samtools stats "~{cleaned_bam}" > "~{prefix}samtools_stats.txt"
         samtools depth -aa -d 0 "~{cleaned_bam}" | awk '{print $3}' > "~{prefix}samtools_depth.txt"
 
-        python <<CODE
-
+        python3 <<CODE
         import argparse
         import collections
         import gzip
@@ -587,7 +777,7 @@ task ComputeStats {
         if depths:
             depths = np.array([int(d) for d in depths])
         else:
-            depths = np.array([0]*pysam.AlignmentFile("~{cleaned_bam}", "rb").lengths([0]))
+            raise Exception("Insufficient coverage to proceed with CG analysis")
 
         stats["depth_avg"] = depths.mean()
         stats["depth_q.25"] = np.quantile(depths, .25)
@@ -637,15 +827,16 @@ task ComputeStats {
                     elif matched.group(1) == "pairs with other orientation":
                         stats["paired_other_orientation"] = int(matched.group(2)) * 2
 
-        with open("~{ercc_stats}") as f:
-            ercc_stats_re = re.compile(r"SN\s+([^\s].*):\s+(\d+)")
-            for line in f:
-                matched = ercc_stats_re.match(line)
-                if matched:
-                    if matched.group(1) == "reads mapped":
-                        stats["ercc_mapped_reads"] = int(matched.group(2))
-                    elif matched.group(1) == "reads mapped and paired":
-                        stats["ercc_mapped_paired"] = int(matched.group(2))
+        if "~{technology}" == "Illumina":
+            with open("~{ercc_stats}") as f:
+                ercc_stats_re = re.compile(r"SN\s+([^\s].*):\s+(\d+)")
+                for line in f:
+                    matched = ercc_stats_re.match(line)
+                    if matched:
+                        if matched.group(1) == "reads mapped":
+                            stats["ercc_mapped_reads"] = int(matched.group(2))
+                        elif matched.group(1) == "reads mapped and paired":
+                            stats["ercc_mapped_paired"] = int(matched.group(2))
 
         def countVCF(vcf_file, snpcol, mnpcol, indelcol, statsdict):
             vcf = pysam.VariantFile(vcf_file)
@@ -696,11 +887,44 @@ task ComputeStats {
     }
 }
 
+# NOTE: if we add this step, we need to make it conditional on whether or not the pipeline is running for SARS-CoV-2.
+# Expanding to other viruses will require downloading the full set of VADR models
+task Vadr {
+    # Based on original work at https://github.com/AndrewLangvt/genomic_analyses/blob/v0.4.5/tasks/task_ncbi.wdl
+    # Requires coronavirus VADR models from https://ftp.ncbi.nlm.nih.gov/pub/nawrocki/vadr-models/coronaviridae/CURRENT/
+    input {
+        String prefix
+        File assembly
+        String vadr_options
+        File vadr_model
+        String docker_image_id
+    }
+
+    command <<<
+        set -e
+        source /etc/profile
+        mkdir -p /usr/local/share/vadr/models
+        tar xzvf "~{vadr_model}" -C /usr/local/share/vadr/models --strip-components 1
+        # find available RAM
+        RAM_MB=$(free -m | head -2 | tail -1 | awk '{print $2}')
+        # run VADR
+        v-annotate.pl ~{vadr_options} --mxsize $RAM_MB "~{assembly}" "vadr-output"
+    >>>
+
+    output {
+        File vadr_quality = "vadr-output/vadr-output.vadr.sqc"
+        File vadr_alerts = "vadr-output/vadr-output.vadr.alt.list"
+    }
+
+    runtime {
+        docker: docker_image_id
+    }
+}
+
 task ZipOutputs {
     input {
         String prefix
         Array[File] outputFiles
-
         String docker_image_id
     }
 
@@ -721,5 +945,4 @@ task ZipOutputs {
     runtime {
         docker: docker_image_id
     }
-
 }
