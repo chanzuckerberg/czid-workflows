@@ -28,10 +28,14 @@ workflow consensus_genome {
 
         # ONT-specific inputs
         File primer_schemes = "s3://idseq-public-references/consensus-genome/artic-primer-schemes.tar.gz"
-        # normalise: default is set in accordance with recommendation in ARTIC biox protocol here: https://artic.network/ncov-2019/ncov2019-bioinformatics-sop.html
-        Int normalise  = 200
+        # filters in accordance with recommended parameters in ARTIC SARS-CoV-2 bioinformatics protocol are...
+        # ...intended to remove obviously chimeric reads.
+        Int min_length = 350 # minimum length reduced to 350 to accomodate Clear Labs samples
+        Int max_length = 700
+        # normalise: default is set to 1000 to avoid spurious indels observed in validation
+        Int normalise  = 1000
         # medaka_model: default is selected to support current ClearLabs workflow
-        String medaka_model = "r941_min_fast_g303"
+        String medaka_model = "r941_min_high_g360"
         String vadr_options = "-s -r --nomisc --mkey NC_045512 --lowsim5term 2 --lowsim3term 2 --fstlowthr 0.0 --alt_fail lowscore,fsthicnf,fstlocnf"
         File vadr_model = "s3://idseq-public-references/consensus-genome/vadr-models-corona-1.1.3-1.tar.gz"
 
@@ -69,8 +73,9 @@ workflow consensus_genome {
         call ApplyLengthFilter {
             input:
                 prefix = prefix,
-                fastqs_0 = fastqs_0,
-                normalise = normalise,
+                fastqs = ValidateInput.validated_fastqs,
+                min_length = min_length,
+                max_length = max_length,
                 docker_image_id = docker_image_id
         }    
     }
@@ -267,16 +272,42 @@ task ValidateInput{
     # TODO: Check if the input files from Illumina have reads with length < 300;
     # if not, throw an error and do not proceed - the user has likely selected the wrong input analysis type
     if [[ "~{technology}" == "ONT" ]]; then
+        # expect ONT to include only 1 input .fastq file; throw error if multiple input fastqs provided
         if [[ ~{length(fastqs)} -gt 1 ]]; then
             export error=InsufficientReadsError cause="No reads after RemoveHost"
             jq -nc ".wdl_error_message=true | .error=env.error | .cause=env.cause" > /dev/stderr
             exit 1
         fi
+        # ONT guppyplex requires files are in .fastq format with .fastq extension (not .fq)
+        FILE=~{fastqs[0]}
+        if [[ "${FILE##*.}" == "gz" ]]; then
+            gunzip "$FILE"
+            FILE="${FILE%.*}"
+        fi
+        cp "$FILE" "~{prefix}validated.fastq"
+        gzip "~{prefix}validated.fastq"
+    else  # if technology == Illumina
+        FILE=~{fastqs[0]}
+        if [[ "${FILE##*.}" == "gz" ]]; then
+            COUNTER=1
+            for i in `echo ~{sep=' ' fastqs}`; do 
+                cp $i "~{prefix}validated_${COUNTER}.fastq.gz"
+                COUNTER=$((COUNTER + 1))
+            done
+        else
+            COUNTER=1
+            for i in `echo ~{sep=' ' fastqs}`; do 
+                cp $i "~{prefix}validated_${COUNTER}.fastq"
+                gzip "~{prefix}validated_${COUNTER}.fastq"
+                COUNTER=$((COUNTER + 1))
+            done
+        fi
     fi
+    
     >>>
 
     output {
-        Array[File]+ validated_fastqs = fastqs
+        Array[File]+ validated_fastqs = glob("~{prefix}validated*.fastq.gz")
     }
 
     runtime {
@@ -288,16 +319,15 @@ task ValidateInput{
 task ApplyLengthFilter {
     input {
         String prefix
-        File fastqs_0
-        Int normalise
-        Int min_length = 400 # default filters in accordance with recommended parameters in ARTIC SARS-CoV-2 bioinformatics protocol...
-        Int max_length = 700 # ...these are intended to remove obviously chimeric reads.
+        Array[File]+ fastqs
+        Int min_length
+        Int max_length
 
         String docker_image_id
     }
 
     command <<<
-        artic guppyplex --min-length ~{min_length} --max-length ~{max_length} --directory $(dirname "~{fastqs_0}") --output filtered.fastq
+        artic guppyplex --min-length ~{min_length} --max-length ~{max_length} --directory $(dirname "~{fastqs[0]}") --output filtered.fastq
     >>>
 
     output {
@@ -909,6 +939,16 @@ task Vadr {
         RAM_MB=$(free -m | head -2 | tail -1 | awk '{print $2}')
         # run VADR
         v-annotate.pl ~{vadr_options} --mxsize $RAM_MB "~{assembly}" "vadr-output"
+
+        # in validation, some samples fail with error: ERROR in cmalign_run(), cmalign failed in a bad way...
+        # ...see vadr-output/vadr-output.vadr.NC_045512.align.r1.s0.stdout for error output
+        if [ ! -e "vadr-output/vadr-output.vadr.sqc" ]; then
+            set +x
+            export error=InsufficientReadsError cause="VADR failed to run"
+            jq -nc ".wdl_error_message=true | .error=env.error | .cause=env.cause" > /dev/stderr
+            exit 1
+        fi
+
     >>>
 
     output {
