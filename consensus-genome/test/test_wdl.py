@@ -10,15 +10,14 @@ import yaml
 
 class TestConsensusGenomes(TestCase):
     wdl = os.path.join(os.path.dirname(__file__), "..", "run.wdl")
-    with open(os.path.join(os.path.dirname(__file__), "local_test.yml")) as fh:
-        common_inputs = yaml.safe_load(fh)
+    common_inputs = os.path.join(os.path.dirname(__file__), "local_test.yml")
 
     def run_miniwdl(self, args, task=None, docker_image_id=os.environ["DOCKER_IMAGE_ID"]):
         cmd = ["miniwdl", "run", self.wdl] + args + [f"docker_image_id={docker_image_id}"]
         if task:
             cmd += ["--task", task]
         else:
-            cmd += [f"{i}={v}" for i, v in self.common_inputs.items()]
+            cmd += ["--input", common_inputs]
         td = tempfile.TemporaryDirectory(prefix="idseq-workflows-test-").name
         cmd += ["--verbose", "--error-json", "--dir", td]
         print(cmd)
