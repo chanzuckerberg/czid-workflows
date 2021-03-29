@@ -575,7 +575,15 @@ task TrimPrimers {
 
         samtools view -F4 -q "~{samQualThreshold}" -o ivar.bam "~{alignments}"
         samtools index ivar.bam
-        ivar trim -e -i ivar.bam -b "~{primer_bed}" -p ivar.out
+        # The SNAP protocol may result in primer position offsets due to polymerases adding additional bases 
+        # (https://github.com/andersen-lab/ivar/pull/88)... if the primer bed file given is for the SNAP protocol, 
+        # then add offset allowance of 5 bp in accordance with ivar developer recommendation
+        if [[ "$(basename '~{primer_bed}')" == "snap_primers.bed" ]]; then
+            primerOffset=5
+        else
+            primerOffset=0
+        fi
+        ivar trim -x $primerOffset -e -i ivar.bam -b "~{primer_bed}" -p ivar.out
         samtools sort -O bam -o "~{prefix}primertrimmed.bam" ivar.out.bam
         samtools index "~{prefix}primertrimmed.bam"
     >>>

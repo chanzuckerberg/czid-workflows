@@ -18,7 +18,7 @@ class TestConsensusGenomes(TestCase):
         if task:
             cmd += ["--task", task]
         else:
-            cmd += [f"{i}={v}" for i, v in self.common_inputs.items()]
+            cmd += [f"{i}={v}" for i, v in self.common_inputs.items() if i+'=' not in ''.join(cmd)]
         td = tempfile.TemporaryDirectory(prefix="idseq-workflows-test-").name
         cmd += ["--verbose", "--error-json", "--dir", td]
         print(cmd)
@@ -61,6 +61,25 @@ class TestConsensusGenomes(TestCase):
                 output = [output]
             for filename in output:
                 self.assertGreater(os.path.getsize(filename), 0)
+
+    # test the depths associated with SNAP ivar trim -x 5 
+    def test_sars_cov2_illumina_cg_snap(self):
+        fastqs_0 = os.path.join(os.path.dirname(__file__), "snap_top10k_R1_001.fastq.gz")
+        fastqs_1 = os.path.join(os.path.dirname(__file__), "snap_top10k_R1_001.fastq.gz")
+        args = ["sample=test_snap", f"fastqs_0={fastqs_0}", f"fastqs_1={fastqs_1}", "technology=Illumina", "primer_bed=s3://idseq-public-references/consensus-genome/snap_primers.bed"]
+        res = self.run_miniwdl(args)
+        outputs = res["outputs"]
+        with open(outputs["consensus_genome.compute_stats_out_output_stats"]) as fh:
+            output_stats = json.load(fh)
+        self.assertEqual(output_stats["sample_name"], "test_snap")
+        self.assertGreater(output_stats["depth_avg"], 7)
+        self.assertLess(output_stats["depth_avg"], 8)
+        self.assertGreater(output_stats["depth_q.5"], 3.9)
+        self.assertLess(output_stats["depth_q.5"], 4.5)
+        self.assertGreater(output_stats["depth_q.75"], 10.9)
+        self.assertGreater(output_stats["depth_frac_above_10x"], 0.28)
+        self.assertGreater(output_stats["depth_frac_above_25x"], 0.03)
+        self.assertGreater(output_stats["depth_frac_above_25x"], 0.03)
 
     def test_sars_cov2_ont_cg_no_reads(self):
         fastqs_0 = os.path.join(os.path.dirname(__file__), "MT007544.fastq.gz")
