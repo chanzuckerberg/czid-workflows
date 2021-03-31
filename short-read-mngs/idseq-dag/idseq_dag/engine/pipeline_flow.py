@@ -44,7 +44,6 @@ class PipelineFlow(object):
         # idseq_dag.util.s3.config["REF_FETCH_LOG_DIR"] = os.path.join(self.ref_dir_local, "fetch_log")
         self.large_file_list = []
 
-        self.step_status_local = f"{self.output_dir_local}/{self.name}_status.json"
         command.make_dirs(self.output_dir_local)
         command.make_dirs(self.ref_dir_local)
 
@@ -277,8 +276,6 @@ class PipelineFlow(object):
 
         # Start initializing all the steps and start running them and wait until all of them are done
         step_instances = []
-        step_status_lock = TraceLock(
-            f"Step-level status updates for stage {self.name}", threading.RLock())
         for step in step_list:
             log.write("Initializing step %s" % step["out"])
             StepClass = getattr(importlib.import_module(step["module"]), step["class"])
@@ -286,8 +283,7 @@ class PipelineFlow(object):
             step_inputs = [self.targets[itarget] for itarget in step["in"]]
             step_instance = StepClass(step["out"], step_inputs, step_output,
                                       self.output_dir_local, self.output_dir_s3, self.ref_dir_local,
-                                      step["additional_files"], step["additional_attributes"],
-                                      self.step_status_local, step_status_lock)
+                                      step["additional_files"], step["additional_attributes"])
             step_instance.start()
             step_instances.append(step_instance)
         # Collecting stats files

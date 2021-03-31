@@ -36,8 +36,6 @@ class TestDownloadAccessions(unittest.TestCase):
                 "db":  "s3://idseq-public-references/alignment_data/2018-12-01/nr",
                 "db_type": "nr"
             },
-            step_status_lock=RLock(),
-            step_status_local="./dummy_status.json"
         )
 
 

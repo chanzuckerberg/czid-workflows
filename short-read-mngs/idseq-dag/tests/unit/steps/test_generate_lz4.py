@@ -20,8 +20,6 @@ class TestPipelineStepGenerateLZ4(unittest.TestCase):
             output_dir_s3='',
             additional_files={},
             additional_attributes={},
-            step_status_lock=None,
-            step_status_local=''
         )
 
     def test_get_command(self):
