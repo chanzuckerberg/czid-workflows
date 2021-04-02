@@ -41,6 +41,7 @@ def main():
         nargs="+",
         help="any of: " + ", ".join(BENCHMARKS["samples"].keys()),
     )
+    parser.add_argument("--idseq", required=True, help="path to idseq monorepo")
     parser.add_argument(
         "--workflow-version",
         metavar="X.Y.Z",
@@ -72,63 +73,40 @@ def main():
     run_samples(**vars(args))
 
 
-def run_samples(samples, workflow_version, settings):
-    assert os.environ.get(
-        "AWS_PROFILE", False
-    ), f"export AWS_PROFILE to for access to s3://{BUCKET} and idseq-dev"
-
+def run_samples(idseq, samples, workflow_version, settings):
     samples = set(samples)
     for sample_i in samples:
         assert sample_i in BENCHMARKS["samples"], f"unknown sample {sample_i}"
 
     failures = []
     results = []
-    with tempfile.TemporaryDirectory(prefix="idseq_short_read_mngs_auto_benchmark_") as tmpdir:
-        # clone monorepo
-        subprocess.run(
-            ["git", "clone", "--depth", "1", "git@github.com:chanzuckerberg/idseq.git"],
-            cwd=tmpdir,
-            check=True,
-        )
-        # ensure up-to-date dependencies (required when we `source environment.dev`)
-        subprocess.run(
-            ["pip3", "install", "-qr", os.path.join(tmpdir, "idseq/workflows/requirements.txt")],
-            check=True,
-        )
-        subprocess.run(
-            [
-                "pip3",
-                "install",
-                "-qr",
-                os.path.join(tmpdir, "idseq/workflows/requirements-dev.txt"),
-            ],
-            check=True,
-        )
 
-        # formulate S3 directory for these benchmarking runs
-        key_prefix = f"{KEY_PREFIX}/{datetime.today().strftime('%Y%m%d_%H%M%S')}_{settings}_{workflow_version}"
+    # formulate S3 directory for these benchmarking runs
+    key_prefix = (
+        f"{KEY_PREFIX}/{datetime.today().strftime('%Y%m%d_%H%M%S')}_{settings}_{workflow_version}"
+    )
 
-        # parallelize run_sample on a thread pool
-        with concurrent.futures.ThreadPoolExecutor(max_workers=16) as executor:
-            futures = {
-                executor.submit(
-                    run_sample,
-                    os.path.join(tmpdir, "idseq"),
-                    workflow_version,
-                    settings,
-                    key_prefix,
-                    sample_i,
-                ): sample_i
-                for sample_i in samples
-            }
-            for future in concurrent.futures.as_completed(futures):
-                exn = future.exception()
-                if exn:
-                    failures.append((futures[future], exn))
-                else:
-                    results.append(future.result())
+    # parallelize run_sample on a thread pool
+    with concurrent.futures.ThreadPoolExecutor(max_workers=16) as executor:
+        futures = {
+            executor.submit(
+                run_sample,
+                idseq,
+                workflow_version,
+                settings,
+                key_prefix,
+                sample_i,
+            ): sample_i
+            for sample_i in samples
+        }
+        for future in concurrent.futures.as_completed(futures):
+            exn = future.exception()
+            if exn:
+                failures.append((futures[future], exn))
+            else:
+                results.append(future.result())
 
-    print(" \\\n".join(f"{sample}={s3path}" for sample, s3path in results))
+    print("\n".join(f"{sample}={s3path}" for sample, s3path in results))
 
     if failures:
         for (failed_sample, exn) in failures:
@@ -159,10 +137,12 @@ def run_sample(idseq_repo, workflow_version, settings, key_prefix, sample):
         ):
             cmd = ["aws", "s3", "cp", v, f"s3://{BUCKET}/{key_prefix}/{sample}/fastqs/"]
             print(" ".join(cmd), file=sys.stderr)
-            subprocess.run(cmd, check=True)
+            subprocess.run(cmd, check=True, stdout=sys.stderr.buffer)
 
     # run_sfn.py
-    cmd = (
+    cmd = [
+        "/bin/bash",
+        "-c",
         "source workflows/environment.dev"
         f" && scripts/run_sfn.py"
         f" --sample-dir s3://{BUCKET}/{key_prefix}/{sample}"
@@ -170,12 +150,12 @@ def run_sample(idseq_repo, workflow_version, settings, key_prefix, sample):
         f" --max-input-fragments {local_input['host_filter.max_input_fragments']}"
         f" --max-subsample-fragments {local_input['host_filter.max_subsample_fragments']}"
         f" --adapter-fasta {local_input['host_filter.adapter_fasta']}"
-        f" --workflow-version {workflow_version}"
-    )
+        f" --workflow-version {workflow_version}",
+    ]
     print(cmd, file=sys.stderr)
     with _timestamp_lock:
         time.sleep(1.1)
-        subprocess.run(cmd, shell=True, cwd=idseq_repo, check=True)
+        subprocess.run(cmd, cwd=idseq_repo, check=True, stdout=sys.stderr.buffer)
 
     workflow_major_version = workflow_version.split(".")[0]
     return (

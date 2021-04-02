@@ -65,11 +65,7 @@ def harvest(outputs, taxadb):
             rundir = parts[1]
             i += 1
         assert sample in BENCHMARKS["samples"], f"unknown sample {sample}"
-        if rundir.startswith("s3:"):
-            assert os.environ.get(
-                "AWS_PROFILE", False
-            ), f"set environment AWS_PROFILE to read from {rundir}"
-        else:
+        if not rundir.startswith("s3:"):
             assert (
                 Path(rundir) / "outputs.json"
             ).is_file(), f"couldn't find outputs.json in {rundir}"

@@ -1,0 +1,44 @@
+name: short-read-mngs full benchmarks
+# Launch full-scale short-read-mngs benchmarks for a given point release of idseq-workflows. Uses
+# GitHub API to trigger them asynchronously on the idseq-dev backend.
+
+on:
+  workflow_dispatch:
+    inputs:
+      idseq_workflows_release:
+        description: release (vX.Y.Z) of idseq-workflows short-read-mngs
+      idseq_ref:
+        description: desired git ref in idseq monorepo
+        default: main
+
+env:
+  GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+  GH_DEPLOY_TOKEN: ${{secrets.GH_DEPLOY_TOKEN}}
+  DEBIAN_FRONTEND: noninteractive
+  GH_CLI_VERSION: 1.7.0
+  LC_ALL: C.UTF-8
+  LANG: C.UTF-8
+
+jobs:
+  trigger_benchmarks:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Install release script dependencies
+        run: |
+          source /etc/profile
+          sudo apt-get -qq update
+          sudo apt-get -qq install -o=Dpkg::Use-Pty=0 --yes jq moreutils gettext httpie git curl
+          curl -OLs https://github.com/cli/cli/releases/download/v${GH_CLI_VERSION}/gh_${GH_CLI_VERSION}_linux_amd64.deb
+          sudo dpkg -i gh_${GH_CLI_VERSION}_linux_amd64.deb
+      # Note: the triggered action will use the current revision of the BENCHMARKING code in this
+      # repo (env.GITHUB_SHA). However, it will run the vX.Y.Z point release of the short-read-mngs
+      # WORKFLOW code specified in the user inputs.
+      - name: Trigger benchmarks
+        run: |
+          export DEPLOY_REF='${{github.event.inputs.idseq_ref}}' GITHUB_TOKEN=${GH_DEPLOY_TOKEN:-GITHUB_TOKEN} IDSEQ_WORKFLOWS_RELEASE='${{github.event.inputs.idseq_workflows_release}}'
+          workflow_args=$(jq -n ".ref=env.DEPLOY_REF | .inputs={idseq_workflows_release: env.IDSEQ_WORKFLOWS_RELEASE, idseq_workflows_ref: env.GITHUB_SHA}")
+          gh api repos/:owner/idseq/actions/workflows/short-read-mngs-benchmarks.yml/dispatches --input - <<< "$workflow_args"
