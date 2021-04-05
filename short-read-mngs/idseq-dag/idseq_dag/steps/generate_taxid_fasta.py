@@ -56,7 +56,7 @@ class PipelineStepGenerateTaxidFasta(PipelineStep):
                 new_read_name = ('>' + ':'.join(fields) + '\n')
 
                 output_fa.write(new_read_name)
-                output_fa.write(read.sequence)
+                output_fa.write(read.sequence + "\n")
 
     def count_reads(self):
         pass

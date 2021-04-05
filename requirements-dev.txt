@@ -7,3 +7,4 @@ taxadb
 boto3
 requests
 sklearn
+biopython
