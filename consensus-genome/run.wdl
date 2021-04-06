@@ -36,7 +36,7 @@ workflow consensus_genome {
         Int normalise  = 1000
         # medaka_model: default is selected to support current ClearLabs workflow
         String medaka_model = "r941_min_high_g360"
-        String vadr_options = "-s -r --nomisc --mkey NC_045512 --lowsim5term 2 --lowsim3term 2 --fstlowthr 0.0 --alt_fail lowscore,fsthicnf,fstlocnf"
+        String vadr_options = "-s -r --nomisc --mkey NC_045512 --lowsim5term 2 --lowsim3term 2 --fstlowthr 0.0 --alt_fail lowscore,fsthicnf,fstlocnf --noseqnamemax"
         File vadr_model = "s3://idseq-public-references/consensus-genome/vadr-models-corona-1.1.3-1.tar.gz"
 
         # Illumina-specific parameters
@@ -228,7 +228,8 @@ workflow consensus_genome {
                     CallVariants.variants_ch,
                     RunMinion.vcf,
                     Vadr.vadr_quality,                 # NOTE: optional, only if we include .vadr step - filename equivalent between Illumina and ONT
-                    Vadr.vadr_alerts                   # NOTE: optional, only if we include .vadr step - filename equivalent between Illumina and ONT
+                    Vadr.vadr_alerts,                   # NOTE: optional, only if we include .vadr step - filename equivalent between Illumina and ONT
+                    Vadr.vadr_errors
                 ])
             ])),
             docker_image_id = docker_image_id
@@ -251,6 +252,7 @@ workflow consensus_genome {
         File? compute_stats_out_sam_depths = ComputeStats.sam_depths
         File? vadr_quality_out = Vadr.vadr_quality    # NOTE: optional, only if we include .vadr step
         File? vadr_alerts_out = Vadr.vadr_alerts      # NOTE: optional, only if we include .vadr step
+        File? vadr_errors = Vadr.vadr_errors          # NOTE: optional, only if vadr runs and fails
         File? minion_log = RunMinion.log
         File zip_outputs_out_output_zip = ZipOutputs.output_zip
     }
@@ -945,23 +947,23 @@ task Vadr {
         tar xzvf "~{vadr_model}" -C /usr/local/share/vadr/models --strip-components 1
         # find available RAM
         RAM_MB=$(free -m | head -2 | tail -1 | awk '{print $2}')
-        # run VADR
-        v-annotate.pl ~{vadr_options} --mxsize $RAM_MB "~{assembly}" "vadr-output"
-
-        # in validation, some samples fail with error: ERROR in cmalign_run(), cmalign failed in a bad way...
-        # ...see vadr-output/vadr-output.vadr.NC_045512.align.r1.s0.stdout for error output
-        if [ ! -e "vadr-output/vadr-output.vadr.sqc" ]; then
-            set +x
-            export error=InsufficientReadsError cause="VADR failed to run"
-            jq -nc ".wdl_error_message=true | .error=env.error | .cause=env.cause" > /dev/stderr
-            exit 1
-        fi
-
+        
+        {
+            # run VADR
+            v-annotate.pl ~{vadr_options} --mxsize $RAM_MB "~{assembly}" "vadr-output"        
+        } || {
+            # in validation, some samples fail with errors: 
+            # ... ERROR in cmalign_run(), cmalign failed in a bad way...
+            # ... ERROR, at least one sequence name exceeds the maximum GenBank allowed length of 50...
+            # we want to capture VADR errors in outputs but these should not cause the workflow to fail entirely
+            grep "ERROR" vadr-output/vadr-output.vadr.log > vadr_error.txt
+        }
     >>>
 
     output {
-        File vadr_quality = "vadr-output/vadr-output.vadr.sqc"
-        File vadr_alerts = "vadr-output/vadr-output.vadr.alt.list"
+        File? vadr_errors = "vadr_error.txt"
+        File? vadr_quality = "vadr-output/vadr-output.vadr.sqc"
+        File? vadr_alerts = "vadr-output/vadr-output.vadr.alt.list"
     }
 
     runtime {

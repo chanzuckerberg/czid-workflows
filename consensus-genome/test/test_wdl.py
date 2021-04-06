@@ -25,9 +25,10 @@ class TestConsensusGenomes(TestCase):
         res = check_output(cmd)
         return json.loads(res)
 
-    def assertRunFailed(self, ecm, task, error, cause):
+    def assertRunFailed(self, ecm, task, error, cause, error_without_failure = False):
         miniwdl_error = json.loads(ecm.exception.output)
-        self.assertEqual(miniwdl_error["error"], "RunFailed")
+        if not error_without_failure:
+            self.assertEqual(miniwdl_error["error"], "RunFailed")
         self.assertEqual(miniwdl_error["cause"]["error"], "CommandFailed")
         self.assertEqual(miniwdl_error["cause"]["run"], f"call-{task}")
         with open(miniwdl_error["cause"]["stderr_file"]) as fh:
@@ -55,13 +56,35 @@ class TestConsensusGenomes(TestCase):
         self.assertEqual(output_stats["ref_snps"], 7)
         self.assertEqual(output_stats["ref_mnps"], 0)
         for output_name, output in outputs.items():
-            if output_name in {"consensus_genome.minion_log"}:
+            if output_name in {"consensus_genome.minion_log", "consensus_genome.vadr_errors"}:
                 continue
             if not isinstance(output, list):
                 output = [output]
             for filename in output:
                 self.assertGreater(os.path.getsize(filename), 0)
 
+    def test_vadr_error_caught(self):
+        # use the long filename error as a proxy for testing VADR error handling 
+        fastqs_0 = os.path.join(os.path.dirname(__file__), "sample_sars-cov-2_paired_r1.fastq.gz")
+        fastqs_1 = os.path.join(os.path.dirname(__file__), "sample_sars-cov-2_paired_r2.fastq.gz")
+        vadr_opts_string = "-s -r --nomisc --mkey NC_045512 --lowsim5term 2 --lowsim3term 2 --fstlowthr 0.0 --alt_fail lowscore,fsthicnf,fstlocnf"
+        args = ["sample=test_sample_really_really_really_long_sample_name_over_50_chars", f"fastqs_0={fastqs_0}", f"fastqs_1={fastqs_1}", "technology=Illumina", f"vadr_options={vadr_opts_string}"]
+        res = self.run_miniwdl(args=args)
+        self.assertIn("consensus_genome.vadr_errors", res["outputs"])
+        self.assertEqual(res["outputs"]["consensus_genome.vadr_alerts_out"], None)
+        self.assertEqual(res["outputs"]["consensus_genome.vadr_quality_out"], None)
+
+    def test_vadr_flag_works(self):
+        fastqs_0 = os.path.join(os.path.dirname(__file__), "sample_sars-cov-2_paired_r1.fastq.gz")
+        fastqs_1 = os.path.join(os.path.dirname(__file__), "sample_sars-cov-2_paired_r2.fastq.gz")
+        args = ["sample=test_sample_really_really_really_long_sample_name_over_50_chars", f"fastqs_0={fastqs_0}", f"fastqs_1={fastqs_1}", "technology=Illumina"]
+        res = self.run_miniwdl(args=args)
+        self.assertIn("consensus_genome.vadr_alerts_out", res["outputs"])
+        self.assertIn("consensus_genome.vadr_alerts_out", res["outputs"])
+        print(res["outputs"])
+        print(res["outputs"]["consensus_genome.vadr_errors"])
+        self.assertEqual(res["outputs"]["consensus_genome.vadr_errors"], None)
+        
     # test the depths associated with SNAP ivar trim -x 5 
     def test_sars_cov2_illumina_cg_snap(self):
         fastqs_0 = os.path.join(os.path.dirname(__file__), "snap_top10k_R1_001.fastq.gz")
@@ -112,7 +135,8 @@ class TestConsensusGenomes(TestCase):
         for output_name, output in outputs.items():
             if output_name in {"consensus_genome.quantify_erccs_out_ercc_out",
                                "consensus_genome.filter_reads_out_filtered_fastqs",
-                               "consensus_genome.trim_reads_out_trimmed_fastqs"}:
+                               "consensus_genome.trim_reads_out_trimmed_fastqs",
+                               "consensus_genome.vadr_errors"}:
                 continue
             if not isinstance(output, list):
                 output = [output]
