@@ -33,7 +33,7 @@ workflow consensus_genome {
         File primer_schemes = "s3://idseq-public-references/consensus-genome/artic-primer-schemes.tar.gz"
         # filters in accordance with recommended parameters in ARTIC SARS-CoV-2 bioinformatics protocol are...
         # ...intended to remove obviously chimeric reads.
-        Int min_length = 350 # minimum length reduced to 350 to accomodate Clear Labs samples
+        Int min_length = 200 # minimum length reduced to 200 to accomodate Clear Labs samples
         Int max_length = 700
         # normalise: default is set to 1000 to avoid spurious indels observed in validation
         Int normalise  = 1000
