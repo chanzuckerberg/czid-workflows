@@ -70,7 +70,8 @@ class TestConsensusGenomes(TestCase):
         fastqs_0 = os.path.join(os.path.dirname(__file__), "sample_sars-cov-2_paired_r1.fastq.gz")
         fastqs_1 = os.path.join(os.path.dirname(__file__), "sample_sars-cov-2_paired_r2.fastq.gz")
         vadr_opts_string = "-s -r --nomisc --mkey NC_045512 --lowsim5term 2 --lowsim3term 2 --fstlowthr 0.0 --alt_fail lowscore,fsthicnf,fstlocnf"
-        args = ["sample=test_sample_really_really_really_long_sample_name_over_50_chars", f"fastqs_0={fastqs_0}", f"fastqs_1={fastqs_1}", "technology=Illumina", f"vadr_options={vadr_opts_string}"]
+        args = ["sample=test_sample_really_really_really_long_sample_name_over_50_chars", f"fastqs_0={fastqs_0}", f"fastqs_1={fastqs_1}", "technology=Illumina",
+                f"vadr_options={vadr_opts_string}", f"ref_fasta={self.sc2_ref_fasta}"]
         res = self.run_miniwdl(args=args)
         self.assertIn("consensus_genome.vadr_errors", res["outputs"])
         self.assertEqual(res["outputs"]["consensus_genome.vadr_alerts_out"], None)
@@ -79,7 +80,8 @@ class TestConsensusGenomes(TestCase):
     def test_vadr_flag_works(self):
         fastqs_0 = os.path.join(os.path.dirname(__file__), "sample_sars-cov-2_paired_r1.fastq.gz")
         fastqs_1 = os.path.join(os.path.dirname(__file__), "sample_sars-cov-2_paired_r2.fastq.gz")
-        args = ["sample=test_sample_really_really_really_long_sample_name_over_50_chars", f"fastqs_0={fastqs_0}", f"fastqs_1={fastqs_1}", "technology=Illumina"]
+        args = ["sample=test_sample_really_really_really_long_sample_name_over_50_chars", f"fastqs_0={fastqs_0}", f"fastqs_1={fastqs_1}", "technology=Illumina",
+                f"ref_fasta={self.sc2_ref_fasta}"]
         res = self.run_miniwdl(args=args)
         self.assertIn("consensus_genome.vadr_alerts_out", res["outputs"])
         self.assertIn("consensus_genome.vadr_alerts_out", res["outputs"])
