@@ -19,28 +19,28 @@ databases:
   viral:
     host_filter.star_genome: s3://idseq-public-references/host_filter/ercc/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/STAR_genome.tar
     host_filter.bowtie2_genome: s3://idseq-public-references/host_filter/ercc/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/bowtie2_genome.tar
-    host_filter.gsnap_genome: s3://idseq-database/test/gsnap/ERCC_gsnap2017-11-15_k16.tar
+    host_filter.gsnap_genome: s3://idseq-public-references/test/gsnap/ERCC_gsnap2017-11-15_k16.tar
     host_filter.human_star_genome: s3://idseq-public-references/host_filter/ercc/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/STAR_genome.tar
     host_filter.human_bowtie2_genome: s3://idseq-public-references/host_filter/ercc/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/bowtie2_genome.tar
-    non_host_rapsearch2_index: s3://idseq-database/test/viral-alignment-indexes/viral_nr_rapsearch.tar.gz
-    non_host_gsnap_index: s3://idseq-database/test/viral-alignment-indexes/viral_nt_gsnap2018-10-26_k16.tar.gz
+    non_host_rapsearch2_index: s3://idseq-public-references/test/viral-alignment-indexes/viral_nr_rapsearch.tar.gz
+    non_host_gsnap_index: s3://idseq-public-references/test/viral-alignment-indexes/viral_nt_gsnap2018-10-26_k16.tar.gz
     non_host_gsnap_genome_name: viral_nt_gsnap2018-10-26_k16
     non_host_alignment.accession2taxid_db: s3://idseq-public-references/mini-database/alignment_indexes/2020-08-20-viral/viral_accessions2taxid.db
-    postprocess.nt_db: s3://idseq-database/test/viral-alignment-indexes/viral_nt
-    postprocess.nt_loc_db: s3://idseq-database/test/viral-alignment-indexes/viral_nt_loc.db
-    postprocess.nr_db: s3://idseq-database/test/viral-alignment-indexes/viral_nr
-    postprocess.nr_loc_db: s3://idseq-database/test/viral-alignment-indexes/viral_nr_loc.db
-    experimental.nt_db: s3://idseq-database/test/viral-alignment-indexes/viral_nt
-    experimental.nt_loc_db: s3://idseq-database/test/viral-alignment-indexes/viral_nt_loc.db
-    experimental.nt_info_db: s3://idseq-database/test/viral-alignment-indexes/viral_nt_info.db
+    postprocess.nt_db: s3://idseq-public-references/test/viral-alignment-indexes/viral_nt
+    postprocess.nt_loc_db: s3://idseq-public-references/test/viral-alignment-indexes/viral_nt_loc.db
+    postprocess.nr_db: s3://idseq-public-references/test/viral-alignment-indexes/viral_nr
+    postprocess.nr_loc_db: s3://idseq-public-references/test/viral-alignment-indexes/viral_nr_loc.db
+    experimental.nt_db: s3://idseq-public-references/test/viral-alignment-indexes/viral_nt
+    experimental.nt_loc_db: s3://idseq-public-references/test/viral-alignment-indexes/viral_nt_loc.db
+    experimental.nt_info_db: s3://idseq-public-references/test/viral-alignment-indexes/viral_nt_info.db
   full:
     host_filter.star_genome: s3://idseq-public-references/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/human_STAR_genome.tar
     host_filter.bowtie2_genome: s3://idseq-public-references/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/human_bowtie2_genome.tar
     host_filter.gsnap_genome: s3://idseq-public-references/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/hg38_pantro5_k16.tar
     host_filter.human_star_genome: s3://idseq-public-references/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/human_STAR_genome.tar
     host_filter.human_bowtie2_genome: s3://idseq-public-references/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/human_bowtie2_genome.tar
-    non_host_rapsearch2_index: s3://idseq-database/alignment_indexes/2020-04-20/nr.tar.gz
-    non_host_gsnap_index: s3://idseq-database/alignment_indexes/2020-04-20/nt.tar.gz
+    non_host_rapsearch2_index: s3://idseq-public-references/alignment_indexes/2020-04-20/nr.tar.gz
+    non_host_gsnap_index: s3://idseq-public-references/alignment_indexes/2020-04-20/nt.tar.gz
     non_host_gsnap_genome_name: nt_k16
 
 samples:
