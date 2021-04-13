@@ -1,43 +1,18 @@
 import os
-import tempfile
 import json
 import zipfile
-from unittest import TestCase
-from subprocess import check_output, CalledProcessError
+import gzip
+import tempfile
 
 import yaml
+from test_util import WDLTestCase
 
 
-class TestConsensusGenomes(TestCase):
+class TestConsensusGenomes(WDLTestCase):
     wdl = os.path.join(os.path.dirname(__file__), "..", "run.wdl")
     with open(os.path.join(os.path.dirname(__file__), "local_test.yml")) as fh:
         common_inputs = yaml.safe_load(fh)
     sc2_ref_fasta = "s3://idseq-public-references/consensus-genome/MN908947.3.fa"
-
-    def run_miniwdl(self, args, task=None, docker_image_id=os.environ["DOCKER_IMAGE_ID"]):
-        cmd = ["miniwdl", "run", self.wdl] + args + [f"docker_image_id={docker_image_id}"]
-        if task:
-            cmd += ["--task", task]
-        else:
-            cmd += [f"{i}={v}" for i, v in self.common_inputs.items() if i+'=' not in ''.join(cmd)]
-        td = tempfile.TemporaryDirectory(prefix="idseq-workflows-test-").name
-        cmd += ["--verbose", "--error-json", "--dir", td]
-        print(cmd)
-        res = check_output(cmd)
-        return json.loads(res)
-
-    def assertRunFailed(self, ecm, task, error, cause, error_without_failure = False):
-        miniwdl_error = json.loads(ecm.exception.output)
-        if not error_without_failure:
-            self.assertEqual(miniwdl_error["error"], "RunFailed")
-        self.assertEqual(miniwdl_error["cause"]["error"], "CommandFailed")
-        self.assertEqual(miniwdl_error["cause"]["run"], f"call-{task}")
-        with open(miniwdl_error["cause"]["stderr_file"]) as fh:
-            last_line = fh.read().splitlines()[-1]
-            idseq_error = json.loads(last_line)
-        self.assertEqual(idseq_error["wdl_error_message"], True)
-        self.assertEqual(idseq_error["error"], error)
-        self.assertEqual(idseq_error["cause"], cause)
 
     def test_sars_cov2_illumina_cg(self):
         fastqs_0 = os.path.join(os.path.dirname(__file__), "sample_sars-cov-2_paired_r1.fastq.gz")
@@ -66,11 +41,13 @@ class TestConsensusGenomes(TestCase):
                 self.assertGreater(os.path.getsize(filename), 0)
 
     def test_vadr_error_caught(self):
-        # use the long filename error as a proxy for testing VADR error handling 
+        # use the long filename error as a proxy for testing VADR error handling
         fastqs_0 = os.path.join(os.path.dirname(__file__), "sample_sars-cov-2_paired_r1.fastq.gz")
         fastqs_1 = os.path.join(os.path.dirname(__file__), "sample_sars-cov-2_paired_r2.fastq.gz")
-        vadr_opts_string = "-s -r --nomisc --mkey NC_045512 --lowsim5term 2 --lowsim3term 2 --fstlowthr 0.0 --alt_fail lowscore,fsthicnf,fstlocnf"
-        args = ["sample=test_sample_really_really_really_long_sample_name_over_50_chars", f"fastqs_0={fastqs_0}", f"fastqs_1={fastqs_1}", "technology=Illumina",
+        vadr_opts_string = ("-s -r --nomisc --mkey NC_045512 --lowsim5term 2 --lowsim3term 2 --fstlowthr 0.0 "
+                            "--alt_fail lowscore,fsthicnf,fstlocnf")
+        args = ["sample=test_sample_really_really_really_long_sample_name_over_50_chars",
+                f"fastqs_0={fastqs_0}", f"fastqs_1={fastqs_1}", "technology=Illumina",
                 f"vadr_options={vadr_opts_string}", f"ref_fasta={self.sc2_ref_fasta}"]
         res = self.run_miniwdl(args=args)
         self.assertIn("consensus_genome.vadr_errors", res["outputs"])
@@ -80,7 +57,8 @@ class TestConsensusGenomes(TestCase):
     def test_vadr_flag_works(self):
         fastqs_0 = os.path.join(os.path.dirname(__file__), "sample_sars-cov-2_paired_r1.fastq.gz")
         fastqs_1 = os.path.join(os.path.dirname(__file__), "sample_sars-cov-2_paired_r2.fastq.gz")
-        args = ["sample=test_sample_really_really_really_long_sample_name_over_50_chars", f"fastqs_0={fastqs_0}", f"fastqs_1={fastqs_1}", "technology=Illumina",
+        args = ["sample=test_sample_really_really_really_long_sample_name_over_50_chars",
+                f"fastqs_0={fastqs_0}", f"fastqs_1={fastqs_1}", "technology=Illumina",
                 f"ref_fasta={self.sc2_ref_fasta}"]
         res = self.run_miniwdl(args=args)
         self.assertIn("consensus_genome.vadr_alerts_out", res["outputs"])
@@ -88,8 +66,8 @@ class TestConsensusGenomes(TestCase):
         print(res["outputs"])
         print(res["outputs"]["consensus_genome.vadr_errors"])
         self.assertEqual(res["outputs"]["consensus_genome.vadr_errors"], None)
-        
-    # test the depths associated with SNAP ivar trim -x 5 
+
+    # test the depths associated with SNAP ivar trim -x 5
     def test_sars_cov2_illumina_cg_snap(self):
         fastqs_0 = os.path.join(os.path.dirname(__file__), "snap_top10k_R1_001.fastq.gz")
         fastqs_1 = os.path.join(os.path.dirname(__file__), "snap_top10k_R1_001.fastq.gz")
@@ -148,6 +126,33 @@ class TestConsensusGenomes(TestCase):
                 output = [output]
             for filename in output:
                 self.assertGreater(os.path.getsize(filename), 0)
+
+    def test_sars_cov2_ont_cg_no_length_filter(self):
+        """
+        Ensures that the apply_length_filter=false option has an effect by truncating every other input read
+        and asserting lower coverage in the output
+        """
+        fastqs_0 = os.path.join(os.path.dirname(__file__), "Ct20K.fastq.gz")
+        tf = tempfile.NamedTemporaryFile(prefix=__name__, suffix=".fastq.gz")
+        with gzip.open(fastqs_0, mode="r") as in_fh, gzip.open(tf.name, mode="w") as out_fh:
+            lineno = 0
+            while True:
+                header, seq, sep, qual = in_fh.readline(), in_fh.readline(), in_fh.readline(), in_fh.readline()
+                if not header:
+                    break
+                if lineno % 2 == 0:
+                    seq, qual = seq[:100] + b"\n", qual[:100] + b"\n"
+                out_fh.write(header + seq + sep + qual)
+                lineno += 1
+        args = ["sample=test_sample", f"fastqs_0={tf.name}", "technology=ONT", f"ref_fasta={self.sc2_ref_fasta}",
+                "apply_length_filter=false"]
+        res = self.run_miniwdl(args)
+        outputs = res["outputs"]
+        with open(outputs["consensus_genome.compute_stats_out_output_stats"]) as fh:
+            output_stats = json.load(fh)
+        self.assertEqual(output_stats["sample_name"], "test_sample")
+        self.assertGreater(output_stats["depth_avg"], 6)
+        self.assertGreater(output_stats["depth_avg"], 7)
 
     def test_sars_cov2_ont_cg_input_file_format(self):
         """
