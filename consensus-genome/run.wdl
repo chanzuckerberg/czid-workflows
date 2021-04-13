@@ -33,11 +33,12 @@ workflow consensus_genome {
         File primer_schemes = "s3://idseq-public-references/consensus-genome/artic-primer-schemes.tar.gz"
         # filters in accordance with recommended parameters in ARTIC SARS-CoV-2 bioinformatics protocol are...
         # ...intended to remove obviously chimeric reads.
-        Int min_length = 350 # minimum length reduced to 350 to accomodate Clear Labs samples
+        Boolean apply_length_filter = true # Set to False for Clear Labs samples
+        Int min_length = 350
         Int max_length = 700
         # normalise: default is set to 1000 to avoid spurious indels observed in validation
         Int normalise  = 1000
-        # medaka_model: default is selected to support current ClearLabs workflow
+        # medaka_model: default is selected to support current Clear Labs workflow
         String medaka_model = "r941_min_high_g360"
         String vadr_options = "-s -r --nomisc --mkey NC_045512 --lowsim5term 2 --lowsim3term 2 --fstlowthr 0.0 --alt_fail lowscore,fsthicnf,fstlocnf --noseqnamemax"
         File vadr_model = "s3://idseq-public-references/consensus-genome/vadr-models-corona-1.1.3-1.tar.gz"
@@ -79,7 +80,7 @@ workflow consensus_genome {
         }
     }
 
-    if (technology == "ONT") {
+    if (technology == "ONT" && apply_length_filter) {
         call ApplyLengthFilter {
             input:
                 prefix = prefix,

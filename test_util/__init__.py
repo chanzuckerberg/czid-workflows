@@ -8,8 +8,12 @@ Most test cases access these via the 'util' fixture (defined in ../conftest.py)
 import os
 import subprocess
 import json
-import pytest
+import unittest
+import tempfile
+from subprocess import check_output
 from pathlib import Path
+
+import pytest
 from _pytest import tmpdir
 
 
@@ -68,3 +72,29 @@ def wdl_error_message(runfailed):
         except Exception:
             pass
     return ans
+
+
+class WDLTestCase(unittest.TestCase):
+    def run_miniwdl(self, args, task=None, docker_image_id=os.environ["DOCKER_IMAGE_ID"]):
+        cmd = ["miniwdl", "run", self.wdl] + args + [f"docker_image_id={docker_image_id}"]
+        if task:
+            cmd += ["--task", task]
+        else:
+            cmd += [f"{i}={v}" for i, v in self.common_inputs.items() if i+'=' not in ''.join(cmd)]
+        td = tempfile.TemporaryDirectory(prefix="idseq-workflows-test-").name
+        cmd += ["--verbose", "--error-json", "--dir", td]
+        print(cmd)
+        res = check_output(cmd)
+        return json.loads(res)
+
+    def assertRunFailed(self, ecm, task, error, cause):
+        miniwdl_error = json.loads(ecm.exception.output)
+        self.assertEqual(miniwdl_error["error"], "RunFailed")
+        self.assertEqual(miniwdl_error["cause"]["error"], "CommandFailed")
+        self.assertEqual(miniwdl_error["cause"]["run"], f"call-{task}")
+        with open(miniwdl_error["cause"]["stderr_file"]) as fh:
+            last_line = fh.read().splitlines()[-1]
+            idseq_error = json.loads(last_line)
+        self.assertEqual(idseq_error["wdl_error_message"], True)
+        self.assertEqual(idseq_error["error"], error)
+        self.assertEqual(idseq_error["cause"], cause)
