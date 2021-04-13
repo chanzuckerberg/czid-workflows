@@ -5,14 +5,41 @@ import gzip
 import tempfile
 
 import yaml
-from test_util import WDLTestCase
+# from test_util import WDLTestCase
+import unittest
+from subprocess import check_output
 
 
-class TestConsensusGenomes(WDLTestCase):
+class TestConsensusGenomes(unittest.TestCase):
     wdl = os.path.join(os.path.dirname(__file__), "..", "run.wdl")
     with open(os.path.join(os.path.dirname(__file__), "local_test.yml")) as fh:
         common_inputs = yaml.safe_load(fh)
     sc2_ref_fasta = "s3://idseq-public-references/consensus-genome/MN908947.3.fa"
+
+    def run_miniwdl(self, args, task=None, docker_image_id=os.environ["DOCKER_IMAGE_ID"]):
+        cmd = ["miniwdl", "run", self.wdl] + args + [f"docker_image_id={docker_image_id}"]
+        if task:
+            cmd += ["--task", task]
+        else:
+            cmd += [f"{i}={v}" for i, v in self.common_inputs.items() if i+'=' not in ''.join(cmd)]
+        td = tempfile.TemporaryDirectory(prefix="idseq-workflows-test-").name
+        cmd += ["--verbose", "--error-json", "--dir", td]
+        print(cmd)
+        res = check_output(cmd)
+        return json.loads(res)
+
+    def assertRunFailed(self, ecm, task, error, cause, error_without_failure = False):
+        miniwdl_error = json.loads(ecm.exception.output)
+        if not error_without_failure:
+            self.assertEqual(miniwdl_error["error"], "RunFailed")
+        self.assertEqual(miniwdl_error["cause"]["error"], "CommandFailed")
+        self.assertEqual(miniwdl_error["cause"]["run"], f"call-{task}")
+        with open(miniwdl_error["cause"]["stderr_file"]) as fh:
+            last_line = fh.read().splitlines()[-1]
+            idseq_error = json.loads(last_line)
+        self.assertEqual(idseq_error["wdl_error_message"], True)
+        self.assertEqual(idseq_error["error"], error)
+        self.assertEqual(idseq_error["cause"], cause)
 
     def test_sars_cov2_illumina_cg(self):
         fastqs_0 = os.path.join(os.path.dirname(__file__), "sample_sars-cov-2_paired_r1.fastq.gz")
