@@ -8,7 +8,7 @@ import os
 import pytest
 
 sys.path.append(os.path.dirname(__file__))
-import test_util
+import test_util  # noqa
 
 
 @pytest.fixture(scope="session")

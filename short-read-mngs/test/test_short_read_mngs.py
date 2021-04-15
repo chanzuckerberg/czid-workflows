@@ -2,14 +2,16 @@ import json
 import atexit
 from Bio import SeqIO
 
+
 def is_valid_fasta(filename):
     try:
         with open(filename) as f:
             for read in SeqIO.parse(f, "fasta"):
                 pass
         return True
-    except:
+    except Exception:
         return False
+
 
 def test_bench3_viral(short_read_mngs_bench3_viral_outputs):
     # short_read_mngs_bench3_viral_outputs is a fixture defined in ./conftest.py providing the JSON outputs of

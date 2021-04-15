@@ -1,5 +1,7 @@
 lint:
 	pre-commit run --all-files
+	flake8 .
+	flake8 --ignore E302,F401,E501,W504,E711,E712,E722,E741 short-read-mngs/idseq-dag/idseq_dag
 
 publish:
 	scripts/publish.sh

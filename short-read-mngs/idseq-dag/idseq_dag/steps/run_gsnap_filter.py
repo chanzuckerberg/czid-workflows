@@ -58,11 +58,11 @@ class PipelineStepRunGsnapFilter(PipelineCountingStep):
         gsnap_index_name = os.path.basename(genome_dir)
         # Hack to determine gsnap vs gsnapl
         error_message = subprocess.run(
-                ['gsnapl', '-D', gsnap_base_dir, '-d', gsnap_index_name],
-                input='>'.encode('utf-8'),
-                stderr=subprocess.PIPE,
-                stdout=subprocess.PIPE
-            ).stderr
+            ['gsnapl', '-D', gsnap_base_dir, '-d', gsnap_index_name],
+            input='>'.encode('utf-8'),
+            stderr=subprocess.PIPE,
+            stdout=subprocess.PIPE
+        ).stderr
         gsnap_exe = "gsnap" if 'please run gsnap instead' in error_message.decode('utf-8') else "gsnapl"
         # Run Gsnap
         gsnap_params = [

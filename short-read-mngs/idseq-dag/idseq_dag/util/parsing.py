@@ -190,4 +190,3 @@ class HitSummaryMergedReader(_HitSummaryMergedSchema, _TypedDictTSVReader):
 class HitSummaryMergedWriter(_HitSummaryMergedSchema, _TypedDictTSVWriter):
     def __init__(self, f: Any) -> None:
         super().__init__(f, self.SCHEMA)
-

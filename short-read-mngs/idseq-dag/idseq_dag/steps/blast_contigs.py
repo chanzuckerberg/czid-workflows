@@ -453,7 +453,7 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
                     5000,
                     "-num_threads",
                     16
-                ], # type: ignore
+                ],  # type: ignore
                 # We can only pass BATCH_SIZE as an env var.  The default is 100,000 for blastn;  10,000 for blastp.
                 # Blast concatenates input queries until they exceed this size, then runs them together, for efficiency.
                 # Unfortunately if too many short and low complexity queries are in the input, this can expand too

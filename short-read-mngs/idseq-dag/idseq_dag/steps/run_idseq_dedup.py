@@ -75,4 +75,3 @@ class PipelineStepRunIDSeqDedup(PipelineStep):  # Deliberately not PipelineCount
         # Here we intentionally count unique reads.
         self.counts_dict[self.name] = count.reads_in_group(
             self.output_files_local()[:-2])  # last two outputs are not fastas
-

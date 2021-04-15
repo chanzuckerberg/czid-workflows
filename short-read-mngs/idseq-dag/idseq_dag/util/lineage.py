@@ -83,4 +83,3 @@ def fill_missing_calls_tests():
 def validate_taxid_lineage(taxid_lineage: Sequence[str], hit_taxid: str, hit_level: int) -> List[str]:
     cleaned = _cleaned_taxid_lineage(taxid_lineage, hit_taxid, hit_level)
     return _fill_missing_calls(list(cleaned))
-

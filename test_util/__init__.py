@@ -13,9 +13,6 @@ import tempfile
 from subprocess import check_output
 from pathlib import Path
 
-import pytest
-from _pytest import tmpdir
-
 
 def repo_dir():
     return Path(os.path.dirname(os.path.dirname(__file__)))

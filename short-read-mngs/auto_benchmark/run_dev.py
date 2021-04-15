@@ -9,20 +9,16 @@ necessarily the current git checkout.
 
 After the runs complete, one can harvest the results e.g.
     harvest.py idseq_bench_3=s3://idseq-samples-development/auto_benchmark/YYYYMMDD_HHmmSS_default_latest/results/short-read-mngs-V
-"""
+"""  # noqa
 import sys
 import os
 import argparse
-import tempfile
 import subprocess
-import multiprocessing
 import concurrent.futures
 import threading
-import json
 import time
 import requests
 from datetime import datetime
-from pathlib import Path
 from _util import load_benchmarks_yml
 
 BENCHMARKS = load_benchmarks_yml()

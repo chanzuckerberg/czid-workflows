@@ -483,4 +483,3 @@ def build_should_keep_filter(
         return is_whitelisted(hits) and not is_blacklisted(hits)
 
     return should_keep
-

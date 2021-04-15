@@ -3,7 +3,6 @@
 Run benchmark.yml samples locally using `miniwdl run` on the current checkout of the WDL code.
 """
 import sys
-import os
 import argparse
 import subprocess
 import multiprocessing
