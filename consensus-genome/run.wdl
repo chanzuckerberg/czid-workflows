@@ -335,7 +335,13 @@ task FetchSequenceByAccessionId {
     }
 
     command <<<
-        taxoniq get_from_s3 --accession-id "~{accession_id}" > sequence.fa
+        taxoniq get-from-s3 --accession-id "~{accession_id}" > sequence.fa
+        if [[ $? == 4 ]]; then
+            export error=AccessionIdNotFound cause="Accession ID ~{accession_id} not found in the index"
+            jq -nc ".wdl_error_message=true | .error=env.error | .cause=env.cause" > /dev/stderr
+            exit 4
+        fi
+        exit $?
     >>>
 
     output {

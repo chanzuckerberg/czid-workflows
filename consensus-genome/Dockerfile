@@ -102,4 +102,4 @@ RUN pip3 install ont-fast5-api parasail mappy pyspoa tensorflow https://github.c
 RUN pip3 install medaka --no-deps
 
 # General CG dependencies
-RUN pip3 install taxoniq==0.4.0 && pip3 install --upgrade $(http GET $(http GET https://api.github.com/repos/chanzuckerberg/taxoniq/releases/tags/v0.4.0 | jq -r .assets_url) | jq -r .[].browser_download_url)
+RUN pip3 install taxoniq==0.5.2 && pip3 install --upgrade $(http GET $(http GET https://api.github.com/repos/chanzuckerberg/taxoniq/releases/tags/v0.5.2 | jq -r .assets_url) | jq -r .[].browser_download_url)

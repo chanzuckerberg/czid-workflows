@@ -88,7 +88,7 @@ class WDLTestCase(unittest.TestCase):
         miniwdl_error = json.loads(ecm.exception.output)
         self.assertEqual(miniwdl_error["error"], "RunFailed")
         self.assertEqual(miniwdl_error["cause"]["error"], "CommandFailed")
-        self.assertEqual(miniwdl_error["cause"]["run"], f"call-{task}")
+        self.assertIn(miniwdl_error["cause"]["run"], {task, f"call-{task}"})
         with open(miniwdl_error["cause"]["stderr_file"]) as fh:
             last_line = fh.read().splitlines()[-1]
             idseq_error = json.loads(last_line)

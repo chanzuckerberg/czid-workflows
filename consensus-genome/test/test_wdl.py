@@ -213,3 +213,8 @@ class TestConsensusGenomes(WDLTestCase):
         with open(res["outputs"]["FetchSequenceByAccessionId.sequence_fa"]) as fh:
             self.assertEqual(fh.readline().strip(), ">NC_000913.3")
             self.assertTrue(fh.readline().startswith("AGCTTTTCATTCTGACTGCAACGGGCAATATGTCTCTG"))
+
+        with self.assertRaises(CalledProcessError) as ecm:
+            self.run_miniwdl(task="FetchSequenceByAccessionId", args=["accession_id=NO_ACCESSION_ID"])
+        self.assertRunFailed(ecm, task="FetchSequenceByAccessionId",
+                             error="AccessionIdNotFound", cause="Accession ID NO_ACCESSION_ID not found in the index")
