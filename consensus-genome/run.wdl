@@ -205,14 +205,16 @@ workflow consensus_genome {
             docker_image_id = docker_image_id
     }
 
-    # TODO: (Generalized CG implementer) VADR should only be called for SARS-CoV-2
-    call Vadr {
-        input:
-            prefix = prefix,
-            assembly = select_first([MakeConsensus.consensus_fa, RunMinion.consensus_fa]),
-            vadr_options = vadr_options,
-            vadr_model = vadr_model,
-            docker_image_id = docker_image_id
+    # TODO: generalize VADR to run on any coronavirus reference or any viral reference with a VADR model available
+    if (ref_accession_id == None) {
+        call Vadr {
+            input:
+                prefix = prefix,
+                assembly = select_first([MakeConsensus.consensus_fa, RunMinion.consensus_fa]),
+                vadr_options = vadr_options,
+                vadr_model = vadr_model,
+                docker_image_id = docker_image_id
+        }
     }
 
     call ZipOutputs {
@@ -238,9 +240,9 @@ workflow consensus_genome {
                     ComputeStats.sam_depths,
                     CallVariants.variants_ch,
                     RunMinion.vcf,
-                    Vadr.vadr_quality,                 # NOTE: optional, only if we include .vadr step - filename equivalent between Illumina and ONT
-                    Vadr.vadr_alerts,                   # NOTE: optional, only if we include .vadr step - filename equivalent between Illumina and ONT
-                    Vadr.vadr_errors
+                    Vadr.vadr_quality,                 # Optional (VADR only runs on default (coronavirus) reference)
+                    Vadr.vadr_alerts,                  # Optional (VADR only runs on default (coronavirus) reference)
+                    Vadr.vadr_errors                   # Optional (only present if VADR ran and exited with an error)
                 ])
             ])),
             docker_image_id = docker_image_id
@@ -261,9 +263,9 @@ workflow consensus_genome {
         File? compute_stats_out_depths_fig = ComputeStats.depths_fig
         File? compute_stats_out_output_stats = ComputeStats.output_stats
         File? compute_stats_out_sam_depths = ComputeStats.sam_depths
-        File? vadr_quality_out = Vadr.vadr_quality    # NOTE: optional, only if we include .vadr step
-        File? vadr_alerts_out = Vadr.vadr_alerts      # NOTE: optional, only if we include .vadr step
-        File? vadr_errors = Vadr.vadr_errors          # NOTE: optional, only if vadr runs and fails
+        File? vadr_quality_out = Vadr.vadr_quality  # Optional (VADR only runs on default (coronavirus) reference)
+        File? vadr_alerts_out = Vadr.vadr_alerts    # Optional (VADR only runs on default (coronavirus) reference)
+        File? vadr_errors = Vadr.vadr_errors        # Optional (only present if VADR ran and exited with an error)
         File? minion_log = RunMinion.log
         File zip_outputs_out_output_zip = ZipOutputs.output_zip
     }
