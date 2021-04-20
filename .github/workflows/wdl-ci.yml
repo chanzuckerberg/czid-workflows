@@ -10,7 +10,7 @@ env:
 
 jobs:
   linters:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - uses: actions/cache@v1
@@ -22,18 +22,29 @@ jobs:
           source /etc/profile
           sudo apt-get -qq update
           sudo apt-get -qq install --yes jq moreutils make virtualenv zip unzip httpie git shellcheck
-          virtualenv --python=python3.6 .venv
+          virtualenv --python=python3.8 .venv
           source .venv/bin/activate
           pip install -r requirements-dev.txt
       - name: linters
         run: |
           source .venv/bin/activate
           make lint
+
+  list-workflow-dirs:
+    runs-on: ubuntu-20.04
+    outputs:
+      matrix: ${{steps.list_dirs.outputs.matrix}}
+    steps:
+      - uses: actions/checkout@v2
+      - id: list_dirs
+        run: echo "::set-output name=matrix::$(ls */*.wdl|xargs dirname|uniq|jq -cnR '[inputs|select(length>0)]')"
+
   wdl-ci:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
+    needs: list-workflow-dirs
     strategy:
       matrix:
-        workflow_dir: [short-read-mngs, consensus-genome]
+        workflow_dir: ${{fromJson(needs['list-workflow-dirs'].outputs.matrix)}}
     steps:
       - uses: actions/checkout@v2
       - name: docker login
@@ -75,7 +86,7 @@ jobs:
           source /etc/profile
           sudo apt-get -qq update
           sudo apt-get -qq install --yes jq moreutils make virtualenv zip unzip httpie git shellcheck
-          virtualenv --python=python3.6 .venv
+          virtualenv --python=python3.8 .venv
           source .venv/bin/activate
           pip install -r requirements-dev.txt
 

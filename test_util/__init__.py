@@ -73,11 +73,14 @@ def wdl_error_message(runfailed):
 
 class WDLTestCase(unittest.TestCase):
     def run_miniwdl(self, args, task=None, docker_image_id=os.environ["DOCKER_IMAGE_ID"]):
-        cmd = ["miniwdl", "run", self.wdl] + args + [f"docker_image_id={docker_image_id}"]
+        cmd = ["miniwdl", "run", "--verbose", self.wdl] + args + [f"docker_image_id={docker_image_id}"]
         if task:
             cmd += ["--task", task]
         else:
-            cmd += [f"{i}={v}" for i, v in self.common_inputs.items() if i+'=' not in ''.join(cmd)]
+            tf = tempfile.NamedTemporaryFile(prefix="idseq-workflows-test-", suffix=".json", mode="wt")
+            json.dump({k: v for k, v in self.common_inputs.items() if k+'=' not in ''.join(cmd)}, tf)
+            tf.flush()
+            cmd += ["--input", tf.name]
         td = tempfile.TemporaryDirectory(prefix="idseq-workflows-test-").name
         cmd += ["--verbose", "--error-json", "--dir", td]
         print(cmd)

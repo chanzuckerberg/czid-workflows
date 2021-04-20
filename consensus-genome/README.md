@@ -1,4 +1,22 @@
-# Running Consensus-Genome locally
+# IDseq Consensus Genome workflow
+
+This workflow performs reference-based consensus genome mapping from metagenomic sequencing assays with spiked primer
+enrichment or from amplicon sample sequencing assays.
+
+The workflow has several modes:
+
+- Oxford Nanopore SARS-CoV-2 samples
+- Illumina SARS-CoV-2 samples
+- Illumina samples of other viruses
+- Illumina reads isolated from metagenomic samples via the IDseq mngs workflow
+
+Based on original work at:
+- CZ Biohub SARS-CoV-2 pipeline, https://github.com/czbiohub/sc2-illumina-pipeline
+- ARTIC Oxford Nanopore MinION SARS-CoV-2 SOP, https://artic.network/ncov-2019/ncov2019-bioinformatics-sop.html
+
+With enhancements and additional modules by the CZI Infectious Disease team.
+
+## Running Consensus-Genome locally
 
 For Consensus Genome workflow we can follow a similar workflow to the `short-read-mngs` presented in wiki: [Running-WDL-workflows-locally](https://github.com/chanzuckerberg/idseq-workflows/wiki/Running-WDL-workflows-locally).
 
