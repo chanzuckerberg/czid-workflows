@@ -619,6 +619,8 @@ task TrimPrimers {
         # then add offset allowance of 5 bp in accordance with ivar developer recommendation
         if [[ "$(basename '~{primer_bed}')" == "snap_primers.bed" ]]; then
             primerOffset=5
+        elif [[ "$(basename '~{primer_bed}')" == "artic_v3_short_275_primers.bed" ]]; then
+            primerOffset=2
         else
             primerOffset=0
         fi
