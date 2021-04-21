@@ -37,10 +37,11 @@ We then use our local sample configuration file that points to IDseq's public re
 ```bash
 miniwdl run --verbose consensus-genome/run.wdl \
     docker_image_id=idseq-consensus-genome \
-    fastqs_0=idseq-workflows/tests/consensus-genome/sample_sars-cov-2_paired_r1.fastq.gz \
-    fastqs_1=idseq-workflows/tests/consensus-genome/sample_sars-cov-2_paired_r2.fastq.gz \
+    fastqs_0=idseq-workflows/consensus-genome/test/sample_sars-cov-2_paired_r1.fastq.gz \
+    fastqs_1=idseq-workflows/consensus-genome/test/sample_sars-cov-2_paired_r2.fastq.gz \
     sample=sample_sars-cov-2_paired \
-    -i idseq-workflows/tests/consensus-genome/local_test.yml
+    technology=Illumina \
+    -i idseq-workflows/consensus-genome/test/local_test.yml
 ```
 
 Where:
@@ -49,6 +50,7 @@ Where:
 * `consensus-genome/run.wdl` is the WDL for the consensus genome sequencing workflow.
 * `fastqs_0` and `fastqs_1` are the pair of FASTQ files. The ones referred to are small files to run locally.
 * `sample` is the name to use where referencing the sample in the output files.
+* `technology` is the sequencing technology (options = Illumina or ONT)
 * `local_test.yml` supplies boilerplate workflow inputs, such as the S3 paths for the reference databases. For local run purposes, we use lighter references:
   * The human database for host removal only contains chromosome 1.
   * The kraken db used locally only has coronavirus sequences.
