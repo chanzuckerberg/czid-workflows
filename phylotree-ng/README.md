@@ -1,8 +1,12 @@
 # IDseq PhyloTree-NG workflow
 
 This is the IDseq PhyloTree-NG (next generation) workflow. Given a set of IDseq samples and a taxon ID of the organism
-of interest, the workflow computes a split-kmer phylogeny with pre-filtering by hierarchical clustering, using
-[SKA](https://github.com/simonrharris/SKA) split k-mers to create phylogenetic trees for an input set of samples. This
+of interest, the workflow computes a hierarchically clustered set of phylogenies of the samples (where each sample is
+represented by contigs (assembled reads) from that sample mapped to reference sequences for the organism of interest).
+Depending on coverage and phylogenetic diversity, the resulting phylogenies range in precision from a heatmap (pairwise
+distance matrix) to a phylogram.
+
+The workflow uses [SKA](https://github.com/simonrharris/SKA) split k-mers to create clusters and phylogenetic trees. This
 works for complete genomes as well as raw sequences (currently supporting only `.fasta` inputs).
 
 An in-depth description of the first generation PhyloTree pipeline from idseq-dag is available in
