@@ -183,22 +183,15 @@ task ComputeClusters {
     import seaborn as sns
     import math
 
-    def processed_lines():
-        with open("~{ska_distances}", 'r') as distances:
-            for i, line in enumerate(distances):
-                split_line = line.split()
-                if i == 1:
-                    # on the first line, add entry to both columns to ensure square distance matrix
-                    yield [split_line[0], split_line[0], 0, 0, 0, 0, 0, 0]
-                elif i > 1: # 0 is purposefully omitted
-                    yield split_line
-           # on the last line, add entry to both columns
-            yield [split_line[1], split_line[1], 0, 0, 0, 0, 0, 0]
-
-    # create dataframe from the distance data
-    df = pd.DataFrame.from_dict(dict(enumerate(processed_lines())), orient='index')
-    df.columns=['Sample_1','Sample_2','Matches','Mismatches','Jaccard_Index','Mash-like_distance','SNPs','SNP_distance']
-    df["Mash-like_distance"] = pd.to_numeric(df["Mash-like_distance"], downcast="float")
+    # we have observed some strange parsing behavior of this file, ensure it works with end to end testing
+    # we may need to use a regex separator
+    df = pd.read_csv("~{ska_distances}", sep='\t')
+    df = pd.concat([
+        pd.DataFrame(dict(zip(df.columns, [df.iloc[0][0], df.iloc[0][0]] + [0] * 6)), index=[0]),
+        df,
+        pd.DataFrame(dict(zip(df.columns, [df.iloc[-1][0], df.iloc[-1][0]] + [0] * 6)), index=[0]),
+    ])
+    df.reset_index(drop=True, inplace=True)
 
     # long dataframe to wide
     df2 = df.pivot_table(index=['Sample_1'], columns='Sample_2', values='Mash-like_distance')
