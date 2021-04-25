@@ -102,8 +102,8 @@ RUN pip3 install ont-fast5-api parasail mappy pyspoa tensorflow https://github.c
 RUN pip3 install medaka --no-deps
 
 # General CG dependencies
-RUN pip3 install taxoniq==0.5.2 && \
+RUN pip3 install taxoniq==0.6.0 && \
     pip3 install --upgrade \
-    https://github.com/chanzuckerberg/taxoniq/releases/download/v0.5.2/ncbi_genbank_accession_db-2021.3.25-py3-none-any.whl \
-    https://github.com/chanzuckerberg/taxoniq/releases/download/v0.5.2/ncbi_genbank_accession_lengths-2021.3.25-py3-none-any.whl \
-    https://github.com/chanzuckerberg/taxoniq/releases/download/v0.5.2/ncbi_genbank_accession_offsets-2021.3.25-py3-none-any.whl
+    https://github.com/chanzuckerberg/taxoniq/releases/download/v0.6.0/ncbi_genbank_accession_db-2021.4.10-py3-none-any.whl \
+    https://github.com/chanzuckerberg/taxoniq/releases/download/v0.6.0/ncbi_genbank_accession_lengths-2021.4.10-py3-none-any.whl \
+    https://github.com/chanzuckerberg/taxoniq/releases/download/v0.6.0/ncbi_genbank_accession_offsets-2021.4.10-py3-none-any.whl
