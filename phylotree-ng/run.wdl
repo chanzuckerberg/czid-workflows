@@ -5,6 +5,9 @@ version 1.1
 struct SampleInfo {
     String sample_name
     Int workflow_run_id
+    File? contig_fasta # assembly_out_assembly_contigs_fasta from mngs
+    File? nt_hit_summary # refined_gsnap_out_assembly_gsnap_hitsummary2_tab
+    File? nr_hit_summary # refined_rapsearch2_out_assembly_rapsearch2_hitsummary2_tab
 }
 
 struct ReferenceInfo {
@@ -19,10 +22,13 @@ workflow phylotree {
 
         # TODO: pass this to the relevant tasks and adjust SKA parameters as appropriate
         # (kSNP3 used a variable kmer length for each superkingdom: Viruses: 13, Bacteria: 19, Eukaryota: 19)
-        String superkingdom_name
+        # These kmer names can't be ported directly, because kSNP requires them to be odd while SKA requires a multiple of 3
+        # Try flanking sequence length (-k) 12 for viruses, 18 for bacteria/eukaryotes for SKA
+        # (SKA uses split kmers so the total resulting SKA kmer length here is (12*2 + 1) for 1 wobble base in the middle)
+        String superkingdom_name # viruses, bacteria, or eukaryota
 
         # allow the user to pass specific reference taxids/accessions to include with the tree
-        Array[ReferenceInfo] additional_references
+        Array[ReferenceInfo] additional_references = []
 
         String cut_height = .16
         String ska_align_p = .9
@@ -92,13 +98,15 @@ workflow phylotree {
 task GetSampleContigFastas {
     # Given a list of samples, their workflow run IDs, and a taxon ID, retrieve contigs assigned to that taxon ID or its
     # descendants within each sample. Emit one fasta file per sample, to be graphed in a phylotree along with references
+
     input {
         Array[SampleInfo] samples
         String docker_image_id
     }
 
     command <<<
-
+    # TODO:
+    # For each input sample, scan its hit summaries to identify the contigs that need to be pulled from contigs.fasta (using lineage or exact taxon id hits as needed), and pull them
     >>>
 
     output {

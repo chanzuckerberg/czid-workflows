@@ -9,6 +9,21 @@ distance matrix) to a phylogram.
 The workflow uses [SKA](https://github.com/simonrharris/SKA) split k-mers to create clusters and phylogenetic trees. This
 works for complete genomes as well as raw sequences (currently supporting only `.fasta` inputs).
 
+## Implementation details
+
+### Current workflow
+The workflow takes as input the main reference (represented by its taxon ID), additional references (represented by
+taxon IDs or accession IDs), and samples (each represented by sample name, mngs workflow run ID, contig fasta file,
+NT hit summary, and NR hit summary). The workflow then prepares FASTA files for each sample and reference:
+
+- For samples, we scan the hit summaries to determine which contigs map to taxa under the given reference taxon ID,
+  then subset the sample's contigs FASTA file.
+
+- For references, we download their FASTA files from the AWS NCBI BLAST database S3 bucket using taxoniq.
+
+We then feed the FASTA files to SKA to create kmer profiles and generate phylogenies.
+
+### Old workflow
 An in-depth description of the first generation PhyloTree pipeline from idseq-dag is available in
 [Phylotree.md](Phylotree.md). The authoritative copies of the associated idseq-dag steps are in
 [prepare_taxon_fasta.py](../short-read-mngs/idseq-dag/idseq_dag/steps/prepare_taxon_fasta.py) and
@@ -48,6 +63,6 @@ The `/analysis_support` directory contains scripts that have been used to suppor
 the phylotree pipeline.
 
 ## Reference files
-Filename    | Provenance
-------------|------------
-To be added | To be added
+Filename                | Provenance
+------------------------|------------
+`test/full_zika.tar.gz` | https://github.com/katrinakalantar/clustered-phylotree/blob/main/test/full_zika.tar.gz?raw=true
