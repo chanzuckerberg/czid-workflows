@@ -16,8 +16,10 @@ The workflow takes as input the main reference (represented by its taxon ID), ad
 taxon IDs or accession IDs), and samples (each represented by sample name, mngs workflow run ID, contig fasta file,
 NT hit summary, and NR hit summary). The workflow then prepares FASTA files for each sample and reference:
 
-- For samples, we scan the hit summaries to determine which contigs map to taxa under the given reference taxon ID,
-  then subset the sample's contigs FASTA file.
+- For samples, we scan their
+  [merged hit summaries](https://github.com/chanzuckerberg/idseq-workflows/blob/main/short-read-mngs/idseq-dag/idseq_dag/util/parsing.py)
+  to determine which contigs map to taxa under the given reference taxon ID, then subset the sample's contigs FASTA
+  file.
 
 - For references, we download their FASTA files from the AWS NCBI BLAST database S3 bucket using taxoniq.
 

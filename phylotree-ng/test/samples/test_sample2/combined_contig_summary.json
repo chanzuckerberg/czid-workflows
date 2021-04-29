@@ -1,0 +1,439 @@
+[
+  {
+    "taxid": "694003",
+    "tax_level": 1,
+    "count_type": "NT",
+    "contig_counts": {
+      "NODE_23_length_508_cov_4.097448": 118,
+      "NODE_5_length_1544_cov_3.505112": 398,
+      "NODE_17_length_745_cov_5.507485": 255,
+      "NODE_9_length_1076_cov_3.932933": 262,
+      "NODE_14_length_922_cov_2.944379": 216,
+      "NODE_10_length_1061_cov_3.265244": 306,
+      "NODE_1_length_4450_cov_4.857992": 1972,
+      "NODE_8_length_1185_cov_3.966606": 375,
+      "NODE_3_length_1815_cov_3.085731": 482,
+      "NODE_4_length_1684_cov_4.333541": 463,
+      "NODE_2_length_1950_cov_2.787507": 516,
+      "NODE_16_length_777_cov_2.082857": 136,
+      "NODE_12_length_1005_cov_5.289871": 376,
+      "NODE_31_length_229_cov_1.184211": 28,
+      "NODE_21_length_573_cov_3.086694": 170,
+      "NODE_13_length_941_cov_5.503472": 334,
+      "NODE_22_length_569_cov_2.719512": 92,
+      "*": 264,
+      "NODE_20_length_626_cov_3.389800": 210,
+      "NODE_28_length_296_cov_2.611872": 60,
+      "NODE_11_length_1023_cov_3.700846": 322,
+      "NODE_24_length_496_cov_2.384248": 106,
+      "NODE_6_length_1510_cov_3.034194": 398,
+      "NODE_26_length_445_cov_4.491848": 152,
+      "NODE_15_length_832_cov_2.480795": 170,
+      "NODE_27_length_314_cov_5.852321": 84,
+      "NODE_25_length_489_cov_4.298544": 142,
+      "NODE_18_length_734_cov_3.045662": 183,
+      "NODE_7_length_1257_cov_2.955932": 299,
+      "NODE_29_length_288_cov_0.796209": 68
+    }
+  },
+  {
+    "taxid": "337042",
+    "tax_level": 1,
+    "count_type": "NT",
+    "contig_counts": {
+      "*": 94,
+      "NODE_19_length_717_cov_3.331250": 71,
+      "NODE_32_length_229_cov_1.157895": 6
+    }
+  },
+  {
+    "taxid": "562",
+    "tax_level": 1,
+    "count_type": "NT",
+    "contig_counts": {
+      "*": 4
+    }
+  },
+  {
+    "taxid": "1747",
+    "tax_level": 1,
+    "count_type": "NT",
+    "contig_counts": {
+      "*": 8
+    }
+  },
+  {
+    "taxid": "287",
+    "tax_level": 1,
+    "count_type": "NT",
+    "contig_counts": {
+      "*": 4
+    }
+  },
+  {
+    "taxid": "99802",
+    "tax_level": 1,
+    "count_type": "NT",
+    "contig_counts": {
+      "*": 6
+    }
+  },
+  {
+    "taxid": "694002",
+    "tax_level": 2,
+    "count_type": "NT",
+    "contig_counts": {
+      "NODE_23_length_508_cov_4.097448": 118,
+      "NODE_5_length_1544_cov_3.505112": 398,
+      "NODE_17_length_745_cov_5.507485": 255,
+      "NODE_9_length_1076_cov_3.932933": 262,
+      "NODE_14_length_922_cov_2.944379": 216,
+      "NODE_10_length_1061_cov_3.265244": 306,
+      "NODE_1_length_4450_cov_4.857992": 1972,
+      "NODE_8_length_1185_cov_3.966606": 375,
+      "NODE_3_length_1815_cov_3.085731": 482,
+      "NODE_4_length_1684_cov_4.333541": 463,
+      "NODE_2_length_1950_cov_2.787507": 516,
+      "NODE_16_length_777_cov_2.082857": 136,
+      "NODE_12_length_1005_cov_5.289871": 376,
+      "NODE_31_length_229_cov_1.184211": 28,
+      "NODE_21_length_573_cov_3.086694": 170,
+      "NODE_13_length_941_cov_5.503472": 334,
+      "NODE_22_length_569_cov_2.719512": 92,
+      "*": 264,
+      "NODE_20_length_626_cov_3.389800": 210,
+      "NODE_28_length_296_cov_2.611872": 60,
+      "NODE_11_length_1023_cov_3.700846": 322,
+      "NODE_24_length_496_cov_2.384248": 106,
+      "NODE_6_length_1510_cov_3.034194": 398,
+      "NODE_26_length_445_cov_4.491848": 152,
+      "NODE_15_length_832_cov_2.480795": 170,
+      "NODE_27_length_314_cov_5.852321": 84,
+      "NODE_25_length_489_cov_4.298544": 142,
+      "NODE_18_length_734_cov_3.045662": 183,
+      "NODE_7_length_1257_cov_2.955932": 299,
+      "NODE_29_length_288_cov_0.796209": 68
+    }
+  },
+  {
+    "taxid": "333750",
+    "tax_level": 2,
+    "count_type": "NT",
+    "contig_counts": {
+      "*": 94,
+      "NODE_19_length_717_cov_3.331250": 71,
+      "NODE_32_length_229_cov_1.157895": 6
+    }
+  },
+  {
+    "taxid": "286",
+    "tax_level": 2,
+    "count_type": "NT",
+    "contig_counts": {
+      "*": 18
+    }
+  },
+  {
+    "taxid": "561",
+    "tax_level": 2,
+    "count_type": "NT",
+    "contig_counts": {
+      "*": 4
+    }
+  },
+  {
+    "taxid": "1912216",
+    "tax_level": 2,
+    "count_type": "NT",
+    "contig_counts": {
+      "*": 8
+    }
+  },
+  {
+    "taxid": "46580",
+    "tax_level": 2,
+    "count_type": "NT",
+    "contig_counts": {
+      "*": 6
+    }
+  },
+  {
+    "taxid": "694003",
+    "tax_level": 1,
+    "count_type": "NR",
+    "contig_counts": {
+      "NODE_5_length_1544_cov_3.505112": 398,
+      "NODE_1_length_4450_cov_4.857992": 1972,
+      "NODE_8_length_1185_cov_3.966606": 375,
+      "NODE_3_length_1815_cov_3.085731": 482,
+      "NODE_4_length_1684_cov_4.333541": 463,
+      "NODE_12_length_1005_cov_5.289871": 376,
+      "NODE_10_length_1061_cov_3.265244": 306,
+      "NODE_2_length_1950_cov_2.787507": 516,
+      "NODE_17_length_745_cov_5.507485": 255,
+      "NODE_23_length_508_cov_4.097448": 118,
+      "NODE_24_length_496_cov_2.384248": 106,
+      "NODE_22_length_569_cov_2.719512": 92,
+      "NODE_6_length_1510_cov_3.034194": 398,
+      "NODE_9_length_1076_cov_3.932933": 262,
+      "NODE_27_length_314_cov_5.852321": 84,
+      "NODE_7_length_1257_cov_2.955932": 299,
+      "NODE_13_length_941_cov_5.503472": 334,
+      "NODE_20_length_626_cov_3.389800": 210,
+      "NODE_18_length_734_cov_3.045662": 183,
+      "NODE_25_length_489_cov_4.298544": 142,
+      "NODE_11_length_1023_cov_3.700846": 322,
+      "NODE_16_length_777_cov_2.082857": 136,
+      "*": 71,
+      "NODE_21_length_573_cov_3.086694": 170,
+      "NODE_26_length_445_cov_4.491848": 152,
+      "NODE_15_length_832_cov_2.480795": 170,
+      "NODE_14_length_922_cov_2.944379": 216,
+      "NODE_28_length_296_cov_2.611872": 60,
+      "NODE_29_length_288_cov_0.796209": 68,
+      "NODE_31_length_229_cov_1.184211": 28
+    }
+  },
+  {
+    "taxid": "337042",
+    "tax_level": 1,
+    "count_type": "NR",
+    "contig_counts": {
+      "*": 44,
+      "NODE_19_length_717_cov_3.331250": 71,
+      "NODE_32_length_229_cov_1.157895": 6
+    }
+  },
+  {
+    "taxid": "-1",
+    "tax_level": 1,
+    "count_type": "NR",
+    "contig_counts": {
+      "*": 4
+    }
+  },
+  {
+    "taxid": "694002",
+    "tax_level": 2,
+    "count_type": "NR",
+    "contig_counts": {
+      "NODE_5_length_1544_cov_3.505112": 398,
+      "NODE_1_length_4450_cov_4.857992": 1972,
+      "NODE_8_length_1185_cov_3.966606": 375,
+      "NODE_3_length_1815_cov_3.085731": 482,
+      "NODE_4_length_1684_cov_4.333541": 463,
+      "NODE_12_length_1005_cov_5.289871": 376,
+      "NODE_10_length_1061_cov_3.265244": 306,
+      "NODE_2_length_1950_cov_2.787507": 516,
+      "NODE_17_length_745_cov_5.507485": 255,
+      "NODE_23_length_508_cov_4.097448": 118,
+      "NODE_24_length_496_cov_2.384248": 106,
+      "NODE_22_length_569_cov_2.719512": 92,
+      "NODE_6_length_1510_cov_3.034194": 398,
+      "NODE_9_length_1076_cov_3.932933": 262,
+      "NODE_27_length_314_cov_5.852321": 84,
+      "NODE_7_length_1257_cov_2.955932": 299,
+      "NODE_13_length_941_cov_5.503472": 334,
+      "NODE_20_length_626_cov_3.389800": 210,
+      "NODE_18_length_734_cov_3.045662": 183,
+      "NODE_25_length_489_cov_4.298544": 142,
+      "NODE_11_length_1023_cov_3.700846": 322,
+      "NODE_16_length_777_cov_2.082857": 136,
+      "*": 71,
+      "NODE_21_length_573_cov_3.086694": 170,
+      "NODE_26_length_445_cov_4.491848": 152,
+      "NODE_15_length_832_cov_2.480795": 170,
+      "NODE_14_length_922_cov_2.944379": 216,
+      "NODE_28_length_296_cov_2.611872": 60,
+      "NODE_29_length_288_cov_0.796209": 68,
+      "NODE_31_length_229_cov_1.184211": 28
+    }
+  },
+  {
+    "taxid": "333750",
+    "tax_level": 2,
+    "count_type": "NR",
+    "contig_counts": {
+      "*": 44,
+      "NODE_19_length_717_cov_3.331250": 71,
+      "NODE_32_length_229_cov_1.157895": 6
+    }
+  },
+  {
+    "taxid": "286",
+    "tax_level": 2,
+    "count_type": "NR",
+    "contig_counts": {
+      "*": 11
+    }
+  },
+  {
+    "taxid": "-1",
+    "tax_level": 2,
+    "count_type": "NR",
+    "contig_counts": {
+      "*": 4
+    }
+  },
+  {
+    "taxid": "694003",
+    "tax_level": 1,
+    "count_type": "merged_NT_NR",
+    "contig_counts": {
+      "NODE_23_length_508_cov_4.097448": 118,
+      "NODE_5_length_1544_cov_3.505112": 398,
+      "NODE_17_length_745_cov_5.507485": 255,
+      "NODE_9_length_1076_cov_3.932933": 262,
+      "NODE_14_length_922_cov_2.944379": 216,
+      "NODE_10_length_1061_cov_3.265244": 306,
+      "NODE_1_length_4450_cov_4.857992": 1972,
+      "NODE_8_length_1185_cov_3.966606": 375,
+      "NODE_3_length_1815_cov_3.085731": 482,
+      "NODE_4_length_1684_cov_4.333541": 463,
+      "NODE_2_length_1950_cov_2.787507": 516,
+      "NODE_16_length_777_cov_2.082857": 136,
+      "NODE_12_length_1005_cov_5.289871": 376,
+      "NODE_31_length_229_cov_1.184211": 28,
+      "NODE_21_length_573_cov_3.086694": 170,
+      "NODE_13_length_941_cov_5.503472": 334,
+      "NODE_22_length_569_cov_2.719512": 92,
+      "*": 264,
+      "NODE_20_length_626_cov_3.389800": 210,
+      "NODE_28_length_296_cov_2.611872": 60,
+      "NODE_11_length_1023_cov_3.700846": 322,
+      "NODE_24_length_496_cov_2.384248": 106,
+      "NODE_6_length_1510_cov_3.034194": 398,
+      "NODE_26_length_445_cov_4.491848": 152,
+      "NODE_15_length_832_cov_2.480795": 170,
+      "NODE_27_length_314_cov_5.852321": 84,
+      "NODE_25_length_489_cov_4.298544": 142,
+      "NODE_18_length_734_cov_3.045662": 183,
+      "NODE_7_length_1257_cov_2.955932": 299,
+      "NODE_29_length_288_cov_0.796209": 68
+    }
+  },
+  {
+    "taxid": "337042",
+    "tax_level": 1,
+    "count_type": "merged_NT_NR",
+    "contig_counts": {
+      "*": 94,
+      "NODE_19_length_717_cov_3.331250": 71,
+      "NODE_32_length_229_cov_1.157895": 6
+    }
+  },
+  {
+    "taxid": "562",
+    "tax_level": 1,
+    "count_type": "merged_NT_NR",
+    "contig_counts": {
+      "*": 4
+    }
+  },
+  {
+    "taxid": "1747",
+    "tax_level": 1,
+    "count_type": "merged_NT_NR",
+    "contig_counts": {
+      "*": 8
+    }
+  },
+  {
+    "taxid": "287",
+    "tax_level": 1,
+    "count_type": "merged_NT_NR",
+    "contig_counts": {
+      "*": 4
+    }
+  },
+  {
+    "taxid": "99802",
+    "tax_level": 1,
+    "count_type": "merged_NT_NR",
+    "contig_counts": {
+      "*": 6
+    }
+  },
+  {
+    "taxid": "694002",
+    "tax_level": 2,
+    "count_type": "merged_NT_NR",
+    "contig_counts": {
+      "NODE_23_length_508_cov_4.097448": 118,
+      "NODE_5_length_1544_cov_3.505112": 398,
+      "NODE_17_length_745_cov_5.507485": 255,
+      "NODE_9_length_1076_cov_3.932933": 262,
+      "NODE_14_length_922_cov_2.944379": 216,
+      "NODE_10_length_1061_cov_3.265244": 306,
+      "NODE_1_length_4450_cov_4.857992": 1972,
+      "NODE_8_length_1185_cov_3.966606": 375,
+      "NODE_3_length_1815_cov_3.085731": 482,
+      "NODE_4_length_1684_cov_4.333541": 463,
+      "NODE_2_length_1950_cov_2.787507": 516,
+      "NODE_16_length_777_cov_2.082857": 136,
+      "NODE_12_length_1005_cov_5.289871": 376,
+      "NODE_31_length_229_cov_1.184211": 28,
+      "NODE_21_length_573_cov_3.086694": 170,
+      "NODE_13_length_941_cov_5.503472": 334,
+      "NODE_22_length_569_cov_2.719512": 92,
+      "*": 264,
+      "NODE_20_length_626_cov_3.389800": 210,
+      "NODE_28_length_296_cov_2.611872": 60,
+      "NODE_11_length_1023_cov_3.700846": 322,
+      "NODE_24_length_496_cov_2.384248": 106,
+      "NODE_6_length_1510_cov_3.034194": 398,
+      "NODE_26_length_445_cov_4.491848": 152,
+      "NODE_15_length_832_cov_2.480795": 170,
+      "NODE_27_length_314_cov_5.852321": 84,
+      "NODE_25_length_489_cov_4.298544": 142,
+      "NODE_18_length_734_cov_3.045662": 183,
+      "NODE_7_length_1257_cov_2.955932": 299,
+      "NODE_29_length_288_cov_0.796209": 68
+    }
+  },
+  {
+    "taxid": "333750",
+    "tax_level": 2,
+    "count_type": "merged_NT_NR",
+    "contig_counts": {
+      "*": 94,
+      "NODE_19_length_717_cov_3.331250": 71,
+      "NODE_32_length_229_cov_1.157895": 6
+    }
+  },
+  {
+    "taxid": "286",
+    "tax_level": 2,
+    "count_type": "merged_NT_NR",
+    "contig_counts": {
+      "*": 18
+    }
+  },
+  {
+    "taxid": "561",
+    "tax_level": 2,
+    "count_type": "merged_NT_NR",
+    "contig_counts": {
+      "*": 4
+    }
+  },
+  {
+    "taxid": "1912216",
+    "tax_level": 2,
+    "count_type": "merged_NT_NR",
+    "contig_counts": {
+      "*": 8
+    }
+  },
+  {
+    "taxid": "64320",
+    "tax_level": 2,
+    "count_type": "merged_NT_NR",
+    "contig_counts": {
+      "CONTIG1": 6,
+      "CONTIG2": 7,
+      "CONTIG3": 8,
+      "CONTIG4": 9
+    }
+  }
+]
