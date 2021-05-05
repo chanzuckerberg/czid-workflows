@@ -45,6 +45,7 @@ RUN apt-get -qq update && apt-get -qq -y install \
   build-essential \
   automake \
   tabix \
+  fasta3 \
   && locale-gen en_US.UTF-8
 
 # These newer versions of infernal and ncbi-blast+ are required by VADR
@@ -83,7 +84,7 @@ RUN /bin/bash -c "set -e; mkdir -p /usr/local/lib/site_perl; \
   popd; \
   rm -rf Bio-Easel; \
   mkdir -p vadr; \
-  curl -L https://github.com/ncbi/vadr/archive/vadr-1.1.3.tar.gz | tar -xz --strip-components 1 -C vadr; \
+  curl -L https://github.com/ncbi/vadr/archive/vadr-1.2.tar.gz | tar -xz --strip-components 1 -C vadr; \
   sed -i -e 's|/scripts/esl-ssplit.pl|/esl-ssplit.pl|' vadr/v-annotate.pl; \
   mv vadr/*.pl /usr/local/bin/; \
   mv vadr/*.pm /usr/local/lib/site_perl/; \
@@ -91,6 +92,7 @@ RUN /bin/bash -c "set -e; mkdir -p /usr/local/lib/site_perl; \
   echo export VADRSCRIPTSDIR=/usr/local/bin \
   VADRMODELDIR=/usr/local/share/vadr/models \
   VADRBLASTDIR=/usr/bin \
+  VADRFASTADIR=/usr/bin \
   VADRINFERNALDIR=/usr/bin \
   VADRHMMERDIR=/usr/bin \
   VADREASELDIR=/usr/local/bin \
