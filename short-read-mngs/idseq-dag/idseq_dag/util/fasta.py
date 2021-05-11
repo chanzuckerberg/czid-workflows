@@ -3,6 +3,7 @@ from typing import Iterator, List, Tuple, NamedTuple
 import sys
 import os
 from subprocess import run
+from idseq_dag.exceptions import InsufficientReadsError
 import idseq_dag.util.command as command
 import idseq_dag.util.command_patterns as command_patterns
 
@@ -40,6 +41,8 @@ def input_file_type(input_file):
     ''' Check input file type based on first line of file. file needs to be uncompressed '''
     with open(input_file, 'r') as f:
         first_line = f.readline()
+    if not first_line:
+        raise InsufficientReadsError("Insufficient reads")
     if first_line[0] == '@':
         return 'fastq'
     elif first_line[0] == '>':
