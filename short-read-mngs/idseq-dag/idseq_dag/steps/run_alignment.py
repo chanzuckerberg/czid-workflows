@@ -31,7 +31,6 @@ from idseq_dag.util.m8 import NT_MIN_ALIGNMENT_LEN
 
 MAX_CHUNKS_IN_FLIGHT = 16
 CHUNK_MAX_ATTEMPTS = 3
-CHUNK_ATTEMPT_TIMEOUT = 60 * 60 * 3  # 3 hours
 GSNAP_CHUNK_SIZE = 240000
 RAPSEARCH_CHUNK_SIZE = 320000
 
@@ -428,19 +427,18 @@ class PipelineStepRunAlignment(PipelineStep):
                 "command": command,
                 "environment": environment,
             },
-            retryStrategy={"attempts": retries},
-            timeout={"attemptDurationSeconds": CHUNK_ATTEMPT_TIMEOUT}
+            retryStrategy={"attempts": retries}
         )
         job_id = response["jobId"]
         self._log_alignment_batch_job_status(job_id, job_queue, job_definition, chunk_id, 'SUBMITTED')
 
-        total_timeout = retries * CHUNK_ATTEMPT_TIMEOUT
-        end_time = time.time() + total_timeout
         chunks_in_flight = min(self.chunk_count, MAX_CHUNKS_IN_FLIGHT)  # use min in case we have fewer chunks than the maximum
         mean_delay = chunks_in_flight  # ~1 chunk per second to avoid throttling,
         delay = mean_delay + random.randint(-mean_delay // 2, mean_delay // 2)  # Add some noise to de-synchronize chunks
         status = "SUBMITTED"
-        while time.time() < end_time:
+        attempts = 0
+        while attempts < retries:
+            attempts += 1
             try:
                 status = self._get_job_status(session, job_id)
             except ClientError as e:
