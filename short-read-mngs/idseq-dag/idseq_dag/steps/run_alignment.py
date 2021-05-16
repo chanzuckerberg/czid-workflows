@@ -436,9 +436,8 @@ class PipelineStepRunAlignment(PipelineStep):
         mean_delay = chunks_in_flight  # ~1 chunk per second to avoid throttling,
         delay = mean_delay + random.randint(-mean_delay // 2, mean_delay // 2)  # Add some noise to de-synchronize chunks
         status = "SUBMITTED"
-        attempts = 0
-        while attempts < retries:
-            attempts += 1
+        # the job this is monitoring has an timeout and the job this runs in has a timeout
+        while True:
             try:
                 status = self._get_job_status(session, job_id)
             except ClientError as e:
@@ -452,17 +451,12 @@ class PipelineStepRunAlignment(PipelineStep):
 
             if status == "SUCCEEDED":
                 self._log_alignment_batch_job_status(job_id, job_queue, job_definition, chunk_id, status)
-                break
+                return job_id
             if status == "FAILED":
                 log.log_event("alignment_batch_job_failed", values={'job_id': job_id, 'chunk_id': chunk_id, 'alignment_algorithm': self.alignment_algorithm})
                 self._log_alignment_batch_job_status(job_id, job_queue, job_definition, chunk_id, status)
                 raise BatchJobFailed("chunk alignment failed")
             time.sleep(delay)
-        else:
-            self._log_alignment_batch_job_status(job_id, job_queue, job_definition, chunk_id, 'TIMEOUT')
-            raise Exception("chunk timed out but never entered the FAILED state")
-
-        return job_id
 
     def _validate_chunk_output(self, chunk_output_filename):
         cmd = "awk '{print NF}' | sort -nu | head -n 1"
