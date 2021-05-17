@@ -145,6 +145,7 @@ class PipelineStepRunStar(PipelineStep):
 
         output_files_local = self.output_files_local()
         output_gene_file = self.additional_attributes.get("output_gene_file")
+        output_log_file = self.additional_attributes.get("output_log_file")
 
         genome_dir = s3.fetch_reference(
             self.additional_files["star_genome"],
@@ -196,6 +197,11 @@ class PipelineStepRunStar(PipelineStep):
                                          output_gene_file)
                     command.move_file(gene_count_file, moved)
                     self.additional_output_files_hidden.append(moved)
+
+                log_file = os.path.join(tmp, "Log.final.out")
+                if os.path.isfile(log_file):
+                    moved = os.path.join(self.output_dir_local, output_log_file)
+                    command.move_file(log_file, moved)
 
                 # STAR names the output BAM file Aligned.out.bam without TranscriptomeSAM and
                 #  Aligned.toTranscriptome.out.bam with  TranscriptomeSAM, this doesn't

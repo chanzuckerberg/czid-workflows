@@ -53,11 +53,12 @@ task RunStar {
     --output-files '[~{if length(valid_input_fastq) == 2 then '"unmapped1.fastq", "unmapped2.fastq"' else '"unmapped1.fastq"'}]' \
     --output-dir-s3 '~{s3_wd_uri}' \
     --additional-files '{"star_genome": "~{star_genome}"}' \
-    --additional-attributes '{"output_gene_file": "reads_per_gene.star.tab", "nucleotide_type": "~{nucleotide_type}", "host_genome": "~{host_genome}", "output_metrics_file": "picard_insert_metrics.txt", "output_histogram_file": "insert_size_histogram.pdf"}'
+    --additional-attributes '{"output_gene_file": "reads_per_gene.star.tab", "nucleotide_type": "~{nucleotide_type}", "host_genome": "~{host_genome}", "output_metrics_file": "picard_insert_metrics.txt", "output_histogram_file": "insert_size_histogram.pdf", "output_log_file": "Log.final.out"}'
   >>>
   output {
     String step_description_md = read_string("star_out.description.md")
     File unmapped1_fastq = "unmapped1.fastq"
+    File output_log_file = "Log.final.out"
     File? unmapped2_fastq = "unmapped2.fastq"
     File? output_read_count = "star_out.count"
     File? output_gene_file = "reads_per_gene.star.tab"
@@ -501,6 +502,7 @@ workflow idseq_host_filter {
     File? validate_input_out_count = RunValidateInput.output_read_count
     File star_out_unmapped1_fastq = RunStar.unmapped1_fastq
     File? star_out_unmapped2_fastq = RunStar.unmapped2_fastq
+    File? star_out_log_file = RunStar.output_log_file
     File? star_out_count = RunStar.output_read_count
     File trimmomatic_out_trimmomatic1_fastq = RunTrimmomatic.trimmomatic1_fastq
     File? trimmomatic_out_trimmomatic2_fastq = RunTrimmomatic.trimmomatic2_fastq
