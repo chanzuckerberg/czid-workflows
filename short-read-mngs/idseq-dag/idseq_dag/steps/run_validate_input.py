@@ -147,7 +147,7 @@ class PipelineStepRunValidateInput(PipelineStep):
                     if num_fragments == 1:
                         raise InsufficientReadsError("The input file contains 0 reads")
                     break
-                
+
                 # These identifiers are used in a CSV downstream
                 # For security reasons we must strip out characters that can be used for explouts
                 identifier_l = bad_csv_character_re.sub(identifier_l, '')
