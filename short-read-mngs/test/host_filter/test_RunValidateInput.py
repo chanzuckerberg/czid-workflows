@@ -30,6 +30,7 @@ def test_RunValidateInput_invalid(util, short_read_mngs_bench3_viral_outputs):
     assert err["wdl_error_message"]
     assert err["error"] == "InvalidFileFormatError"
 
+
 def test_RunValidateInput_strip_bad_csv_characters(util, short_read_mngs_bench3_viral_outputs):
     # load the task's inputs from the end-to-end workflow test
     inputs, _ = util.miniwdl_inputs_outputs(
