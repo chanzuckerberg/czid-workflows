@@ -231,7 +231,6 @@ class PipelineStepRunValidateInput(PipelineStep):
                 identifier_l = next_line
                 if len(identifier_l) == 0:  # EOF
                     break
-                identifier_l = re.replace()
 
                 read_l = input_f.readline()
                 if len(read_l) == 0:
