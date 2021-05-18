@@ -41,11 +41,11 @@ def test_RunValidateInput_strip_bad_csv_characters(util, short_read_mngs_bench3_
         )
     )
 
-    with tempfile.NamedTemporaryFile('w') as input_fastq, gzip.open(inputs["fastqs"][0], 'r') as good_fastq:
+    with tempfile.NamedTemporaryFile('wb') as input_fastq, gzip.open(inputs["fastqs"][0]) as good_fastq:
         for i, line in enumerate(good_fastq):
             if i == 0:
                 clean_line = line
-                dirty_line = clean_line.strip() + "=+-@|\n"
+                dirty_line = clean_line.strip() + b"=+-@|\n"
                 input_fastq.write(dirty_line)
             else:
                 input_fastq.write(line)
