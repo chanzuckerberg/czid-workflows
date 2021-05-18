@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import tempfile
 
@@ -39,14 +40,18 @@ def test_RunValidateInput_strip_bad_csv_characters(util, short_read_mngs_bench3_
         )
     )
 
-    with tempfile.NamedTemporaryFile('w') as f:
-        f.writelines([
-            ">my-id@with|bad=chars+",
-            "ACTG",
-        ])
+    with tempfile.NamedTemporaryFile('w') as input_fastq, open(inputs["fastqs"][0]) as good_fastq:
+        for i, line in enumerate(good_fastq):
+            if i == 0:
+                clean_line = line
+                dirty_line = clean_line.strip() + "=+-@|\n"
+                input_fastq.write(dirty_line)
+            else:
+                input_fastq.write(line)
+
 
         # override fastqs to test
-        inputs["fastqs"] = [f.name]
+        inputs["fastqs"] = [input_fastq.name]
 
         # run the task with the manipulated inputs, expecting an error exit status
         outp = util.miniwdl_run(
@@ -57,6 +62,7 @@ def test_RunValidateInput_strip_bad_csv_characters(util, short_read_mngs_bench3_
             json.dumps(inputs),
         )
 
-        with open(outp["outputs"]["RunValidateInput."]) as o:
-            first = o.read()
-            assert first == ">myidwithbadchars", "should strip out bad csv characters"
+        bad = re.compile('[=+-@|]')
+        with open(outp["outputs"]["RunValidateInput.valid_input1_fastq"]) as o:
+            for line in o:
+                assert not bad.match(line[1:]), "found bad csv character in line"
