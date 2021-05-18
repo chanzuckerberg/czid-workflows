@@ -49,7 +49,6 @@ def test_RunValidateInput_strip_bad_csv_characters(util, short_read_mngs_bench3_
             else:
                 input_fastq.write(line)
 
-
         # override fastqs to test
         inputs["fastqs"] = [input_fastq.name]
 
