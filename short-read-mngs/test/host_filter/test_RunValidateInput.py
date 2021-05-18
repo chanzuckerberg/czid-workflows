@@ -44,8 +44,7 @@ def test_RunValidateInput_strip_bad_csv_characters(util, short_read_mngs_bench3_
     with tempfile.NamedTemporaryFile('wb') as input_fastq, gzip.open(inputs["fastqs"][0]) as good_fastq:
         for i, line in enumerate(good_fastq):
             if i == 0:
-                clean_line = line
-                dirty_line = clean_line.strip() + b"=+-@|\n"
+                dirty_line = line.strip() + b"=+-@|\n"
                 input_fastq.write(dirty_line)
             else:
                 input_fastq.write(line)
@@ -64,6 +63,5 @@ def test_RunValidateInput_strip_bad_csv_characters(util, short_read_mngs_bench3_
 
         bad = re.compile('[=+-@|]')
         with open(outp["outputs"]["RunValidateInput.valid_input1_fastq"]) as o:
-            for line in o:
-                if line.startswith('@'):
-                    assert not bad.match(line[1:]), f"found bad csv character in line: '{line}'"
+            first = o.read()
+            assert not bad.match(first[1:]), f"found bad csv character in line: '{first}'"
