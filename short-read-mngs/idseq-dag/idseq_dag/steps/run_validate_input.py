@@ -1,5 +1,6 @@
 import json
 import os
+import re
 
 from idseq_dag.engine.pipeline_step import PipelineStep
 from idseq_dag.exceptions import InvalidFileFormatError, InsufficientReadsError
@@ -8,6 +9,8 @@ import idseq_dag.util.command_patterns as command_patterns
 import idseq_dag.util.count as count
 import idseq_dag.util.validate_constants as vc
 import idseq_dag.util.s3 as s3
+
+bad_csv_character_re = re.compile("[=+-@|]")
 
 class PipelineStepRunValidateInput(PipelineStep):
     """ Validates that the input files are .fastq format and truncates to 75 million fragments
@@ -144,6 +147,10 @@ class PipelineStepRunValidateInput(PipelineStep):
                     if num_fragments == 1:
                         raise InsufficientReadsError("The input file contains 0 reads")
                     break
+                
+                # These identifiers are used in a CSV downstream
+                # For security reasons we must strip out characters that can be used for explouts
+                identifier_l = bad_csv_character_re.sub(identifier_l, '')
 
                 read_l = input_f.readline()
                 if len(read_l) == 0:  # unexpected EOF
@@ -224,6 +231,7 @@ class PipelineStepRunValidateInput(PipelineStep):
                 identifier_l = next_line
                 if len(identifier_l) == 0:  # EOF
                     break
+                identifier_l = re.replace()
 
                 read_l = input_f.readline()
                 if len(read_l) == 0:
