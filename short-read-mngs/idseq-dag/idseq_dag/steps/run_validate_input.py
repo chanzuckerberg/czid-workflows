@@ -150,7 +150,7 @@ class PipelineStepRunValidateInput(PipelineStep):
 
                 # These identifiers are used in a CSV downstream
                 # For security reasons we must strip out characters that can be used for explouts
-                identifier_l = bad_csv_character_re.sub(identifier_l, '')
+                identifier_l = identifier_l[0] + bad_csv_character_re.sub(identifier_l[1:], '')
 
                 read_l = input_f.readline()
                 if len(read_l) == 0:  # unexpected EOF
