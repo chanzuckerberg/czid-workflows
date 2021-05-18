@@ -65,4 +65,5 @@ def test_RunValidateInput_strip_bad_csv_characters(util, short_read_mngs_bench3_
         bad = re.compile('[=+-@|]')
         with open(outp["outputs"]["RunValidateInput.valid_input1_fastq"]) as o:
             for line in o:
-                assert not bad.match(line[1:]), "found bad csv character in line"
+                if line.startswith('@'):
+                    assert not bad.match(line[1:]), f"found bad csv character in line: '{line}'"
