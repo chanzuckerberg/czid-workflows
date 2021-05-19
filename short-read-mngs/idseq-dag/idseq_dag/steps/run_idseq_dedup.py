@@ -63,11 +63,11 @@ class PipelineStepRunIDSeqDedup(PipelineStep):  # Deliberately not PipelineCount
             )
         )
 
-        # quote the csv with ' to guard against potential csv injection
+        # Add leading space to every cell in the CSV to guard against potential csv injection
         with open(duplicate_clusters_raw_path) as r, open(duplicate_clusters_path, 'w') as w:
             writer = csv.writer(w)
             for row in csv.reader(r):
-                writer.writerow(f"'{elem}'" for elem in row)
+                writer.writerow(" " + elem for elem in row)
 
         # Emit cluster sizes.  One line per cluster.  Format "<cluster_size> <cluster_read_id>".
         # This info is loaded in multiple subsequent steps using m8.load_duplicate_cluster_sizes,

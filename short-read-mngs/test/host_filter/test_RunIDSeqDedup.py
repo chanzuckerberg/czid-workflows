@@ -21,8 +21,14 @@ def test_RunIDSeqDedup_safe_csv(util, short_read_mngs_bench3_viral_outputs):
 
     dups = outp["outputs"]["RunIDSeqDedup.duplicate_clusters_csv"]
 
+    # check we have an initial space to prevent CSV injection
     with open(dups) as f:
         for row in csv.reader(f):
             for elem in row:
-                # check for quotes that prevent csv injection
-                assert elem[0] == "'" and elem[-1] == "'", f"line not surrounded with ': {elem}"
+                assert elem[0] == " ", f"cell does not have initial space '{elem}'"
+
+    # check we can parse our CSV with skipinitialspace
+    with open(dups) as f:
+        for row in csv.reader(f, skipinitialspace=True):
+            for elem in row:
+                assert elem[0] != " ", f"initial space was not stripped from cell '{elem}'"
