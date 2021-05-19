@@ -1,3 +1,5 @@
+import csv
+
 import idseq_dag.util.command as command
 import idseq_dag.util.command_patterns as command_patterns
 import idseq_dag.util.count as count
@@ -45,11 +47,12 @@ class PipelineStepRunIDSeqDedup(PipelineStep):  # Deliberately not PipelineCount
         duplicate_clusters_path = output_files[-2]
         assert duplicate_clusters_path.endswith(".csv"), str(output_files)
 
+        duplicate_clusters_raw_path = 'clusters_raw.csv'
         # See docstring above for explanation of these options.
         idseq_dedup_params = [
             '-i', input_fas[0], '-o', output_fas[0],
             '-l', '70',
-            '-c', duplicate_clusters_path,
+            '-c', duplicate_clusters_raw_path,
         ]
         if len(input_fas) == 2:
             idseq_dedup_params += ['-i', input_fas[1], '-o', output_fas[1]]
@@ -59,6 +62,12 @@ class PipelineStepRunIDSeqDedup(PipelineStep):  # Deliberately not PipelineCount
                 args=idseq_dedup_params
             )
         )
+
+        # quote the csv with ' to guard against potential csv injection
+        with open(duplicate_clusters_raw_path) as r, open(duplicate_clusters_path, 'w') as w:
+            writer = csv.writer(w)
+            for row in csv.reader(r):
+                writer.writerow(f"'{elem}'" for elem in row)
 
         # Emit cluster sizes.  One line per cluster.  Format "<cluster_size> <cluster_read_id>".
         # This info is loaded in multiple subsequent steps using m8.load_duplicate_cluster_sizes,

@@ -12,7 +12,7 @@ def parse_clusters_file(
 ) -> Dict[str, Optional[List]]:
     clusters_dict = {}
     with open(idseq_dedup_clusters_path) as f:
-        for row in DictReader(f):
+        for row in DictReader(f, quotechar="'"):
             r_read_id, read_id = row["representative read id"], row["read id"]
             if r_read_id not in clusters_dict:
                 clusters_dict[r_read_id] = [1]
