@@ -199,7 +199,7 @@ class PipelineStepRunStar(PipelineStep):
                     self.additional_output_files_hidden.append(moved)
 
                 log_file = os.path.join(tmp, "Log.final.out")
-                if os.path.isfile(log_file):
+                if os.path.isfile(log_file) and output_log_file:
                     moved = os.path.join(self.output_dir_local, output_log_file)
                     command.move_file(log_file, moved)
 
