@@ -667,7 +667,6 @@ workflow idseq_postprocess {
     File coverage_out_assembly_contig_coverage_summary_csv = GenerateCoverageStats.assembly_contig_coverage_summary_csv
     File? coverage_out_count = GenerateCoverageStats.output_read_count
     File? gsnap_accessions_out_count = DownloadAccessions_gsnap_accessions_out.output_read_count
-    File rapsearch2_accessions_out_assembly_nr_refseq_fasta = DownloadAccessions_rapsearch2_accessions_out.assembly_nr_refseq_fasta
     File? rapsearch2_accessions_out_count = DownloadAccessions_rapsearch2_accessions_out.output_read_count
     File refined_gsnap_out_assembly_gsnap_blast_m8 = BlastContigs_refined_gsnap_out.assembly_gsnap_blast_m8
     File refined_gsnap_out_assembly_gsnap_reassigned_m8 = BlastContigs_refined_gsnap_out.assembly_gsnap_reassigned_m8
