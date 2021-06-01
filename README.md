@@ -1,4 +1,4 @@
-# idseq-workflows - portable IDseq production pipeline logic
+# idseq-workflows - Portable IDseq production pipeline logic
 
 #### Infectious Disease Sequencing Platform
 IDseq is a hypothesis-free global software platform that helps scientists identify pathogens in metagenomic sequencing
