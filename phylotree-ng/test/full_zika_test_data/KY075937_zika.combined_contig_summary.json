@@ -1,0 +1,29 @@
+[
+  {
+    "taxid": "64320",
+    "tax_level": 1,
+    "count_type": "NT",
+    "contig_counts": {
+      "CONTIG1": 114,
+      "*": 60
+    }
+  },
+  {
+    "taxid": "64320",
+    "tax_level": 1,
+    "count_type": "NR",
+    "contig_counts": {
+      "CONTIG1": 114,
+      "*": 56
+    }
+  },
+  {
+    "taxid": "64320",
+    "tax_level": 1,
+    "count_type": "merged_NT_NR",
+    "contig_counts": {
+      "CONTIG1": 114,
+      "*": 56
+    }
+  }
+]

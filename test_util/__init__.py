@@ -5,11 +5,11 @@ collecting its results, etc.
 Most test cases access these via the 'util' fixture (defined in ../conftest.py)
 """
 
+import json
 import os
 import subprocess
-import json
-import unittest
 import tempfile
+import unittest
 from subprocess import check_output
 from pathlib import Path
 
@@ -72,7 +72,7 @@ def wdl_error_message(runfailed):
 
 
 class WDLTestCase(unittest.TestCase):
-    def run_miniwdl(self, args, task=None, docker_image_id=os.environ["DOCKER_IMAGE_ID"]):
+    def run_miniwdl(self, args=[], task=None, docker_image_id=os.environ["DOCKER_IMAGE_ID"]):
         cmd = ["miniwdl", "run", "--verbose", self.wdl] + args + [f"docker_image_id={docker_image_id}"]
         if task:
             cmd += ["--task", task]

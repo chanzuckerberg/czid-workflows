@@ -1,0 +1,11 @@
+biopython==1.78
+matplotlib==3.4.2
+numpy==1.20.3
+pandas==1.2.4
+requests==2.25.1
+seaborn==0.11.1
+taxoniq==0.6.0
+
+https://github.com/chanzuckerberg/taxoniq/releases/download/v0.6.0/ncbi_genbank_accession_db-2021.4.10-py3-none-any.whl
+https://github.com/chanzuckerberg/taxoniq/releases/download/v0.6.0/ncbi_genbank_accession_lengths-2021.4.10-py3-none-any.whl
+https://github.com/chanzuckerberg/taxoniq/releases/download/v0.6.0/ncbi_genbank_accession_offsets-2021.4.10-py3-none-any.whl
