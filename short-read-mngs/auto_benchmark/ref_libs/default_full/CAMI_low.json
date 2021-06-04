@@ -73256,8 +73256,6 @@
     "idseq_short_read_mngs.host_filter.priceseq_out_priceseq1_fa": "s3://idseq-samples-development/auto_benchmark/20210221_231016_default_6.1.6/CAMI_low/results/short-read-mngs-6/priceseq1.fa",
     "idseq_short_read_mngs.host_filter.trimmomatic_out_count": "s3://idseq-samples-development/auto_benchmark/20210221_231016_default_6.1.6/CAMI_low/results/short-read-mngs-6/trimmomatic_out.count",
     "idseq_short_read_mngs.host_filter.bowtie2_human_out_bowtie2_human_1_fa": null,
-    "idseq_short_read_mngs.host_filter.validate_input_out_valid_input2_fastq": "s3://idseq-samples-development/auto_benchmark/20210221_231016_default_6.1.6/CAMI_low/results/short-read-mngs-6/valid_input2.fastq",
-    "idseq_short_read_mngs.host_filter.validate_input_out_valid_input1_fastq": "s3://idseq-samples-development/auto_benchmark/20210221_231016_default_6.1.6/CAMI_low/results/short-read-mngs-6/valid_input1.fastq",
     "idseq_short_read_mngs.host_filter.trimmomatic_out_trimmomatic2_fastq": "s3://idseq-samples-development/auto_benchmark/20210221_231016_default_6.1.6/CAMI_low/results/short-read-mngs-6/trimmomatic2.fastq",
     "idseq_short_read_mngs.host_filter.output_histogram_file": "s3://idseq-samples-development/auto_benchmark/20210221_231016_default_6.1.6/CAMI_low/results/short-read-mngs-6/insert_size_histogram.pdf",
     "idseq_short_read_mngs.non_host_alignment.gsnap_out_gsnap_counts_with_dcr_json": "s3://idseq-samples-development/auto_benchmark/20210221_231016_default_6.1.6/CAMI_low/results/short-read-mngs-6/gsnap_counts_with_dcr.json",

@@ -40929,8 +40929,6 @@
     "idseq_short_read_mngs.host_filter.input_read_count": "/mnt/shared/runs/um8/unambiguouslymapped_ds_cityparks/out/host_filter.input_read_count/fastqs.count",
     "idseq_short_read_mngs.host_filter.output_metrics_file": null,
     "idseq_short_read_mngs.host_filter.gsnap_filter_out_gsnap_filter_2_fa": null,
-    "idseq_short_read_mngs.host_filter.validate_input_out_valid_input1_fastq": "/mnt/shared/runs/um8/unambiguouslymapped_ds_cityparks/out/host_filter.validate_input_out_valid_input1_fastq/valid_input1.fastq",
-    "idseq_short_read_mngs.host_filter.validate_input_out_valid_input2_fastq": null,
     "idseq_short_read_mngs.host_filter.star_human_out_unmapped_human_1_fa": null,
     "idseq_short_read_mngs.host_filter.idseq_dedup_out_duplicate_cluster_sizes_tsv": "/mnt/shared/runs/um8/unambiguouslymapped_ds_cityparks/out/host_filter.idseq_dedup_out_duplicate_cluster_sizes_tsv/duplicate_cluster_sizes.tsv",
     "idseq_short_read_mngs.host_filter.subsampled_out_subsampled_2_fa": null,

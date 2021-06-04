@@ -90,7 +90,7 @@ def harvest_sample(sample, outputs_json, taxadb):
 
     # collect read counts at various pipeline steps
     ans["paired"] = (
-        outputs_json["idseq_short_read_mngs.host_filter.validate_input_out_valid_input2_fastq"]
+        outputs_json["idseq_short_read_mngs.host_filter.star_out_unmapped2_fastq"]
         is not None
     )
     ans["input_reads"] = read_output_jsonfile(outputs_json, "host_filter.input_read_count")[

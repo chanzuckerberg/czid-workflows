@@ -497,8 +497,6 @@ workflow idseq_host_filter {
 
   output {
     File validate_input_out_validate_input_summary_json = RunValidateInput.validate_input_summary_json
-    File validate_input_out_valid_input1_fastq = RunValidateInput.valid_input1_fastq
-    File? validate_input_out_valid_input2_fastq = RunValidateInput.valid_input2_fastq
     File? validate_input_out_count = RunValidateInput.output_read_count
     File star_out_unmapped1_fastq = RunStar.unmapped1_fastq
     File? star_out_unmapped2_fastq = RunStar.unmapped2_fastq
