@@ -26,5 +26,5 @@ Then, build the docker image from the current code revision and start the tests:
 ```bash
 cd idseq-workflows
 docker build -t idseq-short-read-mngs short-read-mngs
-make test-short-read-mngs
+DOCKER_IMAGE_ID=idseq-short-read-mngs make test-short-read-mngs
 ```

@@ -1,6 +1,6 @@
 FROM ubuntu:18.04
 ARG DEBIAN_FRONTEND=noninteractive
-ARG MINIWDL_VERSION=0.7.5
+ARG MINIWDL_VERSION=1.1.5
 
 LABEL maintainer="IDseq Team idseq-tech@chanzuckerberg.com"
 

@@ -6,6 +6,7 @@ task RunAssembly {
     String s3_wd_uri
     Array[File] host_filter_out_gsnap_filter_fa
     File duplicate_cluster_sizes_tsv
+    Int min_contig_length
   }
   command<<<
   set -euxo pipefail
@@ -14,14 +15,15 @@ task RunAssembly {
     --step-class PipelineStepRunAssembly \
     --step-name assembly_out \
     --input-files '[["~{sep='","' host_filter_out_gsnap_filter_fa}"], ["~{duplicate_cluster_sizes_tsv}"]]' \
-    --output-files '["assembly/contigs.fasta", "assembly/scaffolds.fasta", "assembly/read-contig.sam", "assembly/contig_stats.json"]' \
+    --output-files '["assembly/contigs.fasta", "assembly/contigs_all.fasta", "assembly/scaffolds.fasta", "assembly/read-contig.sam", "assembly/contig_stats.json"]' \
     --output-dir-s3 '~{s3_wd_uri}' \
     --additional-files '{}' \
-    --additional-attributes '{"memory": 200}'
+    --additional-attributes '{"memory": 200, "min_contig_length": ~{min_contig_length}}'
   >>>
   output {
     String step_description_md = read_string("assembly_out.description.md")
     File assembly_contigs_fasta = "assembly/contigs.fasta"
+    File assembly_contigs_all_fasta = "assembly/contigs_all.fasta"
     File assembly_scaffolds_fasta = "assembly/scaffolds.fasta"
     File assembly_read_contig_sam = "assembly/read-contig.sam"
     File assembly_contig_stats_json = "assembly/contig_stats.json"
@@ -479,6 +481,7 @@ workflow idseq_postprocess {
     File deuterostome_db = "s3://idseq-public-references/taxonomy/2020-04-20/deuterostome_taxids.txt"
     Boolean use_deuterostome_filter = true
     Boolean use_taxon_whitelist = false
+    Int min_contig_length = 100
   }
 
   call RunAssembly {
@@ -486,7 +489,8 @@ workflow idseq_postprocess {
       docker_image_id = docker_image_id,
       s3_wd_uri = s3_wd_uri,
       host_filter_out_gsnap_filter_fa = select_all([host_filter_out_gsnap_filter_1_fa, host_filter_out_gsnap_filter_2_fa, host_filter_out_gsnap_filter_merged_fa]),
-      duplicate_cluster_sizes_tsv = duplicate_cluster_sizes_tsv
+      duplicate_cluster_sizes_tsv = duplicate_cluster_sizes_tsv,
+      min_contig_length = min_contig_length
   }
 
   call GenerateCoverageStats {
@@ -659,6 +663,7 @@ workflow idseq_postprocess {
 
   output {
     File assembly_out_assembly_contigs_fasta = RunAssembly.assembly_contigs_fasta
+    File assembly_out_assembly_contigs_all_fasta = RunAssembly.assembly_contigs_all_fasta
     File assembly_out_assembly_scaffolds_fasta = RunAssembly.assembly_scaffolds_fasta
     File assembly_out_assembly_read_contig_sam = RunAssembly.assembly_read_contig_sam
     File assembly_out_assembly_contig_stats_json = RunAssembly.assembly_contig_stats_json
