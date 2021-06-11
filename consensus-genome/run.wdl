@@ -40,8 +40,8 @@ workflow consensus_genome {
         Int normalise  = 1000
         # medaka_model: default is selected to support current Clear Labs workflow
         String medaka_model = "r941_min_high_g360"
-        String vadr_options = "-s -r --nomisc --mkey NC_045512 --lowsim5term 2 --lowsim3term 2 --fstlowthr 0.0 --alt_fail lowscore,fsthicnf,fstlocnf --noseqnamemax"
-        File vadr_model = "s3://idseq-public-references/consensus-genome/vadr-models-corona-1.1.3-1.tar.gz"
+        String vadr_options = "-s -r --nomisc --mkey sarscov2 --lowsim5term 2 --lowsim3term 2 --fstlowthr 0.0 --alt_fail lowscore,fsthicnf,fstlocnf --noseqnamemax"
+        File vadr_model = "s3://idseq-public-references/consensus-genome/vadr-models-sarscov2-1.2-2.tar.gz"
 
         # Illumina-specific parameters
         # Step parameters
