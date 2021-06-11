@@ -147,6 +147,35 @@ class TestConsensusGenomes(WDLTestCase):
                 self.assertIsNotNone(filename, output_name)
                 self.assertGreater(os.path.getsize(filename), 0)
 
+    def test_sars_cov2_medaka_model(self):
+        """
+        Test that the pipeline will run a variety of different medaka models
+        """
+        models = ["r10_min_high_g340", "r103_min_high_g345", "r941_prom_fast_g303"]
+        fastq = os.path.join(os.path.dirname(__file__), "no_host_1.fq.gz")
+        for model in models:
+            args = ["prefix=''", "sample=test_sample", f"fastqs={fastq}",
+                    "normalise=1000", f"medaka_model={model}",
+                    "primer_schemes=s3://idseq-public-references/consensus-genome/artic-primer-schemes.tar.gz"]
+            res = self.run_miniwdl(args, task="RunMinion")
+            for filename in res["outputs"].values():
+                self.assertGreater(os.path.getsize(filename), 0)
+
+    def test_sars_cov2_medaka_fail(self):
+        """
+        Test that the pipeline will fail if the medaka model is incompatible
+        """
+        model = "r941_prom_snp_g360"
+        fastq = os.path.join(os.path.dirname(__file__), "no_host_1.fq.gz")
+        args = ["prefix=''", "sample=test_sample", f"fastqs={fastq}",
+                "normalise=1000", f"medaka_model={model}",
+                "primer_schemes=s3://idseq-public-references/consensus-genome/artic-primer-schemes.tar.gz"]
+        with self.assertRaises(CalledProcessError) as ecm:
+            self.run_miniwdl(args, task="RunMinion")
+        miniwdl_error = json.loads(ecm.exception.output)
+        self.assertEqual(miniwdl_error["error"], "RunFailed")
+        self.assertEqual(miniwdl_error["cause"]["error"], "CommandFailed")
+
     def test_sars_cov2_ont_cg_no_length_filter(self):
         """
         Ensures that the apply_length_filter=false option has an effect by truncating every other input read
