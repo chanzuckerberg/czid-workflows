@@ -29,7 +29,7 @@ def test_bench3_viral(short_read_mngs_bench3_viral_outputs):
         taxon_counts = json.load(infile)["pipeline_output"]["taxon_counts_attributes"]
 
     taxa = set(entry["tax_id"] for entry in taxon_counts)
-    assert len(taxa) == 149
+    assert abs(len(taxa) - 149) < 5
 
     for filename in outp["outputs"]:
         if filename.endswith(".fasta"):
