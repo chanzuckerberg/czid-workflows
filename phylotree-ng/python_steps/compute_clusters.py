@@ -26,6 +26,7 @@ def main(ska_distances: str, trim_height: float, samples: Iterable[Sample], outp
     # we may need to use a regex separator
     df = pd.read_csv(ska_distances, sep='\t')
     df.reset_index(drop=True, inplace=True)
+    df.fillna(1, inplace=True)  # fill NA values for SNP and Mash-like Distance with 1 (maximum dist)
 
     # long dataframe to wide
     df2 = df.pivot_table(index=['Sample 1'], columns='Sample 2', values='Mash-like distance')

@@ -232,6 +232,14 @@ task GenerateClusterPhylos {
     ska merge -o ska.merged ska_hashes/*.skf
     ska align -p "~{ska_align_p}" -o ska -v ska.merged.skf
     mv ska_variants.aln ska.variants.aln
+
+    num_zero_variant_samples=`grep -c "^$" ska.variants.aln`
+    if [[ $num_zero_variant_samples -gt 0 ]]; then
+        export error=TooDivergentError cause="Sequences are too divergent to create a single phylo tree"
+        jq -nc ".wdl_error_message=true | .error=env.error | .cause=env.cause" > /dev/stderr
+        exit 4
+    fi
+
     iqtree -s ska.variants.aln
     mv ska.variants.aln.treefile phylotree.nwk
     >>>
