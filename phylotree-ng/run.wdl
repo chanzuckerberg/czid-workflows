@@ -20,6 +20,9 @@ workflow phylotree {
         String cut_height = .16
         String ska_align_p = .9
         String docker_image_id
+
+        # Dummy values - required by SFN interface
+        String s3_wd_uri = ""
     }
 
     call GetSampleContigFastas {
