@@ -156,7 +156,8 @@ class TestConsensusGenomes(WDLTestCase):
         for model in models:
             args = ["prefix=''", "sample=test_sample", f"fastqs={fastq}",
                     "normalise=1000", f"medaka_model={model}",
-                    "primer_schemes=s3://idseq-public-references/consensus-genome/artic-primer-schemes.tar.gz"]
+                    "primer_schemes=s3://idseq-public-references/consensus-genome/artic-primer-schemes_v2.tar.gz",
+                    "primer_set=nCoV-2019/V1200"]
             res = self.run_miniwdl(args, task="RunMinion")
             for filename in res["outputs"].values():
                 self.assertGreater(os.path.getsize(filename), 0)
@@ -169,12 +170,50 @@ class TestConsensusGenomes(WDLTestCase):
         fastq = os.path.join(os.path.dirname(__file__), "no_host_1.fq.gz")
         args = ["prefix=''", "sample=test_sample", f"fastqs={fastq}",
                 "normalise=1000", f"medaka_model={model}",
-                "primer_schemes=s3://idseq-public-references/consensus-genome/artic-primer-schemes.tar.gz"]
+                "primer_schemes=s3://idseq-public-references/consensus-genome/artic-primer-schemes.tar.gz",
+                "primer_set=nCoV-2019/V3"]
         with self.assertRaises(CalledProcessError) as ecm:
             self.run_miniwdl(args, task="RunMinion")
         miniwdl_error = json.loads(ecm.exception.output)
         self.assertEqual(miniwdl_error["error"], "RunFailed")
         self.assertEqual(miniwdl_error["cause"]["error"], "CommandFailed")
+
+    def test_sars_cov2_midnight_primers_minion(self):
+        """
+        Test that RunMinion will run with midnight primers
+        """
+        fastq = os.path.join(os.path.dirname(__file__), "no_host_1.fq.gz")
+        args = ["prefix=''", "sample=test_sample", f"fastqs={fastq}",
+                "normalise=1000", "medaka_model=r10_min_high_g340",
+                "primer_schemes=s3://idseq-public-references/consensus-genome/artic-primer-schemes_v2.tar.gz",
+                "primer_set=nCoV-2019/V1200"]
+        res = self.run_miniwdl(args, task="RunMinion")
+        with open(res["outputs"]["RunMinion.log"]) as f:
+            log_output = f.read()
+        self.assertIn("primer_schemes/nCoV-2019/V1200", log_output)
+        for filename in res["outputs"].values():
+            self.assertGreater(os.path.getsize(filename), 0)
+
+    def test_sars_cov2_midnight_primers_quast(self):
+        """
+        Test that Quast will run with midnight primers
+        """
+        assembly = os.path.join(os.path.dirname(__file__), "quast", "test_sample.consensus.fasta")
+        bam = os.path.join(os.path.dirname(__file__), "quast", "test_sample.primertrimmed.rg.sorted.bam")
+        fastq = os.path.join(os.path.dirname(__file__), "no_host_1.fq.gz")
+        args = [
+            "prefix=''",
+            f"assembly={assembly}",
+            f"bam={bam}",
+            f"fastqs={fastq}",
+            "no_reads_quast=false",
+            "technology=ONT",
+            "primer_schemes=s3://idseq-public-references/consensus-genome/artic-primer-schemes_v2.tar.gz",
+            "primer_set=nCoV-2019/V1200"
+        ]
+        res = self.run_miniwdl(args, task="Quast")
+        for filename in res["outputs"]["Quast.quast_dir"]:
+            self.assertGreater(os.path.getsize(filename), 0)
 
     def test_sars_cov2_ont_cg_no_length_filter(self):
         """
