@@ -42,26 +42,109 @@ task RunStar {
     File star_genome
     String nucleotide_type
     String host_genome
+    String genome_dir = "STAR_genome/part-0/"
   }
   command<<<
   set -euxo pipefail
-  idseq-dag-run-step --workflow-name host_filter \
-    --step-module idseq_dag.steps.run_star \
-    --step-class PipelineStepRunStar \
-    --step-name star_out \
-    --input-files '[["~{validate_input_summary_json}", "~{sep='","' valid_input_fastq}"]]' \
-    --output-files '[~{if length(valid_input_fastq) == 2 then '"unmapped1.fastq", "unmapped2.fastq"' else '"unmapped1.fastq"'}]' \
-    --output-dir-s3 '~{s3_wd_uri}' \
-    --additional-files '{"star_genome": "~{star_genome}"}' \
-    --additional-attributes '{"output_gene_file": "reads_per_gene.star.tab", "nucleotide_type": "~{nucleotide_type}", "host_genome": "~{host_genome}", "output_metrics_file": "picard_insert_metrics.txt", "output_histogram_file": "insert_size_histogram.pdf", "output_log_file": "Log.final.out"}'
+
+  python3 <<CODE
+  """ save description to file """
+  from idseq_utils.save_descriptions import star_description
+  description = star_description("~{nucleotide_type}")
+  with open("star_out.description.md", "w+") as f:
+    f.write(description)
+  CODE
+
+  tar -xf "~{star_genome}"
+  # Set Parameters
+  SAMMODE="None"
+  SAMTYPE="None"
+
+  # Currently we always use 'GeneCounts', 
+  QUANTMODE="~{if nucleotide_type == 'RNA' then 'TranscriptomeSAM GeneCounts' else 'GeneCounts'}"
+  if [[ "~{length(valid_input_fastq)}" -eq "2" ]] && [[ "~{host_genome}" == "human" ]]; then
+    SAMMODE="NoQS"
+    SAMTYPE="BAM Unsorted"
+  fi
+
+  if [[ $(jq '."500-10000"' "~{validate_input_summary_json}") -gt "1" ]] || [[ $(jq '."10000+"' "~{validate_input_summary_json}") -gt "1" ]]; then 
+    STARlong \
+    --outFilterMultimapNmax 99999 \
+    --outFilterScoreMinOverLread 0.5 \
+    --outFilterMatchNminOverLread 0.5 \
+    --outReadsUnmapped Fastx \
+    --outFilterMismatchNmax 999 \
+    --clip3pNbases 0 \
+    --runThreadN "$(nproc --all)" \
+    --genomeDir "~{genome_dir}" \
+    --readFilesIn "~{sep='" "' valid_input_fastq}" \
+    --seedSearchStartLmax 20 \
+    --seedPerReadNmax 100000 \
+    --seedPerWindowNmax 1000 \
+    --alignTranscriptsPerReadNmax 100000 \
+    --outSAMmode $SAMMODE \
+    --outSAMtype $SAMTYPE \
+    --quantMode $QUANTMODE
+  else
+    STAR --outFilterMultimapNmax 99999 \
+    --outFilterScoreMinOverLread 0.5 \
+    --outFilterMatchNminOverLread 0.5 \
+    --outReadsUnmapped Fastx \
+    --outFilterMismatchNmax 999 \
+    --outSAMmode $SAMMODE \
+    --outSAMtype $SAMTYPE \
+    --clip3pNbases 0 \
+    --runThreadN "$(nproc --all)" \
+    --limitOutSJcollapsed 2000000 \
+    --runRNGseed 777 \
+    --genomeDir "~{genome_dir}" \
+    --quantMode $QUANTMODE \
+    --readFilesIn "~{sep='" "' valid_input_fastq}" 
+  fi
+
+  if [ -f "Aligned.toTranscriptome.out.bam" ]; then 
+    mv "Aligned.toTranscriptome.out.bam" "Aligned.out.bam"
+  fi
+
+  python3 <<CODE
+  """ sync pairs of files, sort by entry id, count reads """
+  import idseq_utils.sync_pairs as sp
+  import shutil
+  import glob
+  unmapped = sorted(glob.glob("Unmapped.out.mate*"))
+  output_files, too_discrepant = sp.sync_pairs(unmapped)
+  if too_discrepant:
+      raise ValueError("pairs are too discrepant")
+  for unmapped_file in output_files:
+      sp.sort_fastx_by_entry_id(unmapped_file)
+
+  for ind, unmapped_file in enumerate(output_files):
+      shutil.move(unmapped_file, f"unmapped{ind+1}.fastq")
+  CODE
+
+  if [ -f "Aligned.out.bam" ]; then 
+    picard CollectInsertSizeMetrics I=Aligned.out.bam O=picard_insert_metrics.txt H=insert_size_histogram.pdf
+  fi 
+
+  python3 <<CODE
+  """ count reads """
+  import idseq_utils.count_reads as cr
+  import glob
+  input_files = sorted(glob.glob("unmapped*.fastq"))
+  cr.main("star_out", input_files)
+  CODE
+
+  rm "~{genome_dir}"/SAindex # the star genome is pretty big (1.5G)
+  rm "~{genome_dir}"/Genome 
   >>>
   output {
     String step_description_md = read_string("star_out.description.md")
     File unmapped1_fastq = "unmapped1.fastq"
     File output_log_file = "Log.final.out"
     File? unmapped2_fastq = "unmapped2.fastq"
+    File? aligned_file = "Aligned.out.bam"
     File? output_read_count = "star_out.count"
-    File? output_gene_file = "reads_per_gene.star.tab"
+    File? output_gene_file = "ReadsPerGene.out.tab"
     File? output_metrics_file = "picard_insert_metrics.txt"
     File? output_histogram_file = "insert_size_histogram.pdf"
   }
