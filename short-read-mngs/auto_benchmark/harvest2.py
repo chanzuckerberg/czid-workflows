@@ -36,23 +36,26 @@ def main(argv):
 
 
 def harvest(harvest_json, wall, version):
+    print(",".join(["version", "sample", "timestamp", "wall_seconds", "NT_aupr", "NR_aupr"]))
+
     timestamp = datetime.utcnow().isoformat()
 
     for one_harvest_json in harvest_json:
         with open(one_harvest_json, "r") as infile:
             for sample, results in json.load(infile).items():
-                json.dump(
-                    {
-                        "version": version,
-                        "sample": sample,
-                        "ntAUPR": results["NT_aupr"],
-                        "nrAUPR": results["NR_aupr"],
-                        "timestamp": timestamp,
-                        "wallSeconds": wall,
-                    },
-                    sys.stdout,
+                print(
+                    ",".join(
+                        str(v)
+                        for v in [
+                            version,
+                            sample,
+                            timestamp,
+                            wall,
+                            results["NT_aupr"],
+                            results["NR_aupr"],
+                        ]
+                    )
                 )
-                sys.stdout.write("\n")
 
 
 if __name__ == "__main__":
