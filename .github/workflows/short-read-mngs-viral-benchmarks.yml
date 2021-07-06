@@ -120,6 +120,8 @@ jobs:
           mv short-read-mngs/auto_benchmark/short-read-mngs-benchmarks.html short-read-mngs-benchmarks.${{ matrix.settings }}_viral.html
           mkdir ref_libs
           cp -r short-read-mngs/auto_benchmark/ref_libs/${{ matrix.settings }}_viral ref_libs/
+      - name: test harvest2.py
+        run: short-read-mngs/auto_benchmark/harvest2.py *_viral.json --version "$(git describe --long --tags --always --dirty)" --wall 999
       - uses: actions/upload-artifact@v2
         with:
           name: short-read-mngs-benchmarks.${{ matrix.settings }}_viral.html
