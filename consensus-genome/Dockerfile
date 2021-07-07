@@ -28,6 +28,7 @@ RUN apt-get -qq update && apt-get -qq -y install \
   freebayes \
   kraken2 \
   minimap2 \
+  muscle \
   samtools \
   seqtk \
   trim-galore \
@@ -46,6 +47,7 @@ RUN apt-get -qq update && apt-get -qq -y install \
   automake \
   tabix \
   fasta3 \
+  wget \
   && locale-gen en_US.UTF-8
 
 # These newer versions of infernal and ncbi-blast+ are required by VADR
@@ -97,6 +99,9 @@ RUN /bin/bash -c "set -e; mkdir -p /usr/local/lib/site_perl; \
   VADRHMMERDIR=/usr/bin \
   VADREASELDIR=/usr/local/bin \
   VADRBIOEASELDIR=/usr/local/bin > /etc/profile.d/vadr.sh"
+
+RUN wget https://www.drive5.com/muscle/downloads3.8.31/muscle3.8.31_i86linux32.tar.gz \
+&& tar zxvf muscle3.8.31_i86linux32.tar.gz && mv muscle3.8.31_i86linux32 muscle && rm muscle3.8.31_i86linux32.tar.gz
 
 # ARTIC, Medaka and dependencies
 RUN apt-get install -y python3-cffi python3-h5py python3-intervaltree python3-edlib muscle

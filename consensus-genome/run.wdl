@@ -164,6 +164,14 @@ workflow consensus_genome {
                 minDepth = minDepth,
                 docker_image_id = docker_image_id
         }
+        call RealignConsensus {
+            input:
+                prefix = prefix,
+                sample = sample,
+                ref_fasta = select_first([ref_fasta, FetchSequenceByAccessionId.sequence_fa]),
+                consensus = MakeConsensus.consensus_fa,
+                docker_image_id = docker_image_id
+        }
     }
 
     if (technology == "ONT"){
@@ -244,6 +252,8 @@ workflow consensus_genome {
                     ComputeStats.sam_depths,
                     CallVariants.variants_ch,
                     RunMinion.vcf,
+                    RealignConsensus.muscle_output,
+                    RunMinion.muscle_output,
                     Vadr.vadr_quality,                 # Optional (VADR only runs on default (coronavirus) reference)
                     Vadr.vadr_alerts,                  # Optional (VADR only runs on default (coronavirus) reference)
                     Vadr.vadr_errors                   # Optional (only present if VADR ran and exited with an error)
@@ -261,6 +271,7 @@ workflow consensus_genome {
         File? trim_primers_out_trimmed_bam_ch = select_first([TrimPrimers.trimmed_bam_ch, RunMinion.primertrimmedbam])
         File? trim_primers_out_trimmed_bam_bai = select_first([TrimPrimers.trimmed_bam_bai, RunMinion.primertrimmedbai])
         File? make_consensus_out_consensus_fa = select_first([MakeConsensus.consensus_fa, RunMinion.consensus_fa])
+        File? realign_consensus_fa = select_first([RealignConsensus.muscle_output, RunMinion.muscle_output])
         File? quast_out_quast_txt = Quast.quast_txt
         File? quast_out_quast_tsv = Quast.quast_tsv
         File? call_variants_out_variants_ch = select_first([CallVariants.variants_ch, RunMinion.vcf_pass])
@@ -715,6 +726,33 @@ task CallVariants {
     }
 }
 
+task RealignConsensus {
+    input {
+        String prefix
+        String sample
+        File ref_fasta
+        File consensus
+        String docker_image_id
+    }
+
+    command <<<
+        # MUSCLE accepts a fasta file containing all the sequences that are to be aligned (in this case we want
+        # to align the reference and the consensus genome) and outputs a multiple sequence alignment file. 
+        # Some documentation here: https://www.drive5.com/muscle/manual/basic_alignment.html
+        cat "~{consensus}" "~{ref_fasta}" > "~{sample}.muscle.in.fasta" 
+        muscle -in "~{sample}.muscle.in.fasta" -out "~{sample}.muscle.out.fasta"
+
+    >>>
+
+    output{
+        File muscle_output = "~{sample}.muscle.out.fasta"
+    }
+
+    runtime {
+        docker: docker_image_id
+    }
+}
+
 task RunMinion {
     input {
         String prefix
@@ -751,6 +789,7 @@ task RunMinion {
         File vcf_pass = "~{sample}.pass.vcf"
         File vcf = "~{sample}.merged.vcf"
         File consensus_fa = "~{sample}.consensus.fasta"
+        File muscle_output = "~{sample}.muscle.out.fasta"
         File log = "~{sample}.minion.log.txt"
     }
 
