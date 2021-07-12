@@ -1,7 +1,7 @@
 FROM ubuntu:20.04
 ARG DEBIAN_FRONTEND=noninteractive
 
-LABEL maintainer="IDseq Team idseq-tech@chanzuckerberg.com"
+LABEL maintainer="IDseq Team <idseq-tech@chanzuckerberg.com>"
 LABEL description = "Image for consensus genome by metagenomic sequencing with spiked primer enrichment or amplicon sequencing"
 
 RUN sed -i s/archive.ubuntu.com/us-west-2.ec2.archive.ubuntu.com/ /etc/apt/sources.list; \

@@ -40,10 +40,8 @@ jobs:
       - uses: actions/checkout@v2
       - name: docker build
         run: |
-            echo "${{ secrets.GITHUB_TOKEN }}" \
-                | docker login docker.pkg.github.com --username $(dirname $GITHUB_REPOSITORY) --password-stdin
             IMAGE_NAME=idseq-short-read-mngs-public
-            IMAGE_URI="docker.pkg.github.com/${GITHUB_REPOSITORY}/${IMAGE_NAME}"
+            IMAGE_URI="ghcr.io/${GITHUB_REPOSITORY}/${IMAGE_NAME}"
             CACHE_FROM=""; docker pull "$IMAGE_URI" && CACHE_FROM="--cache-from $IMAGE_URI"
             docker build short-read-mngs --tag idseq-short-read-mngs $CACHE_FROM \
                 || docker build short-read-mngs --tag idseq-short-read-mngs

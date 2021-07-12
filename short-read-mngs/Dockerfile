@@ -2,7 +2,7 @@ FROM ubuntu:18.04
 ARG DEBIAN_FRONTEND=noninteractive
 ARG MINIWDL_VERSION=1.1.5
 
-LABEL maintainer="IDseq Team idseq-tech@chanzuckerberg.com"
+LABEL maintainer="IDseq Team <idseq-tech@chanzuckerberg.com>"
 
 RUN sed -i s/archive.ubuntu.com/us-west-2.ec2.archive.ubuntu.com/ /etc/apt/sources.list; \
         echo 'APT::Install-Recommends "false";' > /etc/apt/apt.conf.d/98idseq; \
