@@ -35,19 +35,20 @@ TIPS: For more detailed setup information
 We then use our local sample configuration file that points to IDseq's public references for smaller runs:
 
 ```bash
-miniwdl run --verbose consensus-genome/run.wdl \
+miniwdl run --verbose idseq-workflows/consensus-genome/run.wdl \
     docker_image_id=idseq-consensus-genome \
     fastqs_0=idseq-workflows/consensus-genome/test/sample_sars-cov-2_paired_r1.fastq.gz \
     fastqs_1=idseq-workflows/consensus-genome/test/sample_sars-cov-2_paired_r2.fastq.gz \
     sample=sample_sars-cov-2_paired \
     technology=Illumina \
+    ref_fasta=s3://idseq-public-references/consensus-genome/MN908947.3.fa \
     -i idseq-workflows/consensus-genome/test/local_test.yml
 ```
 
 Where:
 
 * `docker_image_id=` should be set to the docker image tag you used when building the image (in our example, `idseq-consensus-genome`)
-* `consensus-genome/run.wdl` is the WDL for the consensus genome sequencing workflow.
+* `idseq-workflows/consensus-genome/run.wdl` is the WDL for the consensus genome sequencing workflow.
 * `fastqs_0` and `fastqs_1` are the pair of FASTQ files. The ones referred to are small files to run locally.
 * `sample` is the name to use where referencing the sample in the output files.
 * `technology` is the sequencing technology (options = Illumina or ONT)
