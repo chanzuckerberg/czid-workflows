@@ -36,7 +36,6 @@ class TestPhylotree(WDLTestCase):
     }
 
     def test_phylotree(self):
-        workflow_run_ids = [str(s["workflow_run_id"]) for s in self.common_inputs["samples"]]
         sample_names = [s["sample_name"] for s in self.common_inputs["samples"]]
 
         res = self.run_miniwdl()
@@ -54,7 +53,7 @@ class TestPhylotree(WDLTestCase):
         with open(outputs["phylotree.phylotree_newick"]) as f:
             tree = next(NewickIO.parse(f))
             nodes = [n.name for n in tree.get_terminals() + tree.get_nonterminals() if n.name]
-            self.assertCountEqual(nodes, workflow_run_ids + self.accession_ids)
+            self.assertCountEqual(nodes, sample_names + self.accession_ids)
 
         identifiers = sorted(sample_names + self.accession_ids)
         with open(outputs["phylotree.ska_distances"]) as f:

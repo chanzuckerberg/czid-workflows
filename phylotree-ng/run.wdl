@@ -75,6 +75,15 @@ workflow phylotree {
         docker_image_id = docker_image_id
     }
 
+    if (GenerateClusterPhylos.phylotree_newick != None) {
+      call AddSampleNamesToNewick {
+        input:
+        newick = select_first([GenerateClusterPhylos.phylotree_newick]),
+        samples = samples,
+        docker_image_id = docker_image_id
+      }
+    }
+
     call FetchNCBIMetadata {
         input:
         reference_accession_ids = additional_reference_accession_ids,
@@ -85,7 +94,7 @@ workflow phylotree {
         File ska_distances = AddSampleNamesToDistances.sample_name_distances
         File clustermap_png = ComputeClusters.clustermap_png
         File clustermap_svg = ComputeClusters.clustermap_svg
-        File? phylotree_newick = GenerateClusterPhylos.phylotree_newick
+        File? phylotree_newick = select_first([AddSampleNamesToNewick.phylotree_newick])
         File variants = AddSampleNamesToVariants.sample_name_variants
         File ncbi_metadata_json = FetchNCBIMetadata.ncbi_metadata_json
     }
@@ -296,6 +305,29 @@ task AddSampleNamesToVariants {
 
     output {
         File sample_name_variants = "ska.variants.aln"
+    }
+
+    runtime {
+        docker: docker_image_id
+    }
+}
+
+task AddSampleNamesToNewick {
+    input {
+        File newick
+        Array[SampleInfo] samples
+        String docker_image_id
+    }
+
+    command <<<
+    python3 /bin/add_sample_names_to_newick.py \
+        --newick ~{newick} \
+        --samples "~{write_json(samples)}" \
+        --output-newick phylotree.nwk
+    >>>
+
+    output {
+        File phylotree_newick = "phylotree.nwk"
     }
 
     runtime {
