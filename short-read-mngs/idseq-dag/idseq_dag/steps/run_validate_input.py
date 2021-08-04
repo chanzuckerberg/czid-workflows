@@ -53,7 +53,7 @@ class PipelineStepRunValidateInput(PipelineStep):
                         # then decompress it
                         command.execute(
                             command_patterns.ShellScriptCommand(
-                                script=r'''gzip -dc "${input_file}" | cut -c -"$[max_line_length+1]" | head -n "${num_lines}" | awk -f "${awk_script_file}" -v max_line_length="${max_line_length}" > "${output_file}";''',
+                                script=r'''gzip -dc "${input_file}" | cut -c -"$[max_line_length+1]" | head -n "${num_lines}" | sed -e 's/\r$//' | awk -f "${awk_script_file}" -v max_line_length="${max_line_length}" > "${output_file}";''',
                                 named_args={
                                     "input_file": input_file,
                                     "awk_script_file": command.get_resource_filename("scripts/fastq-fasta-line-validation.awk"),
@@ -71,7 +71,7 @@ class PipelineStepRunValidateInput(PipelineStep):
                         tmp_file = splited_input_file_name + ".tmp"
                         command.execute(
                             command_patterns.ShellScriptCommand(
-                                script=r'''cat "${input_file}" | cut -c -"$[max_line_length+1]" | head -n "${num_lines}" | awk -f "${awk_script_file}" -v max_line_length="${max_line_length}" > "${output_file}";''',
+                                script=r'''cat "${input_file}" | cut -c -"$[max_line_length+1]" | head -n "${num_lines}"  | sed -e 's/\r$//' | awk -f "${awk_script_file}" -v max_line_length="${max_line_length}" > "${output_file}";''',
                                 named_args={
                                     "input_file": input_file,
                                     "awk_script_file": command.get_resource_filename("scripts/fastq-fasta-line-validation.awk"),
