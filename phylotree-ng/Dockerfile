@@ -27,6 +27,7 @@ RUN apt-get -qq update && apt-get -qq -y install \
     python3-dateutil \
     iqtree \
     build-essential \
+    fonts-open-sans \
     && locale-gen en_US.UTF-8
 
 RUN curl -L https://github.com/simonrharris/SKA/archive/refs/tags/v1.0.tar.gz | tar -xvz && \

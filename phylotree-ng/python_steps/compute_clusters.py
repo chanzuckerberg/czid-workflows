@@ -1,15 +1,14 @@
 import argparse
 import json
-import math
-from typing import TypedDict, Iterable
+from typing import Iterable, TypedDict
 
 import matplotlib
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-import matplotlib.pyplot as plt
+from matplotlib import rcParams
 from scipy import cluster
-
 
 matplotlib.use('Agg')
 
@@ -68,21 +67,38 @@ def main(ska_distances: str, trim_height: float, samples: Iterable[Sample], outp
     sample_name_by_workflow_id = {str(s["workflow_run_id"]): s["sample_name"] for s in samples}
     df3.columns = [sample_name_by_workflow_id.get(a, a) for a in df3.columns]
     df3.index = [sample_name_by_workflow_id.get(a, a) for a in df3.index]
-    color_list = sns.color_palette("Dark2", 8)
-    long_color_list = color_list*math.ceil(len(set(ordered_clusterids))/len(color_list))
-    col_colors = [long_color_list[i] for i in ordered_clusterids]
-    sns.clustermap(
+
+    # Use Open Sans for the labels
+    rcParams['font.family'] = 'sans-serif'
+    rcParams['font.sans-serif'] = ['Open Sans']
+
+    chart = sns.clustermap(
         df3,
+        # cbar means colorbar. It's the key/legend for the colors.
+        cbar_kws={'orientation': 'horizontal'},
+        # (left, bottom, width, height) numbers as ratios of the figure.
+        cbar_pos=(1, 1, 0.2, 0.02),
         cmap='YlOrRd_r',
-        vmin=0,
-        vmax=0.15,
-        row_linkage=Z,
         col_linkage=Z,
-        col_colors=col_colors,
+        # Higher number means larger dendrograms.
+        dendrogram_ratio=0.1,
         figsize=(15, 15),
+        # The lines are for the cell borders.
+        linecolor='w',
+        linewidth=5,
+        row_linkage=Z,
+        vmax=0.15,
+        vmin=0,
     )
-    plt.savefig('clustermap.png', bbox_inches='tight')
-    plt.savefig('clustermap.svg', bbox_inches='tight')
+
+    heatmap = chart.ax_heatmap
+    # Make the x tick labels slanted:
+    heatmap.set_xticklabels(heatmap.get_xticklabels(), rotation=45, ha='right', rotation_mode='anchor')
+    # Hide the actual tick marks:
+    heatmap.tick_params(bottom=False, right=False)
+
+    plt.savefig('clustermap.png', bbox_inches='tight', dpi=300)
+    plt.savefig('clustermap.svg', bbox_inches='tight', dpi=300)
 
     if n_clusters_out > 1:
         exit(json.dumps(dict(
