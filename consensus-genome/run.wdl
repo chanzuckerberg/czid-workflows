@@ -35,8 +35,11 @@ workflow consensus_genome {
         # filters in accordance with recommended parameters in ARTIC SARS-CoV-2 bioinformatics protocol are...
         # ...intended to remove obviously chimeric reads.
         Boolean apply_length_filter = true # Set to False for Clear Labs samples
-        Int min_length = 350
-        Int max_length = 700
+
+        # set default min_length to 350 unless midnight primers are used
+        Int min_length = if primer_set == "nCoV-2019/V1200" then 250 else 350
+        # set default max_length to 1500 unless midnight primers are used
+        Int max_length = if primer_set == "nCoV-2019/V1200" then 1500 else 700
         # normalise: default is set to 1000 to avoid spurious indels observed in validation
         Int normalise  = 1000
         # medaka_model: default is selected to support current Clear Labs workflow
@@ -376,7 +379,6 @@ task ApplyLengthFilter {
         Array[File]+ fastqs
         Int min_length
         Int max_length
-
         String docker_image_id
     }
 
