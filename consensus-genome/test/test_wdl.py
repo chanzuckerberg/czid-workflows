@@ -8,6 +8,8 @@ from subprocess import CalledProcessError
 import yaml
 from test_util import WDLTestCase
 
+from Bio import SeqIO
+
 
 class TestConsensusGenomes(WDLTestCase):
     wdl = os.path.join(os.path.dirname(__file__), "..", "run.wdl")
@@ -134,7 +136,12 @@ class TestConsensusGenomes(WDLTestCase):
         args = ["sample=test_sample", f"fastqs_0={fastqs_0}", "technology=ONT", f"ref_fasta={self.sc2_ref_fasta}"]
         with self.assertRaises(CalledProcessError) as ecm:
             self.run_miniwdl(args)
-        self.assertRunFailed(ecm, task="RemoveHost", error="InsufficientReadsError", cause="No reads after RemoveHost")
+        self.assertRunFailed(
+            ecm,
+            task="RemoveHost",
+            error="InsufficientReadsError",
+            cause="No reads after RemoveHost"
+        )
 
     def test_sars_cov2_ont_cg(self):
         fastqs_0 = os.path.join(os.path.dirname(__file__), "Ct20K.fastq.gz")
@@ -270,7 +277,10 @@ class TestConsensusGenomes(WDLTestCase):
         ApplyLengthFilter
         """
         fastqs = os.path.join(os.path.dirname(__file__), "Ct20K.fq.gz")
-        res = self.run_miniwdl(task="ValidateInput", args=["prefix=test", f"fastqs={fastqs}", "technology=ONT"])
+        res = self.run_miniwdl(
+            task="ValidateInput",
+            args=["prefix=test", f"fastqs={fastqs}", "technology=ONT", "max_reads=75000000"],
+        )
         for output_name, output in res["outputs"].items():
             for filename in output:
                 self.assertTrue(filename.endswith(".fastq.gz"))
@@ -333,3 +343,54 @@ class TestConsensusGenomes(WDLTestCase):
             self.run_miniwdl(task="FetchSequenceByAccessionId", args=["accession_id=NO_ACCESSION_ID"])
         self.assertRunFailed(ecm, task="FetchSequenceByAccessionId",
                              error="AccessionIdNotFound", cause="Accession ID NO_ACCESSION_ID not found in the index")
+
+    def test_max_reads_illumina(self):
+        fastq_0 = os.path.join(os.path.dirname(__file__), "SRR11741455_65054_nh_R1.fastq.gz")
+        fastq_1 = os.path.join(os.path.dirname(__file__), "SRR11741455_65054_nh_R2.fastq.gz")
+
+        res = self.run_miniwdl(
+            task="ValidateInput",
+            task_input={
+                "max_reads": 100,
+                "technology": "Illumina",
+                "fastqs": [fastq_0, fastq_1],
+                "prefix": "",
+            },
+        )
+        for output in res["outputs"]["ValidateInput.validated_fastqs"]:
+            with gzip.open(output, 'rt') as f:
+                self.assertEqual(sum(1 for _ in SeqIO.parse(f, "fastq")), 100)
+
+    def test_max_reads_ont(self):
+        fastq = os.path.join(os.path.dirname(__file__), "SRR11741455_65054_nh_R1.fastq.gz")
+
+        res = self.run_miniwdl(
+            task="ValidateInput",
+            task_input={
+                "max_reads": 100,
+                "technology": "ONT",
+                "fastqs": [fastq],
+                "prefix": "",
+            },
+        )
+        for output in res["outputs"]["ValidateInput.validated_fastqs"]:
+            with gzip.open(output, 'rt') as f:
+                self.assertEqual(sum(1 for _ in SeqIO.parse(f, "fastq")), 100)
+
+    def test_max_reads_uncompressed_input(self):
+        fastq = os.path.join(os.path.dirname(__file__), "SRR11741455_65054_nh_R1.fastq.gz")
+        with tempfile.NamedTemporaryFile('wb') as f, gzip.open(fastq) as gzipped_f:
+            f.write(gzipped_f.read())
+
+            res = self.run_miniwdl(
+                task="ValidateInput",
+                task_input={
+                    "max_reads": 100,
+                    "technology": "ONT",
+                    "fastqs": [f.name],
+                    "prefix": "",
+                }
+            )
+        for output in res["outputs"]["ValidateInput.validated_fastqs"]:
+            with gzip.open(output, 'rt') as f:
+                self.assertEqual(sum(1 for _ in SeqIO.parse(f, "fastq")), 100)

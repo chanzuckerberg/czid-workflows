@@ -12,6 +12,8 @@ workflow consensus_genome {
         File fastqs_0
         File? fastqs_1
 
+        Int max_reads = 75000000
+
         String docker_image_id
         File ercc_fasta = "s3://idseq-public-references/consensus-genome/ercc_sequences.fasta"
         File kraken2_db_tar_gz  # TODO: make this optional; only required if filter_reads == true, even for Illumina
@@ -74,6 +76,7 @@ workflow consensus_genome {
             prefix = prefix,
             fastqs = select_all([fastqs_0, fastqs_1]),
             technology = technology,
+            max_reads = max_reads,
             docker_image_id = docker_image_id
     }
 
@@ -290,53 +293,65 @@ workflow consensus_genome {
 }
 
 task ValidateInput{
-    # This step is still a placeholder - it does not have any logic yet.
-    # It should validate that "Illumina" pipeline reads are short (<300bp), perform other simple sanity checks, and
-    # check that only one input fastq is present for ONT.
     input {
         String prefix
         Array[File]+ fastqs
         String technology
+        Int max_reads
 
         String docker_image_id
     }
 
     command <<<
-    # TODO: Check if the input files from Illumina have reads with length < 300;
-    # if not, throw an error and do not proceed - the user has likely selected the wrong input analysis type
-    if [[ "~{technology}" == "ONT" ]]; then
+        python3 <<CODE
+        import gzip
+        import json
+        import os
+        import sys
+
+        from Bio import SeqIO
+
+        def truncate(gen):
+            for i, elem in enumerate(gen):
+                if i >= ~{max_reads}:
+                    break
+                if "~{technology}" == "Illumina" and len(elem.seq) >= 300:
+                    json.dump({
+                        "wdl_error_message": True,
+                        "error": "InvalidInputFileError",
+                        "cause": "Read longer than 300bp for Illumina",
+                    }, sys.stderr)
+                    os.exit(1)
+                yield elem
+
+        def maybe_gzip_open(path):
+            with open(path, "rb") as f:
+                gzipped = f.read(2) == b'\x1f\x8b'
+            if gzipped:
+                return gzip.open(path, "rt")
+            return open(path)
+
+        fastqs = ["~{sep='", "' fastqs}"]
+
         # expect ONT to include only 1 input .fastq file; throw error if multiple input fastqs provided
-        if [[ ~{length(fastqs)} -gt 1 ]]; then
-            export error=InsufficientReadsError cause="No reads after RemoveHost"
-            jq -nc ".wdl_error_message=true | .error=env.error | .cause=env.cause" > /dev/stderr
-            exit 1
-        fi
-        # ONT guppyplex requires files are in .fastq format with .fastq extension (not .fq)
-        FILE=~{fastqs[0]}
-        if [[ "${FILE##*.}" == "gz" ]]; then
-            gunzip "$FILE"
-            FILE="${FILE%.*}"
-        fi
-        cp "$FILE" "~{prefix}validated.fastq"
-        gzip "~{prefix}validated.fastq"
-    else  # if technology == Illumina
-        FILE=~{fastqs[0]}
-        if [[ "${FILE##*.}" == "gz" ]]; then
-            COUNTER=1
-            for i in `echo ~{sep=' ' fastqs}`; do 
-                cp $i "~{prefix}validated_${COUNTER}.fastq.gz"
-                COUNTER=$((COUNTER + 1))
-            done
-        else
-            COUNTER=1
-            for i in `echo ~{sep=' ' fastqs}`; do 
-                cp $i "~{prefix}validated_${COUNTER}.fastq"
-                gzip "~{prefix}validated_${COUNTER}.fastq"
-                COUNTER=$((COUNTER + 1))
-            done
-        fi
-    fi
-    
+        if "~{technology}" == "ONT" and len(fastqs) > 1:
+            json.dump({
+                "wdl_error_message": True,
+                "error": "InvalidInputFileError",
+                "cause": "Multiple fastqs provided for ONT",
+            }, sys.stderr)
+            os.exit(1)
+
+        for i, file in enumerate(fastqs):
+            if not os.stat(file).st_size:
+                pass
+
+            # ONT guppyplex requires files are in .fastq format with .fastq extension (not .fq)
+            prefix = "~{prefix}"
+            out_path = f"{prefix}validated_{i}.fastq.gz" if len(fastqs) > 1 else f"{prefix}validated.fastq.gz"
+            with maybe_gzip_open(file) as in_f, gzip.open(out_path, "wt") as out_f:
+                SeqIO.write(truncate(SeqIO.parse(in_f, "fastq")), out_f, "fastq")
+        CODE
     >>>
 
     output {
@@ -347,6 +362,7 @@ task ValidateInput{
         docker: docker_image_id
     }
 }
+
 
 task FetchSequenceByAccessionId {
     input {
