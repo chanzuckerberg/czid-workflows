@@ -71,6 +71,8 @@ def main(ska_distances: str, trim_height: float, samples: Iterable[Sample], outp
     # Use Open Sans for the labels
     rcParams['font.family'] = 'sans-serif'
     rcParams['font.sans-serif'] = ['Open Sans']
+    # 1.0 is baseline font size
+    sns.set(font_scale=1.15)
 
     chart = sns.clustermap(
         df3,
@@ -87,6 +89,8 @@ def main(ska_distances: str, trim_height: float, samples: Iterable[Sample], outp
         linecolor='w',
         linewidth=5,
         row_linkage=Z,
+        # Set dendogram color.
+        tree_kws={'colors': "#767676"},
         vmax=0.15,
         vmin=0,
     )
