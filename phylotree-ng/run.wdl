@@ -94,7 +94,7 @@ workflow phylotree {
         File ska_distances = AddSampleNamesToDistances.sample_name_distances
         File clustermap_png = ComputeClusters.clustermap_png
         File clustermap_svg = ComputeClusters.clustermap_svg
-        File? phylotree_newick = select_first([AddSampleNamesToNewick.phylotree_newick])
+        File? phylotree_newick = AddSampleNamesToNewick.phylotree_newick
         File variants = AddSampleNamesToVariants.sample_name_variants
         File ncbi_metadata_json = FetchNCBIMetadata.ncbi_metadata_json
     }
