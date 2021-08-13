@@ -1,6 +1,8 @@
 ''' Generate Coverage Statistics '''
 import json
 import os
+import sys
+import traceback
 from multiprocessing import cpu_count
 
 import pysam
@@ -128,12 +130,19 @@ class PipelineStepGenerateCoverageStats(PipelineStep):
 
         @run_in_subprocess
         def compute_slice(slice_idx):
-            with open(output_csv_filenames[slice_idx], "w") as output_csv, \
-                 open(output_json_filenames[slice_idx], "w") as output_json, \
-                 pysam.AlignmentFile(bam_filename, "rb") as input_bam:  # noqa: E126
-                for contig_idx, contig_name in enumerate(input_bam.references):
-                    if contig_idx % num_slices == slice_idx:
-                        PipelineStepGenerateCoverageStats._process_contig(input_bam, output_csv, output_json, contig_name)
+            try:
+                with open(output_csv_filenames[slice_idx], "w") as output_csv, \
+                     open(output_json_filenames[slice_idx], "w") as output_json, \
+                     pysam.AlignmentFile(bam_filename, "rb") as input_bam:  # noqa: E126
+                    for contig_idx, contig_name in enumerate(input_bam.references):
+                        if contig_idx % num_slices == slice_idx:
+                            PipelineStepGenerateCoverageStats._process_contig(input_bam, output_csv, output_json, contig_name)
+            except Exception as e:
+                print(f"Exception in subprocess: {e.__class__} '{e}'")
+                print("-" * 60)
+                traceback.print_exc(file=sys.stdout)
+                print("-" * 60)
+                raise e
 
         # Compute pileup for each slice
         with LongRunningCodeSection("PipelineStepGenerateCoverageStats.calc_contig2coverage.mt_map"):
