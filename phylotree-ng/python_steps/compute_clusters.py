@@ -104,13 +104,6 @@ def main(ska_distances: str, trim_height: float, samples: Iterable[Sample], outp
     plt.savefig('clustermap.png', bbox_inches='tight', dpi=300)
     plt.savefig('clustermap.svg', bbox_inches='tight', dpi=300)
 
-    if n_clusters_out > 1:
-        exit(json.dumps(dict(
-            wdl_error_message=True,
-            error="TooDivergentError",
-            cause="Sequences are too divergent to create a single phylo tree",
-        )))
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
