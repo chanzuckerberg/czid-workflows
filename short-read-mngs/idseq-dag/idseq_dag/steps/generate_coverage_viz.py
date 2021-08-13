@@ -176,6 +176,7 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
                     "num_contigs": len(accession_data[accession_id]["contigs"]),
                     "num_reads": len(accession_data[accession_id]["reads"]),
                     "score": _format_number(accession_data[accession_id]["score"]),
+                    "coverage_breadth": coverage_viz_obj[accession_id]["coverage_breadth"],
                     "coverage_depth": coverage_viz_obj[accession_id]["coverage_depth"]
                 }, data["accessions"])),
                 "num_accessions": data["num_total_accessions"]
