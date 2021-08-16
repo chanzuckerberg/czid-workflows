@@ -3,7 +3,6 @@ import csv
 import idseq_dag.util.command as command
 import idseq_dag.util.command_patterns as command_patterns
 import idseq_dag.util.count as count
-import idseq_dag.util.fasta as fasta
 import idseq_dag.util.log as log
 
 from idseq_dag.engine.pipeline_step import PipelineStep
@@ -63,11 +62,11 @@ class PipelineStepRunIDSeqDedup(PipelineStep):  # Deliberately not PipelineCount
             )
         )
 
-        # Add leading space to every cell in the CSV to guard against potential csv injection
+        # Add leading single quote to every cell in the CSV that starts with a special character
+        #   to guard against potential csv injection
         with open(duplicate_clusters_raw_path) as r, open(duplicate_clusters_path, 'w') as w:
-            writer = csv.writer(w)
             for row in csv.reader(r):
-                writer.writerow(" " + elem for elem in row)
+                csv.writer(w).writerow(c if c[0].isalnum() else f"'{c}" for c in row)
 
         # Emit cluster sizes.  One line per cluster.  Format "<cluster_size> <cluster_read_id>".
         # This info is loaded in multiple subsequent steps using m8.load_duplicate_cluster_sizes,
