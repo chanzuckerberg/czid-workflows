@@ -107,6 +107,7 @@ task GetReferenceAccessionFastas {
     }
 
     command <<<
+    set -euxo pipefail
         for accession_id in ~{sep=' ' accession_ids}; do
             taxoniq get-from-s3 --accession-id $accession_id > $accession_id.fasta
             if [[ $? == 4 ]]; then
@@ -163,6 +164,7 @@ task RunSKA {
     }
 
     command <<<
+    set -euxo pipefail
     k=18
     if [[ "~{superkingdom_name}" == viruses ]]; then
         k=12
@@ -199,7 +201,7 @@ task ComputeClusters {
     }
 
     command <<<
-    set -e
+    set -euxo pipefail
     mkdir cluster_files
     python3 /bin/compute_clusters.py \
         --ska-distances ~{ska_distances} \
@@ -229,17 +231,18 @@ task GenerateClusterPhylos {
     }
 
     command <<<
+    # -e omitted because iqtree can exit with a non-zero exit code despite
+    #   producing valid output
+    set -uxo pipefail
     tar -xzvf "~{clusters_directory}"
     tar -xzvf "~{ska_hashes}"
 
-    CLUSTER_FILE=$(ls cluster_files | head -n 1)
-    mkdir cluster
-    for hash in `cat $CLUSTER_FILE`
-    do
-        cp ska_hashes/$hash.skf cluster
-    done
+    if [[ $(ls cluster_files | wc -l) -gt 1 ]]; then
+      # If we have more than one cluster then the samples are too
+      #   divergent and we should not generate a tree
+      exit 0
+    fi
 
-    mkdir ska_outputs
     ska distance -o ska ska_hashes/*.skf
     ska merge -o ska.merged ska_hashes/*.skf
     ska align -p "~{ska_align_p}" -o ska -v ska.merged.skf
