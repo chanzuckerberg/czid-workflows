@@ -55,7 +55,8 @@ task RunStar {
     f.write(description)
   CODE
 
-  tar -xf "~{star_genome}"
+  mkdir "STAR_genome"
+  tar xf "~{star_genome}" -C "STAR_genome" --strip-components 1
   # Set Parameters
   SAMMODE="None"
   SAMTYPE="None"
