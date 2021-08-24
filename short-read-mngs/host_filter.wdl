@@ -135,6 +135,10 @@ task RunStar {
   cr.main("star_out", input_files)
   CODE
 
+  if [ -f "ReadsPerGene.out.tab" ]; then 
+    mv ReadsPerGene.out.tab reads_per_gene.star.tab
+  fi
+
   rm "~{genome_dir}"/SAindex # the star genome is pretty big (1.5G)
   rm "~{genome_dir}"/Genome 
   >>>
@@ -145,7 +149,7 @@ task RunStar {
     File? unmapped2_fastq = "unmapped2.fastq"
     File? aligned_file = "Aligned.out.bam"
     File? output_read_count = "star_out.count"
-    File? output_gene_file = "ReadsPerGene.out.tab"
+    File? output_gene_file = "reads_per_gene.star.tab"
     File? output_metrics_file = "picard_insert_metrics.txt"
     File? output_histogram_file = "insert_size_histogram.pdf"
   }
