@@ -237,16 +237,17 @@ task GenerateClusterPhylos {
     tar -xzvf "~{clusters_directory}"
     tar -xzvf "~{ska_hashes}"
 
+    ska distance -o ska ska_hashes/*.skf
+    ska merge -o ska.merged ska_hashes/*.skf
+    ska align -p "~{ska_align_p}" -o ska -v ska.merged.skf
+    mv ska_variants.aln ska.variants.aln
+
     if [[ $(ls cluster_files | wc -l) -gt 1 ]]; then
       # If we have more than one cluster then the samples are too
       #   divergent and we should not generate a tree
       exit 0
     fi
 
-    ska distance -o ska ska_hashes/*.skf
-    ska merge -o ska.merged ska_hashes/*.skf
-    ska align -p "~{ska_align_p}" -o ska -v ska.merged.skf
-    mv ska_variants.aln ska.variants.aln
 
     num_zero_variant_samples=`grep -c "^$" ska.variants.aln`
     if [[ $num_zero_variant_samples -gt 0 ]]; then
