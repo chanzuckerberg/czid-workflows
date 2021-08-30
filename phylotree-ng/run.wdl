@@ -256,8 +256,13 @@ task GenerateClusterPhylos {
       exit 0
     fi
 
-    iqtree -s ska.variants.aln
-    mv ska.variants.aln.treefile phylotree.nwk
+    iqtree -s ska.variants.aln 2>&1 | tee iqtree-out
+    
+    # This error means the samples were too divergent, we should treat this like other divergent errors
+    #   The output file will not be present if this error prints so it should not be moved
+    if ! [[ $(grep 'ERROR: Some sequences (see above) are problematic, please check your alignment again' iqtree-out) ]]; then
+      mv ska.variants.aln.treefile phylotree.nwk
+    fi
     >>>
 
     output {
