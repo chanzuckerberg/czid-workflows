@@ -73,7 +73,7 @@ class TestConsensusGenomes(WDLTestCase):
     # test the depths associated with SNAP ivar trim -x 5
     def test_sars_cov2_illumina_cg_snap(self):
         fastqs_0 = os.path.join(os.path.dirname(__file__), "snap_top10k_R1_001.fastq.gz")
-        fastqs_1 = os.path.join(os.path.dirname(__file__), "snap_top10k_R1_001.fastq.gz")
+        fastqs_1 = os.path.join(os.path.dirname(__file__), "snap_top10k_R2_001.fastq.gz")
         args = ["sample=test_snap", f"fastqs_0={fastqs_0}", f"fastqs_1={fastqs_1}", "technology=Illumina",
                 "primer_bed=s3://idseq-public-references/consensus-genome/snap_primers.bed",
                 f"ref_fasta={self.sc2_ref_fasta}"]
@@ -116,7 +116,7 @@ class TestConsensusGenomes(WDLTestCase):
     # test the depths associated with tailedseq protocol, ivar trim -x 2
     def test_sars_cov2_illumina_cg_tailedseq(self):
         fastqs_0 = os.path.join(os.path.dirname(__file__), "tailedseq_top10k_R1.fastq.gz")
-        fastqs_1 = os.path.join(os.path.dirname(__file__), "tailedseq_top10k_R1.fastq.gz")
+        fastqs_1 = os.path.join(os.path.dirname(__file__), "tailedseq_top10k_R2.fastq.gz")
         args = ["sample=test_tailedseq", f"fastqs_0={fastqs_0}", f"fastqs_1={fastqs_1}", "technology=Illumina",
                 "primer_bed=s3://idseq-public-references/consensus-genome/artic_v3_short_275_primers.bed",
                 f"ref_fasta={self.sc2_ref_fasta}"]
@@ -128,11 +128,11 @@ class TestConsensusGenomes(WDLTestCase):
         self.assertGreater(output_stats["depth_avg"], 71)
         self.assertLess(output_stats["depth_avg"], 72)
         self.assertGreater(output_stats["n_actg"], 3.9)
-        self.assertEqual(output_stats["n_actg"], 18655)
-        self.assertEqual(output_stats["n_missing"], 11077)
+        self.assertEqual(output_stats["n_actg"], 28759)
+        self.assertEqual(output_stats["n_missing"], 973)
 
     def test_sars_cov2_ont_cg_no_reads(self):
-        fastqs_0 = os.path.join(os.path.dirname(__file__), "MT007544.fastq.gz")
+        fastqs_0 = os.path.join(os.path.dirname(__file__), "blank.fastq.gz")
         args = ["sample=test_sample", f"fastqs_0={fastqs_0}", "technology=ONT", f"ref_fasta={self.sc2_ref_fasta}"]
         with self.assertRaises(CalledProcessError) as ecm:
             self.run_miniwdl(args)
