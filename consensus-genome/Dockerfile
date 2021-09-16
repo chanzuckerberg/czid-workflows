@@ -104,9 +104,11 @@ RUN wget https://www.drive5.com/muscle/downloads3.8.31/muscle3.8.31_i86linux32.t
 && tar zxvf muscle3.8.31_i86linux32.tar.gz && mv muscle3.8.31_i86linux32 muscle && rm muscle3.8.31_i86linux32.tar.gz
 
 # ARTIC, Medaka and dependencies
-RUN apt-get install -y python3-cffi python3-h5py python3-intervaltree python3-edlib muscle
+RUN apt-get install -y python3-cffi python3-h5py python3-intervaltree python3-edlib muscle git
 RUN pip3 install ont-fast5-api parasail mappy pyspoa tensorflow https://github.com/artic-network/fieldbioinformatics/archive/1.2.1.tar.gz
 RUN pip3 install medaka --no-deps
+RUN pip3 install git+https://github.com/rzlim08/PyVCF.git
+
 
 # General CG dependencies
 RUN pip3 install taxoniq==0.6.0 && \
