@@ -91,11 +91,17 @@ def main(ska_distances: str, trim_height: float, samples: Iterable[Sample], outp
         row_linkage=Z,
         # Set dendogram color.
         tree_kws={'colors': "#767676"},
-        vmax=0.15,
         vmin=0,
+        vmax=0.15,
     )
 
     heatmap = chart.ax_heatmap
+
+    # make the color bar last tick >.15
+    cbar = heatmap.collections[0].colorbar
+    cbar.set_ticks([0, 0.05, 0.1, 0.15])
+    cbar.set_ticklabels(["0", "0.05", "0.1", ">0.15"])
+
     # Make the x tick labels slanted:
     heatmap.set_xticklabels(heatmap.get_xticklabels(), rotation=45, ha='right', rotation_mode='anchor')
     # Hide the actual tick marks:
