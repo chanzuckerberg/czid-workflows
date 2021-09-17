@@ -128,7 +128,7 @@ class TestConsensusGenomes(WDLTestCase):
         self.assertGreater(output_stats["depth_avg"], 71)
         self.assertLess(output_stats["depth_avg"], 72)
         self.assertGreater(output_stats["n_actg"], 3.9)
-        self.assertEqual(output_stats["n_actg"], 28759)
+        self.assertEqual(output_stats["n_actg"], 28774)
         self.assertEqual(output_stats["n_missing"], 973)
 
     def test_sars_cov2_ont_cg_no_reads(self):
@@ -313,10 +313,10 @@ class TestConsensusGenomes(WDLTestCase):
         self.assertEqual(output_stats["ref_snps"], 0)
         self.assertEqual(output_stats["ref_mnps"], 0)
         # TODO: address this non-determinism
-        self.assertIn(output_stats["n_actg"], [15313, 15314])
+        self.assertIn(output_stats["n_actg"], [15317])
         self.assertIn(output_stats["n_missing"], [0, 1])
         self.assertEqual(output_stats["n_gap"], 0)
-        self.assertEqual(output_stats["n_ambiguous"], 4)
+        self.assertEqual(output_stats["n_ambiguous"], 1)
 
         self.assertEqual(res["outputs"]["consensus_genome.vadr_alerts_out"], None)
         self.assertEqual(res["outputs"]["consensus_genome.vadr_quality_out"], None)

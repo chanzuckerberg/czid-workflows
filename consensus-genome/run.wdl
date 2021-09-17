@@ -54,9 +54,9 @@ workflow consensus_genome {
         Boolean filter_reads = true
         Boolean trim_adapters = true
 
-        Float ivarFreqThreshold = 0.9
+        Float ivarFreqThreshold = 0.75
         Int   ivarQualThreshold  = 20
-        Int   minDepth          = 10
+        Int   minDepth          = if "~{primer_bed}" == "s3://idseq-public-references/consensus-genome/na_primers.bed" then 5 else 10
 
         # If no_reads_quast is true, quast runs without considering the raw reads (only considering the reference genome and the consensus.fa).
         # This reduces the number of informative metrics that quast provides, but speeds up the step since quast is faster when it doesn't consider raw reads.
