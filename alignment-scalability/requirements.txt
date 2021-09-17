@@ -1,1 +1,3 @@
 biopython
+boto3
+requests

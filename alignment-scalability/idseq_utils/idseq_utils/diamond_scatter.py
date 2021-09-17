@@ -6,7 +6,6 @@ import errno
 from argparse import ArgumentParser
 from glob import glob
 from multiprocessing import Pool
-from os import path
 from os.path import abspath, basename, join
 from subprocess import run, PIPE
 from tempfile import NamedTemporaryFile, TemporaryDirectory
