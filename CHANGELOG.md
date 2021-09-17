@@ -21,6 +21,9 @@ In addition, if a modification is made that may affect the results of a pipeline
 - Fixed broken consensus-genome tests
 - Fixed bitrot error in benchmarking notebook
 
+### phylotree-ng-v1.2.3
+- changed the phylo-heatmap scale bar from '0.15' to '>0.15' to remove ambiguity
+
 ### short-read-mngs-v6.8.5
 - mitigation for intermittent GenerateCoverageStats error (#161)
 
