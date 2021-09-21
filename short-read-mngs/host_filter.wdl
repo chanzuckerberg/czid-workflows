@@ -45,6 +45,7 @@ task RunStar {
     String genome_dir = "STAR_genome/part-0/"
   }
   command<<<
+  # TODO(Ryan): remove when status upload is not dependent on idseq-dag see: https://app.shortcut.com/idseq/story/163323
   # this comment is for the miniwdl plugin uploader to parse:
   # --step-name star_out 
   set -euxo pipefail
