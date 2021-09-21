@@ -45,6 +45,8 @@ task RunStar {
     String genome_dir = "STAR_genome/part-0/"
   }
   command<<<
+  # this comment is for the miniwdl plugin uploader to parse:
+  # --step-name star_out 
   set -euxo pipefail
 
   python3 <<CODE
