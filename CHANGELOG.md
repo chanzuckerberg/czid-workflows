@@ -21,6 +21,9 @@ In addition, if a modification is made that may affect the results of a pipeline
 - Fixed broken consensus-genome tests
 - Fixed bitrot error in benchmarking notebook
 
+### short-read-mngs-v6.8.6
+- add a comment into STAR filter step to allow miniwdl to parse step name. Fixes a bug where the "Reads Lost" chart included STAR under Trimmomatic counts. 
+
 ### phylotree-ng-v1.2.3
 - changed the phylo-heatmap scale bar from '0.15' to '>0.15' to remove ambiguity
 
