@@ -127,7 +127,7 @@ task RunStar {
   CODE
 
   if [ -f "Aligned.out.bam" ]; then 
-    picard CollectInsertSizeMetrics I=Aligned.out.bam O=picard_insert_metrics.txt H=insert_size_histogram.pdf
+    picard CollectInsertSizeMetrics I=Aligned.out.bam O=picard_insert_metrics.txt H=insert_size_histogram.pdf || echo WARNING: picard failed
   fi 
 
   python3 <<CODE
