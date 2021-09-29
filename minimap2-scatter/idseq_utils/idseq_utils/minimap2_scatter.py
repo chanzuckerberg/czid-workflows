@@ -4,8 +4,6 @@ import sys
 import errno
 
 from argparse import ArgumentParser
-from glob import glob
-from multiprocessing import Pool
 from os.path import abspath, basename, join
 from subprocess import run, PIPE
 from tempfile import NamedTemporaryFile, TemporaryDirectory
@@ -100,25 +98,6 @@ def make_par_dir(cwd: str, par_tmpdir: str):
         pass
 
 
-def make_db(reference_fasta: str, output_dir: str, chunks: int):
-    os.mkdir(output_dir)
-    chunk_size = (sum(1 for _ in SeqIO.parse(reference_fasta, "fasta")) // chunks) + 1
-    seqs = SeqIO.parse(reference_fasta, "fasta")
-    for i in range(chunks):
-        print(f"STARTING  CHUNK {i}")
-        fasta_name = f"{i}.fasta"
-        SeqIO.write(_consume_iter(seqs, chunk_size), fasta_name, "fasta")
-        n_seqs = n_letters = 0
-        for seq in SeqIO.parse(fasta_name, "fasta"):
-            n_seqs += 1
-            n_letters += len(seq.seq)
-        db_name = f"{i}-{n_seqs}-{n_letters}"
-        print(f"INDEXING  CHUNK {i}")
-        diamond_makedb(".", fasta_name, join(output_dir, db_name))
-        os.remove(fasta_name)
-        print(f"COMPLETED CHUNK {i}")
-
-
 def minimap2_chunk(db_chunk: str, output_dir: str, *query: str):
     """
     Run a single chunk of the database using minimap2-scatter 
@@ -179,38 +158,6 @@ def minimap2_merge(chunk_dir, out, *query):
             chunks.append(join(tmp_dir, "par-tmp", f))
         minimap2_merge_cmd(tmp_dir, "par-tmp", chunks, query)
         shutil.copy(join(tmp_dir, "par-tmp", "out.paf"), out)
-
-
-def blastx_join(chunk_dir: str, out: str, *query: str):
-    with TemporaryDirectory() as tmp_dir:
-        make_par_dir(tmp_dir, "par-tmp")
-        with open(join(tmp_dir, "par-tmp", f"join_todo_{zero_pad(0, 6)}"), "w") as f:
-            f.write("TOKEN\n")
-
-        for f in os.listdir(chunk_dir):
-            shutil.copy(join(chunk_dir, f), join(tmp_dir, "par-tmp", f))
-
-        chunks = len(os.listdir(chunk_dir)) // 2
-        with NamedTemporaryFile() as ref_fasta, NamedTemporaryFile() as db:
-            # make fake db to appease diamond
-            SeqIO.write(SeqRecord(Seq("M"), "ID"), ref_fasta.name, "fasta")
-            diamond_makedb(tmp_dir, ref_fasta.name, db.name)
-            diamond_blastx(
-                cwd=tmp_dir,
-                par_tmpdir="par-tmp",
-                block_size=1,
-                database=db.name,
-                out="out.tsv",
-                join_chunks=chunks,
-                queries=(abspath(q) for q in query),
-            )
-
-        with open(out, "w") as out_f:
-            for out_chunk in glob(join(tmp_dir, f"out.tsv_*")):
-                with open(out_chunk) as out_chunk_f:
-                    out_f.writelines(out_chunk_f)
-                os.remove(out_chunk)
-
 
 if __name__ == "__main__":
     parser = ArgumentParser()

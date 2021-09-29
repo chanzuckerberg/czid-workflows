@@ -42,7 +42,7 @@ task RunMinimap {
         python3 <<CODE
         from idseq_utils.run_minimap2 import run_minimap2
         fastqs = ["~{sep='", "' fastqs}"]
-        run_diamond("~{input_dir}", "~{chunk_dir}", "~{db_path}", "out.tsv", *fastqs)
+        run_minimap2("~{input_dir}", "~{chunk_dir}", "~{db_path}", "out.tsv", *fastqs)
         CODE
     >>>
 
