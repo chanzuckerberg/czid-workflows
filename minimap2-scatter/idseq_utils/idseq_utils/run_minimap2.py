@@ -12,7 +12,7 @@ from urllib.parse import urlparse
 from multiprocessing import Pool
 from botocore.exceptions import ClientError
 
-from .minimap2_scatter import minimap2_alignment, minimap2_join
+from .minimap2_scatter import minimap2_alignment, minimap2_merge
 from .batch_run_helpers import get_batch_job_desc_bucket, \
                             _log_alignment_batch_job_status, \
                             _get_job_status, \
