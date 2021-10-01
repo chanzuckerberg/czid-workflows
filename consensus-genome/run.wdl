@@ -371,7 +371,14 @@ task FetchSequenceByAccessionId {
     }
 
     command <<<
-        taxoniq get-from-s3 --accession-id "~{accession_id}" > sequence.fa
+        function incrementAccession { 
+            ( [[ $1 =~ ([A-Z0-9_]*)\.([0-9]+) ]] && echo "${BASH_REMATCH[1]}.$(( ${BASH_REMATCH[2]} + 1 ))");
+        }
+        # Try fetching accession id. If not found, try incrementing the version. 
+
+        ({ taxoniq get-from-s3 --accession-id "~{accession_id}"; } || \
+        { taxoniq get-from-s3 --accession-id $(incrementAccession "~{accession_id}"); } \
+        || exit 4; ) > sequence.fa;
         if [[ $? == 4 ]]; then
             export error=AccessionIdNotFound cause="Accession ID ~{accession_id} not found in the index"
             jq -nc ".wdl_error_message=true | .error=env.error | .cause=env.cause" > /dev/stderr

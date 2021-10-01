@@ -344,6 +344,17 @@ class TestConsensusGenomes(WDLTestCase):
         self.assertRunFailed(ecm, task="FetchSequenceByAccessionId",
                              error="AccessionIdNotFound", cause="Accession ID NO_ACCESSION_ID not found in the index")
 
+    def test_fetch_sequence_by_expired_accession_id(self):
+        res = self.run_miniwdl(task="FetchSequenceByAccessionId", args=["accession_id=NC_000913.2"])
+        with open(res["outputs"]["FetchSequenceByAccessionId.sequence_fa"]) as fh:
+            self.assertEqual(fh.readline().strip(), ">NC_000913.3")
+            self.assertTrue(fh.readline().startswith("AGCTTTTCATTCTGACTGCAACGGGCAATATGTCTCTG"))
+
+        with self.assertRaises(CalledProcessError) as ecm:
+            self.run_miniwdl(task="FetchSequenceByAccessionId", args=["accession_id=NO_ACCESSION_ID"])
+        self.assertRunFailed(ecm, task="FetchSequenceByAccessionId",
+                             error="AccessionIdNotFound", cause="Accession ID NO_ACCESSION_ID not found in the index")
+
     def test_max_reads_illumina(self):
         fastq_0 = os.path.join(os.path.dirname(__file__), "SRR11741455_65054_nh_R1.fastq.gz")
         fastq_1 = os.path.join(os.path.dirname(__file__), "SRR11741455_65054_nh_R2.fastq.gz")
