@@ -13,6 +13,7 @@ from multiprocessing import Pool
 from botocore.exceptions import ClientError
 
 log = logging.getLogger(__name__)
+ALIGNMENT_ALGORITHM = "minimap2"
 
 MAX_CHUNKS_IN_FLIGHT = 10
 
@@ -35,7 +36,7 @@ def _log_alignment_batch_job_status(job_id, job_queue, job_definition, chunk_id,
         'job_queue': job_queue,
         'job_definition': job_definition,
         'status': status,
-        'alignment_algorithm': "diamond",
+        'alignment_algorithm': ALIGNMENT_ALGORITHM,
     })
 
 
