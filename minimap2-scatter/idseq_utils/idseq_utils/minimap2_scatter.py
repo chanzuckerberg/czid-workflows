@@ -150,13 +150,16 @@ def minimap2_merge(chunk_dir, out, *query):
         with open(join(tmp_dir, "par-tmp", f"join_todo_{zero_pad(0, 6)}"), "w") as f:
             f.write("TOKEN\n") 
         chunks = []
+        query_tmp = []
         for q in query:
-            shutil.copy(q, join(tmp_dir, q))
+            shutil.copy(q, join(tmp_dir, basename(q)))
+            query_tmp.append(join(tmp_dir, basename(q)))
+
         for f in os.listdir(chunk_dir):
             print("list", f)
             shutil.copy(join(chunk_dir, f), join(tmp_dir, "par-tmp", f)) 
             chunks.append(join(tmp_dir, "par-tmp", f))
-        minimap2_merge_cmd(tmp_dir, "par-tmp", chunks, query)
+        minimap2_merge_cmd(tmp_dir, "par-tmp", chunks, query_tmp)
         shutil.copy(join(tmp_dir, "par-tmp", "out.paf"), out)
 
 if __name__ == "__main__":
