@@ -4,7 +4,7 @@ import zipfile
 import gzip
 import tempfile
 from subprocess import CalledProcessError
-
+import hashlib
 import yaml
 from test_util import WDLTestCase
 
@@ -27,11 +27,11 @@ class TestConsensusGenomes(WDLTestCase):
         with open(outputs["consensus_genome.compute_stats_out_output_stats"]) as fh:
             output_stats = json.load(fh)
         self.assertEqual(output_stats["sample_name"], "test_sample")
-        # TODO: track non-determinism (888.xx vs 889.xx coverage)
-        self.assertGreater(output_stats["depth_avg"], 888)
-        self.assertEqual(output_stats["total_reads"], 187444)
-        self.assertEqual(output_stats["mapped_reads"], 187211)
-        self.assertEqual(output_stats["mapped_paired"], 187150)
+        # TODO: track non-determinism
+        self.assertGreater(output_stats["depth_avg"], 222)
+        self.assertEqual(output_stats["total_reads"], 47108)
+        self.assertEqual(output_stats["mapped_reads"], 47054)
+        self.assertEqual(output_stats["mapped_paired"], 47035)
         self.assertEqual(output_stats["ercc_mapped_reads"], 0)
         self.assertEqual(output_stats["ref_snps"], 7)
         self.assertEqual(output_stats["ref_mnps"], 0)
@@ -45,51 +45,53 @@ class TestConsensusGenomes(WDLTestCase):
 
     def test_vadr_error_caught(self):
         # use the long filename error as a proxy for testing VADR error handling
-        fastqs_0 = os.path.join(os.path.dirname(__file__), "sample_sars-cov-2_paired_r1.fastq.gz")
-        fastqs_1 = os.path.join(os.path.dirname(__file__), "sample_sars-cov-2_paired_r2.fastq.gz")
+        consensus = os.path.join(os.path.dirname(__file__), "vadr_input", "really-long-name-consensus.fa")
         vadr_opts_string = ("-s -r --nomisc --mkey NC_045512 --lowsim5term 2 --lowsim3term 2 --fstlowthr 0.0 "
                             "--alt_fail lowscore,fsthicnf,fstlocnf")
-        args = ["sample=test_sample_really_really_really_long_sample_name_over_50_chars",
-                f"fastqs_0={fastqs_0}", f"fastqs_1={fastqs_1}", "technology=Illumina",
-                f"vadr_options={vadr_opts_string}", f"ref_fasta={self.sc2_ref_fasta}"]
-        res = self.run_miniwdl(args=args)
-        self.assertIn("consensus_genome.vadr_errors", res["outputs"])
-        self.assertEqual(res["outputs"]["consensus_genome.vadr_alerts_out"], None)
-        self.assertEqual(res["outputs"]["consensus_genome.vadr_quality_out"], None)
+        args = ["vadr_model=s3://idseq-public-references/consensus-genome/vadr-models-sarscov2-1.2-2.tar.gz",
+                f"vadr_options={vadr_opts_string}",
+                f"assembly={consensus}"]
+        res = self.run_miniwdl(args=args, task="Vadr", task_input={"prefix": ""})
+        self.assertIsNotNone(res["outputs"]["Vadr.vadr_errors"])
+        self.assertEqual(res["outputs"]["Vadr.vadr_alerts"], None)
+        self.assertEqual(res["outputs"]["Vadr.vadr_quality"], None)
 
     def test_vadr_flag_works(self):
-        fastqs_0 = os.path.join(os.path.dirname(__file__), "sample_sars-cov-2_paired_r1.fastq.gz")
-        fastqs_1 = os.path.join(os.path.dirname(__file__), "sample_sars-cov-2_paired_r2.fastq.gz")
-        args = ["sample=test_sample_really_really_really_long_sample_name_over_50_chars",
-                f"fastqs_0={fastqs_0}", f"fastqs_1={fastqs_1}", "technology=Illumina",
-                f"ref_fasta={self.sc2_ref_fasta}"]
-        res = self.run_miniwdl(args=args)
-        self.assertIn("consensus_genome.vadr_alerts_out", res["outputs"])
-        self.assertIn("consensus_genome.vadr_alerts_out", res["outputs"])
-        print(res["outputs"])
-        print(res["outputs"]["consensus_genome.vadr_errors"])
-        self.assertEqual(res["outputs"]["consensus_genome.vadr_errors"], None)
+        consensus = os.path.join(os.path.dirname(__file__), "vadr_input", "really-long-name-consensus.fa")
+        vadr_opts_string = ("-s -r --nomisc --mkey sarscov2 --lowsim5term 2 --lowsim3term 2 "
+                            "--fstlowthr 0.0 --alt_fail lowscore,fsthicnf,fstlocnf --noseqnamemax")
+        args = ["vadr_model=s3://idseq-public-references/consensus-genome/vadr-models-sarscov2-1.2-2.tar.gz",
+                f"vadr_options={vadr_opts_string}",
+                f"assembly={consensus}"]
+        res = self.run_miniwdl(args=args, task="Vadr", task_input={"prefix": ""})
+        self.assertIsNotNone(res["outputs"]["Vadr.vadr_alerts"])
+        self.assertIsNone(res["outputs"]["Vadr.vadr_errors"])
 
     # test the depths associated with SNAP ivar trim -x 5
     def test_sars_cov2_illumina_cg_snap(self):
-        fastqs_0 = os.path.join(os.path.dirname(__file__), "snap_top10k_R1_001.fastq.gz")
-        fastqs_1 = os.path.join(os.path.dirname(__file__), "snap_top10k_R2_001.fastq.gz")
-        args = ["sample=test_snap", f"fastqs_0={fastqs_0}", f"fastqs_1={fastqs_1}", "technology=Illumina",
-                "primer_bed=s3://idseq-public-references/consensus-genome/snap_primers.bed",
-                f"ref_fasta={self.sc2_ref_fasta}"]
-        res = self.run_miniwdl(args)
-        outputs = res["outputs"]
-        with open(outputs["consensus_genome.compute_stats_out_output_stats"]) as fh:
-            output_stats = json.load(fh)
-        self.assertEqual(output_stats["sample_name"], "test_snap")
-        self.assertGreater(output_stats["depth_avg"], 7)
-        self.assertLess(output_stats["depth_avg"], 8)
-        self.assertGreater(output_stats["depth_q.5"], 3.9)
-        self.assertLess(output_stats["depth_q.5"], 4.5)
-        self.assertGreater(output_stats["depth_q.75"], 10.9)
-        self.assertGreater(output_stats["depth_frac_above_10x"], 0.28)
-        self.assertGreater(output_stats["depth_frac_above_25x"], 0.03)
-        self.assertGreater(output_stats["depth_frac_above_25x"], 0.03)
+        aligned_reads = os.path.join(os.path.dirname(__file__), "trim_primers_input", "snap_aligned_reads.bam")
+        args = [f"alignments={aligned_reads}",
+                "primer_bed=s3://idseq-public-references/consensus-genome/snap_primers.bed"]
+        res = self.run_miniwdl(args, task="TrimPrimers", task_input={"prefix": ""})
+        with open(res["outputs"]["TrimPrimers.trimmed_bam_bai"], 'rb') as f:
+            hash = hashlib.md5(f.read()).hexdigest()
+        self.assertEqual(hash, "3081c5e09cc31194821a84fc24b5685f")
+        with open(res["outputs"]["TrimPrimers.trimmed_bam_ch"], 'rb') as f:
+            hash = hashlib.md5(f.read()).hexdigest()
+        self.assertEqual(hash, "a4d8b1d6e5d6a0bbc4b336919baddffd")
+
+    # test the depths associated with tailedseq protocol, ivar trim -x 2
+    def test_sars_cov2_illumina_cg_tailedseq(self):
+        aligned_reads = os.path.join(os.path.dirname(__file__), "trim_primers_input", "tailedseq_aligned_reads.bam")
+        args = [f"alignments={aligned_reads}",
+                "primer_bed=s3://idseq-public-references/consensus-genome/artic_v3_short_275_primers.bed"]
+        res = self.run_miniwdl(args, task="TrimPrimers", task_input={"prefix": ""})
+        with open(res["outputs"]["TrimPrimers.trimmed_bam_bai"], 'rb') as f:
+            hash = hashlib.md5(f.read()).hexdigest()
+        self.assertEqual(hash, "010dfb9df3c7a45c9bf6556925859ce7")
+        with open(res["outputs"]["TrimPrimers.trimmed_bam_ch"], 'rb') as f:
+            hash = hashlib.md5(f.read()).hexdigest()
+        self.assertEqual(hash, "7028bf8450548391f264f2948b9e19f0")
 
     def test_length_filter_midnight_primers(self):
         """
@@ -113,24 +115,6 @@ class TestConsensusGenomes(WDLTestCase):
         self.assertEqual(apply_length_filter_inputs["min_length"], 250)
         self.assertEqual(apply_length_filter_inputs["max_length"], 1500)
 
-    # test the depths associated with tailedseq protocol, ivar trim -x 2
-    def test_sars_cov2_illumina_cg_tailedseq(self):
-        fastqs_0 = os.path.join(os.path.dirname(__file__), "tailedseq_top10k_R1.fastq.gz")
-        fastqs_1 = os.path.join(os.path.dirname(__file__), "tailedseq_top10k_R2.fastq.gz")
-        args = ["sample=test_tailedseq", f"fastqs_0={fastqs_0}", f"fastqs_1={fastqs_1}", "technology=Illumina",
-                "primer_bed=s3://idseq-public-references/consensus-genome/artic_v3_short_275_primers.bed",
-                f"ref_fasta={self.sc2_ref_fasta}"]
-        res = self.run_miniwdl(args)
-        outputs = res["outputs"]
-        with open(outputs["consensus_genome.compute_stats_out_output_stats"]) as fh:
-            output_stats = json.load(fh)
-        self.assertEqual(output_stats["sample_name"], "test_tailedseq")
-        self.assertGreater(output_stats["depth_avg"], 71)
-        self.assertLess(output_stats["depth_avg"], 72)
-        self.assertGreater(output_stats["n_actg"], 3.9)
-        self.assertEqual(output_stats["n_actg"], 28774)
-        self.assertEqual(output_stats["n_missing"], 973)
-
     def test_sars_cov2_ont_cg_no_reads(self):
         fastqs_0 = os.path.join(os.path.dirname(__file__), "blank.fastq.gz")
         args = ["sample=test_sample", f"fastqs_0={fastqs_0}", "technology=ONT", f"ref_fasta={self.sc2_ref_fasta}"]
@@ -151,17 +135,17 @@ class TestConsensusGenomes(WDLTestCase):
         with open(outputs["consensus_genome.compute_stats_out_output_stats"]) as fh:
             output_stats = json.load(fh)
         self.assertEqual(output_stats["sample_name"], "test_sample")
-        self.assertGreater(output_stats["depth_avg"], 13)
-        self.assertGreater(output_stats["depth_frac_above_10x"], 0.5)
+        self.assertGreater(output_stats["depth_avg"], 6)
+        self.assertGreater(output_stats["depth_frac_above_10x"], 0.2)
         self.assertEqual(output_stats["depth_frac_above_100x"], 0)
-        self.assertEqual(output_stats["total_reads"], 1793)
-        self.assertEqual(output_stats["mapped_reads"], 1347)
+        self.assertEqual(output_stats["total_reads"], 912)
+        self.assertEqual(output_stats["mapped_reads"], 689)
         self.assertEqual(output_stats["mapped_paired"], 0)
         self.assertNotIn("ercc_mapped_reads", output_stats)
-        self.assertEqual(output_stats["ref_snps"], 10)
+        self.assertEqual(output_stats["ref_snps"], 2)
         self.assertEqual(output_stats["ref_mnps"], 0)
-        self.assertEqual(output_stats["n_actg"], 7864)
-        self.assertEqual(output_stats["n_missing"], 22039)
+        self.assertEqual(output_stats["n_actg"], 2461)
+        self.assertEqual(output_stats["n_missing"], 27442)
         self.assertEqual(output_stats["n_gap"], 0)
         self.assertEqual(output_stats["n_ambiguous"], 0)
         for output_name, output in outputs.items():
@@ -180,7 +164,7 @@ class TestConsensusGenomes(WDLTestCase):
         """
         Test that the pipeline will run a variety of different medaka models
         """
-        models = ["r10_min_high_g340", "r103_min_high_g345", "r941_prom_fast_g303"]
+        models = ["r10_min_high_g340", "r941_prom_fast_g303"]
         fastq = os.path.join(os.path.dirname(__file__), "no_host_1.fq.gz")
         for model in models:
             args = ["prefix=''", "sample=test_sample", f"fastqs={fastq}",
@@ -188,6 +172,11 @@ class TestConsensusGenomes(WDLTestCase):
                     "primer_schemes=s3://idseq-public-references/consensus-genome/artic-primer-schemes_v2.tar.gz",
                     "primer_set=nCoV-2019/V1200"]
             res = self.run_miniwdl(args, task="RunMinion")
+            for filename in res["outputs"].values():
+                self.assertGreater(os.path.getsize(filename), 0)
+            with open(res["outputs"]["RunMinion.log"]) as f:
+                log_output = f.read()
+            self.assertIn("primer_schemes/nCoV-2019/V1200", log_output)
             for filename in res["outputs"].values():
                 self.assertGreater(os.path.getsize(filename), 0)
 
@@ -207,28 +196,12 @@ class TestConsensusGenomes(WDLTestCase):
         self.assertEqual(miniwdl_error["error"], "RunFailed")
         self.assertEqual(miniwdl_error["cause"]["error"], "CommandFailed")
 
-    def test_sars_cov2_midnight_primers_minion(self):
-        """
-        Test that RunMinion will run with midnight primers
-        """
-        fastq = os.path.join(os.path.dirname(__file__), "no_host_1.fq.gz")
-        args = ["prefix=''", "sample=test_sample", f"fastqs={fastq}",
-                "normalise=1000", "medaka_model=r10_min_high_g340",
-                "primer_schemes=s3://idseq-public-references/consensus-genome/artic-primer-schemes_v2.tar.gz",
-                "primer_set=nCoV-2019/V1200"]
-        res = self.run_miniwdl(args, task="RunMinion")
-        with open(res["outputs"]["RunMinion.log"]) as f:
-            log_output = f.read()
-        self.assertIn("primer_schemes/nCoV-2019/V1200", log_output)
-        for filename in res["outputs"].values():
-            self.assertGreater(os.path.getsize(filename), 0)
-
     def test_sars_cov2_midnight_primers_quast(self):
         """
         Test that Quast will run with midnight primers
         """
-        assembly = os.path.join(os.path.dirname(__file__), "quast", "test_sample.consensus.fasta")
-        bam = os.path.join(os.path.dirname(__file__), "quast", "test_sample.primertrimmed.rg.sorted.bam")
+        assembly = os.path.join(os.path.dirname(__file__), "quast_input", "test_sample.consensus.fasta")
+        bam = os.path.join(os.path.dirname(__file__), "quast_input", "test_sample.primertrimmed.rg.sorted.bam")
         fastq = os.path.join(os.path.dirname(__file__), "no_host_1.fq.gz")
         args = [
             "prefix=''",
@@ -268,8 +241,8 @@ class TestConsensusGenomes(WDLTestCase):
         with open(outputs["consensus_genome.compute_stats_out_output_stats"]) as fh:
             output_stats = json.load(fh)
         self.assertEqual(output_stats["sample_name"], "test_sample")
-        self.assertGreater(output_stats["depth_avg"], 6)
-        self.assertLess(output_stats["depth_avg"], 7)
+        self.assertGreater(output_stats["depth_avg"], 3)
+        self.assertLess(output_stats["depth_avg"], 4)
 
     def test_sars_cov2_ont_cg_input_file_format(self):
         """
@@ -292,7 +265,6 @@ class TestConsensusGenomes(WDLTestCase):
         args = ["sample=test_sample", f"fastqs_0={fastqs_0}", f"fastqs_1={fastqs_1}", "technology=Illumina",
                 "filter_reads=false", "ref_accession_id=MF965207.1",
                 "primer_bed=s3://idseq-public-references/consensus-genome/na_primers.bed"]
-
         res = self.run_miniwdl(args)
         for output_name, output in res["outputs"].items():
             if isinstance(output, str):

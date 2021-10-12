@@ -537,7 +537,7 @@ task FilterReads {
             fi
 
             mkdir "${TMPDIR}/kraken_db"
-            tar -xzv -C "${TMPDIR}/kraken_db" -f "~{kraken2_db_tar_gz}"
+            tar -xv --use-compress-program=pigz -C "${TMPDIR}/kraken_db" -f "~{kraken2_db_tar_gz}"
             kraken2 --db ${TMPDIR}/kraken_db/* \
                 --threads $CORES \
                 --report ${TMPDIR}/~{prefix}kraken2_report.txt \
@@ -651,7 +651,6 @@ task TrimPrimers {
 
     command <<<
         set -euxo pipefail
-
         samtools view -F4 -q "~{samQualThreshold}" -o ivar.bam "~{alignments}"
         samtools index ivar.bam
         # The SNAP protocol may result in primer position offsets due to polymerases adding additional bases 
