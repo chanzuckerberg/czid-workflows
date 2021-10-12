@@ -2,16 +2,10 @@ import os
 import shutil
 import sys
 import errno
-
 from argparse import ArgumentParser
 from os.path import abspath, basename, join
 from subprocess import run, PIPE
-from tempfile import NamedTemporaryFile, TemporaryDirectory
-from typing import Iterable
-
-from Bio import SeqIO
-from Bio.Seq import Seq
-from Bio.SeqRecord import SeqRecord
+from tempfile import TemporaryDirectory
 
 ################################################################################################################
 #
@@ -22,15 +16,17 @@ from Bio.SeqRecord import SeqRecord
 
 # TODO: add minimap2 make database here
 
+
 def minimap2_alignment(cwd, par_tmpdir, cpus, database, out, queries):
-    cmd =  [
-        "/usr/local/bin/minimap2", 
-        "-cx", "sr",
+    cmd = [
+        "/usr/local/bin/minimap2",
+        "-cx",
+        "sr",
         f"-t {cpus}",
-        "--split-map", out,
+        "--split-map",
+        out,
         f"{database}",
     ]
-    print(queries)
     for q in queries:
         print(q)
         cmd += [q]
@@ -40,29 +36,24 @@ def minimap2_alignment(cwd, par_tmpdir, cpus, database, out, queries):
             print(line)
         raise Exception(f"Command failed: {' '.join(cmd)}")
 
+
 def minimap2_merge_cmd(cwd, par_tmpdir, chunks, queries):
-    cmd = [
-        "minimap2", 
-        "-cx", 
-        "sr", 
-        "--split-merge",
-        "-o",
-        f"{par_tmpdir}/out.paf"
-    ]
+    cmd = ["minimap2", "-cx", "sr", "--split-merge", "-o", f"{par_tmpdir}/out.paf"]
     for query in queries:
         cmd += [query]
-    
+
     cmd += [
-        ".", 
+        ".",
     ]
     for chunk in chunks:
         cmd += [f"{chunk}"]
-    
+
     res = run(cmd, cwd=cwd, stdout=PIPE, stderr=PIPE)
     if res.returncode != 0:
         for line in res.stderr.decode().split("\n"):
             print(line)
-        raise Exception(f"Command failed: {' '.join(cmd)}") 
+        raise Exception(f"Command failed: {' '.join(cmd)}")
+
 
 ################################################################################################################
 #
@@ -70,20 +61,10 @@ def minimap2_merge_cmd(cwd, par_tmpdir, chunks, queries):
 #
 ################################################################################################################
 
-def _consume_iter(iterable: Iterable, n: int):
-    for i, e in enumerate(iterable):
-        yield e
-        if i == n - 1:
-            break
 
-
-def align_chunk(ref_chunk: int, start: int, size: int, query_chunk: int):
-    return f"{ref_chunk} {start} {size} # query_chunk={query_chunk}\n"
-
-
-def zero_pad(n: int, l: int):
+def zero_pad(n: int, i: int):
     tagged = str(n)
-    return ("0" * (l - len(tagged))) + tagged
+    return ("0" * (i - len(tagged))) + tagged
 
 
 def make_par_dir(cwd: str, par_tmpdir: str):
@@ -100,7 +81,7 @@ def make_par_dir(cwd: str, par_tmpdir: str):
 
 def minimap2_chunk(db_chunk: str, output_dir: str, *query: str):
     """
-    Run a single chunk of the database using minimap2-scatter 
+    Run a single chunk of the database using minimap2-scatter
     """
 
     # make output directory
@@ -113,54 +94,45 @@ def minimap2_chunk(db_chunk: str, output_dir: str, *query: str):
     # get chunk
 
     # for diamond: chunk, n_seqs, n_letters = basename(db_chunk)[:-5].split("-")
-    chunk = basename(db_chunk).split("_")[-1] # example: nt.part_001  
+    chunk = basename(db_chunk).split("_")[-1]  # example: nt.part_001
 
-
-    # Don't really understand this temp dir thing? 
+    # Don't really understand this temp dir thing?
     with TemporaryDirectory() as tmp_dir:
         make_par_dir(tmp_dir, "par-tmp")
         with open(join(tmp_dir, "par-tmp", f"align_todo_{zero_pad(0, 6)}"), "w") as f:
             f.writelines([f"Aligning chunk f{chunk}"])
 
-        minimap2_alignment( 
-            cwd=tmp_dir, 
+        minimap2_alignment(
+            cwd=tmp_dir,
             par_tmpdir="par-tmp",
             cpus=7,
             database=abspath(db_chunk),
             out=f"intermediate{chunk}",
-            queries=[abspath(q) for q in query]
+            queries=[abspath(q) for q in query],
         )
-        shutil.copy(join(tmp_dir, f"intermediate{chunk}"), join(output_dir, f"intermediate{chunk}"))
+        shutil.copy(
+            join(tmp_dir, f"intermediate{chunk}"),
+            join(output_dir, f"intermediate{chunk}"),
+        )
 
-
-def mock_reference_fasta(chunks: int, chunk_size: int):
-    letters = chunk = i = 0
-    while chunk < chunks:
-        n = 100
-        letters += n
-        if letters > (1 + chunk) * chunk_size:
-            chunk += 1
-        yield SeqRecord(Seq("M" * n), "A")
-        i += 1
 
 def minimap2_merge(chunk_dir, out, *query):
     chunk_dir = abspath(chunk_dir)
     with TemporaryDirectory() as tmp_dir:
         make_par_dir(tmp_dir, "par-tmp")
         with open(join(tmp_dir, "par-tmp", f"join_todo_{zero_pad(0, 6)}"), "w") as f:
-            f.write("TOKEN\n") 
+            f.write("TOKEN\n")
         chunks = []
         query_tmp = []
         for q in query:
             shutil.copy(q, join(tmp_dir, basename(q)))
             query_tmp.append(join(tmp_dir, basename(q)))
-
         for f in os.listdir(chunk_dir):
-            print("list", f)
-            shutil.copy(join(chunk_dir, f), join(tmp_dir, "par-tmp", f)) 
+            shutil.copy(join(chunk_dir, f), join(tmp_dir, "par-tmp", f))
             chunks.append(join(tmp_dir, "par-tmp", f))
         minimap2_merge_cmd(tmp_dir, "par-tmp", chunks, query_tmp)
         shutil.copy(join(tmp_dir, "par-tmp", "out.paf"), out)
+
 
 if __name__ == "__main__":
     parser = ArgumentParser()
@@ -169,16 +141,15 @@ if __name__ == "__main__":
     minimap2_chunk_parser = subparsers.add_parser("minimap2-chunk")
     minimap2_chunk_parser.add_argument("--db", required=True)
     minimap2_chunk_parser.add_argument("--out-dir", required=True)
-    minimap2_chunk_parser.add_argument("--query", required=True, action='append')
+    minimap2_chunk_parser.add_argument("--query", required=True, action="append")
 
     minimap2_join_parser = subparsers.add_parser("minimap2-merge")
     minimap2_join_parser.add_argument("--chunk-dir", required=True)
     minimap2_join_parser.add_argument("--out", required=True)
-    minimap2_join_parser.add_argument("--query", required=True, action='append')
+    minimap2_join_parser.add_argument("--query", required=True, action="append")
 
     args = parser.parse_args(sys.argv[1:])
     if args.command == "minimap2-chunk":
         minimap2_chunk(args.db, args.out_dir, *args.query)
     elif args.command == "minimap2-merge":
         minimap2_merge(args.chunk_dir, args.out, *args.query)
-
