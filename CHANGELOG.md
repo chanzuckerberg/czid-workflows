@@ -15,6 +15,23 @@ To add clarity for users it is [recommended](https://keepachangelog.com/en/1.0.0
 In addition, if a modification is made that may affect the results of a pipeline run, we suggest using noting the `[Pipeline Change]` as well as including the specific change that was made, the predicted result to the output. 
 
 ### Unreleased
+
+### consensus-genome-v3.4.3
+- fix a bug to print out errors properly 
+
+### consensus-genome-v3.4.2
+- reduce size of tests
+- retry accession id with updated version
+- refactor validation input to use seqkit
+
+### short-read-mngs-v6.8.7
+- don't fail if picard fails, emit warning instead
+
+### short-read-mngs-v6.8.6
+- add step-name in STAR comment
+
+
+### consensus-genome-v3.4.1
 - [Pipeline Change] Modify parameters to reduce stringency in consensus-genome pipeline
 	- Change: reduce `ivarFreqThreshold` parameter from 0.9 to 0.75 and reduce `minDepth` parameter from 10 to 5 when using generalized consensus genome
 	- Predicted result: fewer ambiguous bases

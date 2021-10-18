@@ -305,6 +305,7 @@ task ValidateInput{
     command <<<
         set -uxo pipefail 
         function raise_error {
+            set +x
             export error=$1 cause=$2
             jq -nc ".wdl_error_message=true | .error=env.error | .cause=env.cause" > /dev/stderr
             exit 1 
@@ -330,7 +331,6 @@ task ValidateInput{
             # Input files cannot be in FASTA format
             raise_error InvalidInputFileError "One or more of the input files is in FASTA format"
         fi 
-        set -e
         if [[ "~{technology}" == "Illumina" ]]; then 
             # check if any of the input files has max length > 300bp
             MAXLEN=$(cut -f 8 input_stats.tsv | tail -n "~{length(fastqs)}" | sort -n | tail -n 1)
