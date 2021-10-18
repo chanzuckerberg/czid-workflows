@@ -116,3 +116,6 @@ RUN pip3 install taxoniq==0.6.0 && \
     https://github.com/chanzuckerberg/taxoniq/releases/download/v0.6.0/ncbi_genbank_accession_db-2021.4.10-py3-none-any.whl \
     https://github.com/chanzuckerberg/taxoniq/releases/download/v0.6.0/ncbi_genbank_accession_lengths-2021.4.10-py3-none-any.whl \
     https://github.com/chanzuckerberg/taxoniq/releases/download/v0.6.0/ncbi_genbank_accession_offsets-2021.4.10-py3-none-any.whl
+
+RUN wget https://github.com/shenwei356/seqkit/releases/download/v2.0.0/seqkit_linux_amd64.tar.gz && tar zxvf seqkit_linux_amd64.tar.gz \
+&& mv seqkit /usr/local/bin/ && rm seqkit_linux_amd64.tar.gz

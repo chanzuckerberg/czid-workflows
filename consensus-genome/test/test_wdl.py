@@ -136,6 +136,8 @@ class TestConsensusGenomes(WDLTestCase):
         )
         for output_name, output in res["outputs"].items():
             for filename in output:
+                if output_name == 'ValidateInput.input_stats':
+                    continue
                 self.assertTrue(filename.endswith(".fastq.gz"))
                 self.assertGreater(os.path.getsize(filename), 0)
 

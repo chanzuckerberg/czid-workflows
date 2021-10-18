@@ -303,66 +303,52 @@ task ValidateInput{
     }
 
     command <<<
-        python3 <<CODE
-        import gzip
-        import json
-        import os
-        import sys
+        set -uxo pipefail 
+        function raise_error {
+            export error=$1 cause=$2
+            jq -nc ".wdl_error_message=true | .error=env.error | .cause=env.cause" > /dev/stderr
+            exit 1 
+        }
+        if [[ "~{technology}" == "ONT" ]] && [[ "~{length(fastqs)}" -gt 1 ]]; then
+            # ONT pipeline should only have one input
+            raise_error InvalidInputFileError "Multiple fastqs provided for ONT"
+        fi 
 
-        from Bio import SeqIO
-
-        def truncate(gen):
-            for i, elem in enumerate(gen):
-                if i >= ~{max_reads}:
-                    break
-                if "~{technology}" == "Illumina" and len(elem.seq) >= 300:
-                    json.dump({
-                        "wdl_error_message": True,
-                        "error": "InvalidInputFileError",
-                        "cause": "Read longer than 300bp for Illumina",
-                    }, sys.stderr)
-                    os.exit(1)
-                yield elem
-
-        def maybe_gzip_open(path):
-            with open(path, "rb") as f:
-                gzipped = f.read(2) == b'\x1f\x8b'
-            if gzipped:
-                return gzip.open(path, "rt")
-            return open(path)
-
-        fastqs = ["~{sep='", "' fastqs}"]
-
-        # expect ONT to include only 1 input .fastq file; throw error if multiple input fastqs provided
-        if "~{technology}" == "ONT" and len(fastqs) > 1:
-            json.dump({
-                "wdl_error_message": True,
-                "error": "InvalidInputFileError",
-                "cause": "Multiple fastqs provided for ONT",
-            }, sys.stderr)
-            os.exit(1)
-
-        for i, file in enumerate(fastqs):
-            if not os.stat(file).st_size:
-                pass
-
-            # ONT guppyplex requires files are in .fastq format with .fastq extension (not .fq)
-            prefix = "~{prefix}"
-            out_path = f"{prefix}validated_{i}.fastq.gz" if len(fastqs) > 1 else f"{prefix}validated.fastq.gz"
-            with maybe_gzip_open(file) as in_f, gzip.open(out_path, "wt") as out_f:
-                SeqIO.write(truncate(SeqIO.parse(in_f, "fastq")), out_f, "fastq")
-        CODE
+        counter=1
+        for fastq in ~{sep=' ' fastqs}; do 
+            # limit max # of reads to max_reads
+            seqkit head -n "~{max_reads}" $fastq -o "~{prefix}validated_$counter.fastq.gz" 2> read_error.txt
+            if [[ -s read_error.txt ]]; then 
+                # Checks if seqkit can parse input files
+                raise_error InvalidFileFormatError "Error parsing one of the input files: ""$(cat read_error.txt)"
+            fi 
+           ((counter++))
+        done
+        set -e
+        seqkit stats "~{prefix}"validated*fastq.gz -T > input_stats.tsv
+        if grep  -q "FASTA" <<< $(cut -f 2 input_stats.tsv ); then 
+            # Input files cannot be in FASTA format
+            raise_error InvalidInputFileError "One or more of the input files is in FASTA format"
+        fi 
+        set -e
+        if [[ "~{technology}" == "Illumina" ]]; then 
+            # check if any of the input files has max length > 300bp
+            MAXLEN=$(cut -f 8 input_stats.tsv | tail -n "~{length(fastqs)}" | sort -n | tail -n 1)
+            if [[ $MAXLEN > 300 ]]; then 
+                raise_error InvalidInputFileError "Read longer than 300bp for Illumina"
+            fi 
+        fi
     >>>
 
     output {
         Array[File]+ validated_fastqs = glob("~{prefix}validated*.fastq.gz")
+        File? input_stats = "input_stats.tsv"
     }
 
     runtime {
         docker: docker_image_id
     }
 }
-
 
 task FetchSequenceByAccessionId {
     input {
