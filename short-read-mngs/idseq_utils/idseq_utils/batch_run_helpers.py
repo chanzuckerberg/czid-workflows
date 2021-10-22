@@ -1,6 +1,3 @@
-import os
-import re
-from os.path import basename, join
 import time
 import random
 import boto3
@@ -131,6 +128,3 @@ def _db_chunks(bucket: str, prefix):
     for page in result:
         for obj in page["Contents"]:
             yield obj["Key"]
-
-
-

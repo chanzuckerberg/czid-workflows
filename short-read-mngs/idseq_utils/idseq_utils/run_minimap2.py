@@ -45,7 +45,10 @@ def _run_chunk(
     else:
         project_id, sample_id = "0", "0"
 
-    job_name = f"idseq-{deployment_environment}-{alignment_algorithm}-project-{project_id}-sample-{sample_id}-part-{chunk_id}"
+    job_name = (
+        f"idseq-{deployment_environment}-{alignment_algorithm}-"
+        f"project-{project_id}-sample-{sample_id}-part-{chunk_id}"
+    )
     job_queue = f"idseq-{deployment_environment}-{alignment_algorithm}-{provisioning_model}-{priority_name}"
     job_definition = f"idseq-{deployment_environment}-{alignment_algorithm}"
     print(job_name)
