@@ -39,7 +39,26 @@ workflow alignment_scalability {
         min_read_length = min_read_length,
         docker_image_id = docker_image_id
     }
-
+    call RunDiamond {
+        input:        
+        fastqs = select_all([fastqs_0, fastqs_1]),
+        input_dir = input_dir,
+        chunk_dir = chunk_dir,
+        db_path = db_path,
+        docker_image_id = docker_image_id
+    }
+    call RunCallHits as call_diamond_hits{ 
+        input:
+        m8_file = RunDiamond.out_tsv,
+        lineage_db = lineage_db,
+        duplicate_cluster_size = duplicate_cluster_size,
+        taxon_blacklist = taxon_blacklist,
+        deuterostome_db = deuterostome_db,
+        accession2taxid = accession2taxid,
+        prefix = prefix,
+        min_read_length = min_read_length,
+        docker_image_id = docker_image_id
+    }
     output {
         File out_paf = RunMinimap.out_paf
         File out_m8 = RunMinimap.out_m8 
@@ -47,6 +66,7 @@ workflow alignment_scalability {
         File hitsummary = RunCallHits.hitsummary
     }
 }
+
 
 task RunMinimap {
     input {
@@ -107,6 +127,35 @@ task RunCallHits {
     output {
         File deduped_out_m8 = "~{prefix}_frompaf_deduped.m8"
         File hitsummary = "~{prefix}.hitsummary.tab"
+    }
+
+    runtime {
+        docker: docker_image_id
+    }
+}
+task RunDiamond {
+    input {
+        Array[File]+ fastqs
+        String input_dir
+        String chunk_dir
+        String db_path
+        String docker_image_id
+    }
+
+    command <<<
+        echo STARTING
+        export DEPLOYMENT_ENVIRONMENT=dev
+        export AWS_REGION="us-west-2"
+        export AWS_DEFAULT_REGION="us-west-2"
+        python3 <<CODE
+        from idseq_utils.run_diamond import run_diamond
+        fastqs = ["~{sep='", "' fastqs}"]
+        run_diamond("~{input_dir}", "~{chunk_dir}", "~{db_path}", "out.tsv", *fastqs)
+        CODE
+    >>>
+
+    output {
+        File out_tsv = "out.tsv"
     }
 
     runtime {
