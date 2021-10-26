@@ -16,6 +16,9 @@ In addition, if a modification is made that may affect the results of a pipeline
 
 ### Unreleased
 
+### consensus-genome-v3.4.4
+- raise limit for illumina CGs to 500 basepairs
+
 ### consensus-genome-v3.4.3
 - fix a bug to print out errors properly 
 
