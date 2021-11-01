@@ -53,7 +53,7 @@ task RunStar {
   python3 <<CODE
   """ save description to file """
   from idseq_utils.save_descriptions import star_description
-  from idseq_utils.error_printer import print_exceptions
+  from idseq_utils.exceptions import print_exceptions
 
   def main():
     description = star_description("~{nucleotide_type}")
@@ -120,7 +120,7 @@ task RunStar {
   import idseq_utils.sync_pairs as sp
   import shutil
   import glob
-  from idseq_utils.error_printer import print_exceptions
+  from idseq_utils.exceptions import print_exceptions
   
   def main():
     unmapped = sorted(glob.glob("Unmapped.out.mate*"))
@@ -144,7 +144,7 @@ task RunStar {
   """ count reads """
   import idseq_utils.count_reads as cr
   import glob
-  from idseq_utils.error_printer import print_exceptions
+  from idseq_utils.exceptions import print_exceptions
 
   def main():
     input_files = sorted(glob.glob("unmapped*.fastq"))
