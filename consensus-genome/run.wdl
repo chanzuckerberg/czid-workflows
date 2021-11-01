@@ -12,7 +12,7 @@ workflow consensus_genome {
         File fastqs_0
         File? fastqs_1
 
-        Int max_reads = 75000000
+        Int max_reads = 25000000
 
         String docker_image_id
         File ercc_fasta = "s3://idseq-public-references/consensus-genome/ercc_sequences.fasta"
