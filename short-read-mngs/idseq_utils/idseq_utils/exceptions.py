@@ -1,3 +1,7 @@
+import json
+import traceback
+
+
 class IDseqDagError(Exception):
     def __init__(self, json):
         super().__init__()
@@ -25,3 +29,11 @@ class BrokenReadPairError(InvalidInputFileError):
 
 class InvalidFileFormatError(InvalidInputFileError):
     pass
+
+
+def print_exceptions(f):
+    try:
+        f()
+    except Exception as e:
+        traceback.print_exc()
+        exit(json.dumps(dict(wdl_error_message=True, error=type(e).__name__, cause=str(e))))

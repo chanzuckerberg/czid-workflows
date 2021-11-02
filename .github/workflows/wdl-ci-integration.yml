@@ -55,6 +55,7 @@ jobs:
           echo "TAG=${TAG}" >> $GITHUB_ENV
       - name: run tests
         run: |
+          [ -d "${{ matrix.workflow_dir }}/integration_test" ] || exit 0
           source /etc/profile
           # explicitly block EC2 IMDS endpoint to work around awscli issue:
           # https://github.com/aws/aws-cli/issues/5234#issuecomment-635459464

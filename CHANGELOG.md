@@ -16,6 +16,9 @@ In addition, if a modification is made that may affect the results of a pipeline
 
 ### Unreleased
 
+### short-read-mngs-v6.8.7
+- fix bug in RunSTAR that caused known errors not to be reported
+
 ### consensus-genome-v3.4.4
 - raise limit for illumina CGs to 500 basepairs
 

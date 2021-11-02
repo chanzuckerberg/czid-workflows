@@ -53,9 +53,14 @@ task RunStar {
   python3 <<CODE
   """ save description to file """
   from idseq_utils.save_descriptions import star_description
-  description = star_description("~{nucleotide_type}")
-  with open("star_out.description.md", "w+") as f:
-    f.write(description)
+  from idseq_utils.exceptions import print_exceptions
+
+  def main():
+    description = star_description("~{nucleotide_type}")
+    with open("star_out.description.md", "w+") as f:
+      f.write(description)
+
+  print_exceptions(main)
   CODE
 
   mkdir "STAR_genome"
@@ -115,15 +120,20 @@ task RunStar {
   import idseq_utils.sync_pairs as sp
   import shutil
   import glob
-  unmapped = sorted(glob.glob("Unmapped.out.mate*"))
-  output_files, too_discrepant = sp.sync_pairs(unmapped)
-  if too_discrepant:
-      raise ValueError("pairs are too discrepant")
-  for unmapped_file in output_files:
-      sp.sort_fastx_by_entry_id(unmapped_file)
+  from idseq_utils.exceptions import print_exceptions
+  
+  def main():
+    unmapped = sorted(glob.glob("Unmapped.out.mate*"))
+    output_files, too_discrepant = sp.sync_pairs(unmapped)
+    if too_discrepant:
+        raise ValueError("pairs are too discrepant")
+    for unmapped_file in output_files:
+        sp.sort_fastx_by_entry_id(unmapped_file)
 
-  for ind, unmapped_file in enumerate(output_files):
-      shutil.move(unmapped_file, f"unmapped{ind+1}.fastq")
+    for ind, unmapped_file in enumerate(output_files):
+        shutil.move(unmapped_file, f"unmapped{ind+1}.fastq")
+
+  print_exceptions(main)
   CODE
 
   if [ -f "Aligned.out.bam" ]; then 
@@ -134,8 +144,13 @@ task RunStar {
   """ count reads """
   import idseq_utils.count_reads as cr
   import glob
-  input_files = sorted(glob.glob("unmapped*.fastq"))
-  cr.main("star_out", input_files)
+  from idseq_utils.exceptions import print_exceptions
+
+  def main():
+    input_files = sorted(glob.glob("unmapped*.fastq"))
+    cr.main("star_out", input_files)
+
+  print_exceptions(main)
   CODE
 
   if [ -f "ReadsPerGene.out.tab" ]; then 
