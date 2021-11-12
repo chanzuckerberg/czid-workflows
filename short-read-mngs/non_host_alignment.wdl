@@ -184,6 +184,40 @@ task RunAlignment_minimap2_out {
         docker: docker_image_id
     }
 }
+task RunAlignment_diamond_out {
+    input {
+        Array[File]+ fastqs
+        String input_dir
+        String chunk_dir
+        String db_path
+        String prefix
+        String docker_image_id
+    }
+
+    command <<<
+        echo STARTING
+        export DEPLOYMENT_ENVIRONMENT=dev
+        export AWS_REGION="us-west-2"
+        export AWS_DEFAULT_REGION="us-west-2"
+        for fastq in ~{sep=' ' fastqs}; do 
+          s3parcp $fastq "~{input_dir}"
+        done 
+        python3 <<CODE
+        from idseq_utils.run_diamond import run_diamond
+        fastqs = ["~{sep='", "' fastqs}"]
+        run_diamond("~{input_dir}", "~{chunk_dir}", "~{db_path}", "~{prefix}.m8", *fastqs)
+        CODE
+    >>>
+
+    output {
+        File out_m8 = "~{prefix}.m8"
+    }
+
+    runtime {
+        docker: docker_image_id
+    }
+}
+
 task RunCallHits {
     input {
         File m8_file
@@ -257,6 +291,20 @@ workflow idseq_non_host_alignment {
           index = local_gsnap_index,
           genome_name = local_gsnap_genome_name
     }
+  call RunAlignment_rapsearch2_out {
+    input:
+      docker_image_id = docker_image_id,
+      s3_wd_uri = s3_wd_uri,
+      host_filter_out_gsnap_filter_fa = select_all([host_filter_out_gsnap_filter_1_fa, host_filter_out_gsnap_filter_2_fa, host_filter_out_gsnap_filter_merged_fa]),
+      duplicate_cluster_sizes_tsv = duplicate_cluster_sizes_tsv,
+      lineage_db = lineage_db,
+      accession2taxid_db = accession2taxid_db,
+      taxon_blacklist = taxon_blacklist,
+      index_dir_suffix = index_dir_suffix,
+      use_taxon_whitelist = use_taxon_whitelist,
+      run_locally = defined(local_rapsearch2_index),
+      index = local_rapsearch2_index
+  }
   }
   if (alignment_scalability) { 
     call RunAlignment_minimap2_out { 
@@ -280,22 +328,30 @@ workflow idseq_non_host_alignment {
         min_read_length = min_read_length,
         docker_image_id = docker_image_id
     }
+    call RunAlignment_diamond_out {
+      input: 
+      fastqs = select_all([host_filter_out_gsnap_filter_1_fa, host_filter_out_gsnap_filter_2_fa]),
+      input_dir = "s3://idseq-samples-development/samples/alignment-scalability-test/alignment-scalability-test/1/",
+      chunk_dir = "s3://idseq-samples-development/samples/alignment-scalability-test/alignment-scalability-test/1/chunks/",
+      db_path = "s3://idseq-public-references/diamond-test/2021-01-22/",
+      prefix = "rapsearch2",
+      docker_image_id = docker_image_id
+    }
+    call RunCallHits as RunCallHitsDiamond { 
+        input:
+        m8_file = RunAlignment_diamond_out.out_m8,
+        lineage_db = lineage_db,
+        duplicate_cluster_size = duplicate_cluster_sizes_tsv,
+        taxon_blacklist = taxon_blacklist,
+        deuterostome_db = deuterostome_db,
+        accession2taxid = accession2taxid_db,
+        prefix = "rapsearch2",
+        min_read_length = min_read_length,
+        docker_image_id = docker_image_id
+    }
   }
 
-  call RunAlignment_rapsearch2_out {
-    input:
-      docker_image_id = docker_image_id,
-      s3_wd_uri = s3_wd_uri,
-      host_filter_out_gsnap_filter_fa = select_all([host_filter_out_gsnap_filter_1_fa, host_filter_out_gsnap_filter_2_fa, host_filter_out_gsnap_filter_merged_fa]),
-      duplicate_cluster_sizes_tsv = duplicate_cluster_sizes_tsv,
-      lineage_db = lineage_db,
-      accession2taxid_db = accession2taxid_db,
-      taxon_blacklist = taxon_blacklist,
-      index_dir_suffix = index_dir_suffix,
-      use_taxon_whitelist = use_taxon_whitelist,
-      run_locally = defined(local_rapsearch2_index),
-      index = local_rapsearch2_index
-  }
+
 
   call CombineTaxonCounts {
     input:
@@ -303,7 +359,7 @@ workflow idseq_non_host_alignment {
       s3_wd_uri = s3_wd_uri,
       counts_json_files = [
         select_first([RunAlignment_gsnap_out.gsnap_counts_with_dcr_json, RunCallHits.counts_json]),
-        RunAlignment_rapsearch2_out.rapsearch2_counts_with_dcr_json
+        select_first([RunAlignment_rapsearch2_out.rapsearch2_counts_with_dcr_json, RunCallHitsDiamond.counts_json])
       ]
   }
 
@@ -316,10 +372,10 @@ workflow idseq_non_host_alignment {
       gsnap_deduped_m8 = select_first([RunAlignment_gsnap_out.gsnap_deduped_m8, RunCallHits.deduped_out_m8]),
       gsnap_hitsummary_tab = select_first([RunAlignment_gsnap_out.gsnap_hitsummary_tab, RunCallHits.hitsummary]),
       gsnap_counts_with_dcr_json = select_first([RunAlignment_gsnap_out.gsnap_counts_with_dcr_json, RunCallHits.counts_json]),
-      rapsearch2_m8 = RunAlignment_rapsearch2_out.rapsearch2_m8,
-      rapsearch2_deduped_m8 = RunAlignment_rapsearch2_out.rapsearch2_deduped_m8,
-      rapsearch2_hitsummary_tab = RunAlignment_rapsearch2_out.rapsearch2_hitsummary_tab,
-      rapsearch2_counts_with_dcr_json = RunAlignment_rapsearch2_out.rapsearch2_counts_with_dcr_json,
+      rapsearch2_m8 = select_first([RunAlignment_rapsearch2_out.rapsearch2_m8, RunAlignment_diamond_out.out_m8]),
+      rapsearch2_deduped_m8 = select_first([RunAlignment_rapsearch2_out.rapsearch2_deduped_m8, RunCallHitsDiamond.deduped_out_m8]),
+      rapsearch2_hitsummary_tab = select_first([RunAlignment_rapsearch2_out.rapsearch2_hitsummary_tab, RunCallHitsDiamond.hitsummary]),
+      rapsearch2_counts_with_dcr_json = select_first([RunAlignment_rapsearch2_out.rapsearch2_counts_with_dcr_json, RunCallHitsDiamond.counts_json]),
       idseq_dedup_out_duplicate_clusters_csv = idseq_dedup_out_duplicate_clusters_csv,
       duplicate_cluster_sizes_tsv = duplicate_cluster_sizes_tsv
   }
@@ -330,10 +386,10 @@ workflow idseq_non_host_alignment {
     File gsnap_out_gsnap_hitsummary_tab = select_first([RunAlignment_gsnap_out.gsnap_hitsummary_tab, RunCallHits.hitsummary])
     File gsnap_out_gsnap_counts_with_dcr_json = select_first([RunAlignment_gsnap_out.gsnap_counts_with_dcr_json, RunCallHits.counts_json])
     File? gsnap_out_count = RunAlignment_gsnap_out.output_read_count
-    File rapsearch2_out_rapsearch2_m8 = RunAlignment_rapsearch2_out.rapsearch2_m8
-    File rapsearch2_out_rapsearch2_deduped_m8 = RunAlignment_rapsearch2_out.rapsearch2_deduped_m8
-    File rapsearch2_out_rapsearch2_hitsummary_tab = RunAlignment_rapsearch2_out.rapsearch2_hitsummary_tab
-    File rapsearch2_out_rapsearch2_counts_with_dcr_json = RunAlignment_rapsearch2_out.rapsearch2_counts_with_dcr_json
+    File rapsearch2_out_rapsearch2_m8 = select_first([RunAlignment_rapsearch2_out.rapsearch2_m8, RunAlignment_diamond_out.out_m8])
+    File rapsearch2_out_rapsearch2_deduped_m8 = select_first([RunAlignment_rapsearch2_out.rapsearch2_deduped_m8, RunCallHitsDiamond.deduped_out_m8])
+    File rapsearch2_out_rapsearch2_hitsummary_tab = select_first([RunAlignment_rapsearch2_out.rapsearch2_hitsummary_tab, RunCallHitsDiamond.hitsummary])
+    File rapsearch2_out_rapsearch2_counts_with_dcr_json = select_first([RunAlignment_rapsearch2_out.rapsearch2_counts_with_dcr_json, RunCallHitsDiamond.counts_json])
     File? rapsearch2_out_count = RunAlignment_rapsearch2_out.output_read_count
     File taxon_count_out_taxon_counts_with_dcr_json = CombineTaxonCounts.taxon_counts_with_dcr_json
     File? taxon_count_out_count = CombineTaxonCounts.output_read_count

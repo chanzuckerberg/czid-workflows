@@ -184,13 +184,13 @@ def blastx_join(chunk_dir: str, out: str, *query: str):
                 par_tmpdir="par-tmp",
                 block_size=1,
                 database=db.name,
-                out="out.tsv",
+                out=out,
                 join_chunks=chunks,
                 queries=(abspath(q) for q in query),
             )
 
         with open(out, "w") as out_f:
-            for out_chunk in glob(join(tmp_dir, "out.tsv_*")):
+            for out_chunk in glob(join(tmp_dir, f"{out}_*")):
                 with open(out_chunk) as out_chunk_f:
                     out_f.writelines(out_chunk_f)
                 os.remove(out_chunk)
