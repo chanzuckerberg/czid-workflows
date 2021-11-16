@@ -40,5 +40,6 @@ jobs:
       - name: Trigger benchmarks
         run: |
           export DEPLOY_REF='${{github.event.inputs.idseq_ref}}' GITHUB_TOKEN=${GH_DEPLOY_TOKEN:-GITHUB_TOKEN} IDSEQ_WORKFLOWS_RELEASE='${{github.event.inputs.idseq_workflows_release}}'
+          gh auth status
           workflow_args=$(jq -n ".ref=env.DEPLOY_REF | .inputs={idseq_workflows_release: env.IDSEQ_WORKFLOWS_RELEASE, idseq_workflows_ref: env.GITHUB_SHA}")
           gh api repos/:owner/idseq/actions/workflows/short-read-mngs-benchmarks.yml/dispatches --input - <<< "$workflow_args"
