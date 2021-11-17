@@ -154,6 +154,7 @@ task RunAlignment_minimap2_out {
         String input_dir
         String chunk_dir
         String db_path
+        String minimap2_args 
         String docker_image_id
         String prefix
     }
@@ -190,6 +191,7 @@ task RunAlignment_diamond_out {
         String input_dir
         String chunk_dir
         String db_path
+        String diamond_args 
         String prefix
         String docker_image_id
     }
@@ -272,6 +274,14 @@ workflow idseq_non_host_alignment {
     File? local_gsnap_index
     String? local_gsnap_genome_name
     File? local_rapsearch2_index
+    String alignment_input_dir = "s3://idseq-samples-development/samples/alignment-scalability-test/combined-test/1/"
+    String minimap2_chunk_dir = "s3://idseq-samples-development/samples/alignment-scalability-test/combined-test/1/minimap2-chunks/"
+    String diamond_chunk_dir = "s3://idseq-samples-development/samples/alignment-scalability-test/combined-test/1/diamond-chunks/"
+    String minimap2_db = "s3://idseq-public-references/minimap2-test/2021-05-21_k12_w8/"
+    String diamond_db = "s3://idseq-public-references/diamond-test/2021-01-22/"
+    String minimap2_args = ""
+    String diamond_args = ""
+
   }
   if (!alignment_scalability){
     call RunAlignment_gsnap_out {
@@ -310,9 +320,10 @@ workflow idseq_non_host_alignment {
     call RunAlignment_minimap2_out { 
       input:         
         fastqs = select_all([host_filter_out_gsnap_filter_1_fa, host_filter_out_gsnap_filter_2_fa]),
-        input_dir = "s3://idseq-samples-development/samples/alignment-scalability-test/minimap2-scatter-test/8_S8_L001_16334_reads_nh/",
-        chunk_dir = "s3://idseq-samples-development/samples/alignment-scalability-test/minimap2-scatter-test/8_S8_L001_16334_reads_nh/chunks/",
-        db_path = "s3://idseq-public-references/minimap2-test/small-nt2/",
+        input_dir = alignment_input_dir,
+        chunk_dir = minimap2_chunk_dir,
+        db_path = minimap2_db,
+        minimap2_args = minimap2_args,
         prefix= "gsnap",
         docker_image_id = docker_image_id
     }
@@ -331,9 +342,10 @@ workflow idseq_non_host_alignment {
     call RunAlignment_diamond_out {
       input: 
       fastqs = select_all([host_filter_out_gsnap_filter_1_fa, host_filter_out_gsnap_filter_2_fa]),
-      input_dir = "s3://idseq-samples-development/samples/alignment-scalability-test/alignment-scalability-test/1/",
-      chunk_dir = "s3://idseq-samples-development/samples/alignment-scalability-test/alignment-scalability-test/1/chunks/",
-      db_path = "s3://idseq-public-references/diamond-test/2021-01-22/",
+      input_dir = alignment_input_dir,
+      chunk_dir = diamond_chunk_dir,
+      db_path = diamond_db,
+      diamond_args = diamond_args,
       prefix = "rapsearch2",
       docker_image_id = docker_image_id
     }
