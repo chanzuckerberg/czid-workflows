@@ -171,7 +171,7 @@ task RunAlignment_minimap2_out {
         python3 <<CODE
         from idseq_utils.run_minimap2 import run_minimap2
         fastqs = ["~{sep='", "' fastqs}"]
-        run_minimap2("~{input_dir}", "~{chunk_dir}", "~{db_path}", "~{prefix}.paf", *fastqs)
+        run_minimap2("~{input_dir}", "~{chunk_dir}", "~{db_path}", "~{prefix}.paf", "~{minimap2_args}", *fastqs)
         CODE
         python3 /usr/local/lib/python3.6/dist-packages/idseq_utils/paf2blast6.py "~{prefix}".paf
         mv *frompaf.m8 "~{prefix}.m8" # TODO: rewrite paf2blast6.py to output in this format
@@ -279,8 +279,10 @@ workflow idseq_non_host_alignment {
     String diamond_chunk_dir = "s3://idseq-samples-development/samples/alignment-scalability-test/combined-test/1/diamond-chunks/"
     String minimap2_db = "s3://idseq-public-references/minimap2-test/2021-05-21_k12_w8/"
     String diamond_db = "s3://idseq-public-references/diamond-test/2021-01-22/"
-    String minimap2_args = ""
+    String minimap2_args = "-cx sr --secondary=yes"
     String diamond_args = ""
+    String minimap2_prefix = "gsnap"
+    String diamond_prefix = "rapsearch2"
 
   }
   if (!alignment_scalability){
@@ -319,12 +321,12 @@ workflow idseq_non_host_alignment {
   if (alignment_scalability) { 
     call RunAlignment_minimap2_out { 
       input:         
-        fastqs = select_all([host_filter_out_gsnap_filter_1_fa, host_filter_out_gsnap_filter_2_fa]),
+        fastqs = select_all([host_filter_out_gsnap_filter_merged_fa]), #select_all([host_filter_out_gsnap_filter_1_fa, host_filter_out_gsnap_filter_2_fa]),
         input_dir = alignment_input_dir,
         chunk_dir = minimap2_chunk_dir,
         db_path = minimap2_db,
         minimap2_args = minimap2_args,
-        prefix= "gsnap",
+        prefix= minimap2_prefix,
         docker_image_id = docker_image_id
     }
     call RunCallHits { 
@@ -335,18 +337,18 @@ workflow idseq_non_host_alignment {
         taxon_blacklist = taxon_blacklist,
         deuterostome_db = deuterostome_db,
         accession2taxid = accession2taxid_db,
-        prefix = "gsnap",
+        prefix = minimap2_prefix,
         min_read_length = min_read_length,
         docker_image_id = docker_image_id
     }
     call RunAlignment_diamond_out {
       input: 
-      fastqs = select_all([host_filter_out_gsnap_filter_1_fa, host_filter_out_gsnap_filter_2_fa]),
+      fastqs = select_all([host_filter_out_gsnap_filter_merged_fa]), #select_all([host_filter_out_gsnap_filter_1_fa, host_filter_out_gsnap_filter_2_fa]),
       input_dir = alignment_input_dir,
       chunk_dir = diamond_chunk_dir,
       db_path = diamond_db,
       diamond_args = diamond_args,
-      prefix = "rapsearch2",
+      prefix = diamond_prefix,
       docker_image_id = docker_image_id
     }
     call RunCallHits as RunCallHitsDiamond { 
@@ -357,7 +359,7 @@ workflow idseq_non_host_alignment {
         taxon_blacklist = taxon_blacklist,
         deuterostome_db = deuterostome_db,
         accession2taxid = accession2taxid_db,
-        prefix = "rapsearch2",
+        prefix = diamond_prefix,
         min_read_length = min_read_length,
         docker_image_id = docker_image_id
     }

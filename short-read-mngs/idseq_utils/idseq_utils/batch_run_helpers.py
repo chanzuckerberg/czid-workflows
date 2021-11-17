@@ -7,7 +7,6 @@ import logging
 from botocore.exceptions import ClientError
 
 log = logging.getLogger(__name__)
-ALIGNMENT_ALGORITHM = "minimap2"
 
 MAX_CHUNKS_IN_FLIGHT = 10
 
@@ -27,7 +26,7 @@ class BatchJobFailed(Exception):
 
 
 def _log_alignment_batch_job_status(
-    job_id, job_queue, job_definition, chunk_id, status
+    job_id, job_queue, job_definition, chunk_id, status, alignment_algorithm
 ):
     log.info(
         "alignment_batch_job_status",
@@ -37,7 +36,7 @@ def _log_alignment_batch_job_status(
             "job_queue": job_queue,
             "job_definition": job_definition,
             "status": status,
-            "alignment_algorithm": ALIGNMENT_ALGORITHM,
+            "alignment_algorithm": alignment_algorithm,
         },
     )
 
@@ -58,7 +57,7 @@ def _get_job_status(job_id):
             raise e
 
 
-def _run_batch_job(job_name, job_queue, job_definition, environment, chunk_id, retries):
+def _run_batch_job(job_name, job_queue, job_definition, environment, chunk_id, alignment_algorithm, retries):
     client = boto3.client("batch")
     response = client.submit_job(
         jobName=job_name,
@@ -71,7 +70,7 @@ def _run_batch_job(job_name, job_queue, job_definition, environment, chunk_id, r
     )
     job_id = response["jobId"]
     _log_alignment_batch_job_status(
-        job_id, job_queue, job_definition, chunk_id, "SUBMITTED"
+        job_id, job_queue, job_definition, chunk_id, "SUBMITTED", alignment_algorithm
     )
 
     delay = 60 + random.randint(
@@ -96,7 +95,7 @@ def _run_batch_job(job_name, job_queue, job_definition, environment, chunk_id, r
 
         if status == "SUCCEEDED":
             _log_alignment_batch_job_status(
-                job_id, job_queue, job_definition, chunk_id, status
+                job_id, job_queue, job_definition, chunk_id, status, alignment_algorithm
             )
             return job_id
         if status == "FAILED":
@@ -105,11 +104,11 @@ def _run_batch_job(job_name, job_queue, job_definition, environment, chunk_id, r
                 extra={
                     "job_id": job_id,
                     "chunk_id": chunk_id,
-                    "alignment_algorithm": ALIGNMENT_ALGORITHM,
+                    "alignment_algorithm": alignment_algorithm,
                 },
             )
             _log_alignment_batch_job_status(
-                job_id, job_queue, job_definition, chunk_id, status
+                job_id, job_queue, job_definition, chunk_id, status, alignment_algorithm
             )
             raise BatchJobFailed("chunk alignment failed")
         time.sleep(delay)
