@@ -361,7 +361,7 @@ workflow idseq_non_host_alignment {
         deuterostome_db = deuterostome_db,
         accession2taxid = accession2taxid_db,
         prefix = diamond_prefix,
-        min_read_length = min_read_length,
+        min_read_length = 0,
         docker_image_id = docker_image_id
     }
   }
