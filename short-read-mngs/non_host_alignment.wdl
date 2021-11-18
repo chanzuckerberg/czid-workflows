@@ -160,7 +160,7 @@ task RunAlignment_minimap2_out {
     }
 
     command <<<
-        set -e 
+        set -euxo pipefail
         echo STARTING
         export DEPLOYMENT_ENVIRONMENT=dev
         export AWS_REGION="us-west-2"
@@ -197,6 +197,7 @@ task RunAlignment_diamond_out {
     }
 
     command <<<
+        set -euxo pipefail  
         echo STARTING
         export DEPLOYMENT_ENVIRONMENT=dev
         export AWS_REGION="us-west-2"
@@ -234,7 +235,7 @@ task RunCallHits {
     }
 
     command <<<
-        set -e 
+        set -euxo pipefail
         python3 <<CODE
         from idseq_dag.util.m8 import call_hits_m8, generate_taxon_count_json_from_m8
         call_hits_m8("~{m8_file}", "~{lineage_db}", "~{accession2taxid}", "~{prefix}.deduped.m8", "~{prefix}.hitsummary.tab", ~{min_read_length}, "~{deuterostome_db}", None, "~{taxon_blacklist}")
