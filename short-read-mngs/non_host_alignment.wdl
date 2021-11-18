@@ -278,7 +278,7 @@ workflow idseq_non_host_alignment {
     String alignment_input_dir = "s3://idseq-samples-development/samples/alignment-scalability-test/combined-test/1/"
     String minimap2_chunk_dir = "s3://idseq-samples-development/samples/alignment-scalability-test/combined-test/1/minimap2-chunks/"
     String diamond_chunk_dir = "s3://idseq-samples-development/samples/alignment-scalability-test/combined-test/1/diamond-chunks/"
-    String minimap2_db = "s3://idseq-public-references/minimap2-test/2021-05-21_k12_w8/"
+    String minimap2_db = "s3://idseq-public-references/minimap2-test/2020-04-20/nt_k12_w8_20/"
     String diamond_db = "s3://idseq-public-references/diamond-test/2021-01-22/"
     String minimap2_args = "-cx sr --secondary=yes"
     String diamond_args = ""
@@ -322,7 +322,7 @@ workflow idseq_non_host_alignment {
   if (alignment_scalability) { 
     call RunAlignment_minimap2_out { 
       input:         
-        fastqs = select_all([host_filter_out_gsnap_filter_merged_fa]), #select_all([host_filter_out_gsnap_filter_1_fa, host_filter_out_gsnap_filter_2_fa]),
+        fastqs = [select_first([host_filter_out_gsnap_filter_merged_fa, host_filter_out_gsnap_filter_1_fa])], #select_all([host_filter_out_gsnap_filter_1_fa, host_filter_out_gsnap_filter_2_fa]),
         input_dir = alignment_input_dir,
         chunk_dir = minimap2_chunk_dir,
         db_path = minimap2_db,
@@ -344,7 +344,7 @@ workflow idseq_non_host_alignment {
     }
     call RunAlignment_diamond_out {
       input: 
-      fastqs = select_all([host_filter_out_gsnap_filter_merged_fa]), #select_all([host_filter_out_gsnap_filter_1_fa, host_filter_out_gsnap_filter_2_fa]),
+      fastqs = [select_first([host_filter_out_gsnap_filter_merged_fa, host_filter_out_gsnap_filter_1_fa])], #select_all([host_filter_out_gsnap_filter_1_fa, host_filter_out_gsnap_filter_2_fa]),
       input_dir = alignment_input_dir,
       chunk_dir = diamond_chunk_dir,
       db_path = diamond_db,
