@@ -271,7 +271,7 @@ workflow idseq_non_host_alignment {
     File deuterostome_db = "s3://idseq-public-references/taxonomy/2021-01-22/deuterostome_taxids.txt"
     Boolean use_deuterostome_filter = true
     Boolean use_taxon_whitelist = false
-    Boolean alignment_scalability = false
+    Boolean alignment_scalability = true
     File? local_gsnap_index
     String? local_gsnap_genome_name
     File? local_rapsearch2_index
