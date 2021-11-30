@@ -278,7 +278,7 @@ workflow idseq_non_host_alignment {
     String alignment_input_dir = "s3://idseq-samples-development/samples/alignment-scalability-test/combined-test/1/"
     String minimap2_chunk_dir = "s3://idseq-samples-development/samples/alignment-scalability-test/combined-test/1/minimap2-chunks/"
     String diamond_chunk_dir = "s3://idseq-samples-development/samples/alignment-scalability-test/combined-test/1/diamond-chunks/"
-    String minimap2_db = "s3://idseq-public-references/minimap2-test/2021-01-22/nt_k12_w8_20/"
+    String minimap2_db = "s3://idseq-public-references/minimap2-test/2021-01-22/nt_k12_w5_20/"
     String diamond_db = "s3://idseq-public-references/diamond-test/2021-01-22/"
     String minimap2_args = "-cx sr --secondary=yes"
     String diamond_args = ""
