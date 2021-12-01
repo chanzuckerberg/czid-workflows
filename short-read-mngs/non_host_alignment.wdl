@@ -171,7 +171,7 @@ task RunAlignment_minimap2_out {
         import os
         from idseq_utils.run_minimap2 import run_minimap2
         fastas = ["~{sep='", "' fastas}"]
-        chunk_dir = os.path.join("~{s3_wd_uri}", "chunks")
+        chunk_dir = os.path.join("~{s3_wd_uri}", "chunks/")
         run_minimap2("~{s3_wd_uri}", chunk_dir, "~{db_path}", "~{prefix}.paf", "~{minimap2_args}", *fastas)
         CODE
         python3 /usr/local/lib/python3.6/dist-packages/idseq_utils/paf2blast6.py "~{prefix}".paf
