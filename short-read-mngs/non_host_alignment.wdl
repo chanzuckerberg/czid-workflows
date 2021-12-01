@@ -150,9 +150,8 @@ task GenerateAnnotatedFasta {
 
 task RunAlignment_minimap2_out {
     input {
-        Array[File]+ fastqs
-        String input_dir
-        String chunk_dir
+        String s3_wd_uri
+        Array[File]+ fastas
         String db_path
         String minimap2_args 
         String docker_image_id
@@ -161,17 +160,19 @@ task RunAlignment_minimap2_out {
 
     command <<<
         set -euxo pipefail
-        echo STARTING
+        # should already be here
+        #for fasta in ~{sep=' ' fastas}; do 
+        #  s3parcp $fasta "~{s3_wd_uri}"
+        #done 
         export DEPLOYMENT_ENVIRONMENT=dev
         export AWS_REGION="us-west-2"
         export AWS_DEFAULT_REGION="us-west-2"
-        for fastq in ~{sep=' ' fastqs}; do 
-          s3parcp $fastq "~{input_dir}"
-        done 
         python3 <<CODE
+        import os
         from idseq_utils.run_minimap2 import run_minimap2
-        fastqs = ["~{sep='", "' fastqs}"]
-        run_minimap2("~{input_dir}", "~{chunk_dir}", "~{db_path}", "~{prefix}.paf", "~{minimap2_args}", *fastqs)
+        fastas = ["~{sep='", "' fastas}"]
+        chunk_dir = os.path.join("~{s3_wd_uri}", "chunks")
+        run_minimap2("~{s3_wd_uri}", chunk_dir, "~{db_path}", "~{prefix}.paf", "~{minimap2_args}", *fastas)
         CODE
         python3 /usr/local/lib/python3.6/dist-packages/idseq_utils/paf2blast6.py "~{prefix}".paf
         mv *frompaf.m8 "~{prefix}.m8" # TODO: rewrite paf2blast6.py to output in this format
@@ -187,7 +188,7 @@ task RunAlignment_minimap2_out {
 }
 task RunAlignment_diamond_out {
     input {
-        Array[File]+ fastqs
+        Array[File]+ fastas
         String input_dir
         String chunk_dir
         String db_path
@@ -202,13 +203,13 @@ task RunAlignment_diamond_out {
         export DEPLOYMENT_ENVIRONMENT=dev
         export AWS_REGION="us-west-2"
         export AWS_DEFAULT_REGION="us-west-2"
-        for fastq in ~{sep=' ' fastqs}; do 
-          s3parcp $fastq "~{input_dir}"
+        for fasta in ~{sep=' ' fastas}; do 
+          s3parcp $fasta "~{input_dir}"
         done 
         python3 <<CODE
         from idseq_utils.run_diamond import run_diamond
-        fastqs = ["~{sep='", "' fastqs}"]
-        run_diamond("~{input_dir}", "~{chunk_dir}", "~{db_path}", "~{prefix}.m8", *fastqs)
+        fastas = ["~{sep='", "' fastas}"]
+        run_diamond("~{input_dir}", "~{chunk_dir}", "~{db_path}", "~{prefix}.m8", *fastas)
         CODE
     >>>
 
@@ -232,14 +233,35 @@ task RunCallHits {
         String prefix 
         Int min_read_length = 36
         String docker_image_id
+        String count_type = "NT"
     }
 
     command <<<
         set -euxo pipefail
         python3 <<CODE
         from idseq_dag.util.m8 import call_hits_m8, generate_taxon_count_json_from_m8
-        call_hits_m8("~{m8_file}", "~{lineage_db}", "~{accession2taxid}", "~{prefix}.deduped.m8", "~{prefix}.hitsummary.tab", ~{min_read_length}, "~{deuterostome_db}", None, "~{taxon_blacklist}")
-        generate_taxon_count_json_from_m8( "~{prefix}.deduped.m8", "~{prefix}.hitsummary.tab", "NT", "~{lineage_db}", "~{deuterostome_db}", None, "~{taxon_blacklist}", "~{duplicate_cluster_size}", "~{prefix}_counts_with_dcr.json")
+        call_hits_m8(
+            input_m8="~{m8_file}",
+            lineage_map_path="~{lineage_db}",
+            accession2taxid_dict_path="~{accession2taxid}",
+            output_m8="~{prefix}.deduped.m8",
+            output_summary="~{prefix}.hitsummary.tab",
+            min_alignment_length=~{min_read_length},
+            deuterostome_path="~{deuterostome_db}",
+            taxon_whitelist_path=None,
+            taxon_blacklist_path="~{taxon_blacklist}",
+        )
+        generate_taxon_count_json_from_m8(
+            blastn_6_path="~{prefix}.deduped.m8",
+            hit_level_path="~{prefix}.hitsummary.tab",
+            count_type="~{count_type}",
+            lineage_map_path="~{lineage_db}",
+            deuterostome_path="~{deuterostome_db}",
+            taxon_whitelist_path=None,
+            taxon_blacklist_path="~{taxon_blacklist}",
+            duplicate_cluster_sizes_path="~{duplicate_cluster_size}",
+            output_json_file="~{prefix}_counts_with_dcr.json",
+        )
         CODE
         >>>
 
@@ -322,15 +344,14 @@ workflow idseq_non_host_alignment {
   if (alignment_scalability) { 
     call RunAlignment_minimap2_out { 
       input:         
-        fastqs = [select_first([host_filter_out_gsnap_filter_merged_fa, host_filter_out_gsnap_filter_1_fa])], #select_all([host_filter_out_gsnap_filter_1_fa, host_filter_out_gsnap_filter_2_fa]),
-        input_dir = alignment_input_dir,
-        chunk_dir = minimap2_chunk_dir,
+        docker_image_id = docker_image_id,
+        s3_wd_uri = s3_wd_uri,
+        fastas = [select_first([host_filter_out_gsnap_filter_merged_fa, host_filter_out_gsnap_filter_1_fa])], #select_all([host_filter_out_gsnap_filter_1_fa, host_filter_out_gsnap_filter_2_fa]),
         db_path = minimap2_db,
         minimap2_args = minimap2_args,
-        prefix= minimap2_prefix,
-        docker_image_id = docker_image_id
+        prefix= minimap2_prefix
     }
-    call RunCallHits { 
+    call RunCallHits as RunCallHitsMinimap2{ 
         input:
         m8_file = RunAlignment_minimap2_out.out_m8,
         lineage_db = lineage_db,
@@ -340,11 +361,12 @@ workflow idseq_non_host_alignment {
         accession2taxid = accession2taxid_db,
         prefix = minimap2_prefix,
         min_read_length = min_read_length,
+        count_type = "NR",
         docker_image_id = docker_image_id
     }
     call RunAlignment_diamond_out {
       input: 
-      fastqs = [select_first([host_filter_out_gsnap_filter_merged_fa, host_filter_out_gsnap_filter_1_fa])], #select_all([host_filter_out_gsnap_filter_1_fa, host_filter_out_gsnap_filter_2_fa]),
+      fastas = [select_first([host_filter_out_gsnap_filter_merged_fa, host_filter_out_gsnap_filter_1_fa])], #select_all([host_filter_out_gsnap_filter_1_fa, host_filter_out_gsnap_filter_2_fa]),
       input_dir = alignment_input_dir,
       chunk_dir = diamond_chunk_dir,
       db_path = diamond_db,
@@ -362,18 +384,17 @@ workflow idseq_non_host_alignment {
         accession2taxid = accession2taxid_db,
         prefix = diamond_prefix,
         min_read_length = 0,
+        count_type = "NR",
         docker_image_id = docker_image_id
     }
   }
-
-
 
   call CombineTaxonCounts {
     input:
       docker_image_id = docker_image_id,
       s3_wd_uri = s3_wd_uri,
       counts_json_files = [
-        select_first([RunAlignment_gsnap_out.gsnap_counts_with_dcr_json, RunCallHits.counts_json]),
+        select_first([RunAlignment_gsnap_out.gsnap_counts_with_dcr_json, RunCallHitsMinimap2.counts_json]),
         select_first([RunAlignment_rapsearch2_out.rapsearch2_counts_with_dcr_json, RunCallHitsDiamond.counts_json])
       ]
   }
@@ -384,9 +405,9 @@ workflow idseq_non_host_alignment {
       s3_wd_uri = s3_wd_uri,
       host_filter_out_gsnap_filter_fa = select_all([host_filter_out_gsnap_filter_1_fa, host_filter_out_gsnap_filter_2_fa, host_filter_out_gsnap_filter_merged_fa]),
       gsnap_m8 = select_first([RunAlignment_gsnap_out.gsnap_m8, RunAlignment_minimap2_out.out_m8]),
-      gsnap_deduped_m8 = select_first([RunAlignment_gsnap_out.gsnap_deduped_m8, RunCallHits.deduped_out_m8]),
-      gsnap_hitsummary_tab = select_first([RunAlignment_gsnap_out.gsnap_hitsummary_tab, RunCallHits.hitsummary]),
-      gsnap_counts_with_dcr_json = select_first([RunAlignment_gsnap_out.gsnap_counts_with_dcr_json, RunCallHits.counts_json]),
+      gsnap_deduped_m8 = select_first([RunAlignment_gsnap_out.gsnap_deduped_m8, RunCallHitsMinimap2.deduped_out_m8]),
+      gsnap_hitsummary_tab = select_first([RunAlignment_gsnap_out.gsnap_hitsummary_tab, RunCallHitsMinimap2.hitsummary]),
+      gsnap_counts_with_dcr_json = select_first([RunAlignment_gsnap_out.gsnap_counts_with_dcr_json, RunCallHitsMinimap2.counts_json]),
       rapsearch2_m8 = select_first([RunAlignment_rapsearch2_out.rapsearch2_m8, RunAlignment_diamond_out.out_m8]),
       rapsearch2_deduped_m8 = select_first([RunAlignment_rapsearch2_out.rapsearch2_deduped_m8, RunCallHitsDiamond.deduped_out_m8]),
       rapsearch2_hitsummary_tab = select_first([RunAlignment_rapsearch2_out.rapsearch2_hitsummary_tab, RunCallHitsDiamond.hitsummary]),
@@ -397,9 +418,9 @@ workflow idseq_non_host_alignment {
 
   output {
     File gsnap_out_gsnap_m8 = select_first([RunAlignment_gsnap_out.gsnap_m8, RunAlignment_minimap2_out.out_m8])
-    File gsnap_out_gsnap_deduped_m8 = select_first([RunAlignment_gsnap_out.gsnap_deduped_m8, RunCallHits.deduped_out_m8])
-    File gsnap_out_gsnap_hitsummary_tab = select_first([RunAlignment_gsnap_out.gsnap_hitsummary_tab, RunCallHits.hitsummary])
-    File gsnap_out_gsnap_counts_with_dcr_json = select_first([RunAlignment_gsnap_out.gsnap_counts_with_dcr_json, RunCallHits.counts_json])
+    File gsnap_out_gsnap_deduped_m8 = select_first([RunAlignment_gsnap_out.gsnap_deduped_m8, RunCallHitsMinimap2.deduped_out_m8])
+    File gsnap_out_gsnap_hitsummary_tab = select_first([RunAlignment_gsnap_out.gsnap_hitsummary_tab, RunCallHitsMinimap2.hitsummary])
+    File gsnap_out_gsnap_counts_with_dcr_json = select_first([RunAlignment_gsnap_out.gsnap_counts_with_dcr_json, RunCallHitsMinimap2.counts_json])
     File? gsnap_out_count = RunAlignment_gsnap_out.output_read_count
     File rapsearch2_out_rapsearch2_m8 = select_first([RunAlignment_rapsearch2_out.rapsearch2_m8, RunAlignment_diamond_out.out_m8])
     File rapsearch2_out_rapsearch2_deduped_m8 = select_first([RunAlignment_rapsearch2_out.rapsearch2_deduped_m8, RunCallHitsDiamond.deduped_out_m8])
