@@ -17,6 +17,7 @@ import subprocess
 import concurrent.futures
 import threading
 import time
+import json
 import requests
 from datetime import datetime
 from _util import load_benchmarks_yml
@@ -147,6 +148,7 @@ def run_sample(idseq_repo, workflow_version, settings, key_prefix, sample):
         f" --max-subsample-fragments {local_input['host_filter.max_subsample_fragments']}"
         f" --adapter-fasta {local_input['host_filter.adapter_fasta']}"
         f" --workflow-version {workflow_version}",
+        f" --sfn-input {json.dumps(local_input)}",
     ]
     print(cmd, file=sys.stderr)
     with _timestamp_lock:
