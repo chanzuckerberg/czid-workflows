@@ -147,8 +147,8 @@ def run_sample(idseq_repo, workflow_version, settings, key_prefix, sample):
         f" --max-input-fragments {local_input['host_filter.max_input_fragments']}"
         f" --max-subsample-fragments {local_input['host_filter.max_subsample_fragments']}"
         f" --adapter-fasta {local_input['host_filter.adapter_fasta']}"
-        f" --workflow-version {workflow_version}",
-        f" --sfn-input {json.dumps(local_input)}",
+        f" --workflow-version {workflow_version}"
+        f" --sfn-input '{json.dumps(local_input)}'"
     ]
     print(cmd, file=sys.stderr)
     with _timestamp_lock:
