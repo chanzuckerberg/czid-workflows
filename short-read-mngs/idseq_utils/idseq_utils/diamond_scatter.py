@@ -15,6 +15,12 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
+
+class DiamondBlastXException(Exception):
+    pass
+
+class DiamondJoinException(Exception):
+    pass
 ################################################################################################################
 #
 # Diamond
@@ -67,7 +73,7 @@ def diamond_blastx(
     if res.returncode != 0:
         for line in res.stderr.decode().split("\n"):
             print(line)
-        raise Exception(f"Command failed: {' '.join(cmd)}")
+        raise DiamondBlastXException(f"Command {' '.join(cmd)} failed with error: {res.stderr.decode()}")
 
 
 ################################################################################################################

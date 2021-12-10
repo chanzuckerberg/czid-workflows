@@ -2,12 +2,9 @@ import os
 import re
 from os.path import basename, join
 from subprocess import run
-import boto3
-import requests
 import logging
 from urllib.parse import urlparse
 from multiprocessing import Pool
-from botocore.exceptions import ClientError
 from idseq_utils.minimap2_scatter import minimap2_merge
 from idseq_utils.batch_run_helpers import _run_batch_job, _db_chunks
 
@@ -15,20 +12,6 @@ log = logging.getLogger(__name__)
 
 ALIGNMENT_ALGORITHM = "minimap2"
 MAX_CHUNKS_IN_FLIGHT = 5
-
-
-def get_batch_job_desc_bucket():
-    try:
-        account_id = boto3.client("sts").get_caller_identity()["Account"]
-    except ClientError:
-        account_id = requests.get(
-            "http://169.254.169.254/latest/dynamic/instance-identity/document"
-        ).json()["accountId"]
-    return f"aegea-batch-jobs-{account_id}"
-
-
-class BatchJobFailed(Exception):
-    pass
 
 
 def _run_chunk(

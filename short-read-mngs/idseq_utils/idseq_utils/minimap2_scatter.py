@@ -7,6 +7,9 @@ from os.path import abspath, basename, join
 from subprocess import run, PIPE
 from tempfile import TemporaryDirectory
 
+
+class Minimap2MergeException(Exception):
+    pass
 ################################################################################################################
 #
 # Minimap2
@@ -52,7 +55,7 @@ def minimap2_merge_cmd(cwd, par_tmpdir, chunks, queries):
     if res.returncode != 0:
         for line in res.stderr.decode().split("\n"):
             print(line)
-        raise Exception(f"Command failed: {' '.join(cmd)}")
+        raise Minimap2MergeException(f"Command {' '.join(cmd)} failed with result: {res.stderr.decode()}")
 
 
 ################################################################################################################
@@ -82,6 +85,7 @@ def make_par_dir(cwd: str, par_tmpdir: str):
 def minimap2_chunk(db_chunk: str, output_dir: str, *query: str):
     """
     Run a single chunk of the database using minimap2-scatter
+    This is no longer used, we should consider removing
     """
 
     # make output directory
