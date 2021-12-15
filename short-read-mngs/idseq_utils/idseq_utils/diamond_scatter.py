@@ -19,8 +19,10 @@ from Bio.SeqRecord import SeqRecord
 class DiamondBlastXException(Exception):
     pass
 
+
 class DiamondJoinException(Exception):
     pass
+
 ################################################################################################################
 #
 # Diamond
