@@ -107,14 +107,3 @@ jobs:
           export DOCKER_IMAGE_ID="${IMAGE_URI}:${TAG}"
 
           make test-${{ matrix.workflow_dir }}
-      - name: docker push to docker.pkg.github.com (legacy)
-        run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" \
-            | docker login docker.pkg.github.com --username $(dirname $GITHUB_REPOSITORY) --password-stdin
-          LEGACY_IMAGE_URI=$(sed s/ghcr.io/docker.pkg.github.com/ <<< "$IMAGE_URI")
-          docker tag "${IMAGE_URI}:${TAG}" "${LEGACY_IMAGE_URI}:${TAG}"
-          docker push "${LEGACY_IMAGE_URI}:${TAG}"
-          if [[ ${GITHUB_REF##*/} == "main" ]]; then
-            docker tag "${IMAGE_URI}:${TAG}" "${LEGACY_IMAGE_URI}:latest"
-            docker push "${LEGACY_IMAGE_URI}:latest"
-          fi
