@@ -11,27 +11,27 @@ The moving parts include:
 5. [**ref_libs/**](ref_libs): library of "reference" (expected) results
 6. **short-read-mngs-benchmarks.ipynb**: executable Jupyter notebook comparing harvested & reference results
 
-A [GitHub Actions workflow](https://github.com/chanzuckerberg/idseq-workflows/blob/main/.github/workflows/short-read-mngs-viral-benchmarks.yml) runs limited tests on every code push (two small samples & viral reference databases), automatically generating the notebook as a [build artifact](https://github.com/chanzuckerberg/idseq-workflows/actions?query=workflow%3A%22short-read-mngs+viral+benchmarks%22).
+A [GitHub Actions workflow](https://github.com/chanzuckerberg/czid-workflows/blob/main/.github/workflows/short-read-mngs-viral-benchmarks.yml) runs limited tests on every code push (two small samples & viral reference databases), automatically generating the notebook as a [build artifact](https://github.com/chanzuckerberg/czid-workflows/actions?query=workflow%3A%22short-read-mngs+viral+benchmarks%22).
 
 ## Manual steps to run
 
 With a local checkout of this repository, first install Python dependencies:
 
 ```bash
-git clone https://github.com/chanzuckerberg/idseq-workflows.git
-pip3 install -r idseq-workflows/requirements-dev.txt
+git clone https://github.com/chanzuckerberg/czid-workflows.git
+pip3 install -r czid-workflows/requirements-dev.txt
 ```
 
 Then run desired test scenarios **either (1A)** locally **or (1B)** by submitting to the idseq-dev SFN-WDL backend.
 
 ### (1A) run_local
 
-`run_local.py` runs requested samples by invoking `miniwdl run` locally, using the WDL code in the current repo checkout. For the scenarios with small FASTQs and viral reference databases, this runs well on a laptop. Full-scale runs require a [powerful AWS instance](https://github.com/chanzuckerberg/idseq-workflows/wiki/Running-WDL-workflows-locally#full-metagenomics-run).
+`run_local.py` runs requested samples by invoking `miniwdl run` locally, using the WDL code in the current repo checkout. For the scenarios with small FASTQs and viral reference databases, this runs well on a laptop. Full-scale runs require a [powerful AWS instance](https://github.com/chanzuckerberg/czid-workflows/wiki/Running-WDL-workflows-locally#full-metagenomics-run).
 
-Prepare by building the idseq-short-read-mngs docker image and enabling the miniwdl download cache:
+Prepare by building the czid-short-read-mngs docker image and enabling the miniwdl download cache:
 
 ```bash
-docker build idseq-workflows/short-read-mngs --tag idseq-short-read-mngs
+docker build czid-workflows/short-read-mngs --tag czid-short-read-mngs
 export MINIWDL__DOWNLOAD_CACHE__PUT=true
 export MINIWDL__DOWNLOAD_CACHE__GET=true
 export MINIWDL__DOWNLOAD_CACHE__DIR=/tmp/miniwdl_download_cache
@@ -40,16 +40,16 @@ export MINIWDL__DOWNLOAD_CACHE__DIR=/tmp/miniwdl_download_cache
 The following invocation runs two small synthetic samples using the viral reference databases (roughly 6GB download):
 
 ```bash
-idseq-workflows/short-read-mngs/auto_benchmark/run_local.py --dir my_benchmarks/ \
-    --docker-image-id idseq-short-read-mngs --settings default --verbose \
+czid-workflows/short-read-mngs/auto_benchmark/run_local.py --dir my_benchmarks/ \
+    --docker-image-id czid-short-read-mngs --settings default --verbose \
     idseq_bench_3 idseq_bench_5
 ```
 
 This would run those and two other samples on the full-size databases, which takes a few hours:
 
 ```bash
-idseq-workflows/short-read-mngs/auto_benchmark/run_local.py --dir my_benchmarks/ \
-    --docker-image-id idseq-short-read-mngs --settings default --databases full \
+czid-workflows/short-read-mngs/auto_benchmark/run_local.py --dir my_benchmarks/ \
+    --docker-image-id czid-short-read-mngs --settings default --databases full \
     idseq_bench_3 idseq_bench_5 atcc_staggered atcc_even
 ```
 
@@ -57,10 +57,10 @@ The available benchmark samples are listed in [benchmarks.yml](benchmarks.yml).
 
 ### (1B) run_dev
 
-`run_dev.py` submits requested samples to the idseq-dev SFN-WDL backend, using a given [released version vA.B.C](https://github.com/chanzuckerberg/idseq-workflows/releases) of the WDL code (not necessarily the checked-out revision!) and the full-size reference databases. The invoking shell session must be pre-configured with an appropriate AWS profile for control of the idseq-dev infrastructure.
+`run_dev.py` submits requested samples to the idseq-dev SFN-WDL backend, using a given [released version vA.B.C](https://github.com/chanzuckerberg/czid-workflows/releases) of the WDL code (not necessarily the checked-out revision!) and the full-size reference databases. The invoking shell session must be pre-configured with an appropriate AWS profile for control of the idseq-dev infrastructure.
 
 ```bash
-idseq-workflows/short-read-mngs/auto_benchmark/run_dev.py --workflow-version vA.B.C \
+czid-workflows/short-read-mngs/auto_benchmark/run_dev.py --workflow-version vA.B.C \
     idseq_bench_3 idseq_bench_5 atcc_staggered atcc_even
 ```
 
@@ -80,7 +80,7 @@ taxadb create -i taxadb --dbname taxadb.sqlite
 Harvesting local run folders generated by `run_local.py` (printed at the end of its standard output):
 
 ```bash
-idseq-workflows/short-read-mngs/auto_benchmark/harvest.py --taxadb taxadb.sqlite \
+czid-workflows/short-read-mngs/auto_benchmark/harvest.py --taxadb taxadb.sqlite \
     idseq_bench_3=my_benchmarks/idseq_bench_3/ idseq_bench_5=my_benchmarks/idseq_bench_5/ \
     > my_benchmarks.json
 ```
@@ -88,7 +88,7 @@ idseq-workflows/short-read-mngs/auto_benchmark/harvest.py --taxadb taxadb.sqlite
 or S3 folders from`run_dev.py`:
 
 ```bash
-idseq-workflows/short-read-mngs/auto_benchmark/harvest.py --taxadb taxadb.sqlite \
+czid-workflows/short-read-mngs/auto_benchmark/harvest.py --taxadb taxadb.sqlite \
     idseq_bench_3=s3://idseq-samples-development/auto_benchmark/YYYYMMDD_HHmmss_default_latest/idseq_bench_3/results/short-read-mngs-A/ \
     idseq_bench_5=s3://idseq-samples-development/auto_benchmark/YYYYMMDD_HHmmss_default_latest/idseq_bench_5/results/short-read-mngs-A/ \
     > my_benchmarks.json
@@ -101,10 +101,10 @@ Finally, run the Jupyter notebook to compare the generated results with the refe
 ```bash
 docker run -v $(pwd):/mnt \
     --env HARVEST_DATA=/mnt/my_benchmarks.json \
-    --env REF_LIB=/mnt/idseq-workflows/short-read-mngs/auto_benchmark/ref_libs/default_viral \
+    --env REF_LIB=/mnt/czid-workflows/short-read-mngs/auto_benchmark/ref_libs/default_viral \
     --env "RUN_NAME=default_viral_vA.B.C" \
     jupyter/scipy-notebook:latest jupyter nbconvert --execute --to html --no-input --output-dir /mnt \
-        /mnt/idseq-workflows/short-read-mngs/auto_benchmark/short-read-mngs-benchmarks.ipynb
+        /mnt/czid-workflows/short-read-mngs/auto_benchmark/short-read-mngs-benchmarks.ipynb
 ```
 
 Then find `idseq-short-read-mngs-benchmarks.html` in your working directory! (Note: when using the viral databases, the precision-recall curves compared to the truth sets are very poor, correctly so because the simulated datasets include non-viral species.)
@@ -116,7 +116,7 @@ Change "viral" to "full" if you used the full-sized databases. Strike `--no-inpu
 Suppose the results in `my_benchmarks.json` differ from the reference library in an expected way due to pipeline code changes. You can update the reference values like so:
 
 ```bash
-jq .idseq_bench_3 my_benchmarks.json > idseq-workflows/short-read-mngs/auto_benchmark/ref_libs/default_viral/idseq_bench_3.json
+jq .idseq_bench_3 my_benchmarks.json > czid-workflows/short-read-mngs/auto_benchmark/ref_libs/default_viral/idseq_bench_3.json
 ```
 
 Rerun the notebook to verify it now reports identical results, and check into git.
@@ -126,7 +126,7 @@ Rerun the notebook to verify it now reports identical results, and check into gi
 You can edit the notebook by opening it in a local Jupyter server started like so:
 
 ```bash
-docker run -v $(pwd)/idseq-workflows/short-read-mngs/auto_benchmark:/home/jovyan \
+docker run -v $(pwd)/czid-workflows/short-read-mngs/auto_benchmark:/home/jovyan \
     -p 8888:8888 jupyter/scipy-notebook:latest
 ```
 

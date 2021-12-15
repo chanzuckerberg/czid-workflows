@@ -468,7 +468,7 @@ task RunGsnapFilter {
   }
 }
 
-workflow idseq_host_filter {
+workflow czid_host_filter {
   input {
     String docker_image_id
     String s3_wd_uri

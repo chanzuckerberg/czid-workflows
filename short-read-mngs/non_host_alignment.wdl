@@ -148,7 +148,7 @@ task GenerateAnnotatedFasta {
   }
 }
 
-workflow idseq_non_host_alignment {
+workflow czid_non_host_alignment {
   input {
     String docker_image_id
     String s3_wd_uri
