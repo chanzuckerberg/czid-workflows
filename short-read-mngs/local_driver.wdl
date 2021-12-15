@@ -9,6 +9,7 @@ import "postprocess.wdl" as stage3
 import "experimental.wdl" as stage4
 
 workflow czid_short_read_mngs {
+
     input {
         String docker_image_id
         File fastqs_0
