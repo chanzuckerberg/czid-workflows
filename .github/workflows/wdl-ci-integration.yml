@@ -39,7 +39,7 @@ jobs:
       - name: docker build + push to ghcr.io
         run: |
           TAG=$(git describe --long --tags --always --dirty)
-          IMAGE_NAME=idseq-${{ matrix.workflow_dir }}-public
+          IMAGE_NAME=czid-${{ matrix.workflow_dir }}-public
           IMAGE_URI="ghcr.io/${GITHUB_REPOSITORY}/${IMAGE_NAME}"
 
           CACHE_FROM=""; docker pull "$IMAGE_URI" && CACHE_FROM="--cache-from $IMAGE_URI"

@@ -40,11 +40,11 @@ jobs:
       - uses: actions/checkout@v2
       - name: docker build
         run: |
-            IMAGE_NAME=idseq-short-read-mngs-public
+            IMAGE_NAME=czid-short-read-mngs-public
             IMAGE_URI="ghcr.io/${GITHUB_REPOSITORY}/${IMAGE_NAME}"
             CACHE_FROM=""; docker pull "$IMAGE_URI" && CACHE_FROM="--cache-from $IMAGE_URI"
-            docker build short-read-mngs --tag idseq-short-read-mngs $CACHE_FROM \
-                || docker build short-read-mngs --tag idseq-short-read-mngs
+            docker build short-read-mngs --tag czid-short-read-mngs $CACHE_FROM \
+                || docker build short-read-mngs --tag czid-short-read-mngs
       - name: run sample
         run: |
           pip install -r requirements-dev.txt
@@ -62,7 +62,7 @@ jobs:
           # https://github.com/aws/aws-cli/issues/5262
           sudo ip route add blackhole 169.254.169.254
 
-          short-read-mngs/auto_benchmark/run_local.py --dir testrun/ --docker-image-id idseq-short-read-mngs \
+          short-read-mngs/auto_benchmark/run_local.py --dir testrun/ --docker-image-id czid-short-read-mngs \
             --settings ${{ matrix.settings }} ${{ matrix.sample }}
       - name: harvest output statistics
         run: |
