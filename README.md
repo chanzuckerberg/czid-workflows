@@ -21,6 +21,10 @@ to get started with them.
 We use GitHub Actions for CI/CD. Lint and unit tests run on GitHub from jobs in `.github/workflows/wdl-ci.yml`
 (triggered on every commit).
 
+## Contributing
+
+This project adheres to the Contributor Covenant code of conduct. By participating, you are expected to uphold this code. Please report unacceptable behavior to opensource@chanzuckerberg.com.
+
 ## Security
 
 Please disclose security issues responsibly by contacting security@chanzuckerberg.com.
