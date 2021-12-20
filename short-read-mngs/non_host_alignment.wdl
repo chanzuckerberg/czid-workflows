@@ -155,29 +155,34 @@ task RunAlignment_minimap2_out {
         String db_path
         String minimap2_args 
         String docker_image_id
+        Boolean? run_locally = false
+        File? local_minimap2_index 
         String prefix
     }
 
     command <<<
         set -euxo pipefail
 
-        export DEPLOYMENT_ENVIRONMENT=dev
+        if [[ "~{run_locally}" == true ]]; then
+          minimap2 ~{minimap2_args} "~{local_minimap2_index}" "~{sep=' ' fastas}" > "~{prefix}.paf"
+        else
+          export DEPLOYMENT_ENVIRONMENT=dev
+          python3 <<CODE
+          import os
+          from idseq_utils.run_minimap2 import run_minimap2
 
-        python3 <<CODE
-        import os
-        from idseq_utils.run_minimap2 import run_minimap2
-
-        fastas = ["~{sep='", "' fastas}"]
-        chunk_dir = os.path.join("~{s3_wd_uri}", "minimap2-chunks/")
-        run_minimap2(
-            "~{s3_wd_uri}",
-            chunk_dir,
-            "~{db_path}",
-            "~{prefix}.paf",
-            "~{minimap2_args}",
-            *fastas
-        )
+          fastas = ["~{sep='", "' fastas}"]
+          chunk_dir = os.path.join("~{s3_wd_uri}", "minimap2-chunks/")
+          run_minimap2(
+              "~{s3_wd_uri}",
+              chunk_dir,
+              "~{db_path}",
+              "~{prefix}.paf",
+              "~{minimap2_args}",
+              *fastas
+          )
         CODE
+        fi
         python3 /usr/local/lib/python3.6/dist-packages/idseq_utils/paf2blast6.py "~{prefix}".paf
         mv *frompaf.m8 "~{prefix}.m8" # TODO: rewrite paf2blast6.py to output in this format
     >>>
@@ -197,30 +202,34 @@ task RunAlignment_diamond_out {
         Array[File]+ fastas
         String db_path
         String diamond_args 
+        Boolean? run_locally = false
+        File? local_diamond_index
         String prefix
     }
 
     command <<<
         set -euxo pipefail  
+        if [[ "~{run_locally}" == true ]]; then 
+          diamond makedb --in "~{local_diamond_index}" -d reference
+          diamond blastx -d reference -q "~{sep=' ' fastas}" -o "~{prefix}.m8"
+        else
+          export DEPLOYMENT_ENVIRONMENT=dev 
+          python3 <<CODE
+          import os 
+          from idseq_utils.run_diamond import run_diamond
 
-        export DEPLOYMENT_ENVIRONMENT=dev 
+          fastas = ["~{sep='", "' fastas}"]
+          chunk_dir = os.path.join("~{s3_wd_uri}", "diamond-chunks/")
 
-        python3 <<CODE
-        import os 
-        from idseq_utils.run_diamond import run_diamond
-
-        fastas = ["~{sep='", "' fastas}"]
-        chunk_dir = os.path.join("~{s3_wd_uri}", "diamond-chunks/")
-
-        run_diamond(
-                "~{s3_wd_uri}",
-                chunk_dir, 
-                "~{db_path}", 
-                "~{prefix}.m8", 
-                *fastas
-                )
-
+          run_diamond(
+                  "~{s3_wd_uri}",
+                  chunk_dir, 
+                  "~{db_path}", 
+                  "~{prefix}.m8", 
+                  *fastas
+                  )
         CODE
+        fi
     >>>
 
     output {
@@ -386,6 +395,8 @@ workflow idseq_non_host_alignment {
     Boolean use_taxon_whitelist = false
     Boolean alignment_scalability = false
     File? local_gsnap_index
+    File? minimap2_local_db_path
+    File? diamond_local_db_path
     String? local_gsnap_genome_name
     File? local_rapsearch2_index
     String alignment_input_dir = "s3://idseq-samples-development/samples/alignment-scalability-test/combined-test/1/"
@@ -417,20 +428,20 @@ workflow idseq_non_host_alignment {
           index = local_gsnap_index,
           genome_name = local_gsnap_genome_name
     }
-  call RunAlignment_rapsearch2_out {
-    input:
-      docker_image_id = docker_image_id,
-      s3_wd_uri = s3_wd_uri,
-      host_filter_out_gsnap_filter_fa = select_all([host_filter_out_gsnap_filter_1_fa, host_filter_out_gsnap_filter_2_fa, host_filter_out_gsnap_filter_merged_fa]),
-      duplicate_cluster_sizes_tsv = duplicate_cluster_sizes_tsv,
-      lineage_db = lineage_db,
-      accession2taxid_db = accession2taxid_db,
-      taxon_blacklist = taxon_blacklist,
-      index_dir_suffix = index_dir_suffix,
-      use_taxon_whitelist = use_taxon_whitelist,
-      run_locally = defined(local_rapsearch2_index),
-      index = local_rapsearch2_index
-  }
+    call RunAlignment_rapsearch2_out {
+      input:
+        docker_image_id = docker_image_id,
+        s3_wd_uri = s3_wd_uri,
+        host_filter_out_gsnap_filter_fa = select_all([host_filter_out_gsnap_filter_1_fa, host_filter_out_gsnap_filter_2_fa, host_filter_out_gsnap_filter_merged_fa]),
+        duplicate_cluster_sizes_tsv = duplicate_cluster_sizes_tsv,
+        lineage_db = lineage_db,
+        accession2taxid_db = accession2taxid_db,
+        taxon_blacklist = taxon_blacklist,
+        index_dir_suffix = index_dir_suffix,
+        use_taxon_whitelist = use_taxon_whitelist,
+        run_locally = defined(local_rapsearch2_index),
+        index = local_rapsearch2_index
+    }
   }
   if (alignment_scalability) { 
     call RunAlignment_minimap2_out { 
@@ -440,6 +451,8 @@ workflow idseq_non_host_alignment {
         fastas = [select_first([host_filter_out_gsnap_filter_merged_fa, host_filter_out_gsnap_filter_1_fa])], #select_all([host_filter_out_gsnap_filter_1_fa, host_filter_out_gsnap_filter_2_fa]),
         db_path = minimap2_db,
         minimap2_args = minimap2_args,
+        run_locally = defined(local_gsnap_index),
+        local_minimap2_index = minimap2_local_db_path,
         prefix= minimap2_prefix
     }
     call RunCallHitsMinimap2{ 
@@ -461,6 +474,8 @@ workflow idseq_non_host_alignment {
       db_path = diamond_db,
       diamond_args = diamond_args,
       prefix = diamond_prefix,
+      run_locally = defined(local_rapsearch2_index),
+      local_diamond_index = diamond_local_db_path,
       docker_image_id = docker_image_id
     }
     call RunCallHitsDiamond { 
