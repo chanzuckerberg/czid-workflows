@@ -219,7 +219,7 @@ task NonhostFastq {
   }
 }
 
-workflow idseq_experimental {
+workflow czid_experimental {
   input {
     String docker_image_id
     String s3_wd_uri

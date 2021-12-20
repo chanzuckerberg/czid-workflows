@@ -58,7 +58,7 @@ def main():
 
     if args.workflow_version is None:
         github_api = "https://api.github.com"
-        github_repo_api = f"{github_api}/repos/chanzuckerberg/idseq-workflows"
+        github_repo_api = f"{github_api}/repos/chanzuckerberg/czid-workflows"
         github_refs_api = f"{github_repo_api}/git/matching-refs/tags/short-read-mngs"
         github_refs = sorted(
             os.path.basename(ref["url"]).split("-v", 1)[1]

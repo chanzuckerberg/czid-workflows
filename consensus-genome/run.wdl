@@ -1,4 +1,4 @@
-# IDseq Consensus Genome workflow
+# CZ ID Consensus Genome workflow
 # Based on original work at:
 # - CZ Biohub SARS-CoV-2 pipeline, https://github.com/czbiohub/sc2-illumina-pipeline
 # - ARTIC Oxford Nanopore MinION SARS-CoV-2 SOP, https://artic.network/ncov-2019/ncov2019-bioinformatics-sop.html
@@ -7,6 +7,7 @@
 version 1.1
 
 workflow consensus_genome {
+
     input {
         # Required parameters
         File fastqs_0

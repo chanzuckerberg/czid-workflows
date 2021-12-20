@@ -8,6 +8,7 @@ struct SampleInfo {
 }
 
 workflow phylotree {
+
     input {
         Array[SampleInfo] samples
         Int reference_taxon_id

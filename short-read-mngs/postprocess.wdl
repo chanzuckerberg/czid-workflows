@@ -454,7 +454,7 @@ task GenerateTaxidLocator {
   }
 }
 
-workflow idseq_postprocess {
+workflow czid_postprocess {
   input {
     String docker_image_id
     String s3_wd_uri

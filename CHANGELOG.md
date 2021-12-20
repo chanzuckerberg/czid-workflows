@@ -1,4 +1,4 @@
-# IDSeq Workflows Changelog
+# CZ ID Workflows Changelog
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 and is based on recommendations from [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). 

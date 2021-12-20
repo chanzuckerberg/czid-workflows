@@ -1,7 +1,7 @@
-# IDseq PhyloTree-NG workflow
+# CZ ID PhyloTree-NG workflow
 
-This is the IDseq PhyloTree-NG (next generation) workflow. Given a set of 
-IDseq samples and a taxon ID of the organism of interest, the workflow 
+This is the CZ ID PhyloTree-NG (next generation) workflow. Given a set of 
+CZ ID samples and a taxon ID of the organism of interest, the workflow 
 computes the relative genomic distance between samples and generates phylogenies of the samples. Each sample is represented by contigs (assembled 
 reads) from the original input sample mapped to reference sequences for the 
 organism of interest.
@@ -19,7 +19,7 @@ well as raw sequences (currently supporting only `.fasta` inputs).
 The workflow takes as input the samples (each represented by sample name, mngs workflow run ID, contig fasta file, contig summary file) and reference accessions (idetified via a heuristic). The workflow then prepares FASTA files for each sample and reference:
 
 - For samples, we scan their
-  [merged hit summaries](https://github.com/chanzuckerberg/idseq-workflows/blob/main/short-read-mngs/idseq-dag/idseq_dag/util/parsing.py)
+  [merged hit summaries](https://github.com/chanzuckerberg/czid-workflows/blob/main/short-read-mngs/idseq-dag/idseq_dag/util/parsing.py)
   to determine which contigs map to taxa under the given reference taxon ID, then subset the sample's contigs FASTA
   file.
 
@@ -41,7 +41,7 @@ An in-depth description of the first generation PhyloTree pipeline from idseq-da
 First, clone the repo
 
 ```
-git clone https://github.com/chanzuckerberg/idseq-workflows.git
+git clone https://github.com/chanzuckerberg/czid-workflows.git
 ```
 
 Then, build the docker image:
