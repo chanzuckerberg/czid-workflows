@@ -364,14 +364,14 @@ task RunCleanOutputs {
       echo "Dummy task to clean outputs for pipeline viz"
       >>>
     output { 
-        File out_gsnap_m8 = "~{gsnap_m8}"
-        File out_gsnap_deduped_m8 = "~{gsnap_deduped_m8}"
-        File out_gsnap_hitsummary_tab = "~{gsnap_hitsummary_tab}"
-        File out_gsnap_counts_with_dcr_json = "~{gsnap_counts_with_dcr_json}"
-        File out_rapsearch2_m8 = "~{rapsearch2_m8}"
-        File out_rapsearch2_deduped_m8 = "~{rapsearch2_deduped_m8}"
-        File out_rapsearch2_hitsummary_tab = "~{rapsearch2_hitsummary_tab}"
-        File out_rapsearch2_counts_with_dcr_json = "~{rapsearch2_counts_with_dcr_json}"
+        File out_gsnap_m8 = "out_~{gsnap_m8}"
+        File out_gsnap_deduped_m8 = "out_~{gsnap_deduped_m8}"
+        File out_gsnap_hitsummary_tab = "out_~{gsnap_hitsummary_tab}"
+        File out_gsnap_counts_with_dcr_json = "out_~{gsnap_counts_with_dcr_json}"
+        File out_rapsearch2_m8 = "out_~{rapsearch2_m8}"
+        File out_rapsearch2_deduped_m8 = "out_~{rapsearch2_deduped_m8}"
+        File out_rapsearch2_hitsummary_tab = "out_~{rapsearch2_hitsummary_tab}"
+        File out_rapsearch2_counts_with_dcr_json = "out_~{rapsearch2_counts_with_dcr_json}"
     }
 
 }
