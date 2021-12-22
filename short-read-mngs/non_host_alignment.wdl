@@ -362,19 +362,27 @@ task RunCleanOutputs {
     command <<<
       set -euxo pipefail
       echo "Dummy task to clean outputs for pipeline viz"
+      cp "~{gsnap_m8}" "out_gsnap.m8"
+      cp "~{gsnap_deduped_m8}" "out_gsnap.deduped.m8"
+      cp "~{gsnap_hitsummary_tab}" "out_gsnap.hitsummary.tab"
+      cp "~{gsnap_counts_with_dcr_json}" "out_gsnap_counts_with_dcr.json"
+      cp "~{rapsearch2_m8}" "out_rapsearch2.m8"
+      cp "~{rapsearch2_deduped_m8}" "out_rapsearch2.deduped.m8"
+      cp "~{rapsearch2_hitsummary_tab}" "out_rapsearch2.hitsummary.tab"
+      cp "~{rapsearch2_counts_with_dcr_json}" "out_rapsearch_counts_with_dcr.json"
       >>>
     output { 
-        File out_gsnap_m8 = "out_~{gsnap_m8}"
-        File out_gsnap_deduped_m8 = "out_~{gsnap_deduped_m8}"
-        File out_gsnap_hitsummary_tab = "out_~{gsnap_hitsummary_tab}"
-        File out_gsnap_counts_with_dcr_json = "out_~{gsnap_counts_with_dcr_json}"
-        File out_rapsearch2_m8 = "out_~{rapsearch2_m8}"
-        File out_rapsearch2_deduped_m8 = "out_~{rapsearch2_deduped_m8}"
-        File out_rapsearch2_hitsummary_tab = "out_~{rapsearch2_hitsummary_tab}"
-        File out_rapsearch2_counts_with_dcr_json = "out_~{rapsearch2_counts_with_dcr_json}"
+        File out_gsnap_m8 = "out_gsnap.m8"
+        File out_gsnap_deduped_m8 = "out_gsnap.deduped.m8"
+        File out_gsnap_hitsummary_tab = "out_gsnap.hitsummary.tab"
+        File out_gsnap_counts_with_dcr_json = "out_gsnap_counts_with_dcr.json"
+        File out_rapsearch2_m8 = "out_rapsearch2.m8"
+        File out_rapsearch2_deduped_m8 = "out_rapsearch2.deduped.m8"
+        File out_rapsearch2_hitsummary_tab = "out_rapsearch2.hitsummary.tab"
+        File out_rapsearch2_counts_with_dcr_json = "out_rapsearch_counts_with_dcr.json"
     }
-
 }
+
 workflow idseq_non_host_alignment {
   input {
     String docker_image_id
