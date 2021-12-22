@@ -170,14 +170,14 @@ class TestConsensusGenomes(WDLTestCase):
 
     def test_no_coverage_error(self):
         ref_host_blank = os.path.join(os.path.dirname(__file__), "blank.fastq.gz")
-        assembly_blank = os.path.join(os.path.dirname(__file__), "blank.fastq.gz") 
+        assembly_blank = os.path.join(os.path.dirname(__file__), "blank.fastq.gz")
         vcf_blank = os.path.join(os.path.dirname(__file__), "blank.fastq.gz")
         fastqs_blank = os.path.join(os.path.dirname(__file__), "blank.fastq.gz")
         cleaned_bam = os.path.join(os.path.dirname(__file__), "empty.bam")
         with self.assertRaises(CalledProcessError) as ecm:
-            res = self.run_miniwdl(task="ComputeStats", args=[
-                f"ref_host={ref_host_blank}", 
-                f"assembly={assembly_blank}", 
+            self.run_miniwdl(task="ComputeStats", args=[
+                f"ref_host={ref_host_blank}",
+                f"assembly={assembly_blank}",
                 f"vcf={vcf_blank}",
                 f"fastqs={fastqs_blank}",
                 "technology=Illumina",
@@ -188,7 +188,6 @@ class TestConsensusGenomes(WDLTestCase):
                 })
         self.assertRunFailed(ecm, task="ComputeStats",
                              error="InsufficientReadsError", cause="Insufficient coverage to proceed with CG analysis")
-
 
     def test_max_reads_illumina(self):
         fastq_0 = os.path.join(os.path.dirname(__file__), "SRR11741455_65054_nh_R1.fastq.gz")
