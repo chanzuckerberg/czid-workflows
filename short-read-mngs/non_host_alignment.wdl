@@ -168,19 +168,19 @@ task RunAlignment_minimap2_out {
         else
           export DEPLOYMENT_ENVIRONMENT=dev
           python3 <<CODE
-          import os
-          from idseq_utils.run_minimap2 import run_minimap2
+        import os
+        from idseq_utils.run_minimap2 import run_minimap2
 
-          fastas = ["~{sep='", "' fastas}"]
-          chunk_dir = os.path.join("~{s3_wd_uri}", "minimap2-chunks/")
-          run_minimap2(
-              "~{s3_wd_uri}",
-              chunk_dir,
-              "~{db_path}",
-              "~{prefix}.paf",
-              "~{minimap2_args}",
-              *fastas
-          )
+        fastas = ["~{sep='", "' fastas}"]
+        chunk_dir = os.path.join("~{s3_wd_uri}", "minimap2-chunks/")
+        run_minimap2(
+            "~{s3_wd_uri}",
+            chunk_dir,
+            "~{db_path}",
+            "~{prefix}.paf",
+            "~{minimap2_args}",
+            *fastas
+        )
         CODE
         fi
         python3 /usr/local/lib/python3.6/dist-packages/idseq_utils/paf2blast6.py "~{prefix}".paf
@@ -215,19 +215,19 @@ task RunAlignment_diamond_out {
         else
           export DEPLOYMENT_ENVIRONMENT=dev 
           python3 <<CODE
-          import os 
-          from idseq_utils.run_diamond import run_diamond
+        import os 
+        from idseq_utils.run_diamond import run_diamond
 
-          fastas = ["~{sep='", "' fastas}"]
-          chunk_dir = os.path.join("~{s3_wd_uri}", "diamond-chunks/")
+        fastas = ["~{sep='", "' fastas}"]
+        chunk_dir = os.path.join("~{s3_wd_uri}", "diamond-chunks/")
 
-          run_diamond(
-                  "~{s3_wd_uri}",
-                  chunk_dir, 
-                  "~{db_path}", 
-                  "~{prefix}.m8", 
-                  *fastas
-                  )
+        run_diamond(
+                "~{s3_wd_uri}",
+                chunk_dir, 
+                "~{db_path}", 
+                "~{prefix}.m8", 
+                *fastas
+                )
         CODE
         fi
     >>>
