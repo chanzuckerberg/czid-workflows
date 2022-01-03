@@ -114,9 +114,9 @@ task GetReferenceAccessionFastas {
         }
         for accession_id in ~{sep=' ' accession_ids}; do
             # Try fetching accession id. If not found, try incrementing the version. 
-            ({ taxoniq get-from-s3 --accession-id $accession_id; } || \
-            { taxoniq get-from-s3 --accession-id $(incrementAccession $accession_id); } \
-            || exit 4; ) > $accession_id.fasta;
+            ({ taxoniq get-from-s3 --accession-id $accession_id > $accession_id.fasta; } || \
+            { taxoniq get-from-s3 --accession-id $(incrementAccession $accession_id) > $accession_id.fasta; } \
+            || exit 4);
             if [[ $? == 4 ]]; then
                 export error=AccessionIdNotFound cause="Accession ID $accession_id not found in the index"
                 jq -nc ".wdl_error_message=true | .error=env.error | .cause=env.cause" > /dev/stderr
