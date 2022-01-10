@@ -53,8 +53,8 @@ RUN apt-get -qq update && apt-get -qq -y install \
 # These newer versions of infernal and ncbi-blast+ are required by VADR
 RUN curl -O -L https://ftp.osuosl.org/pub/ubuntu/pool/universe/i/infernal/infernal_1.1.4-1_amd64.deb && \
   dpkg -i infernal_1.1.4-1_amd64.deb && \
-  curl -O -L https://ftp.osuosl.org/pub/ubuntu/pool/universe/n/ncbi-blast+/ncbi-blast+_2.10.1-2_amd64.deb && \
-  dpkg -i ncbi-blast+_2.10.1-2_amd64.deb
+  curl -O -L https://ftp.osuosl.org/pub/ubuntu/pool/universe/n/ncbi-blast+/ncbi-blast+_2.10.1+ds-1_amd64.deb && \
+  dpkg -i ncbi-blast+_2.10.1+ds-1_amd64.deb
 
 # See https://github.com/ablab/quast/issues/157
 RUN pip3 install multiqc==1.8 quast==5.0.2 && \

@@ -168,6 +168,27 @@ class TestConsensusGenomes(WDLTestCase):
         self.assertRunFailed(ecm, task="FetchSequenceByAccessionId",
                              error="AccessionIdNotFound", cause="Accession ID NO_ACCESSION_ID not found in the index")
 
+    def test_no_coverage_error(self):
+        ref_host_blank = os.path.join(os.path.dirname(__file__), "blank.fastq.gz")
+        assembly_blank = os.path.join(os.path.dirname(__file__), "blank.fastq.gz")
+        vcf_blank = os.path.join(os.path.dirname(__file__), "blank.fastq.gz")
+        fastqs_blank = os.path.join(os.path.dirname(__file__), "blank.fastq.gz")
+        cleaned_bam = os.path.join(os.path.dirname(__file__), "empty.bam")
+        with self.assertRaises(CalledProcessError) as ecm:
+            self.run_miniwdl(task="ComputeStats", args=[
+                f"ref_host={ref_host_blank}",
+                f"assembly={assembly_blank}",
+                f"vcf={vcf_blank}",
+                f"fastqs={fastqs_blank}",
+                "technology=Illumina",
+                f"cleaned_bam={cleaned_bam}"],
+                task_input={
+                    "sample": "sample",
+                    "prefix": "",
+                })
+        self.assertRunFailed(ecm, task="ComputeStats",
+                             error="InsufficientReadsError", cause="Insufficient coverage to proceed with CG analysis")
+
     def test_max_reads_illumina(self):
         fastq_0 = os.path.join(os.path.dirname(__file__), "SRR11741455_65054_nh_R1.fastq.gz")
         fastq_1 = os.path.join(os.path.dirname(__file__), "SRR11741455_65054_nh_R2.fastq.gz")
