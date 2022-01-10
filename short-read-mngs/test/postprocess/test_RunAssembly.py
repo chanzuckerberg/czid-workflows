@@ -10,10 +10,10 @@ def test_RunAssembly_defaults(util, short_read_mngs_bench3_viral_outputs):
     min_contig_length filter)
     """
     assembly_contigs_fasta = short_read_mngs_bench3_viral_outputs["outputs"][
-        "idseq_short_read_mngs.postprocess.assembly_out_assembly_contigs_fasta"
+        "czid_short_read_mngs.postprocess.assembly_out_assembly_contigs_fasta"
     ]
     assembly_contigs_all_fasta = short_read_mngs_bench3_viral_outputs["outputs"][
-        "idseq_short_read_mngs.postprocess.assembly_out_assembly_contigs_all_fasta"
+        "czid_short_read_mngs.postprocess.assembly_out_assembly_contigs_all_fasta"
     ]
     assembly_contigs = list(SeqIO.parse(assembly_contigs_fasta, "fasta"))
     assembly_contigs_all = list(SeqIO.parse(assembly_contigs_all_fasta, "fasta"))
