@@ -23,6 +23,7 @@ non_host_alignment.accession2taxid_db: s3://idseq-public-references/mini-databas
 non_host_alignment.alignment_scalability: true
 non_host_alignment.minimap2_local_db_path: s3://idseq-public-references/test/viral-alignment-indexes/viral_nt
 non_host_alignment.diamond_local_db_path: s3://idseq-public-references/test/viral-alignment-indexes/viral_nr
+non_host_alignment.diamond_args: "--fast" 
 postprocess.nt_db: s3://idseq-public-references/test/viral-alignment-indexes/viral_nt
 postprocess.nt_loc_db: s3://idseq-public-references/test/viral-alignment-indexes/viral_nt_loc.db
 postprocess.nr_db: s3://idseq-public-references/test/viral-alignment-indexes/viral_nr

@@ -15,7 +15,7 @@ MAX_CHUNKS_IN_FLIGHT = 10
 
 
 def _run_chunk(
-    chunk_id: int, input_dir: str, chunk_dir: str, db_chunk: str, *queries: str
+    chunk_id: int, input_dir: str, chunk_dir: str, db_chunk: str, diamond_args: str, *queries: str
 ):
     deployment_environment = os.environ["DEPLOYMENT_ENVIRONMENT"]
     priority_name = os.environ.get("PRIORITY_NAME", "normal")
@@ -42,6 +42,10 @@ def _run_chunk(
             "name": "OUTPUT_DIR",
             "value": chunk_dir,
         },
+        {
+            "name": "EXTRA_ARGS",
+            "value": diamond_args,
+        }
     ]
 
     for i, query in enumerate(queries):
@@ -64,13 +68,13 @@ def _run_chunk(
 
 
 def run_diamond(
-    input_dir: str, chunk_dir: str, db_path: str, result_path: str, *queries: str
+    input_dir: str, chunk_dir: str, db_path: str, result_path: str, diamond_args, *queries: str
 ):
     parsed_url = urlparse(db_path, allow_fragments=False)
     bucket = parsed_url.netloc
     prefix = parsed_url.path.lstrip("/")
     chunks = (
-        [chunk_id, input_dir, chunk_dir, f"s3://{bucket}/{db_chunk}", *queries]
+        [chunk_id, input_dir, chunk_dir, diamond_args, f"s3://{bucket}/{db_chunk}", *queries]
         for chunk_id, db_chunk in enumerate(_db_chunks(bucket, prefix))
     )
     with Pool(MAX_CHUNKS_IN_FLIGHT) as p:

@@ -211,7 +211,7 @@ task RunAlignment_diamond_out {
         set -euxo pipefail  
         if [[ "~{run_locally}" == true ]]; then 
           diamond makedb --in "~{local_diamond_index}" -d reference
-          diamond blastx -d reference -q "~{sep=' ' fastas}" -o "~{prefix}.m8"
+          diamond blastx -d reference -q "~{sep=' ' fastas}" -o "~{prefix}.m8" "~{diamond_args}"
         else
           export DEPLOYMENT_ENVIRONMENT=dev 
           python3 <<CODE
@@ -226,6 +226,7 @@ task RunAlignment_diamond_out {
                 chunk_dir, 
                 "~{db_path}", 
                 "~{prefix}.m8", 
+                "~{diamond_args}",
                 *fastas
                 )
         CODE
