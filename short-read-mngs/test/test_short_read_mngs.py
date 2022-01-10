@@ -23,7 +23,7 @@ def test_bench3_viral(short_read_mngs_bench3_viral_outputs):
     # check correctness of the workflow outputs
     with open(
         outp["outputs"][
-            "idseq_short_read_mngs.postprocess.refined_taxon_count_out_assembly_refined_taxon_counts_with_dcr_json"
+            "czid_short_read_mngs.postprocess.refined_taxon_count_out_assembly_refined_taxon_counts_with_dcr_json"
         ]
     ) as infile:
         taxon_counts = json.load(infile)["pipeline_output"]["taxon_counts_attributes"]
