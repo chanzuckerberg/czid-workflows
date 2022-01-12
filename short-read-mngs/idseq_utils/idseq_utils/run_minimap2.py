@@ -82,4 +82,4 @@ def run_minimap2(
     with Pool(MAX_CHUNKS_IN_FLIGHT) as p:
         p.starmap(_run_chunk, chunks)
     run(["s3parcp", "--recursive", chunk_dir, "chunks"], check=True)
-    minimap2_merge("chunks", result_path, *queries)
+    minimap2_merge("chunks", result_path, minimap2_args, *queries)
