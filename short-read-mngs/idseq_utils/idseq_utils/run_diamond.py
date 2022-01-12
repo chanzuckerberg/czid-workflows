@@ -74,7 +74,7 @@ def run_diamond(
     bucket = parsed_url.netloc
     prefix = parsed_url.path.lstrip("/")
     chunks = (
-        [chunk_id, input_dir, chunk_dir, diamond_args, f"s3://{bucket}/{db_chunk}", *queries]
+        [chunk_id, input_dir, chunk_dir, f"s3://{bucket}/{db_chunk}", diamond_args, *queries]
         for chunk_id, db_chunk in enumerate(_db_chunks(bucket, prefix))
     )
     with Pool(MAX_CHUNKS_IN_FLIGHT) as p:
