@@ -5,7 +5,7 @@ from subprocess import run
 import logging
 from urllib.parse import urlparse
 from multiprocessing import Pool
-
+import sys
 from idseq_utils.diamond_scatter import blastx_join
 from idseq_utils.batch_run_helpers import _run_batch_job, _db_chunks
 
@@ -28,7 +28,7 @@ def _run_chunk(
     else:
         project_id, sample_id = "0", "0"
 
-    print(db_chunk, diamond_args)
+    print(db_chunk, diamond_args, file=sys.stderr)
     job_name = (f"idseq-{deployment_environment}-{alignment_algorithm}-"
                 f"project-{project_id}-sample-{sample_id}-part-{chunk_id}")
     job_queue = f"idseq-{deployment_environment}-{alignment_algorithm}-{provisioning_model}-{priority_name}"
@@ -49,7 +49,7 @@ def _run_chunk(
         }
     ]
 
-    print(environment)
+    print(environment, file=sys.stderr)
     for i, query in enumerate(queries):
         environment.append(
             {
