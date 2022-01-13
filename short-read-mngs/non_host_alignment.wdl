@@ -414,7 +414,7 @@ workflow idseq_non_host_alignment {
     String minimap2_db = "s3://idseq-public-references/minimap2-test/2021-01-22/nt_k12_w8_20/"
     String diamond_db = "s3://idseq-public-references/diamond-test/2021-01-22/"
     String minimap2_args = "-cx sr --secondary=yes"
-    String diamond_args = "--sensitive"
+    String diamond_args = "sensitive"
     String minimap2_prefix = "gsnap"
     String diamond_prefix = "rapsearch2"
 

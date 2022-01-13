@@ -65,7 +65,7 @@ def diamond_blastx(
         database,
         "--out",
         out,
-        diamond_args,
+        f"--{diamond_args}",
     ]
     for query in queries:
         cmd += ["--query", query]
