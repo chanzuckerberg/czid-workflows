@@ -82,4 +82,4 @@ def run_diamond(
     with Pool(MAX_CHUNKS_IN_FLIGHT) as p:
         p.starmap(_run_chunk, chunks)
     run(["s3parcp", "--recursive", chunk_dir, "chunks"], check=True)
-    blastx_join("chunks", result_path, *queries)
+    blastx_join("chunks", result_path, diamond_args, *queries)
