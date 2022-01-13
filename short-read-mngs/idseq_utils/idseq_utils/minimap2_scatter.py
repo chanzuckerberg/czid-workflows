@@ -42,7 +42,6 @@ def minimap2_alignment(cwd, par_tmpdir, cpus, database, out, queries):
 
 
 def minimap2_merge_cmd(cwd, par_tmpdir, chunks, minimap2_args, queries):
-    
     cmd = ["minimap2", "--split-merge", "-o", f"{par_tmpdir}/out.paf"]
     cmd.extend(shlex.split(minimap2_args))
     for query in queries:

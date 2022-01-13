@@ -152,7 +152,7 @@ def blastx_chunk(db_chunk: str, output_dir: str, diamond_args: str, *query: str)
             database=abspath(db_chunk),
             out="out.tsv",
             chunk=True,
-            diamond_args = diamond_args,
+            diamond_args=diamond_args,
             queries=(abspath(q) for q in query),
         )
         ref_block_name = f"ref_block_{zero_pad(0, 6)}_{zero_pad(int(chunk), 6)}"
