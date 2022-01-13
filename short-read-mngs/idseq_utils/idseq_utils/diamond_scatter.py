@@ -176,7 +176,7 @@ def mock_reference_fasta(chunks: int, chunk_size: int):
         i += 1
 
 
-def blastx_join(chunk_dir: str, out: str, *query: str):
+def blastx_join(chunk_dir: str, out: str, diamond_args: str, *query: str):
     with TemporaryDirectory() as tmp_dir:
         make_par_dir(tmp_dir, "par-tmp")
         with open(join(tmp_dir, "par-tmp", f"join_todo_{zero_pad(0, 6)}"), "w") as f:
@@ -197,6 +197,7 @@ def blastx_join(chunk_dir: str, out: str, *query: str):
                 database=db.name,
                 out=out,
                 join_chunks=chunks,
+                diamond_args=diamond_args,
                 queries=(abspath(q) for q in query),
             )
 
@@ -249,4 +250,4 @@ if __name__ == "__main__":
         with Pool(48) as p:
             p.map(_blastx_chunk, os.listdir(args.db_dir))
     elif args.command == "blastx-join":
-        blastx_join(args.chunk_dir, args.out, *args.query)
+        blastx_join(args.chunk_dir, args.out, args.diamond_args, *args.query)
