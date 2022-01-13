@@ -28,6 +28,7 @@ def _run_chunk(
     else:
         project_id, sample_id = "0", "0"
 
+    print(db_chunk, diamond_args)
     job_name = (f"idseq-{deployment_environment}-{alignment_algorithm}-"
                 f"project-{project_id}-sample-{sample_id}-part-{chunk_id}")
     job_queue = f"idseq-{deployment_environment}-{alignment_algorithm}-{provisioning_model}-{priority_name}"
@@ -48,6 +49,7 @@ def _run_chunk(
         }
     ]
 
+    print(environment)
     for i, query in enumerate(queries):
         environment.append(
             {
@@ -68,7 +70,7 @@ def _run_chunk(
 
 
 def run_diamond(
-    input_dir: str, chunk_dir: str, db_path: str, result_path: str, diamond_args, *queries: str
+    input_dir: str, chunk_dir: str, db_path: str, result_path: str, diamond_args: str, *queries: str
 ):
     parsed_url = urlparse(db_path, allow_fragments=False)
     bucket = parsed_url.netloc
