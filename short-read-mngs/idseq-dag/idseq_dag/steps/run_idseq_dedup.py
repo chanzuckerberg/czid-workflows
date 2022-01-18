@@ -62,10 +62,13 @@ class PipelineStepRunIDSeqDedup(PipelineStep):  # Deliberately not PipelineCount
             )
         )
 
+        read_ids = set()
         # Add leading single quote to every cell in the CSV that starts with a special character
         #   to guard against potential csv injection
         with open(duplicate_clusters_raw_path) as r, open(duplicate_clusters_path, 'w') as w:
             for row in csv.reader(r):
+                if row[0] in read_ids:
+                    raise InvalidInputFileError("Input file has duplicate read ids")
                 csv.writer(w).writerow(c if c[0].isalnum() else f"'{c}" for c in row)
 
         # Emit cluster sizes.  One line per cluster.  Format "<cluster_size> <cluster_read_id>".
