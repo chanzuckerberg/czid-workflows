@@ -41,4 +41,4 @@ jobs:
         run: |
           export DEPLOY_REF='${{github.event.inputs.czid_ref}}' GITHUB_TOKEN=${GH_DEPLOY_TOKEN:-GITHUB_TOKEN} IDSEQ_WORKFLOWS_RELEASE='${{github.event.inputs.czid_workflows_release}}'
           workflow_args=$(jq -n ".ref=env.DEPLOY_REF | .inputs={czid_workflows_release: env.IDSEQ_WORKFLOWS_RELEASE, czid_workflows_ref: env.GITHUB_SHA}")
-          gh api repos/:owner/czid/actions/workflows/short-read-mngs-benchmarks.yml/dispatches --input - <<< "$workflow_args"
+          gh api repos/:owner/idseq/actions/workflows/short-read-mngs-benchmarks.yml/dispatches --input - <<< "$workflow_args"
