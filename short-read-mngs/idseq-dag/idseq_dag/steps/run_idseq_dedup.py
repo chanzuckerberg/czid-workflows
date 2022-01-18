@@ -6,7 +6,7 @@ import idseq_dag.util.count as count
 import idseq_dag.util.log as log
 
 from idseq_dag.engine.pipeline_step import PipelineStep
-from idseq_dag.exceptions import InsufficientReadsError
+from idseq_dag.exceptions import InsufficientReadsError, InvalidInputFileError
 from idseq_dag.util.idseq_dedup_clusters import parse_clusters_file
 from idseq_dag.util.count import save_duplicate_cluster_sizes
 
