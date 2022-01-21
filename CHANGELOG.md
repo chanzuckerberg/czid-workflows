@@ -16,12 +16,13 @@ In addition, if a modification is made that may affect the results of a pipeline
 
 ### Unreleased
 
-### consensus-genome-v3.4.5
+
+### consensus-genome-v3.4.5, consensus-genome-v3.4.6, consensus-genome-v3.4.7
 - [Pipeline Change] Reduce max number of reads
-	- Change: reduce `max_reads` parameter from 75,000,000 to 25,000,000. Pipeline will only run on first 25,000,000 reads. 
+	- Change: reduce `max_reads` parameter from 75,000,000 to 50,000,000. Pipeline will only run on first 50,000,000 reads. 
 	- Predicted Results: Reduced number of processed reads, fewer timeouts 
 
-### short-read-mngs-v6.8.7
+### short-read-mngs-v6.8.8
 - fix bug in RunSTAR that caused known errors not to be reported
 
 ### consensus-genome-v3.4.4
