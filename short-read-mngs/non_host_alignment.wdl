@@ -217,7 +217,7 @@ task RunAlignment_diamond_out {
           python3 <<CODE
         import os 
         from idseq_utils.run_diamond import run_diamond
-
+        
         fastas = ["~{sep='", "' fastas}"]
         chunk_dir = os.path.join("~{s3_wd_uri}", "diamond-chunks/")
 
@@ -230,7 +230,14 @@ task RunAlignment_diamond_out {
                 *fastas
                 )
         CODE
+
         fi
+        python3 << CODE
+        import pandas as pd
+        df = pd.read_csv("~{prefix}.m8", header=None, delimiter="\t")
+        df.iloc[:, 10] = 12334787560/2**df.iloc[:, 11]
+        df.to_csv("~{prefix}.m8", header=None, index=None, sep="\t", float_format='%.3g')
+        CODE
     >>>
 
     output {
