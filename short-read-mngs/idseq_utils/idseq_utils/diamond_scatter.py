@@ -75,6 +75,7 @@ def diamond_blastx(
         cmd += ["--single-chunk"]
     if join_chunks > 0:
         cmd += ["--join-chunks", str(join_chunks)]
+    print(cmd)
     res = run(cmd, cwd=cwd, stdout=PIPE, stderr=PIPE)
     if res.returncode != 0:
         for line in res.stderr.decode().split("\n"):
