@@ -57,6 +57,8 @@ def diamond_blastx(
         "diamond",
         "blastx",
         "--multiprocessing",
+        "--dbsize", 
+        "123347875600",
         "--parallel-tmpdir",
         par_tmpdir,
         "--block-size",
