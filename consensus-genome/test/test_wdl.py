@@ -15,14 +15,14 @@ class TestConsensusGenomes(WDLTestCase):
     wdl = os.path.join(os.path.dirname(__file__), "..", "run.wdl")
     with open(os.path.join(os.path.dirname(__file__), "local_test.yml")) as fh:
         common_inputs = yaml.safe_load(fh)
-    sc2_ref_fasta = "s3://idseq-public-references/consensus-genome/MN908947.3.fa"
+    sc2_ref_fasta = "s3://czid-public-references/consensus-genome/MN908947.3.fa"
 
     def test_vadr_error_caught(self):
         # use the long filename error as a proxy for testing VADR error handling
         consensus = os.path.join(os.path.dirname(__file__), "vadr_input", "really-long-name-consensus.fa")
         vadr_opts_string = ("-s -r --nomisc --mkey NC_045512 --lowsim5term 2 --lowsim3term 2 --fstlowthr 0.0 "
                             "--alt_fail lowscore,fsthicnf,fstlocnf")
-        args = ["vadr_model=s3://idseq-public-references/consensus-genome/vadr-models-sarscov2-1.2-2.tar.gz",
+        args = ["vadr_model=s3://czid-public-references/consensus-genome/vadr-models-sarscov2-1.2-2.tar.gz",
                 f"vadr_options={vadr_opts_string}",
                 f"assembly={consensus}"]
         res = self.run_miniwdl(args=args, task="Vadr", task_input={"prefix": ""})
@@ -34,7 +34,7 @@ class TestConsensusGenomes(WDLTestCase):
         consensus = os.path.join(os.path.dirname(__file__), "vadr_input", "really-long-name-consensus.fa")
         vadr_opts_string = ("-s -r --nomisc --mkey sarscov2 --lowsim5term 2 --lowsim3term 2 "
                             "--fstlowthr 0.0 --alt_fail lowscore,fsthicnf,fstlocnf --noseqnamemax")
-        args = ["vadr_model=s3://idseq-public-references/consensus-genome/vadr-models-sarscov2-1.2-2.tar.gz",
+        args = ["vadr_model=s3://czid-public-references/consensus-genome/vadr-models-sarscov2-1.2-2.tar.gz",
                 f"vadr_options={vadr_opts_string}",
                 f"assembly={consensus}"]
         res = self.run_miniwdl(args=args, task="Vadr", task_input={"prefix": ""})
@@ -45,7 +45,7 @@ class TestConsensusGenomes(WDLTestCase):
     def test_sars_cov2_illumina_cg_snap(self):
         aligned_reads = os.path.join(os.path.dirname(__file__), "trim_primers_input", "snap_aligned_reads.bam")
         args = [f"alignments={aligned_reads}",
-                "primer_bed=s3://idseq-public-references/consensus-genome/snap_primers.bed"]
+                "primer_bed=s3://czid-public-references/consensus-genome/snap_primers.bed"]
         res = self.run_miniwdl(args, task="TrimPrimers", task_input={"prefix": ""})
         with open(res["outputs"]["TrimPrimers.trimmed_bam_bai"], 'rb') as f:
             hash = hashlib.md5(f.read()).hexdigest()
@@ -58,7 +58,7 @@ class TestConsensusGenomes(WDLTestCase):
     def test_sars_cov2_illumina_cg_tailedseq(self):
         aligned_reads = os.path.join(os.path.dirname(__file__), "trim_primers_input", "tailedseq_aligned_reads.bam")
         args = [f"alignments={aligned_reads}",
-                "primer_bed=s3://idseq-public-references/consensus-genome/artic_v3_short_275_primers.bed"]
+                "primer_bed=s3://czid-public-references/consensus-genome/artic_v3_short_275_primers.bed"]
         res = self.run_miniwdl(args, task="TrimPrimers", task_input={"prefix": ""})
         with open(res["outputs"]["TrimPrimers.trimmed_bam_bai"], 'rb') as f:
             hash = hashlib.md5(f.read()).hexdigest()
@@ -76,7 +76,7 @@ class TestConsensusGenomes(WDLTestCase):
         for model in models:
             args = ["prefix=''", "sample=test_sample", f"fastqs={fastq}",
                     "normalise=1000", f"medaka_model={model}",
-                    "primer_schemes=s3://idseq-public-references/consensus-genome/artic-primer-schemes_v2.tar.gz",
+                    "primer_schemes=s3://czid-public-references/consensus-genome/artic-primer-schemes_v2.tar.gz",
                     "primer_set=nCoV-2019/V1200"]
             res = self.run_miniwdl(args, task="RunMinion")
             for filename in res["outputs"].values():
@@ -95,7 +95,7 @@ class TestConsensusGenomes(WDLTestCase):
         fastq = os.path.join(os.path.dirname(__file__), "no_host_1.fq.gz")
         args = ["prefix=''", "sample=test_sample", f"fastqs={fastq}",
                 "normalise=1000", f"medaka_model={model}",
-                "primer_schemes=s3://idseq-public-references/consensus-genome/artic-primer-schemes.tar.gz",
+                "primer_schemes=s3://czid-public-references/consensus-genome/artic-primer-schemes.tar.gz",
                 "primer_set=nCoV-2019/V3"]
         with self.assertRaises(CalledProcessError) as ecm:
             self.run_miniwdl(args, task="RunMinion")
@@ -117,7 +117,7 @@ class TestConsensusGenomes(WDLTestCase):
             f"fastqs={fastq}",
             "no_reads_quast=false",
             "technology=ONT",
-            "primer_schemes=s3://idseq-public-references/consensus-genome/artic-primer-schemes_v2.tar.gz",
+            "primer_schemes=s3://czid-public-references/consensus-genome/artic-primer-schemes_v2.tar.gz",
             "primer_set=nCoV-2019/V1200"
         ]
         res = self.run_miniwdl(args, task="Quast")

@@ -60,7 +60,7 @@ class TestSTAR(WDLTestCase):
             f"validate_input_summary_json={summary_json}",
             f"valid_input_fastq={fastqs_0}",
             f"valid_input_fastq={fastqs_1}",
-            "star_genome=s3://idseq-public-references/host_filter/ercc"
+            "star_genome=s3://czid-public-references/host_filter/ercc"
             "/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/STAR_genome.tar",
         ]
         self.star_args = args

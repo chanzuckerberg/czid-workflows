@@ -61,11 +61,11 @@
       "class": "PipelineStepDownloadAccessions",
       "module": "idseq_dag.steps.download_accessions",
       "additional_files": {
-        "lineage_db": "s3://idseq-public-references/taxonomy/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/taxid-lineages.db",
-        "loc_db": "s3://idseq-public-references/alignment_data/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/nt_loc.db"
+        "lineage_db": "s3://czid-public-references/taxonomy/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/taxid-lineages.db",
+        "loc_db": "s3://czid-public-references/alignment_data/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/nt_loc.db"
       },
       "additional_attributes": {
-          "db": "s3://idseq-public-references/alignment_data/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/nt",
+          "db": "s3://czid-public-references/alignment_data/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/nt",
           "db_type": "nt"
       }
     },
@@ -75,11 +75,11 @@
       "class": "PipelineStepDownloadAccessions",
       "module": "idseq_dag.steps.download_accessions",
       "additional_files": {
-        "lineage_db": "s3://idseq-public-references/taxonomy/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/taxid-lineages.db",
-        "loc_db": "s3://idseq-public-references/alignment_data/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/nr_loc.db"
+        "lineage_db": "s3://czid-public-references/taxonomy/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/taxid-lineages.db",
+        "loc_db": "s3://czid-public-references/alignment_data/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/nr_loc.db"
       },
       "additional_attributes": {
-          "db": "s3://idseq-public-references/alignment_data/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/nr",
+          "db": "s3://czid-public-references/alignment_data/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/nr",
           "db_type": "nr"
       }
     },
@@ -89,8 +89,8 @@
       "class": "PipelineStepBlastContigs",
       "module": "idseq_dag.steps.blast_contigs",
       "additional_files": {
-        "lineage_db": "s3://idseq-public-references/taxonomy/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/taxid-lineages.db",
-        "deuterostome_db": "s3://idseq-public-references/taxonomy/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/deuterostome_taxids.txt"
+        "lineage_db": "s3://czid-public-references/taxonomy/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/taxid-lineages.db",
+        "deuterostome_db": "s3://czid-public-references/taxonomy/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/deuterostome_taxids.txt"
       },
       "additional_attributes": {
           "db_type": "nt"
@@ -102,8 +102,8 @@
       "class": "PipelineStepBlastContigs",
       "module": "idseq_dag.steps.blast_contigs",
       "additional_files": {
-        "lineage_db": "s3://idseq-public-references/taxonomy/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/taxid-lineages.db",
-        "deuterostome_db": "s3://idseq-public-references/taxonomy/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/deuterostome_taxids.txt"
+        "lineage_db": "s3://czid-public-references/taxonomy/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/taxid-lineages.db",
+        "deuterostome_db": "s3://czid-public-references/taxonomy/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/deuterostome_taxids.txt"
       },
       "additional_attributes": {
           "db_type": "nr"

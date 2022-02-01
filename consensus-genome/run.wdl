@@ -16,9 +16,9 @@ workflow consensus_genome {
         Int max_reads = 50000000
 
         String docker_image_id
-        File ercc_fasta = "s3://idseq-public-references/consensus-genome/ercc_sequences.fasta"
+        File ercc_fasta = "s3://czid-public-references/consensus-genome/ercc_sequences.fasta"
         File kraken2_db_tar_gz  # TODO: make this optional; only required if filter_reads == true, even for Illumina
-        File primer_bed = "s3://idseq-public-references/consensus-genome/artic_v3_primers.bed" # Only required for Illumina
+        File primer_bed = "s3://czid-public-references/consensus-genome/artic_v3_primers.bed" # Only required for Illumina
 
         File? ref_fasta # Only required for Illumina (ONT SC2 reference is built into ARTIC); takes precedence over ref_accession_id
         String? ref_accession_id # Only required for Illumina; has no effect if ref_fasta is set
@@ -33,7 +33,7 @@ workflow consensus_genome {
         String prefix = ""
 
         # ONT-specific inputs
-        File primer_schemes = "s3://idseq-public-references/consensus-genome/artic-primer-schemes_v2.tar.gz"
+        File primer_schemes = "s3://czid-public-references/consensus-genome/artic-primer-schemes_v2.tar.gz"
         String primer_set = "nCoV-2019/V3"
         # filters in accordance with recommended parameters in ARTIC SARS-CoV-2 bioinformatics protocol are...
         # ...intended to remove obviously chimeric reads.
@@ -48,7 +48,7 @@ workflow consensus_genome {
         # medaka_model: default is selected to support current Clear Labs workflow
         String medaka_model = "r941_min_high_g360"
         String vadr_options = "-s -r --nomisc --mkey sarscov2 --lowsim5term 2 --lowsim3term 2 --fstlowthr 0.0 --alt_fail lowscore,fsthicnf,fstlocnf --noseqnamemax"
-        File vadr_model = "s3://idseq-public-references/consensus-genome/vadr-models-sarscov2-1.2-2.tar.gz"
+        File vadr_model = "s3://czid-public-references/consensus-genome/vadr-models-sarscov2-1.2-2.tar.gz"
 
         # Illumina-specific parameters
         # Step parameters
@@ -57,7 +57,7 @@ workflow consensus_genome {
 
         Float ivarFreqThreshold = 0.75
         Int   ivarQualThreshold  = 20
-        Int   minDepth          = if "~{primer_bed}" == "s3://idseq-public-references/consensus-genome/na_primers.bed" then 5 else 10
+        Int   minDepth          = if "~{primer_bed}" == "s3://czid-public-references/consensus-genome/na_primers.bed" then 5 else 10
 
         # If no_reads_quast is true, quast runs without considering the raw reads (only considering the reference genome and the consensus.fa).
         # This reduces the number of informative metrics that quast provides, but speeds up the step since quast is faster when it doesn't consider raw reads.

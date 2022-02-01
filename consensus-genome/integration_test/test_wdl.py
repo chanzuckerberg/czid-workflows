@@ -11,7 +11,7 @@ class TestConsensusGenomes(WDLTestCase):
     wdl = os.path.join(os.path.dirname(__file__), "..", "run.wdl")
     with open(os.path.join(os.path.dirname(__file__), "local_test.yml")) as fh:
         common_inputs = yaml.safe_load(fh)
-    sc2_ref_fasta = "s3://idseq-public-references/consensus-genome/MN908947.3.fa"
+    sc2_ref_fasta = "s3://czid-public-references/consensus-genome/MN908947.3.fa"
 
     def test_sars_cov2_illumina_cg(self):
         fastqs_0 = os.path.join(os.path.dirname(__file__), "sample_sars-cov-2_paired_r1.fastq.gz")
@@ -104,7 +104,7 @@ class TestConsensusGenomes(WDLTestCase):
         fastqs_1 = os.path.join(os.path.dirname(__file__), "SRR11741455_65054_nh_R2.fastq.gz")
         args = ["sample=test_sample", f"fastqs_0={fastqs_0}", f"fastqs_1={fastqs_1}", "technology=Illumina",
                 "filter_reads=false", "ref_accession_id=MF965207.1",
-                "primer_bed=s3://idseq-public-references/consensus-genome/na_primers.bed"]
+                "primer_bed=s3://czid-public-references/consensus-genome/na_primers.bed"]
         res = self.run_miniwdl(args)
         for output_name, output in res["outputs"].items():
             if isinstance(output, str):
