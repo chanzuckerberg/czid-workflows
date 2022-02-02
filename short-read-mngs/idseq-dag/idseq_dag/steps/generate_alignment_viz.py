@@ -225,10 +225,13 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
             return f"{output_json_dir}/{db_type}.{tag}.{int(lin_id)}.align_viz.json"
 
         def reads_from_dict(d):
-            for v in d.values():
-                for vv in v.values():
-                    for read_arr in vv.get("reads", []):
-                        yield read_arr[1]
+            read_arrs = d.values()
+            while read_arrs and ("reads" not in read_arrs[0]):
+                read_arrs = [vv for v in read_arrs for vv in v]
+
+            read_arrs = [v.get("reads", []) for v in read_arrs]
+            for read_arr in read_arrs:
+                yield read_arr[1]
 
         def write_n_longest(tag, lin_id, d, n):
             if db_type.lower() != "nt":
