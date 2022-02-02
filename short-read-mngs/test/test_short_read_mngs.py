@@ -38,7 +38,17 @@ def test_bench3_viral(short_read_mngs_bench3_viral_outputs):
             assert is_valid_fasta(filename), f"{filename} is not a valid fasta file"
 
     longest_reads = outp["outputs"]["czid_short_read_mngs.experimental.longest_reads"]
-    longest_reads = [os.path.basename(fn) for fn in longest_reads]
-    longest_reads = [fn for fn in longest_reads if re.match(r"nt\.[a-z]+\.[0-9]+\.longest_5_reads", fn)]
-    assert longest_reads, longest_reads
+    basenames = [os.path.basename(fn) for fn in longest_reads]
+    assert basenames, basenames
+    assert all(re.match(r"nt\.[a-z]+\.[0-9]+\.longest_5_reads", fn) for fn in basenames), basenames
+
+    for fn in longest_reads:
+        with open(fn) as f:
+            lines = list(f)
+            assert len(lines) <= 5, len(lines)
+            prev = None
+            for read in lines:
+                assert prev == None or len(read) <= prev, (len(read), prev)
+                prev = len(read)
+                assert all(c in "ACTGU" for c in read.strip()), read
     # TODO: further correctness tests
