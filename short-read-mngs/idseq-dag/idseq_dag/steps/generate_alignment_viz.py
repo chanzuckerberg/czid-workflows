@@ -231,7 +231,7 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
                         yield read_arr[1]
 
         def write_n_longest(tag, lin_id, d, n):
-            if db_type.lower() == "nt":
+            if db_type.lower() != "nt":
                 return
 
             longest_5_reads = sorted(list(set(reads_from_dict(d))), key=lambda read: len(read))[:n]
