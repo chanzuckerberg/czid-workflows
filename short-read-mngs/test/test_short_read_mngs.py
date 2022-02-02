@@ -48,7 +48,7 @@ def test_bench3_viral(short_read_mngs_bench3_viral_outputs):
             assert len(lines) <= 5, len(lines)
             prev = None
             for read in lines:
-                assert prev == None or len(read) <= prev, (len(read), prev)
+                assert prev is None or len(read) <= prev, (len(read), prev)
                 prev = len(read)
                 assert all(c in "ACTGU" for c in read.strip()), read
     # TODO: further correctness tests
