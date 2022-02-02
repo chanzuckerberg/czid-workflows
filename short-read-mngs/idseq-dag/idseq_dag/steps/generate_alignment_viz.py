@@ -225,9 +225,9 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
             return f"{output_json_dir}/{db_type}.{tag}.{int(lin_id)}.align_viz.json"
 
         def reads_from_dict(d):
-            read_arrs = d.values()
+            read_arrs = list(d.values())
             while read_arrs and ("reads" not in read_arrs[0]):
-                read_arrs = [vv for v in read_arrs for vv in v]
+                read_arrs = [vv for v in read_arrs for vv in v.values()]
 
             read_arrs = [v.get("reads", []) for v in read_arrs]
             for read_arr in read_arrs:
