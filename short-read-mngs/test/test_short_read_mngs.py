@@ -37,8 +37,8 @@ def test_bench3_viral(short_read_mngs_bench3_viral_outputs):
         if filename.endswith(".fasta"):
             assert is_valid_fasta(filename), f"{filename} is not a valid fasta file"
 
-    align_viz_out = outp["outputs"]["czid_short_read_mngs.experimental.align_viz"]
-    align_viz_out = [os.path.basename(fn) for fn in align_viz_out]
-    longest_reads = [fn for fn in align_viz_out if re.match(r"nt\.[a-z]+\.[0-9]+\.longest_5_reads", fn)]
-    assert longest_reads, align_viz_out
+    longest_reads = outp["outputs"]["czid_short_read_mngs.experimental.longest_reads"]
+    longest_reads = [os.path.basename(fn) for fn in longest_reads]
+    longest_reads = [fn for fn in longest_reads if re.match(r"nt\.[a-z]+\.[0-9]+\.longest_5_reads", fn)]
+    assert longest_reads, longest_reads
     # TODO: further correctness tests
