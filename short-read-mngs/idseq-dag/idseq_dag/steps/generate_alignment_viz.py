@@ -231,7 +231,8 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
 
             read_arrs = [v.get("reads", []) for v in read_arrs]
             for read_arr in read_arrs:
-                yield read_arr[1]
+                for read_entry in read_arr:
+                    yield read_entry[1]
 
         def write_n_longest(tag, lin_id, d, n):
             if db_type.lower() != "nt":
