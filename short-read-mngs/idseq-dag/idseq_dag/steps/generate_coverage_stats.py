@@ -177,9 +177,10 @@ class PipelineStepGenerateCoverageStats(PipelineStep):
             )
         )
         # if all intermediate json files are empty, close collated json file
-        json_sizes = sum([os.path.getsize(tfn) for tfn in output_json_filenames[:-1]])
+        json_sizes = sum(os.path.getsize(tfn) for tfn in output_json_filenames[:-1])
         if json_sizes == 0:
-            ojson.write("}")
+            with open(output_json_filenames[-1], "w") as ojson: 
+                ojson.write("}")
         for tfn in output_json_filenames[:-1]:
             os.remove(tfn)
         return (output_csv_filenames[-1], output_json_filenames[-1])
