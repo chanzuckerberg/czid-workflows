@@ -69,6 +69,7 @@ class PipelineStepRunIDSeqDedup(PipelineStep):  # Deliberately not PipelineCount
             for row in csv.reader(r):
                 if row[0] in read_ids:
                     raise InvalidInputFileError("Input file has duplicate read ids")
+                read_ids.add(row[0])
                 csv.writer(w).writerow(c if c[0].isalnum() else f"'{c}" for c in row)
 
         # Emit cluster sizes.  One line per cluster.  Format "<cluster_size> <cluster_read_id>".
