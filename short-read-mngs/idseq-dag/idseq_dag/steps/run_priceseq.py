@@ -86,6 +86,11 @@ class PipelineStepRunPriceSeq(PipelineStep):
                 ]
                 self.run_priceseqfilter(convert_out, price_out, is_paired, file_type)
 
+        for file in price_out:
+            statinfo = os.stat(file)
+            if statinfo.st_size == 0:
+                raise InsufficientReadsError("All reads filtered from PriceSeqFilter")
+
         # After PriceSeqFilter, all files should be in FASTA format
         if file_type != 'fasta':
             step = "FASTQ to FASTA conversion"

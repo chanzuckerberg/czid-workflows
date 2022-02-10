@@ -8,7 +8,8 @@ import "non_host_alignment.wdl" as stage2
 import "postprocess.wdl" as stage3
 import "experimental.wdl" as stage4
 
-workflow idseq_short_read_mngs {
+workflow czid_short_read_mngs {
+
     input {
         String docker_image_id
         File fastqs_0
@@ -18,14 +19,14 @@ workflow idseq_short_read_mngs {
         String non_host_gsnap_genome_name = "nt_k16"
         String s3_wd_uri = ""
     }
-    call stage1.idseq_host_filter as host_filter {
+    call stage1.czid_host_filter as host_filter {
         input:
         fastqs_0 = fastqs_0,
         fastqs_1 = fastqs_1,
         docker_image_id = docker_image_id,
         s3_wd_uri = s3_wd_uri
     }
-    call stage2.idseq_non_host_alignment as non_host_alignment {
+    call stage2.czid_non_host_alignment as non_host_alignment {
         input:
         host_filter_out_gsnap_filter_1_fa = host_filter.gsnap_filter_out_gsnap_filter_1_fa,
         host_filter_out_gsnap_filter_2_fa = host_filter.gsnap_filter_out_gsnap_filter_2_fa,
@@ -38,7 +39,7 @@ workflow idseq_short_read_mngs {
         docker_image_id = docker_image_id,
         s3_wd_uri = s3_wd_uri
     }
-    call stage3.idseq_postprocess as postprocess {
+    call stage3.czid_postprocess as postprocess {
         input:
         host_filter_out_gsnap_filter_1_fa = host_filter.gsnap_filter_out_gsnap_filter_1_fa,
         host_filter_out_gsnap_filter_2_fa = host_filter.gsnap_filter_out_gsnap_filter_2_fa,
@@ -56,7 +57,7 @@ workflow idseq_short_read_mngs {
         docker_image_id = docker_image_id,
         s3_wd_uri = s3_wd_uri
     }
-    call stage4.idseq_experimental as experimental {
+    call stage4.czid_experimental as experimental {
         input:
         taxid_fasta_in_annotated_merged_fa = non_host_alignment.annotated_out_annotated_merged_fa,
         taxid_fasta_in_gsnap_hitsummary_tab = non_host_alignment.gsnap_out_gsnap_hitsummary_tab,

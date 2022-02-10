@@ -1,4 +1,4 @@
-# IDseq Consensus Genome workflow
+# CZ ID Consensus Genome workflow
 # Based on original work at:
 # - CZ Biohub SARS-CoV-2 pipeline, https://github.com/czbiohub/sc2-illumina-pipeline
 # - ARTIC Oxford Nanopore MinION SARS-CoV-2 SOP, https://artic.network/ncov-2019/ncov2019-bioinformatics-sop.html
@@ -7,6 +7,7 @@
 version 1.1
 
 workflow consensus_genome {
+
     input {
         # Required parameters
         File fastqs_0
@@ -897,18 +898,20 @@ task ComputeStats {
         import json
         import re
         import pysam
+        import sys
         from Bio import SeqIO
         import numpy as np
         from matplotlib import pyplot as plt
         import seaborn as sns
-
+        
+        error = lambda err, cause: sys.exit(json.dumps(dict(wdl_error_message=True, error=err, cause=cause)))
         stats = {"sample_name": "~{sample}"}
 
         depths = open("~{prefix}samtools_depth.txt").read().splitlines()
         if depths:
             depths = np.array([int(d) for d in depths])
         else:
-            raise Exception("Insufficient coverage to proceed with CG analysis")
+            error("InsufficientReadsError", "Insufficient coverage to proceed with CG analysis")
 
         stats["depth_avg"] = depths.mean()
         stats["depth_q.25"] = np.quantile(depths, .25)

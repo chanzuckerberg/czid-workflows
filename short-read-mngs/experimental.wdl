@@ -109,6 +109,7 @@ task GenerateAlignmentViz {
     File align_viz_summary = "align_viz.summary"
     File? output_read_count = "alignment_viz_out.count"
     Array[File] align_viz = glob("align_viz/*.align_viz.json")
+    Array[File] longest_reads = glob("longest_reads/*.longest_5_reads")
   }
   runtime {
     docker: docker_image_id
@@ -219,7 +220,7 @@ task NonhostFastq {
   }
 }
 
-workflow idseq_experimental {
+workflow czid_experimental {
   input {
     String docker_image_id
     String s3_wd_uri
@@ -353,6 +354,7 @@ workflow idseq_experimental {
     File? nonhost_fastq_out_nonhost_R2_fastq = NonhostFastq.nonhost_R2_fastq
     File? nonhost_fastq_out_count = NonhostFastq.output_read_count
     Array[File] align_viz = GenerateAlignmentViz.align_viz
+    Array[File] longest_reads = GenerateAlignmentViz.longest_reads
     Array[File] coverage_viz = GenerateCoverageViz.coverage_viz
   }
 }

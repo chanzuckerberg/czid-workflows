@@ -90,7 +90,7 @@ def harvest_sample(sample, outputs_json, taxadb):
 
     # collect read counts at various pipeline steps
     ans["paired"] = (
-        outputs_json["idseq_short_read_mngs.host_filter.star_out_unmapped2_fastq"]
+        outputs_json["czid_short_read_mngs.host_filter.star_out_unmapped2_fastq"]
         is not None
     )
     ans["input_reads"] = read_output_jsonfile(outputs_json, "host_filter.input_read_count")[
@@ -228,7 +228,7 @@ def read_outputs_json(rundir):
     )
     ans = {}
     for key, value in items:
-        ans["idseq_short_read_mngs." + key[6:]] = value
+        ans["czid_short_read_mngs." + key[6:]] = value
     return ans
 
 
@@ -248,14 +248,14 @@ def read_output_jsonfile(outputs_json, key):
     """
     From the WDL outputs dict, read the contents of an output JSON file
     """
-    return read_json(outputs_json["idseq_short_read_mngs." + key])
+    return read_json(outputs_json["czid_short_read_mngs." + key])
 
 
 def load_contig_lengths(outputs_json):
     """
     Generate dict contig id -> length
     """
-    fasta = outputs_json["idseq_short_read_mngs.postprocess.assembly_out_assembly_contigs_fasta"]
+    fasta = outputs_json["czid_short_read_mngs.postprocess.assembly_out_assembly_contigs_fasta"]
     lengths = {}
     with ExitStack() as cleanup:
         if fasta.startswith("s3:"):

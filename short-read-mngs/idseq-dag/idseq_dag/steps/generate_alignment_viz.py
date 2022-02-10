@@ -39,6 +39,7 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
         annotated_m8 = self.input_files_local[0][0]
         annotated_fasta = self.input_files_local[1][0]
         output_json_dir = os.path.join(self.output_dir_local, "align_viz")
+        output_longest_reads_dir = os.path.join(self.output_dir_local, "longest_reads")
 
         # Go through annotated_fasta with a db_type (NT/NR match). Infer the
         # family/genus/species info
@@ -82,7 +83,7 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
             target=safe_multi_delete, args=[to_be_deleted])
         deleter_thread.start()
 
-        self.dump_align_viz_json(output_json_dir, db_type, result_dict)
+        self.dump_align_viz_json(output_json_dir, output_longest_reads_dir, db_type, result_dict)
 
         deleter_thread.join()
 
@@ -219,26 +220,49 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
 
         return result_dict, to_be_deleted
 
-    def dump_align_viz_json(self, output_json_dir, db_type, result_dict):
+    def dump_align_viz_json(self, output_json_dir, output_longest_reads_dir, db_type, result_dict):
         def align_viz_name(tag, lin_id):
             return f"{output_json_dir}/{db_type}.{tag}.{int(lin_id)}.align_viz.json"
 
+        def reads_from_dict(d):
+            read_arrs = list(d.values())
+            while read_arrs and ("reads" not in read_arrs[0]):
+                read_arrs = [vv for v in read_arrs for vv in v.values()]
+
+            read_arrs = [v.get("reads", []) for v in read_arrs]
+            for read_arr in read_arrs:
+                for read_entry in read_arr:
+                    yield read_entry[1]
+
+        def write_n_longest(tag, lin_id, d, n):
+            if db_type.lower() != "nt":
+                return
+
+            longest_5_reads = sorted(list(set(reads_from_dict(d))), key=lambda read: len(read))[:n]
+            fn = f"{output_longest_reads_dir}/{db_type}.{tag}.{int(lin_id)}.longest_5_reads"
+            with open(fn, 'w') as f:
+                f.writelines(longest_5_reads)
+
         # Generate JSON files for the align_viz folder
         command.make_dirs(output_json_dir)
+        command.make_dirs(output_longest_reads_dir)
         for (family_id, family_dict) in result_dict.items():
             fn = align_viz_name("family", family_id)
             with open(fn, 'w') as out_f:
                 json.dump(family_dict, out_f)
+            write_n_longest("family", family_id, family_dict, 5)
 
             for (genus_id, genus_dict) in family_dict.items():
                 fn = align_viz_name("genus", genus_id)
                 with open(fn, 'w') as out_f:
                     json.dump(genus_dict, out_f)
+                write_n_longest("genus", genus_id, genus_dict, 5)
 
                 for (species_id, species_dict) in genus_dict.items():
                     fn = align_viz_name("species", species_id)
                     with open(fn, 'w') as out_f:
                         json.dump(species_dict, out_f)
+                    write_n_longest("species", species_id, species_dict, 5)
         self.additional_output_folders_hidden.append(output_json_dir)
 
     @staticmethod

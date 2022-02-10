@@ -2,11 +2,11 @@ FROM ubuntu:18.04
 ARG DEBIAN_FRONTEND=noninteractive
 ARG MINIWDL_VERSION=1.1.5
 
-LABEL maintainer="IDseq Team <idseq-tech@chanzuckerberg.com>"
+LABEL maintainer="CZ ID Team <idseq-tech@chanzuckerberg.com>"
 
 RUN sed -i s/archive.ubuntu.com/us-west-2.ec2.archive.ubuntu.com/ /etc/apt/sources.list; \
-        echo 'APT::Install-Recommends "false";' > /etc/apt/apt.conf.d/98idseq; \
-        echo 'APT::Install-Suggests "false";' > /etc/apt/apt.conf.d/99idseq
+        echo 'APT::Install-Recommends "false";' > /etc/apt/apt.conf.d/98czid; \
+        echo 'APT::Install-Suggests "false";' > /etc/apt/apt.conf.d/99czid
 
 RUN apt-get -q update
 RUN apt-get -q install -y \
@@ -74,8 +74,8 @@ RUN curl -L -o /usr/bin/idseq-dedup https://github.com/chanzuckerberg/idseq-dedu
 # Note: python3-scipy pulls in gcc (fixed in Ubuntu 19.10)
 # TODO: kSNP3 (separate phylotree image?)
 
-# Note: the NonHostAlignment stage uses a different version of gmap custom to IDseq, installed here:
-# https://github.com/chanzuckerberg/idseq/blob/master/workflows/docker/gsnap/Dockerfile#L16-L20
+# Note: the NonHostAlignment stage uses a different version of gmap custom to CZ ID, installed here:
+# https://github.com/chanzuckerberg/czid/blob/master/workflows/docker/gsnap/Dockerfile#L16-L20
 # TODO: migrate both to https://packages.ubuntu.com/focal/gmap (updates to gmap require revalidation)
 RUN apt-get -q install -y gmap
 

@@ -1,4 +1,4 @@
-# IDseq Consensus Genome workflow
+# CZ ID Consensus Genome workflow
 
 This workflow performs reference-based consensus genome mapping from metagenomic sequencing assays with spiked primer
 enrichment or from amplicon sample sequencing assays.
@@ -8,7 +8,7 @@ The workflow has several modes:
 - Oxford Nanopore SARS-CoV-2 samples
 - Illumina SARS-CoV-2 samples
 - Illumina samples of other viruses
-- Illumina reads isolated from metagenomic samples via the IDseq mngs workflow
+- Illumina reads isolated from metagenomic samples via the CZ ID mngs workflow
 
 Based on original work at:
 - CZ Biohub SARS-CoV-2 pipeline, https://github.com/czbiohub/sc2-illumina-pipeline
@@ -18,12 +18,12 @@ With enhancements and additional modules by the CZI Infectious Disease team.
 
 ## Running Consensus-Genome locally
 
-For Consensus Genome workflow we can follow a similar workflow to the `short-read-mngs` presented in wiki: [Running-WDL-workflows-locally](https://github.com/chanzuckerberg/idseq-workflows/wiki/Running-WDL-workflows-locally).
+For Consensus Genome workflow we can follow a similar workflow to the `short-read-mngs` presented in wiki: [Running-WDL-workflows-locally](https://github.com/chanzuckerberg/czid-workflows/wiki/Running-WDL-workflows-locally).
 
 We first build a local Docker container image with the consensus genome workflow:
 
 ```bash
-docker build -t idseq-consensus-genome idseq-workflows/consensus-genome
+docker build -t czid-consensus-genome czid-workflows/consensus-genome
 ```
 
 TIPS: For more detailed setup information
@@ -32,23 +32,23 @@ TIPS: For more detailed setup information
 
 ## Run 
 
-We then use our local sample configuration file that points to IDseq's public references for smaller runs:
+We then use our local sample configuration file that points to CZ ID's public references for smaller runs:
 
 ```bash
-miniwdl run --verbose idseq-workflows/consensus-genome/run.wdl \
-    docker_image_id=idseq-consensus-genome \
-    fastqs_0=idseq-workflows/consensus-genome/test/sample_sars-cov-2_paired_r1.fastq.gz \
-    fastqs_1=idseq-workflows/consensus-genome/test/sample_sars-cov-2_paired_r2.fastq.gz \
+miniwdl run --verbose czid-workflows/consensus-genome/run.wdl \
+    docker_image_id=czid-consensus-genome \
+    fastqs_0=czid-workflows/consensus-genome/test/sample_sars-cov-2_paired_r1.fastq.gz \
+    fastqs_1=czid-workflows/consensus-genome/test/sample_sars-cov-2_paired_r2.fastq.gz \
     sample=sample_sars-cov-2_paired \
     technology=Illumina \
     ref_fasta=s3://idseq-public-references/consensus-genome/MN908947.3.fa \
-    -i idseq-workflows/consensus-genome/test/local_test.yml
+    -i czid-workflows/consensus-genome/test/local_test.yml
 ```
 
 Where:
 
-* `docker_image_id=` should be set to the docker image tag you used when building the image (in our example, `idseq-consensus-genome`)
-* `idseq-workflows/consensus-genome/run.wdl` is the WDL for the consensus genome sequencing workflow.
+* `docker_image_id=` should be set to the docker image tag you used when building the image (in our example, `czid-consensus-genome`)
+* `czid-workflows/consensus-genome/run.wdl` is the WDL for the consensus genome sequencing workflow.
 * `fastqs_0` and `fastqs_1` are the pair of FASTQ files. The ones referred to are small files to run locally.
 * `sample` is the name to use where referencing the sample in the output files.
 * `technology` is the sequencing technology (options = Illumina or ONT)
@@ -85,3 +85,6 @@ For more information, including a screencast of this example, see the `learn-min
 - Screencast at - https://www.youtube.com/watch?v=bnXOoPm_F2I
 - Miniwdl Course at - https://github.com/openwdl/learn-wdl/tree/master/6_miniwdl_course
 - WDL course at - https://github.com/openwdl/learn-wdl
+
+## Troubleshooting
+* When running on docker desktop for MacOS, must uncheck `use gRPC FUSE for file sharing`

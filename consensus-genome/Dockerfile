@@ -1,12 +1,12 @@
 FROM ubuntu:20.04
 ARG DEBIAN_FRONTEND=noninteractive
 
-LABEL maintainer="IDseq Team <idseq-tech@chanzuckerberg.com>"
+LABEL maintainer="CZ ID Team <idseq-tech@chanzuckerberg.com>"
 LABEL description = "Image for consensus genome by metagenomic sequencing with spiked primer enrichment or amplicon sequencing"
 
 RUN sed -i s/archive.ubuntu.com/us-west-2.ec2.archive.ubuntu.com/ /etc/apt/sources.list; \
-  echo 'APT::Install-Recommends "false";' > /etc/apt/apt.conf.d/98idseq; \
-  echo 'APT::Install-Suggests "false";' > /etc/apt/apt.conf.d/99idseq
+  echo 'APT::Install-Recommends "false";' > /etc/apt/apt.conf.d/98czid; \
+  echo 'APT::Install-Suggests "false";' > /etc/apt/apt.conf.d/99czid
 
 RUN apt-get -qq update && apt-get -qq -y install \
   jq \
@@ -53,8 +53,8 @@ RUN apt-get -qq update && apt-get -qq -y install \
 # These newer versions of infernal and ncbi-blast+ are required by VADR
 RUN curl -O -L https://ftp.osuosl.org/pub/ubuntu/pool/universe/i/infernal/infernal_1.1.4-1_amd64.deb && \
   dpkg -i infernal_1.1.4-1_amd64.deb && \
-  curl -O -L https://ftp.osuosl.org/pub/ubuntu/pool/universe/n/ncbi-blast+/ncbi-blast+_2.10.1-2_amd64.deb && \
-  dpkg -i ncbi-blast+_2.10.1-2_amd64.deb
+  curl -O -L https://ftp.osuosl.org/pub/ubuntu/pool/universe/n/ncbi-blast+/ncbi-blast+_2.10.1+ds-1_amd64.deb && \
+  dpkg -i ncbi-blast+_2.10.1+ds-1_amd64.deb
 
 # See https://github.com/ablab/quast/issues/157
 RUN pip3 install multiqc==1.8 quast==5.0.2 && \
@@ -105,7 +105,7 @@ RUN wget https://www.drive5.com/muscle/downloads3.8.31/muscle3.8.31_i86linux32.t
 
 # ARTIC, Medaka and dependencies
 RUN apt-get install -y python3-cffi python3-h5py python3-intervaltree python3-edlib muscle git
-RUN pip3 install ont-fast5-api parasail mappy pyspoa tensorflow https://github.com/artic-network/fieldbioinformatics/archive/1.2.1.tar.gz
+RUN pip3 install ont-fast5-api parasail mappy pyspoa tensorflow==2.7.1 https://github.com/artic-network/fieldbioinformatics/archive/1.2.1.tar.gz
 RUN pip3 install medaka --no-deps
 RUN pip3 install git+https://github.com/rzlim08/PyVCF.git
 

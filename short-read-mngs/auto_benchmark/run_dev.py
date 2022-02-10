@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Run benchmark.yml samples by submitting them to the idseq-dev SFN-WDL backend. The invoking session
-must have (i) AWS_PROFILE set to an appropriate role to access idseq-dev, and (ii) an SSH key able
+Run benchmark.yml samples by submitting them to the czid-dev SFN-WDL backend. The invoking session
+must have (i) AWS_PROFILE set to an appropriate role to access czid-dev, and (ii) an SSH key able
 to clone chanzuckerberg/idseq.
 
 The SFN-WDL runs will use the full databases and the latest -released- version of the WDL code, not
@@ -17,6 +17,7 @@ import subprocess
 import concurrent.futures
 import threading
 import time
+import json
 import requests
 from datetime import datetime
 from _util import load_benchmarks_yml
@@ -37,7 +38,7 @@ def main():
         nargs="+",
         help="any of: " + ", ".join(BENCHMARKS["samples"].keys()),
     )
-    parser.add_argument("--idseq", required=True, help="path to idseq monorepo")
+    parser.add_argument("--czid", required=True, help="path to czid monorepo")
     parser.add_argument(
         "--workflow-version",
         metavar="X.Y.Z",
@@ -57,7 +58,7 @@ def main():
 
     if args.workflow_version is None:
         github_api = "https://api.github.com"
-        github_repo_api = f"{github_api}/repos/chanzuckerberg/idseq-workflows"
+        github_repo_api = f"{github_api}/repos/chanzuckerberg/czid-workflows"
         github_refs_api = f"{github_repo_api}/git/matching-refs/tags/short-read-mngs"
         github_refs = sorted(
             os.path.basename(ref["url"]).split("-v", 1)[1]
@@ -69,7 +70,7 @@ def main():
     run_samples(**vars(args))
 
 
-def run_samples(idseq, samples, workflow_version, settings):
+def run_samples(czid, samples, workflow_version, settings):
     samples = set(samples)
     for sample_i in samples:
         assert sample_i in BENCHMARKS["samples"], f"unknown sample {sample_i}"
@@ -87,7 +88,7 @@ def run_samples(idseq, samples, workflow_version, settings):
         futures = {
             executor.submit(
                 run_sample,
-                idseq,
+                czid,
                 workflow_version,
                 settings,
                 key_prefix,
@@ -117,7 +118,7 @@ def run_samples(idseq, samples, workflow_version, settings):
 _timestamp_lock = threading.Lock()
 
 
-def run_sample(idseq_repo, workflow_version, settings, key_prefix, sample):
+def run_sample(czid_repo, workflow_version, settings, key_prefix, sample):
     local_input = {
         **BENCHMARKS["settings"][settings],
         **BENCHMARKS["databases"]["full"],
@@ -146,12 +147,13 @@ def run_sample(idseq_repo, workflow_version, settings, key_prefix, sample):
         f" --max-input-fragments {local_input['host_filter.max_input_fragments']}"
         f" --max-subsample-fragments {local_input['host_filter.max_subsample_fragments']}"
         f" --adapter-fasta {local_input['host_filter.adapter_fasta']}"
-        f" --workflow-version {workflow_version}",
+        f" --workflow-version {workflow_version}"
+        f" --sfn-input '{json.dumps(local_input)}'"
     ]
     print(cmd, file=sys.stderr)
     with _timestamp_lock:
         time.sleep(1.1)
-        subprocess.run(cmd, cwd=idseq_repo, check=True, stdout=sys.stderr.buffer)
+        subprocess.run(cmd, cwd=czid_repo, check=True, stdout=sys.stderr.buffer)
 
     workflow_major_version = workflow_version.split(".")[0]
     return (
