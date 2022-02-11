@@ -9,7 +9,7 @@ workflow minimap {
         String docker_image_id
     }
 
-    call RunDiamond {
+    call RunMinimap2 {
         input:
         query_0 = query_0,
         query_1 = query_1,
@@ -19,11 +19,11 @@ workflow minimap {
     }
 
     output {
-        Array[File] chunks = RunDiamond.chunks
+        Array[File] chunks = RunMinimap2.chunks
     }
 }
 
-task RunDiamond {
+task RunMinimap2 {
     input {
         File query_0
         File? query_1
