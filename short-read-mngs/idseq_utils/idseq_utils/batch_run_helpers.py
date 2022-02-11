@@ -163,20 +163,18 @@ def _run_chunk(
     if len(query_uris) > 1:
         inputs["query_1"] = query_uris[1]
 
-    input_bucket, _ = _bucket_and_key(chunk_dir)
-    wdl_input_key = os.path.join(chunk_dir, f"{chunk_id}-input.json")
-    wdl_output_key = os.path.join(chunk_dir, f"{chunk_id}-output.json")
+    wdl_input_uri = os.path.join(result_path, f"{chunk_id}-input.json")
+    wdl_output_uri= os.path.join(result_path, f"{chunk_id}-output.json")
+    wdl_workflow_uri = ""  # TODO harcode this based on alignment_algorithm
 
+    input_bucket, input_key = _bucket_and_key(wdl_input_uri)
     _s3_client.put_object(
         Bucket=input_bucket,
-        Key=wdl_input_key,
+        Key=input_key,
         Body=json.dumps(inputs).encode(),
         ContentType="application/json",
     )
 
-    wdl_workflow_uri = ""  # TODO harcode this based on alignment_algorithm
-    wdl_input_uri = f"s3://{input_bucket}/{wdl_input_key}"
-    wdl_output_uri = f"s3://{input_bucket}/{wdl_output_key}"
 
     environment = {
         "WDL_WORKFLOW_URI": wdl_workflow_uri,
