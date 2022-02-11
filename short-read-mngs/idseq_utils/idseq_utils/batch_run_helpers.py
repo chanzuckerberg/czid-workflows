@@ -7,7 +7,7 @@ import requests
 import time
 from multiprocessing import Pool
 from subprocess import run
-from typing import Dict, List, Literal
+from typing import Dict, List
 from urllib.parse import urlparse
 
 from idseq_utils.diamond_scatter import blastx_join
@@ -19,7 +19,7 @@ from botocore.exceptions import ClientError
 log = logging.getLogger(__name__)
 
 MAX_CHUNKS_IN_FLIGHT = 10
-ALIGNMENT_WDL_VERSIONS: Dict[Literal["diamond", "minimap2"], str] = {
+ALIGNMENT_WDL_VERSIONS: Dict[str, str] = {
     "diamond": "v1.0.0",
     "minimap2": "v1.0.0",
 }
@@ -130,7 +130,7 @@ def _run_batch_job(
 def _run_chunk(
     input_dir: str,
     result_path: str,
-    aligner: Literal["diamond", "minimap2"],
+    aligner: str,
     aligner_args: str,
     queries: List[str],
     chunk_id: int,
@@ -144,7 +144,7 @@ def _run_chunk(
     else:
         project_id, sample_id = "0", "0"
 
-    def _job_queue(provisioning_model: Literal["SPOT", "EC2"]):
+    def _job_queue(provisioning_model: str):
         return f"idseq-{deployment_environment}-{aligner}-{provisioning_model}-{priority_name}"
 
     priority_name = os.environ.get("PRIORITY_NAME", "normal")
@@ -216,7 +216,7 @@ def run_alignment(
     chunk_dir: str,
     db_path: str,
     result_path: str,
-    aligner: Literal["diamond", "minimap2"],
+    aligner: str,
     aligner_args: str,
     queries: List[str],
 ):
