@@ -164,7 +164,7 @@ def _run_chunk(
         inputs["query_1"] = query_uris[1]
 
     wdl_input_uri = os.path.join(result_path, f"{chunk_id}-input.json")
-    wdl_output_uri= os.path.join(result_path, f"{chunk_id}-output.json")
+    wdl_output_uri = os.path.join(result_path, f"{chunk_id}-output.json")
     wdl_workflow_uri = f"s3://idseq-workflows/{aligner}-{ALIGNMENT_WDL_VERSIONS[aligner]}/{aligner}.wdl"
 
     input_bucket, input_key = _bucket_and_key(wdl_input_uri)
@@ -174,7 +174,6 @@ def _run_chunk(
         Body=json.dumps(inputs).encode(),
         ContentType="application/json",
     )
-
 
     environment = {
         "WDL_WORKFLOW_URI": wdl_workflow_uri,
