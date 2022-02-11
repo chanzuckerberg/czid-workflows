@@ -26,7 +26,7 @@ ALIGNMENT_WDL_VERSIONS: Dict[str, str] = {
 
 
 _batch_client = boto3.client("batch")
-_s3_client = boto3.client("boto3")
+_s3_client = boto3.client("s3")
 
 try:
     account_id = boto3.client("sts").get_caller_identity()["Account"]
