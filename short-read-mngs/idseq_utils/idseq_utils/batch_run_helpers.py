@@ -129,12 +129,12 @@ def _run_batch_job(
 def _run_chunk(
     input_dir: str,
     chunk_dir: str,
-    db_path: str,
     result_path: str,
     alignment_algorithm: Literal["diamond", "minimap2"],
     aligner_args: str,
     queries: List[str],
     chunk_id: int,
+    db_chunk: str,
 ):
     deployment_environment = os.environ["DEPLOYMENT_ENVIRONMENT"]
     pattern = r"s3://.+/samples/([0-9]+)/([0-9]+)/"
@@ -156,15 +156,16 @@ def _run_chunk(
     inputs = {
         "query_0": query_uris[0],
         "extra_args": aligner_args,
-        "db_chunk": "",  # TODO derive this from chunk_id and db_path
+        "db_chunk": db_chunk,
         "docker_image_id": "",  # TODO hardcode this based on alignment_algorithm
     }
 
     if len(query_uris) > 1:
         inputs["query_1"] = query_uris[1]
 
-    input_bucket, _ = _bucket_and_key(input_dir)
-    wdl_input_key = ""  # TODO figure out sensible per-chunk input json locations
+    input_bucket, _ = _bucket_and_key(chunk_dir)
+    wdl_input_key = os.path.join(chunk_dir, f"{chunk_id}-input.json")
+    wdl_output_key = os.path.join(chunk_dir, f"{chunk_id}-output.json")
 
     _s3_client.put_object(
         Bucket=input_bucket,
@@ -175,7 +176,7 @@ def _run_chunk(
 
     wdl_workflow_uri = ""  # TODO harcode this based on alignment_algorithm
     wdl_input_uri = f"s3://{input_bucket}/{wdl_input_key}"
-    wdl_output_uri = ""  # TODO figure out sensible per-chunk output json locations
+    wdl_output_uri = f"s3://{input_bucket}/{wdl_output_key}"
 
     environment = {
         "WDL_WORKFLOW_URI": wdl_workflow_uri,
