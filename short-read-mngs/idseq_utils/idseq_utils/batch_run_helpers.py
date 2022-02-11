@@ -222,7 +222,7 @@ def run_alignment(
 ):
     bucket, prefix = _bucket_and_key(db_path)
     chunks = (
-        [chunk_id, input_dir, chunk_dir, f"s3://{bucket}/{db_chunk}", aligner_args, *queries]
+        [input_dir, result_path, aligner, aligner_args, queries, chunk_id, f"s3://{bucket}/{db_chunk}"]
         for chunk_id, db_chunk in enumerate(_db_chunks(bucket, prefix))
     )
     with Pool(MAX_CHUNKS_IN_FLIGHT) as p:
