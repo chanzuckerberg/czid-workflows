@@ -129,7 +129,7 @@ def _run_batch_job(
 
 def _run_chunk(
     input_dir: str,
-    result_path: str,
+    chunk_dir: str,
     aligner: str,
     aligner_args: str,
     queries: List[str],
@@ -163,8 +163,8 @@ def _run_chunk(
     if len(query_uris) > 1:
         inputs["query_1"] = query_uris[1]
 
-    wdl_input_uri = os.path.join(result_path, f"{chunk_id}-input.json")
-    wdl_output_uri = os.path.join(result_path, f"{chunk_id}-output.json")
+    wdl_input_uri = os.path.join(chunk_dir, f"{chunk_id}-input.json")
+    wdl_output_uri = os.path.join(chunk_dir, f"{chunk_id}-output.json")
     wdl_workflow_uri = f"s3://idseq-workflows/{aligner}-{ALIGNMENT_WDL_VERSIONS[aligner]}/{aligner}.wdl"
 
     input_bucket, input_key = _bucket_and_key(wdl_input_uri)
@@ -222,7 +222,7 @@ def run_alignment(
 ):
     bucket, prefix = _bucket_and_key(db_path)
     chunks = (
-        [input_dir, result_path, aligner, aligner_args, queries, chunk_id, f"s3://{bucket}/{db_chunk}"]
+        [input_dir, chunk_dir, aligner, aligner_args, queries, chunk_id, f"s3://{bucket}/{db_chunk}"]
         for chunk_id, db_chunk in enumerate(_db_chunks(bucket, prefix))
     )
     with Pool(MAX_CHUNKS_IN_FLIGHT) as p:
