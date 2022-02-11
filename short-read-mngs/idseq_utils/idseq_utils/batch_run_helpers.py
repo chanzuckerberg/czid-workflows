@@ -19,10 +19,21 @@ from botocore.exceptions import ClientError
 log = logging.getLogger(__name__)
 
 MAX_CHUNKS_IN_FLIGHT = 10
+ALIGNMENT_WDL_VERSIONS: Dict[Literal["diamond", "minimap2"], str] = {
+    "diamond": "v1.0.0",
+    "minimap2": "v1.0.0",
+}
 
 
 _batch_client = boto3.client("batch")
 _s3_client = boto3.client("boto3")
+
+try:
+    account_id = boto3.client("sts").get_caller_identity()["Account"]
+except ClientError:
+    account_id = requests.get(
+        "http://169.254.169.254/latest/dynamic/instance-identity/document"
+    ).json()["accountId"]
 
 
 class BatchJobFailed(Exception):
@@ -34,18 +45,8 @@ def _bucket_and_key(s3_path: str):
     return parsed_url.netloc, parsed_url.path.lstrip("/")
 
 
-def _get_batch_job_desc_bucket():
-    try:
-        account_id = boto3.client("sts").get_caller_identity()["Account"]
-    except ClientError:
-        account_id = requests.get(
-            "http://169.254.169.254/latest/dynamic/instance-identity/document"
-        ).json()["accountId"]
-    return f"aegea-batch-jobs-{account_id}"
-
-
 def _get_job_status(job_id):
-    batch_job_desc_bucket = boto3.resource("s3").Bucket(_get_batch_job_desc_bucket())
+    batch_job_desc_bucket = boto3.resource("s3").Bucket(f"aegea-batch-jobs-{account_id}")
     key = f"job_descriptions/{job_id}"
     try:
         job_desc_object = batch_job_desc_bucket.Object(key)
@@ -128,9 +129,8 @@ def _run_batch_job(
 
 def _run_chunk(
     input_dir: str,
-    chunk_dir: str,
     result_path: str,
-    alignment_algorithm: Literal["diamond", "minimap2"],
+    aligner: Literal["diamond", "minimap2"],
     aligner_args: str,
     queries: List[str],
     chunk_id: int,
@@ -145,10 +145,10 @@ def _run_chunk(
         project_id, sample_id = "0", "0"
 
     def _job_queue(provisioning_model: Literal["SPOT", "EC2"]):
-        return f"idseq-{deployment_environment}-{alignment_algorithm}-{provisioning_model}-{priority_name}"
+        return f"idseq-{deployment_environment}-{aligner}-{provisioning_model}-{priority_name}"
 
     priority_name = os.environ.get("PRIORITY_NAME", "normal")
-    job_name = (f"idseq-{deployment_environment}-{alignment_algorithm}-"
+    job_name = (f"idseq-{deployment_environment}-{aligner}-"
                 f"project-{project_id}-sample-{sample_id}-part-{chunk_id}")
     job_definition = f"idseq-swipe-{deployment_environment}-main"
 
@@ -157,7 +157,7 @@ def _run_chunk(
         "query_0": query_uris[0],
         "extra_args": aligner_args,
         "db_chunk": db_chunk,
-        "docker_image_id": "",  # TODO hardcode this based on alignment_algorithm
+        "docker_image_id": f"{account_id}.dkr.ecr.us-west-2.amazonaws.com/{aligner}:{ALIGNMENT_WDL_VERSIONS[aligner]}",
     }
 
     if len(query_uris) > 1:
@@ -165,7 +165,7 @@ def _run_chunk(
 
     wdl_input_uri = os.path.join(result_path, f"{chunk_id}-input.json")
     wdl_output_uri= os.path.join(result_path, f"{chunk_id}-output.json")
-    wdl_workflow_uri = ""  # TODO harcode this based on alignment_algorithm
+    wdl_workflow_uri = f"s3://idseq-workflows/{aligner}-{ALIGNMENT_WDL_VERSIONS[aligner]}/{aligner}.wdl"
 
     input_bucket, input_key = _bucket_and_key(wdl_input_uri)
     _s3_client.put_object(
@@ -217,7 +217,7 @@ def run_alignment(
     chunk_dir: str,
     db_path: str,
     result_path: str,
-    alignment_algorithm: Literal["diamond", "minimap2"],
+    aligner: Literal["diamond", "minimap2"],
     aligner_args: str,
     queries: List[str],
 ):
@@ -229,7 +229,7 @@ def run_alignment(
     with Pool(MAX_CHUNKS_IN_FLIGHT) as p:
         p.starmap(_run_chunk, chunks)
     run(["s3parcp", "--recursive", chunk_dir, "chunks"], check=True)
-    if alignment_algorithm == "diamond":
+    if aligner == "diamond":
         blastx_join("chunks", result_path, aligner_args, *queries)
     else:
         minimap2_merge("chunks", result_path, aligner_args, *queries)
