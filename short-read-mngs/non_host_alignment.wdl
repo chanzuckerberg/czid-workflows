@@ -158,11 +158,11 @@ workflow czid_non_host_alignment {
     File duplicate_cluster_sizes_tsv
     File idseq_dedup_out_duplicate_clusters_csv
     String index_version = "2021-01-22"
-    File lineage_db = "s3://idseq-public-references/taxonomy/2021-01-22/taxid-lineages.db"
-    File accession2taxid_db = "s3://idseq-public-references/alignment_data/2021-01-22/accession2taxid.db"
-    File taxon_blacklist = "s3://idseq-public-references/taxonomy/2021-01-22/taxon_blacklist.txt"
+    File lineage_db = "s3://czid-public-references/taxonomy/2021-01-22/taxid-lineages.db"
+    File accession2taxid_db = "s3://czid-public-references/alignment_data/2021-01-22/accession2taxid.db"
+    File taxon_blacklist = "s3://czid-public-references/taxonomy/2021-01-22/taxon_blacklist.txt"
     String index_dir_suffix = index_version
-    File deuterostome_db = "s3://idseq-public-references/taxonomy/2021-01-22/deuterostome_taxids.txt"
+    File deuterostome_db = "s3://czid-public-references/taxonomy/2021-01-22/deuterostome_taxids.txt"
     Boolean use_deuterostome_filter = true
     Boolean use_taxon_whitelist = false
     File? local_gsnap_index

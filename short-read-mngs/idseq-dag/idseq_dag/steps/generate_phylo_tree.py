@@ -215,7 +215,7 @@ class PipelineStepGeneratePhyloTree(PipelineStep):
         # "other", "metagenomes"]
         categories = genbank_categories_by_superkingdom[superkingdom_name]
         for cat in categories:
-            genome_list_path_s3 = f"s3://idseq-public-references/genbank/{cat}/assembly_summary.txt"  # source: ftp://ftp.ncbi.nih.gov/genomes/genbank/{cat}/assembly_summary.txt
+            genome_list_path_s3 = f"s3://czid-public-references/genbank/{cat}/assembly_summary.txt"  # source: ftp://ftp.ncbi.nih.gov/genomes/genbank/{cat}/assembly_summary.txt
             genome_list_local = s3.fetch_from_s3(genome_list_path_s3, destination_dir)
             genomes = []
             for taxid in reference_taxids:

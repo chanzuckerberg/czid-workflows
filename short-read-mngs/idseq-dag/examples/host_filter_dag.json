@@ -33,7 +33,7 @@
       "class": "PipelineStepRunStar",
       "module": "idseq_dag.steps.run_star",
       "additional_files": {
-        "star_genome": "s3://idseq-public-references/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/human_STAR_genome.tar"
+        "star_genome": "s3://czid-public-references/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/human_STAR_genome.tar"
       },
       "additional_attributes": {
         "truncate_fragments_to": 75000000,
@@ -49,7 +49,7 @@
       "class": "PipelineStepRunTrimmomatic",
       "module": "idseq_dag.steps.run_trimmomatic",
       "additional_files": {
-        "adapter_fasta": "s3://idseq-public-references/adapter_sequences/illumina_TruSeq3-PE-2_NexteraPE-PE.fasta"
+        "adapter_fasta": "s3://czid-public-references/adapter_sequences/illumina_TruSeq3-PE-2_NexteraPE-PE.fasta"
       },
       "additional_attributes": {}
     },
@@ -86,7 +86,7 @@
       "class": "PipelineStepRunBowtie2",
       "module": "idseq_dag.steps.run_bowtie2",
       "additional_files": {
-        "bowtie2_genome": "s3://idseq-public-references/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/human_bowtie2_genome.tar"
+        "bowtie2_genome": "s3://czid-public-references/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/human_bowtie2_genome.tar"
       },
       "additional_attributes": { "output_sam_file": "bowtie2.sam" }
     },
@@ -106,7 +106,7 @@
       "class": "PipelineStepRunGsnapFilter",
       "module": "idseq_dag.steps.run_gsnap_filter",
       "additional_files": {
-        "gsnap_genome": "s3://idseq-public-references/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/hg38_pantro5_k16.tar"
+        "gsnap_genome": "s3://czid-public-references/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/hg38_pantro5_k16.tar"
       },
       "additional_attributes": { "output_sam_file": "gsnap_filter.sam" }
     }

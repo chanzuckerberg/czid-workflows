@@ -17,7 +17,7 @@
   "steps": [
     {
       "in" : ["fastqs"], "out": "star_out", "class": "PipelineStepRunStar",
-      "additional_files": {"star_genome": "s3://idseq-public-references/star_genome"},
+      "additional_files": {"star_genome": "s3://czid-public-references/star_genome"},
       "additional_attributes": {"truncate_fragments_to": 75000000}
     },
     {
@@ -37,12 +37,12 @@
     },
     {
       "in" : ["idseq_dedup_out"], "out": "bowtie2_out", "class": "PipelineStepRunBowtie2",
-      "additional_files": {"bowtie2_genome": "s3://idseq-public-references/bowtie2_genome"},
+      "additional_files": {"bowtie2_genome": "s3://czid-public-references/bowtie2_genome"},
       "additional_attributes": {}
     },
     {
       "in" : ["bowtie2_out"], "out": "gsnap_filter_out", "class": "PipelineStepRunGsnapFilter",
-      "additional_files": {"gsnap_genome": "s3://idseq-public-references/gsnap_genome"},
+      "additional_files": {"gsnap_genome": "s3://czid-public-references/gsnap_genome"},
       "additional_attributes": {"sub_sample_to": 1000000}
     },
     {

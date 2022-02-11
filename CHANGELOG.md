@@ -316,7 +316,7 @@ In addition, if a modification is made that may affect the results of a pipeline
 - support local non host alignment (#25)
 - Add "no reads left" errors (#28)
 - Create CONTRIBUTING.md (#24)
-- s/idseq-database/idseq-public-references (#323)
+- s/idseq-database/czid-public-references (#323)
 - Switch to public references (#19)
 - Warn only about the first failure to upload step status JSON (#322)
 - Simplify CG docker image and update a few packages (#27)

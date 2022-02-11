@@ -29,11 +29,11 @@ class TestDownloadAccessions(unittest.TestCase):
             output_dir_s3="s3://dummy_bucket",
             ref_dir_local=tempfile.TemporaryDirectory().name,
             additional_files={
-                "lineage_db": "s3://idseq-public-references/taxonomy/2018-12-01/taxid-lineages.sqlite3",
-                "loc_db": "s3://idseq-public-references/alignment_data/2018-12-01/nr_loc.sqlite3"
+                "lineage_db": "s3://czid-public-references/taxonomy/2018-12-01/taxid-lineages.sqlite3",
+                "loc_db": "s3://czid-public-references/alignment_data/2018-12-01/nr_loc.sqlite3"
             },
             additional_attributes={
-                "db":  "s3://idseq-public-references/alignment_data/2018-12-01/nr",
+                "db":  "s3://czid-public-references/alignment_data/2018-12-01/nr",
                 "db_type": "nr"
             },
         )
