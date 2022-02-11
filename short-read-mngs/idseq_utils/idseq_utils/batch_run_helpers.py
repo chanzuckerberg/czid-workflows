@@ -21,11 +21,17 @@ log = logging.getLogger(__name__)
 MAX_CHUNKS_IN_FLIGHT = 10
 
 
-batch_client = boto3.client("batch")
+_batch_client = boto3.client("batch")
+_s3_client = boto3.client("boto3")
 
 
 class BatchJobFailed(Exception):
     pass
+
+
+def _bucket_and_key(s3_path: str):
+    parsed_url = urlparse(s3_path, allow_fragments=False)
+    return parsed_url.netloc, parsed_url.path.lstrip("/")
 
 
 def _get_batch_job_desc_bucket():
@@ -61,7 +67,7 @@ def _run_batch_job(
     environment: Dict[str, str],
     retries: int,
 ):
-    response = batch_client.submit_job(
+    response = _batch_client.submit_job(
         jobName=job_name,
         jobQueue=job_queue,
         jobDefinition=job_definition,
@@ -120,7 +126,16 @@ def _run_batch_job(
         time.sleep(delay)
 
 
-def _run_chunk(alignment_algorithm: Literal["diamond", "minimap2"], chunk_id: int, input_dir: str):
+def _run_chunk(
+    input_dir: str,
+    chunk_dir: str,
+    db_path: str,
+    result_path: str,
+    alignment_algorithm: Literal["diamond", "minimap2"],
+    aligner_args: str,
+    queries: List[str],
+    chunk_id: int,
+):
     deployment_environment = os.environ["DEPLOYMENT_ENVIRONMENT"]
     pattern = r"s3://.+/samples/([0-9]+)/([0-9]+)/"
     m = re.match(pattern, input_dir)
@@ -135,11 +150,40 @@ def _run_chunk(alignment_algorithm: Literal["diamond", "minimap2"], chunk_id: in
     priority_name = os.environ.get("PRIORITY_NAME", "normal")
     job_name = (f"idseq-{deployment_environment}-{alignment_algorithm}-"
                 f"project-{project_id}-sample-{sample_id}-part-{chunk_id}")
-    job_definition = f"" # TODO miniwdl job def
+    job_definition = f"idseq-swipe-{deployment_environment}-main"
 
-    # TODO upload inputs object
+    query_uris = [os.path.join(input_dir, os.path.basename(q)) for q in queries]
+    inputs = {
+        "query_0": query_uris[0],
+        "extra_args": aligner_args,
+        "db_chunk": "",  # TODO derive this from chunk_id and db_path
+        "docker_image_id": "",  # TODO hardcode this based on alignment_algorithm
+    }
+
+    if len(query_uris) > 1:
+        inputs["query_1"] = query_uris[1]
+
+    input_bucket, _ = _bucket_and_key(input_dir)
+    wdl_input_key = ""  # TODO figure out sensible per-chunk input json locations
+
+    _s3_client.put_object(
+        Bucket=input_bucket,
+        Key=wdl_input_key,
+        Body=json.dumps(inputs).encode(),
+        ContentType="application/json",
+    )
+
+    wdl_workflow_uri = ""  # TODO harcode this based on alignment_algorithm
+    wdl_input_uri = f"s3://{input_bucket}/{wdl_input_key}"
+    wdl_output_uri = ""  # TODO figure out sensible per-chunk output json locations
+
     environment = {
-    } # TODO miniwdl inputs
+        "WDL_WORKFLOW_URI": wdl_workflow_uri,
+        "WDL_INPUT_URI": wdl_input_uri,
+        "WDL_OUTPUT_URI": wdl_output_uri,
+        "SFN_EXECUTION_ID": os.getenv("SFN_EXECUTION_ID", "ALIGNMENT"),
+        "SFN_CURRENT_STATE": os.getenv("SFN_CURRENT_STATE", "ALIGNMENT"),
+    }
 
     try:
         _run_batch_job(
@@ -164,12 +208,7 @@ def _db_chunks(bucket: str, prefix):
     paginator = s3_client.get_paginator("list_objects_v2")
     log.debug("db chunks")
 
-    result = paginator.paginate(
-        Bucket=bucket,
-        Prefix=prefix,
-    )
-
-    for page in result:
+    for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
         for obj in page["Contents"]:
             yield obj["Key"]
 
@@ -183,9 +222,7 @@ def run_alignment(
     aligner_args: str,
     queries: List[str],
 ):
-    parsed_url = urlparse(db_path, allow_fragments=False)
-    bucket = parsed_url.netloc
-    prefix = parsed_url.path.lstrip("/")
+    bucket, prefix = _bucket_and_key(db_path)
     chunks = (
         [chunk_id, input_dir, chunk_dir, f"s3://{bucket}/{db_chunk}", aligner_args, *queries]
         for chunk_id, db_chunk in enumerate(_db_chunks(bucket, prefix))
@@ -197,4 +234,3 @@ def run_alignment(
         blastx_join("chunks", result_path, aligner_args, *queries)
     else:
         minimap2_merge("chunks", result_path, aligner_args, *queries)
-
