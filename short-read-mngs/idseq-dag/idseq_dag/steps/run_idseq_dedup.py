@@ -69,7 +69,7 @@ class PipelineStepRunIDSeqDedup(PipelineStep):  # Deliberately not PipelineCount
             for row in csv.reader(r):
                 if row[1] in read_ids:
                     raise InvalidInputFileError({
-                        "error": "Input file has duplicate read ids", 
+                        "error": "Input file has duplicate read ids",
                         "step": self.name
                     })
                 read_ids.add(row[1])
