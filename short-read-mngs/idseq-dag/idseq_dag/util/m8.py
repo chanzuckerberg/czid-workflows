@@ -221,8 +221,7 @@ def _call_hits_m8_work(input_blastn_6_path, lineage_map, accession2taxid_dict,
             # the match increases. Essentially, the E value describes the random
             # background noise. https://blast.ncbi.nlm.nih.gov/Blast.cgi?CMD=Web
             # &PAGE_TYPE=BlastDocs&DOC_TYPE=FAQ
-            
-            # We have since moved to using the bitscore rather than the e-value 
+            # We have since moved to using the bitscore rather than the e-value
             my_best_bitscore, hits, _ = summary.get(read_id, (float("-inf"), [{}, {}, {}], None))
             if my_best_bitscore < bitscore:
                 # If we find a new better bitscore we want to start accumulation over
@@ -266,7 +265,7 @@ def _call_hits_m8_work(input_blastn_6_path, lineage_map, accession2taxid_dict,
 
             # Read the fields from the summary level info
             best_bitscore, _, (hit_level, taxid,
-                              best_accession_id) = summary[read_id]
+                               best_accession_id) = summary[read_id]
             if best_bitscore == bitscore and best_accession_id in (None, accession_id) and should_keep([taxid]):
                 # Read out the hit with the best value that provides the
                 # most specific taxonomy information.
