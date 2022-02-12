@@ -54,7 +54,7 @@ def _get_job_status(job_id):
     except ClientError as e:
         if e.response["Error"]["Code"] == "NoSuchKey":
             # Warn that the object is missing so any issue with the s3 mechanism can be identified
-            log.debug("missing_job_description_ojbect", extra={key: key})
+            log.debug(f"missing_job_description_ojbect key: {key}")
             # Return submitted because a missing job status probably means it hasn't been added yet
             return "SUBMITTED"
         else:
@@ -77,6 +77,8 @@ def _run_batch_job(
                 "name": k,
                 "value": v,
             } for k, v in environment.items()],
+            "memory": 261632,  # (524288 - 1024) / 2, 524288 = r5d.24xlarge memory , 2 = jobs per instance, 1024 = leftover for other processes
+            "vcpus": 48,  # 96 / 2, 96 = r5d.24xlarge vcpus , 2 = jobs per instance
         },
         retryStrategy={"attempts": retries},
     )
@@ -86,14 +88,13 @@ def _run_batch_job(
         level = logging.INFO if status != "FAILED" else logging.ERROR
         log.log(
             level,
-            "batch_job_status",
-            extra={
+            "batch_job_status " + json.dumps({
                 "job_id": job_id,
                 "job_name": job_name,
                 "job_queue": job_queue,
                 "job_definition": job_definition,
                 "status": status,
-            },
+            }),
         )
 
     _log_status("SUBMITTED")
@@ -109,12 +110,11 @@ def _run_batch_job(
         except ClientError as e:
             # If we get throttled, randomly wait to de-synchronize the requests
             if e.response["Error"]["Code"] == "TooManyRequestsException":
-                log.warn("describe_jobs_rate_limit_error", extra={"job_id": job_id})
+                log.warn(f"describe_jobs_rate_limit_error for job_id: {job_id}")
                 # Possibly implement a backoff here if throttling becomes an issue
             else:
                 log.error(
-                    "unexpected_client_error_while_polling_job_status",
-                    extra={"job_id": job_id},
+                    f"unexpected_client_error_while_polling_job_status for job_id: {job_id}",
                 )
                 raise e
 
