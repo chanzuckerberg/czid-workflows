@@ -7,6 +7,10 @@ from collections import defaultdict
 import subprocess
 import threading
 
+from Bio import SeqIO
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
+
 from idseq_dag.engine.pipeline_step import PipelineStep
 from idseq_dag.util.lineage import INVALID_CALL_BASE_ID
 import idseq_dag.util.log as log
@@ -229,20 +233,23 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
             while read_arrs and ("reads" not in read_arrs[0]):
                 read_arrs = [vv for v in read_arrs for vv in v.values()]
 
+            raw_reads = set()
             read_arrs = [v.get("reads", []) for v in read_arrs]
             for read_arr in read_arrs:
                 for read_entry in read_arr:
-                    yield ">" + read_entry[0]
-                    yield read_entry[1]
+                    if read_entry[1] in raw_reads:
+                        continue
+                    raw_reads.add(read_entry[1])
+                    yield SeqRecord(Seq(read_entry[1]), id=read_entry[0])
 
         def write_n_longest(tag, lin_id, d, n):
             if db_type.lower() != "nt":
                 return
 
-            longest_5_reads = sorted(list(set(reads_from_dict(d))), key=lambda read: len(read))[:n]
+            reads = list(reads_from_dict(d))
+            longest_5_reads = sorted(reads, key=lambda seq: len(seq.seq), reverse=True)[:n]
             fn = f"{output_longest_reads_dir}/{db_type}.{tag}.{int(lin_id)}.longest_5_reads.fasta"
-            with open(fn, 'w') as f:
-                f.writelines(longest_5_reads)
+            SeqIO.write(longest_5_reads, fn, "fasta")
 
         # Generate JSON files for the align_viz folder
         command.make_dirs(output_json_dir)
