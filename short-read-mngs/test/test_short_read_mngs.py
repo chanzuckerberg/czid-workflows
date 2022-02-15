@@ -45,7 +45,7 @@ def test_bench3_viral(short_read_mngs_bench3_viral_outputs):
     for fn in longest_reads:
         with open(fn) as f:
             lines = list(f)
-            assert len(lines) == 10, len(lines)
+            assert len(lines) == 10, lines
             prev = None
             for i, read in enumerate(lines):
                 if i % 2 == 0:
