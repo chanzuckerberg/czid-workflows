@@ -79,7 +79,7 @@ def _run_batch_job(
             } for k, v in environment.items()],
             # (524288 - 1024) / 2, 524288 = r5d.24xlarge memory
             #   2 = jobs per instance, 1024 = leftover for other processes
-            "memory": 261632,  
+            "memory": 261632,
             "vcpus": 48,  # 96 / 2, 96 = r5d.24xlarge vcpus , 2 = jobs per instance
         },
         retryStrategy={"attempts": retries},
@@ -131,7 +131,6 @@ def _run_batch_job(
 
 def _run_chunk(
     input_dir: str,
-    chunk_dir: str,
     aligner: str,
     aligner_args: str,
     queries: List[str],
@@ -165,8 +164,8 @@ def _run_chunk(
     if len(query_uris) > 1:
         inputs["query_1"] = query_uris[1]
 
-    wdl_input_uri = os.path.join(chunk_dir, f"{chunk_id}-input.json")
-    wdl_output_uri = os.path.join(chunk_dir, f"{chunk_id}-output.json")
+    wdl_input_uri = os.path.join(input_dir, f"{aligner}-chunk-io/{chunk_id}-input.json")
+    wdl_output_uri = os.path.join(input_dir, f"{aligner}-chunk-io/{chunk_id}-output.json")
     wdl_workflow_uri = f"s3://idseq-workflows/{aligner}-{ALIGNMENT_WDL_VERSIONS[aligner]}/{aligner}.wdl"
 
     input_bucket, input_key = _bucket_and_key(wdl_input_uri)
@@ -215,7 +214,6 @@ def _db_chunks(bucket: str, prefix):
 
 def run_alignment(
     input_dir: str,
-    chunk_dir: str,
     db_path: str,
     result_path: str,
     aligner: str,
@@ -224,9 +222,10 @@ def run_alignment(
 ):
     bucket, prefix = _bucket_and_key(db_path)
     chunks = (
-        [input_dir, chunk_dir, aligner, aligner_args, queries, chunk_id, f"s3://{bucket}/{db_chunk}"]
+        [input_dir, aligner, aligner_args, queries, chunk_id, f"s3://{bucket}/{db_chunk}"]
         for chunk_id, db_chunk in enumerate(_db_chunks(bucket, prefix))
     )
+    chunk_dir = os.path.join(input_dir, f"{aligner}-chunks")
     with Pool(MAX_CHUNKS_IN_FLIGHT) as p:
         p.starmap(_run_chunk, chunks)
     run(["s3parcp", "--recursive", chunk_dir, "chunks"], check=True)

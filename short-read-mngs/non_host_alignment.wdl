@@ -173,7 +173,6 @@ task RunAlignment_minimap2_out {
 
         run_alignment(
             input_dir="~{s3_wd_uri}",
-            chunk_dir=os.path.join("~{s3_wd_uri}", "minimap2-chunks/"),
             db_path="~{db_path}",
             result_path="~{prefix}.paf",
             aligner="minimap2",
@@ -219,7 +218,6 @@ task RunAlignment_diamond_out {
 
         run_alignment(
             input_dir="~{s3_wd_uri}",
-            chunk_dir=os.path.join("~{s3_wd_uri}", "diamond-chunks/"),
             db_path="~{db_path}",
             result_path="~{prefix}.m8",
             aligner="diamond",
