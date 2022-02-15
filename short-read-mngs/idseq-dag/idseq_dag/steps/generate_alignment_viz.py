@@ -240,7 +240,7 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
                 return
 
             longest_5_reads = sorted(list(set(reads_from_dict(d))), key=lambda read: len(read))[:n]
-            fn = f"{output_longest_reads_dir}/{db_type}.{tag}.{int(lin_id)}.longest_5_reads"
+            fn = f"{output_longest_reads_dir}/{db_type}.{tag}.{int(lin_id)}.longest_5_reads.fasta"
             with open(fn, 'w') as f:
                 f.writelines(longest_5_reads)
 
