@@ -7,9 +7,9 @@ from collections import defaultdict
 import subprocess
 import threading
 
-from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
+from Bio.SeqIO.FastaIO import FastaWriter
 
 from idseq_dag.engine.pipeline_step import PipelineStep
 from idseq_dag.util.lineage import INVALID_CALL_BASE_ID
@@ -249,7 +249,9 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
             reads = list(reads_from_dict(d))
             longest_5_reads = sorted(reads, key=lambda seq: len(seq.seq), reverse=True)[:n]
             fn = f"{output_longest_reads_dir}/{db_type}.{tag}.{int(lin_id)}.longest_5_reads.fasta"
-            SeqIO.write(longest_5_reads, fn, "fasta")
+            with open(fn, "w") as f:
+                writer = FastaWriter(f, wrap=None)
+                writer.write_file(longest_5_reads)
 
         # Generate JSON files for the align_viz folder
         command.make_dirs(output_json_dir)
