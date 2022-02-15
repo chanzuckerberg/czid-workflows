@@ -240,7 +240,7 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
                     if read_entry[1] in raw_reads:
                         continue
                     raw_reads.add(read_entry[1])
-                    yield SeqRecord(Seq(read_entry[1]), id=read_entry[0])
+                    yield SeqRecord(Seq(read_entry[1]), id=read_entry[0], description="")
 
         def write_n_longest(tag, lin_id, d, n):
             if db_type.lower() != "nt":
