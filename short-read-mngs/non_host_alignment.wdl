@@ -166,7 +166,6 @@ task RunAlignment_minimap2_out {
         if [[ "~{run_locally}" == true ]]; then
           minimap2 ~{minimap2_args} "~{local_minimap2_index}" "~{sep=' ' fastas}" > "~{prefix}.paf"
         else
-          export DEPLOYMENT_ENVIRONMENT=dev
           python3 <<CODE
         import os
         from idseq_utils.run_minimap2 import run_minimap2
@@ -213,7 +212,6 @@ task RunAlignment_diamond_out {
           diamond makedb --in "~{local_diamond_index}" -d reference
           diamond blastx -d reference -q "~{sep=' ' fastas}" -o "~{prefix}.m8" "~{diamond_args}"
         else
-          export DEPLOYMENT_ENVIRONMENT=dev 
           python3 <<CODE
         import os 
         from idseq_utils.run_diamond import run_diamond
