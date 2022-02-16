@@ -109,7 +109,7 @@ task GenerateAlignmentViz {
     File align_viz_summary = "align_viz.summary"
     File? output_read_count = "alignment_viz_out.count"
     Array[File] align_viz = glob("align_viz/*.align_viz.json")
-    Array[File] longest_reads = glob("longest_reads/*.longest_5_reads")
+    Array[File] longest_reads = glob("longest_reads/*.longest_5_reads.fasta")
   }
   runtime {
     docker: docker_image_id
