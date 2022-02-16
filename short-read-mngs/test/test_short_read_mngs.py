@@ -1,7 +1,6 @@
 import json
 import atexit
 import re
-import sys
 import os.path
 from Bio import SeqIO
 
