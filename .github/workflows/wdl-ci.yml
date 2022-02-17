@@ -54,6 +54,7 @@ jobs:
   wdl-ci:
     runs-on: ubuntu-20.04
     needs: list-workflow-dirs
+    if: ${{ needs['list-workflow-dirs'].outputs.matrix != '[]' && needs['list-workflow-dirs'].outputs.matrix != '' }}
     strategy:
       matrix:
         workflow_dir: ${{fromJson(needs['list-workflow-dirs'].outputs.matrix)}}
