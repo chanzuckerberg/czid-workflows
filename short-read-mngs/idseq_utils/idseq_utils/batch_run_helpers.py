@@ -5,7 +5,6 @@ import random
 import re
 import requests
 import time
-import sys
 from os import listdir
 from multiprocessing import Pool
 from subprocess import run
