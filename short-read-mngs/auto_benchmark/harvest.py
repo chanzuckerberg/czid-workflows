@@ -107,6 +107,8 @@ def harvest_sample(sample, outputs_json, taxadb):
         "subsampled",
         "gsnap_filter",
     ]:
+        if step == "czid_dedup":
+            import pdb; pdb.set_trace()
         ans[step + "_reads"] = read_output_jsonfile(
             outputs_json, "host_filter." + step + "_out_count"
         )[step + "_out"]

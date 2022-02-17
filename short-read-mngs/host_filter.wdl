@@ -246,7 +246,7 @@ task RunCZIDDedup {
   idseq-dag-run-step --workflow-name host_filter \
     --step-module idseq_dag.steps.run_czid_dedup \
     --step-class PipelineStepRunCZIDDedup \
-    --step-name idseq_dedup_out \
+    --step-name czid_dedup_out \
     --input-files '[["~{sep='","' priceseq_fa}"]]' \
     --output-files '[~{if length(priceseq_fa) == 2 then '"dedup1.fa", "dedup2.fa"' else '"dedup1.fa"'}, "clusters.csv", "duplicate_cluster_sizes.tsv"]' \
     --output-dir-s3 '~{s3_wd_uri}' \
@@ -254,12 +254,12 @@ task RunCZIDDedup {
     --additional-attributes '{}'
   >>>
   output {
-    String step_description_md = read_string("idseq_dedup_out.description.md")
+    String step_description_md = read_string("czid_dedup_out.description.md")
     File dedup1_fa = "dedup1.fa"
     File? dedup2_fa = "dedup2.fa"
     File duplicate_clusters_csv = "clusters.csv"
     File duplicate_cluster_sizes_tsv = "duplicate_cluster_sizes.tsv"
-    File? output_read_count = "idseq_dedup_out.count"
+    File? output_read_count = "czid_dedup_out.count"
   }
   runtime {
     docker: docker_image_id
