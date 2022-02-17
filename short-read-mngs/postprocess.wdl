@@ -346,7 +346,7 @@ task GenerateAnnotatedFasta {
     File assembly_refined_rapsearch2_counts_with_dcr_json
     File assembly_rapsearch2_contig_summary_json
     File assembly_rapsearch2_blast_top_m8
-    File idseq_dedup_out_duplicate_clusters_csv
+    File czid_dedup_out_duplicate_clusters_csv
     File duplicate_cluster_sizes_tsv
   }
   command<<<
@@ -355,7 +355,7 @@ task GenerateAnnotatedFasta {
     --step-module idseq_dag.steps.generate_annotated_fasta \
     --step-class PipelineStepGenerateAnnotatedFasta \
     --step-name refined_annotated_out \
-    --input-files '[["~{sep='","' host_filter_out_gsnap_filter_fa}"], ["~{assembly_gsnap_blast_m8}", "~{assembly_gsnap_reassigned_m8}", "~{assembly_gsnap_hitsummary2_tab}", "~{assembly_refined_gsnap_counts_with_dcr_json}", "~{assembly_gsnap_contig_summary_json}", "~{assembly_gsnap_blast_top_m8}"], ["~{assembly_rapsearch2_blast_m8}", "~{assembly_rapsearch2_reassigned_m8}", "~{assembly_rapsearch2_hitsummary2_tab}", "~{assembly_refined_rapsearch2_counts_with_dcr_json}", "~{assembly_rapsearch2_contig_summary_json}", "~{assembly_rapsearch2_blast_top_m8}"], ["~{idseq_dedup_out_duplicate_clusters_csv}"], ["~{duplicate_cluster_sizes_tsv}"]]' \
+    --input-files '[["~{sep='","' host_filter_out_gsnap_filter_fa}"], ["~{assembly_gsnap_blast_m8}", "~{assembly_gsnap_reassigned_m8}", "~{assembly_gsnap_hitsummary2_tab}", "~{assembly_refined_gsnap_counts_with_dcr_json}", "~{assembly_gsnap_contig_summary_json}", "~{assembly_gsnap_blast_top_m8}"], ["~{assembly_rapsearch2_blast_m8}", "~{assembly_rapsearch2_reassigned_m8}", "~{assembly_rapsearch2_hitsummary2_tab}", "~{assembly_refined_rapsearch2_counts_with_dcr_json}", "~{assembly_rapsearch2_contig_summary_json}", "~{assembly_rapsearch2_blast_top_m8}"], ["~{czid_dedup_out_duplicate_clusters_csv}"], ["~{duplicate_cluster_sizes_tsv}"]]' \
     --output-files '["assembly/refined_annotated_merged.fa", "assembly/refined_unidentified.fa"]' \
     --output-dir-s3 '~{s3_wd_uri}' \
     --additional-files '{}' \
@@ -470,7 +470,7 @@ workflow czid_postprocess {
     File rapsearch2_out_rapsearch2_hitsummary_tab
     File rapsearch2_out_rapsearch2_counts_with_dcr_json
     File duplicate_cluster_sizes_tsv
-    File idseq_dedup_out_duplicate_clusters_csv
+    File czid_dedup_out_duplicate_clusters_csv
     String index_version = "2021-01-22" # FIXME: vestigial input
     File nt_db = "s3://czid-public-references/ncbi-sources/2021-01-22/nt"
     File nt_loc_db = "s3://czid-public-references/alignment_data/2021-01-22/nt_loc.db"
@@ -629,7 +629,7 @@ workflow czid_postprocess {
       assembly_refined_rapsearch2_counts_with_dcr_json = BlastContigs_refined_rapsearch2_out.assembly_refined_rapsearch2_counts_with_dcr_json,
       assembly_rapsearch2_contig_summary_json = BlastContigs_refined_rapsearch2_out.assembly_rapsearch2_contig_summary_json,
       assembly_rapsearch2_blast_top_m8 = BlastContigs_refined_rapsearch2_out.assembly_rapsearch2_blast_top_m8,
-      idseq_dedup_out_duplicate_clusters_csv = idseq_dedup_out_duplicate_clusters_csv,
+      czid_dedup_out_duplicate_clusters_csv = czid_dedup_out_duplicate_clusters_csv,
       duplicate_cluster_sizes_tsv = duplicate_cluster_sizes_tsv
   }
 

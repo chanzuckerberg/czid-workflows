@@ -122,7 +122,7 @@ task GenerateAnnotatedFasta {
     File rapsearch2_deduped_m8
     File rapsearch2_hitsummary_tab
     File rapsearch2_counts_with_dcr_json
-    File idseq_dedup_out_duplicate_clusters_csv
+    File czid_dedup_out_duplicate_clusters_csv
     File duplicate_cluster_sizes_tsv
   }
   command<<<
@@ -131,7 +131,7 @@ task GenerateAnnotatedFasta {
     --step-module idseq_dag.steps.generate_annotated_fasta \
     --step-class PipelineStepGenerateAnnotatedFasta \
     --step-name annotated_out \
-    --input-files '[["~{sep='","' host_filter_out_gsnap_filter_fa}"], ["~{gsnap_m8}", "~{gsnap_deduped_m8}", "~{gsnap_hitsummary_tab}", "~{gsnap_counts_with_dcr_json}"], ["~{rapsearch2_m8}", "~{rapsearch2_deduped_m8}", "~{rapsearch2_hitsummary_tab}", "~{rapsearch2_counts_with_dcr_json}"], ["~{idseq_dedup_out_duplicate_clusters_csv}"], ["~{duplicate_cluster_sizes_tsv}"]]' \
+    --input-files '[["~{sep='","' host_filter_out_gsnap_filter_fa}"], ["~{gsnap_m8}", "~{gsnap_deduped_m8}", "~{gsnap_hitsummary_tab}", "~{gsnap_counts_with_dcr_json}"], ["~{rapsearch2_m8}", "~{rapsearch2_deduped_m8}", "~{rapsearch2_hitsummary_tab}", "~{rapsearch2_counts_with_dcr_json}"], ["~{czid_dedup_out_duplicate_clusters_csv}"], ["~{duplicate_cluster_sizes_tsv}"]]' \
     --output-files '["annotated_merged.fa", "unidentified.fa"]' \
     --output-dir-s3 '~{s3_wd_uri}' \
     --additional-files '{}' \
@@ -156,7 +156,7 @@ workflow czid_non_host_alignment {
     File? host_filter_out_gsnap_filter_2_fa
     File? host_filter_out_gsnap_filter_merged_fa
     File duplicate_cluster_sizes_tsv
-    File idseq_dedup_out_duplicate_clusters_csv
+    File czid_dedup_out_duplicate_clusters_csv
     String index_version = "2021-01-22"
     File lineage_db = "s3://czid-public-references/taxonomy/2021-01-22/taxid-lineages.db"
     File accession2taxid_db = "s3://czid-public-references/alignment_data/2021-01-22/accession2taxid.db"
@@ -226,7 +226,7 @@ workflow czid_non_host_alignment {
       rapsearch2_deduped_m8 = RunAlignment_rapsearch2_out.rapsearch2_deduped_m8,
       rapsearch2_hitsummary_tab = RunAlignment_rapsearch2_out.rapsearch2_hitsummary_tab,
       rapsearch2_counts_with_dcr_json = RunAlignment_rapsearch2_out.rapsearch2_counts_with_dcr_json,
-      idseq_dedup_out_duplicate_clusters_csv = idseq_dedup_out_duplicate_clusters_csv,
+      czid_dedup_out_duplicate_clusters_csv = czid_dedup_out_duplicate_clusters_csv,
       duplicate_cluster_sizes_tsv = duplicate_cluster_sizes_tsv
   }
 
