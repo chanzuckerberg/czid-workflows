@@ -5,6 +5,8 @@ import random
 import re
 import requests
 import time
+import sys
+from os import listdir
 from multiprocessing import Pool
 from subprocess import run
 from typing import Dict, List
@@ -131,6 +133,7 @@ def _run_batch_job(
 
 def _run_chunk(
     input_dir: str,
+    chunk_dir: str,
     aligner: str,
     aligner_args: str,
     queries: List[str],
@@ -164,8 +167,8 @@ def _run_chunk(
     if len(query_uris) > 1:
         inputs["query_1"] = query_uris[1]
 
-    wdl_input_uri = os.path.join(input_dir, f"{aligner}-chunk-io/{chunk_id}-input.json")
-    wdl_output_uri = os.path.join(input_dir, f"{aligner}-chunk-io/{chunk_id}-output.json")
+    wdl_input_uri = os.path.join(chunk_dir, f"{chunk_id}-input.json")
+    wdl_output_uri = os.path.join(chunk_dir, f"{chunk_id}-output.json")
     wdl_workflow_uri = f"s3://idseq-workflows/{aligner}-{ALIGNMENT_WDL_VERSIONS[aligner]}/{aligner}.wdl"
 
     input_bucket, input_key = _bucket_and_key(wdl_input_uri)
@@ -221,14 +224,17 @@ def run_alignment(
     queries: List[str],
 ):
     bucket, prefix = _bucket_and_key(db_path)
+    chunk_dir = os.path.join(input_dir, f"{aligner}-chunks")
     chunks = (
-        [input_dir, aligner, aligner_args, queries, chunk_id, f"s3://{bucket}/{db_chunk}"]
+        [input_dir, chunk_dir, aligner, aligner_args, queries, chunk_id, f"s3://{bucket}/{db_chunk}"]
         for chunk_id, db_chunk in enumerate(_db_chunks(bucket, prefix))
     )
-    chunk_dir = os.path.join(input_dir, f"{aligner}-chunks")
     with Pool(MAX_CHUNKS_IN_FLIGHT) as p:
         p.starmap(_run_chunk, chunks)
     run(["s3parcp", "--recursive", chunk_dir, "chunks"], check=True)
+    for fn in listdir("chunks"):
+        if fn.endswith("json"):
+            os.remove(os.path.join("chunks", fn))
     if aligner == "diamond":
         blastx_join("chunks", result_path, aligner_args, *queries)
     else:
