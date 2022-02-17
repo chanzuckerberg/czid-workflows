@@ -1,5 +1,5 @@
 version 1.0
-
+ 
 task RunValidateInput {
   input {
     String docker_image_id
