@@ -38,7 +38,7 @@ except ClientError:
     ).text
     account_id = requests.get(
         "http://169.254.169.254/latest/dynamic/instance-identity/document",
-        headers={"X-aws-ec2-metadata-token": token,},
+        headers={"X-aws-ec2-metadata-token": token},
     ).json()["accountId"]
 
 
@@ -81,7 +81,7 @@ def _run_batch_job(
         jobQueue=job_queue,
         jobDefinition=job_definition,
         containerOverrides={
-            "environment": [{"name": k, "value": v,} for k, v in environment.items()],
+            "environment": [{"name": k, "value": v} for k, v in environment.items()],
             # (524288 - 1024) / 2, 524288 = r5d.24xlarge memory
             #   2 = jobs per instance, 1024 = leftover for other processes
             "memory": 261632,
