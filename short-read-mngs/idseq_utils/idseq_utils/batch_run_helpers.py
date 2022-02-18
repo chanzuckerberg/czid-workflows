@@ -32,8 +32,13 @@ _s3_client = boto3.client("s3")
 try:
     account_id = boto3.client("sts").get_caller_identity()["Account"]
 except ClientError:
+    token = requests.put(
+        "http://169.254.169.254/latest/api/token",
+        headers={"X-aws-ec2-metadata-token-ttl-seconds": "21600"},
+    ).text
     account_id = requests.get(
-        "http://169.254.169.254/latest/dynamic/instance-identity/document"
+        "http://169.254.169.254/latest/dynamic/instance-identity/document",
+        headers={"X-aws-ec2-metadata-token": token,},
     ).json()["accountId"]
 
 
@@ -47,7 +52,9 @@ def _bucket_and_key(s3_path: str):
 
 
 def _get_job_status(job_id):
-    batch_job_desc_bucket = boto3.resource("s3").Bucket(f"aegea-batch-jobs-{account_id}")
+    batch_job_desc_bucket = boto3.resource("s3").Bucket(
+        f"aegea-batch-jobs-{account_id}"
+    )
     key = f"job_descriptions/{job_id}"
     try:
         job_desc_object = batch_job_desc_bucket.Object(key)
@@ -55,7 +62,7 @@ def _get_job_status(job_id):
     except ClientError as e:
         if e.response["Error"]["Code"] == "NoSuchKey":
             # Warn that the object is missing so any issue with the s3 mechanism can be identified
-            log.debug(f"missing_job_description_ojbect key: {key}")
+            log.debug(f"missing_job_description_object key: {key}")
             # Return submitted because a missing job status probably means it hasn't been added yet
             return "SUBMITTED"
         else:
@@ -74,10 +81,7 @@ def _run_batch_job(
         jobQueue=job_queue,
         jobDefinition=job_definition,
         containerOverrides={
-            "environment": [{
-                "name": k,
-                "value": v,
-            } for k, v in environment.items()],
+            "environment": [{"name": k, "value": v,} for k, v in environment.items()],
             # (524288 - 1024) / 2, 524288 = r5d.24xlarge memory
             #   2 = jobs per instance, 1024 = leftover for other processes
             "memory": 261632,
@@ -91,13 +95,17 @@ def _run_batch_job(
         level = logging.INFO if status != "FAILED" else logging.ERROR
         log.log(
             level,
-            "batch_job_status " + json.dumps({
-                "job_id": job_id,
-                "job_name": job_name,
-                "job_queue": job_queue,
-                "job_definition": job_definition,
-                "status": status,
-            }),
+            "batch_job_status "
+            + json.dumps(
+                {
+                    "job_id": job_id,
+                    "job_name": job_name,
+                    "job_queue": job_queue,
+                    "job_definition": job_definition,
+                    "status": status,
+                    "environment": environment,
+                }
+            ),
         )
 
     _log_status("SUBMITTED")
@@ -151,8 +159,10 @@ def _run_chunk(
         return f"idseq-{deployment_environment}-{aligner}-{provisioning_model}-{priority_name}"
 
     priority_name = os.environ.get("PRIORITY_NAME", "normal")
-    job_name = (f"idseq-{deployment_environment}-{aligner}-"
-                f"project-{project_id}-sample-{sample_id}-part-{chunk_id}")
+    job_name = (
+        f"idseq-{deployment_environment}-{aligner}-"
+        f"project-{project_id}-sample-{sample_id}-part-{chunk_id}"
+    )
     job_definition = f"idseq-swipe-{deployment_environment}-main"
 
     query_uris = [os.path.join(input_dir, os.path.basename(q)) for q in queries]
@@ -225,7 +235,15 @@ def run_alignment(
     bucket, prefix = _bucket_and_key(db_path)
     chunk_dir = os.path.join(input_dir, f"{aligner}-chunks")
     chunks = (
-        [input_dir, chunk_dir, aligner, aligner_args, queries, chunk_id, f"s3://{bucket}/{db_chunk}"]
+        [
+            input_dir,
+            chunk_dir,
+            aligner,
+            aligner_args,
+            queries,
+            chunk_id,
+            f"s3://{bucket}/{db_chunk}",
+        ]
         for chunk_id, db_chunk in enumerate(_db_chunks(bucket, prefix))
     )
     with Pool(MAX_CHUNKS_IN_FLIGHT) as p:
