@@ -228,30 +228,39 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
         def align_viz_name(tag, lin_id):
             return f"{output_json_dir}/{db_type}.{tag}.{int(lin_id)}.align_viz.json"
 
-        def reads_from_dict(d):
-            read_arrs = list(d.values())
-            while read_arrs and ("reads" not in read_arrs[0]):
-                read_arrs = [vv for v in read_arrs for vv in v.values()]
+        def dig(obj, path, default=None):
+            res = obj
+            for k in path:
+                if k in res:
+                    res = obj[k]
+                else:
+                    return default
+            return res
 
-            raw_reads = set()
-            read_arrs = [v.get("reads", []) for v in read_arrs]
-            for read_arr in read_arrs:
-                for read_entry in read_arr:
-                    if read_entry[1] in raw_reads:
-                        continue
-                    raw_reads.add(read_entry[1])
+        def reads_from_dict(d):
+            read_arr_paths = [[k] for k in d.keys()]
+            while read_arr_paths and (not dig(d, read_arr_paths[0] + ["reads"], False)):
+                read_arrs = [path + [key] for path in read_arr_paths for key in dig(d, path, {}).keys()]
+
+            for read_arr_path in read_arr_paths:
+                for read_entry in dig(d, read_arr_path + ["reads"], []):
                     yield SeqRecord(Seq(read_entry[1]), id=read_entry[0], description="")
 
         def write_n_longest(tag, lin_id, d, n):
             if db_type.lower() != "nt":
                 return
 
-            reads = list(reads_from_dict(d))
-            longest_5_reads = sorted(reads, key=lambda seq: len(seq.seq), reverse=True)[:n]
+            longest_n_reads = []
+            for read in reads_from_dict(d):
+                if [r.seq for r in longest_n_reads if r.seq == read.seq]:
+                    continue
+                longest_n_reads.append(read)
+                longest_n_reads = sorted(longest_n_reads, key=lambda seq: len(seq.seq), reverse=True)[:n]
+
             fn = f"{output_longest_reads_dir}/{db_type}.{tag}.{int(lin_id)}.longest_5_reads.fasta"
             with open(fn, "w") as f:
                 writer = FastaWriter(f, wrap=None)
-                writer.write_file(longest_5_reads)
+                writer.write_file(longest_n_reads)
 
         # Generate JSON files for the align_viz folder
         command.make_dirs(output_json_dir)
