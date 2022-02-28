@@ -229,22 +229,13 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
         def align_viz_name(tag, lin_id):
             return f"{output_json_dir}/{db_type}.{tag}.{int(lin_id)}.align_viz.json"
 
-        def dig(obj: Dict, path, default=None):
-            res = obj
-            for k in path:
-                if type(res) is dict and k in res:
-                    res = res[k]
-                else:
-                    return default
-            return res
-
         def reads_from_dict(d):
-            read_arr_paths = [[k] for k in d.keys()]
-            while read_arr_paths and (not dig(d, read_arr_paths[0] + ["reads"], False)):
-                read_arr_paths = [path + [key] for path in read_arr_paths for key in dig(d, path, {}).keys()]
+            read_arrs = list(d.values())
+            while read_arrs and ("reads" not in read_arrs[0]):
+                read_arrs = [vv for v in read_arrs for vv in v.values()]
 
-            for read_arr_path in read_arr_paths:
-                for read_entry in dig(d, read_arr_path + ["reads"], []):
+            for read_arr in read_arrs:
+                for read_entry in read_arr.get("reads", []):
                     yield SeqRecord(Seq(read_entry[1]), id=read_entry[0], description="")
 
         def write_n_longest(tag, lin_id, d, n):
