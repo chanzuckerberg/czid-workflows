@@ -233,7 +233,7 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
             res = obj
             for k in path:
                 if type(res) is dict and k in res:
-                    res = obj[k]
+                    res = res[k]
                 else:
                     return default
             return res
