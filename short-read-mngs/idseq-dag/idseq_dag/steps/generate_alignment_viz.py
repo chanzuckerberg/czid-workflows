@@ -6,6 +6,7 @@ import traceback
 from collections import defaultdict
 import subprocess
 import threading
+from typing import Dict
 
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
@@ -228,10 +229,10 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
         def align_viz_name(tag, lin_id):
             return f"{output_json_dir}/{db_type}.{tag}.{int(lin_id)}.align_viz.json"
 
-        def dig(obj, path, default=None):
+        def dig(obj: Dict, path, default=None):
             res = obj
             for k in path:
-                if k in res:
+                if type(res) is dict and k in res:
                     res = obj[k]
                 else:
                     return default
@@ -240,7 +241,7 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
         def reads_from_dict(d):
             read_arr_paths = [[k] for k in d.keys()]
             while read_arr_paths and (not dig(d, read_arr_paths[0] + ["reads"], False)):
-                read_arrs = [path + [key] for path in read_arr_paths for key in dig(d, path, {}).keys()]
+                read_arr_paths = [path + [key] for path in read_arr_paths for key in dig(d, path, {}).keys()]
 
             for read_arr_path in read_arr_paths:
                 for read_entry in dig(d, read_arr_path + ["reads"], []):
@@ -252,10 +253,17 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
 
             longest_n_reads = []
             for read in reads_from_dict(d):
-                if [r.seq for r in longest_n_reads if r.seq == read.seq]:
-                    continue
-                longest_n_reads.append(read)
-                longest_n_reads = sorted(longest_n_reads, key=lambda seq: len(seq.seq), reverse=True)[:n]
+                duplicate = False
+                for i, r in enumerate(longest_n_reads):
+                    if read.seq == r.seq:
+                        duplicate = True
+                        break
+                    if len(read.seq) > len(r.seq):
+                        longest_n_reads = longest_n_reads[:i] + [read] + longest_n_reads[i:n-1]
+                        break
+                else:
+                    if len(longest_n_reads) < n and not duplicate:
+                        longest_n_reads.append(read)
 
             fn = f"{output_longest_reads_dir}/{db_type}.{tag}.{int(lin_id)}.longest_5_reads.fasta"
             with open(fn, "w") as f:
