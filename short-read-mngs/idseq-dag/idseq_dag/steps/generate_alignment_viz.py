@@ -259,7 +259,7 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
                         duplicate = True
                         break
                     if len(read.seq) > len(r.seq):
-                        longest_n_reads = longest_n_reads[:i] + [read] + longest_n_reads[i:n-1]
+                        longest_n_reads = longest_n_reads[:i] + [read] + longest_n_reads[i:n - 1]
                         break
                 else:
                     if len(longest_n_reads) < n and not duplicate:
