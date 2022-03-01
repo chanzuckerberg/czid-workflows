@@ -214,23 +214,24 @@ def _call_hits_m8_work(input_blastn_6_path, lineage_map, accession2taxid_dict,
     log.write(f"Starting to summarize hits from {input_blastn_6_path}.")
     with open(input_blastn_6_path) as input_blastn_6_f:
         for row in BlastnOutput6Reader(input_blastn_6_f, filter_invalid=True, min_alignment_length=min_alignment_length):
-            read_id, accession_id, e_value = row["qseqid"], row["sseqid"], row["evalue"]
+            read_id, accession_id, bitscore = row["qseqid"], row["sseqid"], row["bitscore"]
             # The Expect value (E) is a parameter that describes the number of
             # hits one can 'expect' to see by chance when searching a database of
             # a particular size. It decreases exponentially as the Score (S) of
             # the match increases. Essentially, the E value describes the random
             # background noise. https://blast.ncbi.nlm.nih.gov/Blast.cgi?CMD=Web
             # &PAGE_TYPE=BlastDocs&DOC_TYPE=FAQ
-            my_best_evalue, hits, _ = summary.get(read_id, (float("inf"), [{}, {}, {}], None))
-            if my_best_evalue > e_value:
-                # If we find a new better e value we want to start accumulation over
+            # We have since moved to using the bitscore rather than the e-value
+            my_best_bitscore, hits, _ = summary.get(read_id, (float("-inf"), [{}, {}, {}], None))
+            if my_best_bitscore < bitscore:
+                # If we find a new better bitscore we want to start accumulation over
                 hits = [{}, {}, {}]
                 accumulate(hits, accession_id)
-                my_best_evalue = e_value
-            elif my_best_evalue == e_value:
-                # If we find another accession with the same e value we want to accumulate it
+                my_best_bitscore = bitscore
+            elif my_best_bitscore == bitscore:
+                # If we find another accession with the same bitscore we want to accumulate it
                 accumulate(hits, accession_id)
-            summary[read_id] = my_best_evalue, hits, call_hit_level_v2(hits)
+            summary[read_id] = my_best_bitscore, hits, call_hit_level_v2(hits)
             count += 1
             if count % LOG_INCREMENT == 0:
                 log.write(f"Summarized hits for {count} read ids from {input_blastn_6_path}, and counting.")
@@ -258,14 +259,14 @@ def _call_hits_m8_work(input_blastn_6_path, lineage_map, accession2taxid_dict,
         # This change may need to be accompanied by a change to
         # GSNAP/RAPSearch2 parameters.
         for row in BlastnOutput6Reader(input_blastn_6_f, filter_invalid=True, min_alignment_length=min_alignment_length):
-            read_id, accession_id, e_value = row["qseqid"], row["sseqid"], row["evalue"]
+            read_id, accession_id, bitscore = row["qseqid"], row["sseqid"], row["bitscore"]
             if read_id in emitted:
                 continue
 
             # Read the fields from the summary level info
-            best_e_value, _, (hit_level, taxid,
-                              best_accession_id) = summary[read_id]
-            if best_e_value == e_value and best_accession_id in (None, accession_id) and should_keep([taxid]):
+            best_bitscore, _, (hit_level, taxid,
+                               best_accession_id) = summary[read_id]
+            if best_bitscore == bitscore and best_accession_id in (None, accession_id) and should_keep([taxid]):
                 # Read out the hit with the best value that provides the
                 # most specific taxonomy information.
                 emitted.add(read_id)
