@@ -68,7 +68,7 @@ RUN chmod +x /usr/bin/docker-credential-ecr-login
 RUN mkdir -p /root/.docker
 RUN jq -n '.credsStore="ecr-login"' > /root/.docker/config.json
 
-RUN curl -L -o /usr/bin/idseq-dedup https://github.com/chanzuckerberg/idseq-dedup/releases/download/v0.1.0/idseq-dedup-Linux; chmod +x /usr/bin/idseq-dedup
+RUN curl -L -o /usr/bin/czid-dedup https://github.com/chanzuckerberg/czid-dedup/releases/download/v0.1.2/czid-dedup-Linux; chmod +x /usr/bin/czid-dedup
 
 # Note: bsdtar is available in libarchive-tools
 # Note: python3-scipy pulls in gcc (fixed in Ubuntu 19.10)

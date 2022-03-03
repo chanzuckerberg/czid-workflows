@@ -101,7 +101,7 @@ def harvest_sample(sample, outputs_json, taxadb):
         "star",
         "trimmomatic",
         "priceseq",
-        "idseq_dedup",
+        "czid_dedup",
         "lzw",
         "bowtie2",
         "subsampled",

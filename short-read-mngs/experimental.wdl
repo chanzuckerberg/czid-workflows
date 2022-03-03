@@ -109,7 +109,7 @@ task GenerateAlignmentViz {
     File align_viz_summary = "align_viz.summary"
     File? output_read_count = "alignment_viz_out.count"
     Array[File] align_viz = glob("align_viz/*.align_viz.json")
-    Array[File] longest_reads = glob("longest_reads/*.longest_5_reads")
+    Array[File] longest_reads = glob("longest_reads/*.longest_5_reads.fasta")
   }
   runtime {
     docker: docker_image_id
@@ -240,12 +240,12 @@ workflow czid_experimental {
     File duplicate_clusters_csv
     String file_ext = "fastq"
     String index_version = "2021-01-22" # FIXME: vestigial input
-    File nt_db = "s3://idseq-public-references/ncbi-sources/2021-01-22/nt"
-    File nt_loc_db = "s3://idseq-public-references/alignment_data/2021-01-22/nt_loc.db"
-    File nt_info_db = "s3://idseq-public-references/alignment_data/2021-01-22/nt_info.db"
-    File lineage_db = "s3://idseq-public-references/taxonomy/2021-01-22/taxid-lineages.db"
-    File resist_genome_db = "s3://idseq-public-references/amr/ARGannot_r2.fasta"
-    File resist_genome_bed = "s3://idseq-public-references/amr/argannot_genome.bed"
+    File nt_db = "s3://czid-public-references/ncbi-sources/2021-01-22/nt"
+    File nt_loc_db = "s3://czid-public-references/alignment_data/2021-01-22/nt_loc.db"
+    File nt_info_db = "s3://czid-public-references/alignment_data/2021-01-22/nt_info.db"
+    File lineage_db = "s3://czid-public-references/taxonomy/2021-01-22/taxid-lineages.db"
+    File resist_genome_db = "s3://czid-public-references/amr/ARGannot_r2.fasta"
+    File resist_genome_bed = "s3://czid-public-references/amr/argannot_genome.bed"
     Boolean use_taxon_whitelist = false
   }
 

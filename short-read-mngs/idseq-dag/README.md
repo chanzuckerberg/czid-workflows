@@ -101,10 +101,10 @@ The following is an example dag for generating alignment output for idseq. The *
       "class": "PipelineStepRunAlignment",
       "module": "idseq_dag.steps.run_alignment_remotely",
       "additional_files": {
-        "lineage_db": "s3://idseq-public-references/taxonomy/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/taxid-lineages.db",
-        "accession2taxid_db": "s3://idseq-public-references/alignment_data/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/accession2taxid.db"
+        "lineage_db": "s3://czid-public-references/taxonomy/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/taxid-lineages.db",
+        "accession2taxid_db": "s3://czid-public-references/alignment_data/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/accession2taxid.db"
 
-          ,"deuterostome_db": "s3://idseq-public-references/taxonomy/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/deuterostome_taxids.txt"
+          ,"deuterostome_db": "s3://czid-public-references/taxonomy/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/deuterostome_taxids.txt"
 
       },
       "additional_attributes": {
@@ -117,10 +117,10 @@ The following is an example dag for generating alignment output for idseq. The *
       "class": "PipelineStepRunAlignment",
       "module": "idseq_dag.steps.run_alignment_remotely",
       "additional_files": {
-        "lineage_db": "s3://idseq-public-references/taxonomy/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/taxid-lineages.db",
-        "accession2taxid_db": "s3://idseq-public-references/alignment_data/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/accession2taxid.db"
+        "lineage_db": "s3://czid-public-references/taxonomy/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/taxid-lineages.db",
+        "accession2taxid_db": "s3://czid-public-references/alignment_data/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/accession2taxid.db"
 
-          ,"deuterostome_db": "s3://idseq-public-references/taxonomy/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/deuterostome_taxids.txt"
+          ,"deuterostome_db": "s3://czid-public-references/taxonomy/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/deuterostome_taxids.txt"
 
       },
       "additional_attributes": {
@@ -233,7 +233,7 @@ When releasing a new version, please add a Git tag of the form `vX.Y.Z`.
   - Support local non-host alignment
 
 - 4.11.7
-  - Replace references to idseq-database with idseq-public-references
+  - Replace references to idseq-database with czid-public-references
 
 - 4.11.5
   - Unify remote and local non host alignment commands

@@ -21,7 +21,7 @@
   ],
   "given_targets": {
     "test_in": {
-      "s3_dir": "s3://idseq-public-references/alignment_data/2019-09-17/"
+      "s3_dir": "s3://czid-public-references/alignment_data/2019-09-17/"
     }
   }
 }

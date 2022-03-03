@@ -4,11 +4,11 @@ import json
 from tempfile import NamedTemporaryFile
 
 
-def test_RunIDSeqDedup_safe_csv(util, short_read_mngs_bench3_viral_outputs):
+def test_RunCZIDDedup_safe_csv(util, short_read_mngs_bench3_viral_outputs):
     # load the task's inputs from the end-to-end workflow test
     inputs, _ = util.miniwdl_inputs_outputs(
         os.path.join(
-            short_read_mngs_bench3_viral_outputs["dir"], "call-host_filter/call-RunIDSeqDedup"
+            short_read_mngs_bench3_viral_outputs["dir"], "call-host_filter/call-RunCZIDDedup"
         )
     )
 
@@ -33,12 +33,12 @@ def test_RunIDSeqDedup_safe_csv(util, short_read_mngs_bench3_viral_outputs):
         outp = util.miniwdl_run(
             util.repo_dir() / "short-read-mngs/host_filter.wdl",
             "--task",
-            "RunIDSeqDedup",
+            "RunCZIDDedup",
             "-i",
             json.dumps(inputs),
         )
 
-        dups = outp["outputs"]["RunIDSeqDedup.duplicate_clusters_csv"]
+        dups = outp["outputs"]["RunCZIDDedup.duplicate_clusters_csv"]
 
         found_quotes = 0
         # check we have an quotes before special characters space to prevent CSV injection
