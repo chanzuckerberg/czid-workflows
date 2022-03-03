@@ -161,6 +161,7 @@ task RunAlignment_minimap2_out {
     }
 
     command <<<
+        # --step-name minimap2_out
         set -euxo pipefail
 
         if [[ "~{run_locally}" == true ]]; then
@@ -205,6 +206,7 @@ task RunAlignment_diamond_out {
     }
 
     command <<<
+        # --step-name diamond_out
         set -euxo pipefail  
         if [[ "~{run_locally}" == true ]]; then 
           diamond makedb --in "~{local_diamond_index}" -d reference
@@ -257,6 +259,7 @@ task RunCallHitsMinimap2 {
     }
 
     command <<<
+        # --step-name minimap2_call_hits_out
         set -euxo pipefail
         python3 <<CODE
         from idseq_dag.util.m8 import call_hits_m8, generate_taxon_count_json_from_m8
@@ -308,7 +311,7 @@ task RunCallHitsDiamond {
         String docker_image_id
         String count_type = "NR"
     }
-
+    # --step-name diamond_call_hits_out
     command <<<
         set -euxo pipefail
         python3 <<CODE
