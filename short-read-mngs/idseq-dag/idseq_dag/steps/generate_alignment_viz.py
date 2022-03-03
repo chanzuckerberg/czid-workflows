@@ -6,6 +6,7 @@ import traceback
 from collections import defaultdict
 import subprocess
 import threading
+from typing import Dict
 
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
@@ -233,25 +234,32 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
             while read_arrs and ("reads" not in read_arrs[0]):
                 read_arrs = [vv for v in read_arrs for vv in v.values()]
 
-            raw_reads = set()
-            read_arrs = [v.get("reads", []) for v in read_arrs]
             for read_arr in read_arrs:
-                for read_entry in read_arr:
-                    if read_entry[1] in raw_reads:
-                        continue
-                    raw_reads.add(read_entry[1])
+                for read_entry in read_arr.get("reads", []):
                     yield SeqRecord(Seq(read_entry[1]), id=read_entry[0], description="")
 
         def write_n_longest(tag, lin_id, d, n):
             if db_type.lower() != "nt":
                 return
 
-            reads = list(reads_from_dict(d))
-            longest_5_reads = sorted(reads, key=lambda seq: len(seq.seq), reverse=True)[:n]
+            longest_n_reads = []
+            for read in reads_from_dict(d):
+                duplicate = False
+                for i, r in enumerate(longest_n_reads):
+                    if read.seq == r.seq:
+                        duplicate = True
+                        break
+                    if len(read.seq) > len(r.seq):
+                        longest_n_reads = longest_n_reads[:i] + [read] + longest_n_reads[i:n - 1]
+                        break
+                else:
+                    if len(longest_n_reads) < n and not duplicate:
+                        longest_n_reads.append(read)
+
             fn = f"{output_longest_reads_dir}/{db_type}.{tag}.{int(lin_id)}.longest_5_reads.fasta"
             with open(fn, "w") as f:
                 writer = FastaWriter(f, wrap=None)
-                writer.write_file(longest_5_reads)
+                writer.write_file(longest_n_reads)
 
         # Generate JSON files for the align_viz folder
         command.make_dirs(output_json_dir)
