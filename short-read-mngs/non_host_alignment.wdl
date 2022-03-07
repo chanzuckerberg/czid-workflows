@@ -225,12 +225,6 @@ task RunAlignment_diamond_out {
         CODE
 
         fi
-        python3 << CODE
-        import pandas as pd
-        df = pd.read_csv("~{prefix}.m8", header=None, delimiter="\t")
-        df.iloc[:, 10] = 12334787560/2**df.iloc[:, 11]
-        df.to_csv("~{prefix}.m8", header=None, index=None, sep="\t", float_format='%.3g')
-        CODE
     >>>
 
     output {
