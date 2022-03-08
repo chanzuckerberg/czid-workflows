@@ -195,7 +195,7 @@ task RunAlignment_minimap2_out {
 }
 task RunAlignment_diamond_out {
     input {
-        String docker_image_id:
+        String docker_image_id
         String s3_wd_uri
         Array[File]+ fastas
         String db_path
@@ -400,7 +400,7 @@ workflow czid_non_host_alignment {
       prefix= minimap2_prefix
   }
   call RunCallHitsMinimap2{ 
-      input:
+    input:
       m8_file = RunAlignment_minimap2_out.out_m8,
       lineage_db = lineage_db,
       duplicate_cluster_size = duplicate_cluster_sizes_tsv,
@@ -409,21 +409,22 @@ workflow czid_non_host_alignment {
       accession2taxid = accession2taxid_db,
       prefix = minimap2_prefix,
       min_read_length = min_read_length,
-      docker_image_id = docker_image_id
+      docker_image_id = docker_image_id,
+      s3_wd_uri = s3_wd_uri,
   }
   call RunAlignment_diamond_out {
     input: 
-    fastas = [select_first([host_filter_out_gsnap_filter_merged_fa, host_filter_out_gsnap_filter_1_fa])], #select_all([host_filter_out_gsnap_filter_1_fa, host_filter_out_gsnap_filter_2_fa]),
-    s3_wd_uri = s3_wd_uri,
-    db_path = diamond_db,
-    diamond_args = diamond_args,
-    prefix = diamond_prefix,
-    run_locally = defined(local_rapsearch2_index),
-    local_diamond_index = diamond_local_db_path,
-    docker_image_id = docker_image_id
+      fastas = [select_first([host_filter_out_gsnap_filter_merged_fa, host_filter_out_gsnap_filter_1_fa])], #select_all([host_filter_out_gsnap_filter_1_fa, host_filter_out_gsnap_filter_2_fa]),
+      s3_wd_uri = s3_wd_uri,
+      db_path = diamond_db,
+      diamond_args = diamond_args,
+      prefix = diamond_prefix,
+      run_locally = defined(local_rapsearch2_index),
+      local_diamond_index = diamond_local_db_path,
+      docker_image_id = docker_image_id
   }
   call RunCallHitsDiamond { 
-      input:
+    input:
       m8_file = RunAlignment_diamond_out.out_m8,
       lineage_db = lineage_db,
       duplicate_cluster_size = duplicate_cluster_sizes_tsv,
@@ -431,7 +432,8 @@ workflow czid_non_host_alignment {
       deuterostome_db = deuterostome_db,
       accession2taxid = accession2taxid_db,
       prefix = diamond_prefix,
-      docker_image_id = docker_image_id
+      docker_image_id = docker_image_id,
+      s3_wd_uri = s3_wd_uri,
   }
 
   call CombineTaxonCounts {
