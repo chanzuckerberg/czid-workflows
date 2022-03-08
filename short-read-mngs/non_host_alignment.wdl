@@ -195,7 +195,7 @@ task RunAlignment_minimap2_out {
 }
 task RunAlignment_diamond_out {
     input {
-        String docker_image_id
+        String docker_image_id:
         String s3_wd_uri
         Array[File]+ fastas
         String db_path
@@ -256,6 +256,7 @@ task RunCallHitsMinimap2 {
         Int min_read_length = 36
         String docker_image_id
         String count_type = "NT"
+        String s3_wd_uri
     }
 
     command <<<
@@ -311,6 +312,7 @@ task RunCallHitsDiamond {
         Int min_read_length = 0
         String docker_image_id
         String count_type = "NR"
+        String s3_wd_uri
     }
     # --step-name diamond_call_hits_out
     command <<<
