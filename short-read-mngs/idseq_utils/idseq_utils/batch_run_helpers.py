@@ -3,8 +3,8 @@ import logging
 import os
 import random
 import re
-import shutil
 import requests
+import shutil
 import time
 from os import listdir
 from multiprocessing import Pool
