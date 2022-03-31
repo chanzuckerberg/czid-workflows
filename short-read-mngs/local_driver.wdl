@@ -14,8 +14,9 @@ workflow czid_short_read_mngs {
         String docker_image_id
         File fastqs_0
         File? fastqs_1
-        File non_host_rapsearch2_index
-        File non_host_gsnap_index
+        File minimap2_local_db_path
+        File diamond_local_db_path
+        String diamond_args
         String non_host_gsnap_genome_name = "nt_k16"
         String s3_wd_uri = ""
     }
@@ -33,9 +34,10 @@ workflow czid_short_read_mngs {
         host_filter_out_gsnap_filter_merged_fa = host_filter.gsnap_filter_out_gsnap_filter_merged_fa,
         duplicate_cluster_sizes_tsv = host_filter.czid_dedup_out_duplicate_cluster_sizes_tsv,
         czid_dedup_out_duplicate_clusters_csv = host_filter.czid_dedup_out_duplicate_clusters_csv,
-        local_gsnap_index = non_host_gsnap_index,
+        minimap2_local_db_path = minimap2_local_db_path,
         local_gsnap_genome_name = non_host_gsnap_genome_name,
-        local_rapsearch2_index = non_host_rapsearch2_index,
+        diamond_local_db_path = diamond_local_db_path,
+        diamond_args = diamond_args,
         docker_image_id = docker_image_id,
         s3_wd_uri = s3_wd_uri
     }

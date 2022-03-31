@@ -389,7 +389,7 @@ workflow czid_non_host_alignment {
       fastas = [select_first([host_filter_out_gsnap_filter_merged_fa, host_filter_out_gsnap_filter_1_fa])], #select_all([host_filter_out_gsnap_filter_1_fa, host_filter_out_gsnap_filter_2_fa]),
       db_path = minimap2_db,
       minimap2_args = minimap2_args,
-      run_locally = defined(local_gsnap_index),
+      run_locally = defined(minimap2_local_db_path),
       local_minimap2_index = minimap2_local_db_path,
       prefix= minimap2_prefix
   }
@@ -413,7 +413,7 @@ workflow czid_non_host_alignment {
       db_path = diamond_db,
       diamond_args = diamond_args,
       prefix = diamond_prefix,
-      run_locally = defined(local_rapsearch2_index),
+      run_locally = defined(diamond_local_db_path),
       local_diamond_index = diamond_local_db_path,
       docker_image_id = docker_image_id
   }
