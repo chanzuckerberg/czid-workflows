@@ -6,7 +6,7 @@
     "star_reads": 129990,
     "trimmomatic_reads": 129990,
     "priceseq_reads": 110116,
-    "idseq_dedup_reads": 110042,
+    "czid_dedup_reads": 110042,
     "lzw_reads": 99638,
     "bowtie2_reads": 99636,
     "subsampled_reads": 99636,

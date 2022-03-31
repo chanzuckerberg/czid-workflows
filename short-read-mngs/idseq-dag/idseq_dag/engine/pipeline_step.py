@@ -255,7 +255,7 @@ class PipelineStep(object):
 class PipelineCountingStep(PipelineStep):
 
     """PipelineStep that counts nonunique reads based on back-calculation from cluster sizes
-TSV file emitted by `PipelineStepRunIDSeqDedup`. Only steps that follow idseq-dedup are eligible
+TSV file emitted by `PipelineStepRunCZIDDedup`. Only steps that follow czid-dedup are eligible
 for this, and not all of them (not all steps count their outputs)."""
 
     def input_cluster_sizes_path(self):

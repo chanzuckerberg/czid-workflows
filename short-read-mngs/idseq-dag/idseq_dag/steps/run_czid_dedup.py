@@ -7,15 +7,15 @@ import idseq_dag.util.log as log
 
 from idseq_dag.engine.pipeline_step import PipelineStep
 from idseq_dag.exceptions import InsufficientReadsError, InvalidInputFileError
-from idseq_dag.util.idseq_dedup_clusters import parse_clusters_file
+from idseq_dag.util.czid_dedup_clusters import parse_clusters_file
 from idseq_dag.util.count import save_duplicate_cluster_sizes
 
 
-class PipelineStepRunIDSeqDedup(PipelineStep):  # Deliberately not PipelineCountingStep
+class PipelineStepRunCZIDDedup(PipelineStep):  # Deliberately not PipelineCountingStep
     """Identifies duplicate reads.
 
     ```
-    idseq-dedup
+    czid-dedup
     -i {input_fasta}
     -o {output_fasta}
     -l 70
@@ -25,8 +25,8 @@ class PipelineStepRunIDSeqDedup(PipelineStep):  # Deliberately not PipelineCount
     Only 70, because sequencer errors increase toward the end of a read.
     For an illustration of this effect, look [here](https://insilicoseq.readthedocs.io/en/latest/iss/model.html).
 
-    Per the idseq-dedup Documentation, available [here](https://github.com/chanzuckerberg/idseq-dedup),
-    the idseq-dedup command above will output two or three non-empty files.
+    Per the czid-dedup Documentation, available [here](https://github.com/chanzuckerberg/czid-dedup),
+    the czid-dedup command above will output two or three non-empty files.
     The first output is named exactly as directed via the “-o” option, and contains all representative cluster read IDs.
     The second output with extension “.csv” relates each read ID to its representative cluster read ID.
     For paired end reads, a third output lists the cluster representatives for R2 reads.
@@ -34,7 +34,7 @@ class PipelineStepRunIDSeqDedup(PipelineStep):  # Deliberately not PipelineCount
 
     def validate_input_files(self):
         if not count.files_have_min_reads(self.input_files_local[0], 2):
-            raise InsufficientReadsError("Insufficient reads before idseq-dedup")
+            raise InsufficientReadsError("Insufficient reads before czid-dedup")
 
     def run(self):
         input_fas = self.input_files_local[0]
@@ -48,17 +48,17 @@ class PipelineStepRunIDSeqDedup(PipelineStep):  # Deliberately not PipelineCount
 
         duplicate_clusters_raw_path = 'clusters_raw.csv'
         # See docstring above for explanation of these options.
-        idseq_dedup_params = [
+        czid_dedup_params = [
             '-i', input_fas[0], '-o', output_fas[0],
             '-l', '70',
             '-c', duplicate_clusters_raw_path,
         ]
         if len(input_fas) == 2:
-            idseq_dedup_params += ['-i', input_fas[1], '-o', output_fas[1]]
+            czid_dedup_params += ['-i', input_fas[1], '-o', output_fas[1]]
         command.execute(
             command_patterns.SingleCommand(
-                cmd='idseq-dedup',
-                args=idseq_dedup_params
+                cmd='czid-dedup',
+                args=czid_dedup_params
             )
         )
 

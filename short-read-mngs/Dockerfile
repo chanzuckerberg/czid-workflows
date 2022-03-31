@@ -68,7 +68,7 @@ RUN chmod +x /usr/bin/docker-credential-ecr-login
 RUN mkdir -p /root/.docker
 RUN jq -n '.credsStore="ecr-login"' > /root/.docker/config.json
 
-RUN curl -L -o /usr/bin/idseq-dedup https://github.com/chanzuckerberg/idseq-dedup/releases/download/v0.1.0/idseq-dedup-Linux; chmod +x /usr/bin/idseq-dedup
+RUN curl -L -o /usr/bin/czid-dedup https://github.com/chanzuckerberg/czid-dedup/releases/download/v0.1.2/czid-dedup-Linux; chmod +x /usr/bin/czid-dedup
 
 # Note: bsdtar is available in libarchive-tools
 # Note: python3-scipy pulls in gcc (fixed in Ubuntu 19.10)
@@ -140,6 +140,25 @@ WORKDIR /
 
 COPY idseq-dag /tmp/idseq-dag
 RUN pip3 install /tmp/idseq-dag && rm -rf /tmp/idseq-dag
+
+RUN apt-get -y update && apt-get install -y build-essential libz-dev git python3-pip cmake
+
+WORKDIR /tmp
+RUN git clone --recursive https://github.com/mlin/minimap2-scatter.git
+WORKDIR /tmp/minimap2-scatter
+RUN make minimap2
+RUN mv /tmp/minimap2-scatter/minimap2/minimap2 /usr/local/bin/minimap2
+
+WORKDIR /tmp
+RUN git clone https://github.com/morsecodist/diamond
+WORKDIR /tmp/diamond
+RUN git checkout minimal-mods
+WORKDIR /tmp/diamond/build
+RUN cmake -DCMAKE_BUILD_TYPE=Release ..
+RUN make -j6
+RUN mv diamond /usr/local/bin
+
+RUN curl -Ls https://github.com/chanzuckerberg/s3parcp/releases/download/v0.2.0-alpha/s3parcp_0.2.0-alpha_Linux_x86_64.tar.gz | tar -C /usr/bin -xz s3parcp
 
 COPY idseq_utils /tmp/idseq_utils
 RUN pip3 install /tmp/idseq_utils && rm -rf /tmp/idseq_utils
