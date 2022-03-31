@@ -4,6 +4,7 @@ import os
 import random
 import re
 import requests
+import shutil
 import time
 from os import listdir
 from multiprocessing import Pool
@@ -249,6 +250,8 @@ def run_alignment(
     with Pool(MAX_CHUNKS_IN_FLIGHT) as p:
         p.starmap(_run_chunk, chunks)
     run(["s3parcp", "--recursive", chunk_dir, "chunks"], check=True)
+    if os.path.exists(os.path.join("chunks", "cache")):
+        shutil.rmtree(os.path.join("chunks", "cache"))
     for fn in listdir("chunks"):
         if fn.endswith("json"):
             os.remove(os.path.join("chunks", fn))
