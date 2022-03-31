@@ -68,7 +68,10 @@ class PipelineStepRunCZIDDedup(PipelineStep):  # Deliberately not PipelineCounti
         with open(duplicate_clusters_raw_path) as r, open(duplicate_clusters_path, 'w') as w:
             for row in csv.reader(r):
                 if row[1] in read_ids:
-                    raise InvalidInputFileError("Input file has duplicate read ids")
+                    raise InvalidInputFileError({
+                        "error": "Input file has duplicate read ids",
+                        "step": self.name
+                    })
                 read_ids.add(row[1])
                 csv.writer(w).writerow(c if c[0].isalnum() else f"'{c}" for c in row)
 
