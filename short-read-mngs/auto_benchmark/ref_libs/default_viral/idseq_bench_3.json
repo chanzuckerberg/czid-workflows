@@ -11,8 +11,8 @@
     "bowtie2_reads": 7044,
     "subsampled_reads": 7044,
     "gsnap_filter_reads": 7044,
-    "initial_unmapped_reads": 4335,
-    "refined_unmapped_reads": 4097,
+    "initial_unmapped_reads": 4117,
+    "refined_unmapped_reads": 4035,
     "contigs": 28,
     "contigs_nt": 24354,
     "contigs_N50": 7044,
@@ -33,22 +33,11 @@
         "contigs_reads": 1394,
         "tax_name": "Chikungunya virus"
       },
-      "2560598": {
-        "tax_level": 1,
-        "reads": 1366,
-        "reads_dedup": 1364,
-        "avg_aln_len": 160,
-        "contigs": 1,
-        "contigs_nt": 7044,
-        "contigs_N50": 7044,
-        "contigs_reads": 1366,
-        "tax_name": "Mischivirus D"
-      },
       "12360": {
         "tax_level": 1,
-        "reads": 14,
-        "reads_dedup": 14,
-        "avg_aln_len": 143.71428571428572,
+        "reads": 13,
+        "reads_dedup": 13,
+        "avg_aln_len": 147.07692307692307,
         "contigs": 0,
         "contigs_nt": 0,
         "contigs_N50": 0,
@@ -57,9 +46,9 @@
       },
       "186152": {
         "tax_level": 1,
-        "reads": 11,
-        "reads_dedup": 11,
-        "avg_aln_len": 125.9090909090909,
+        "reads": 7,
+        "reads_dedup": 7,
+        "avg_aln_len": 126,
         "contigs": 0,
         "contigs_nt": 0,
         "contigs_N50": 0,
@@ -68,63 +57,30 @@
       },
       "445516": {
         "tax_level": 1,
-        "reads": 5,
-        "reads_dedup": 5,
-        "avg_aln_len": 123.4,
+        "reads": 6,
+        "reads_dedup": 6,
+        "avg_aln_len": 113.83333333333333,
         "contigs": 0,
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
         "tax_name": "Staphylococcus phage tp310-2"
       },
-      "320834": {
+      "2040663": {
         "tax_level": 1,
-        "reads": 4,
-        "reads_dedup": 4,
-        "avg_aln_len": 126,
+        "reads": 6,
+        "reads_dedup": 6,
+        "avg_aln_len": 57.166666666666664,
         "contigs": 0,
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Staphylococcus virus 69"
-      },
-      "186153": {
-        "tax_level": 1,
-        "reads": 4,
-        "reads_dedup": 4,
-        "avg_aln_len": 126,
-        "contigs": 0,
-        "contigs_nt": 0,
-        "contigs_N50": 0,
-        "contigs_reads": 0,
-        "tax_name": "Staphylococcus virus 13"
-      },
-      "2560732": {
-        "tax_level": 1,
-        "reads": 4,
-        "reads_dedup": 4,
-        "avg_aln_len": 102.25,
-        "contigs": 0,
-        "contigs_nt": 0,
-        "contigs_N50": 0,
-        "contigs_reads": 0,
-        "tax_name": "Salmonella virus SJ46"
-      },
-      "129009": {
-        "tax_level": 1,
-        "reads": 4,
-        "reads_dedup": 4,
-        "avg_aln_len": 91,
-        "contigs": 0,
-        "contigs_nt": 0,
-        "contigs_N50": 0,
-        "contigs_reads": 0,
-        "tax_name": "Staphylococcus prophage phiPV83"
+        "tax_name": "Enterovirus I"
       },
       "320839": {
         "tax_level": 1,
-        "reads": 3,
-        "reads_dedup": 3,
+        "reads": 4,
+        "reads_dedup": 4,
         "avg_aln_len": 126,
         "contigs": 0,
         "contigs_nt": 0,
@@ -132,7 +88,7 @@
         "contigs_reads": 0,
         "tax_name": "Staphylococcus virus 47"
       },
-      "1273712": {
+      "1399949": {
         "tax_level": 1,
         "reads": 3,
         "reads_dedup": 3,
@@ -141,7 +97,18 @@
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Staphylococcus phage JS01"
+        "tax_name": "Staphylococcus phage YMC/09/04/R1988"
+      },
+      "445517": {
+        "tax_level": 1,
+        "reads": 3,
+        "reads_dedup": 3,
+        "avg_aln_len": 126,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Staphylococcus phage tp310-3"
       },
       "2560452": {
         "tax_level": 1,
@@ -154,18 +121,29 @@
         "contigs_reads": 0,
         "tax_name": "Escherichia virus RCS47"
       },
+      "2560732": {
+        "tax_level": 1,
+        "reads": 3,
+        "reads_dedup": 3,
+        "avg_aln_len": 120,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Salmonella virus SJ46"
+      },
       "360398": {
         "tax_level": 1,
         "reads": 3,
         "reads_dedup": 3,
-        "avg_aln_len": 99.33333333333333,
+        "avg_aln_len": 118.66666666666667,
         "contigs": 0,
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
         "tax_name": "Staphylococcus virus 108PVL"
       },
-      "215167": {
+      "430796": {
         "tax_level": 1,
         "reads": 2,
         "reads_dedup": 2,
@@ -174,12 +152,89 @@
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Staphylococcus virus 3a"
+        "tax_name": "Staphylococcus phage phi2958PVL"
       },
-      "320837": {
+      "1498171": {
         "tax_level": 1,
         "reads": 2,
         "reads_dedup": 2,
+        "avg_aln_len": 126,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Staphylococcus phage SA97"
+      },
+      "874267": {
+        "tax_level": 1,
+        "reads": 2,
+        "reads_dedup": 2,
+        "avg_aln_len": 126,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Staphylococcus phage phi5967PVL"
+      },
+      "129009": {
+        "tax_level": 1,
+        "reads": 2,
+        "reads_dedup": 2,
+        "avg_aln_len": 106,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Staphylococcus prophage phiPV83"
+      },
+      "1165702": {
+        "tax_level": 1,
+        "reads": 1,
+        "reads_dedup": 1,
+        "avg_aln_len": 126,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Staphylococcus phage phi7401PVL"
+      },
+      "487152": {
+        "tax_level": 1,
+        "reads": 1,
+        "reads_dedup": 1,
+        "avg_aln_len": 126,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Staphylococcus virus phiMR25"
+      },
+      "59506": {
+        "tax_level": 1,
+        "reads": 1,
+        "reads_dedup": 1,
+        "avg_aln_len": 126,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Staphylococcus virus 85"
+      },
+      "320834": {
+        "tax_level": 1,
+        "reads": 1,
+        "reads_dedup": 1,
+        "avg_aln_len": 126,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Staphylococcus virus 69"
+      },
+      "320837": {
+        "tax_level": 1,
+        "reads": 1,
+        "reads_dedup": 1,
         "avg_aln_len": 126,
         "contigs": 0,
         "contigs_nt": 0,
@@ -187,84 +242,7 @@
         "contigs_reads": 0,
         "tax_name": "Staphylococcus virus 42e"
       },
-      "320835": {
-        "tax_level": 1,
-        "reads": 2,
-        "reads_dedup": 2,
-        "avg_aln_len": 126,
-        "contigs": 0,
-        "contigs_nt": 0,
-        "contigs_N50": 0,
-        "contigs_reads": 0,
-        "tax_name": "Staphylococcus virus 53"
-      },
-      "10680": {
-        "tax_level": 1,
-        "reads": 2,
-        "reads_dedup": 2,
-        "avg_aln_len": 121.5,
-        "contigs": 0,
-        "contigs_nt": 0,
-        "contigs_N50": 0,
-        "contigs_reads": 0,
-        "tax_name": "Enterobacteria phage P4"
-      },
-      "55511": {
-        "tax_level": 1,
-        "reads": 2,
-        "reads_dedup": 2,
-        "avg_aln_len": 84,
-        "contigs": 0,
-        "contigs_nt": 0,
-        "contigs_N50": 0,
-        "contigs_reads": 0,
-        "tax_name": "Staphylococcus virus 187"
-      },
-      "268746": {
-        "tax_level": 1,
-        "reads": 2,
-        "reads_dedup": 2,
-        "avg_aln_len": 76,
-        "contigs": 0,
-        "contigs_nt": 0,
-        "contigs_N50": 0,
-        "contigs_reads": 0,
-        "tax_name": "Prochlorococcus phage P-SSM2"
-      },
-      "1325953": {
-        "tax_level": 1,
-        "reads": 2,
-        "reads_dedup": 2,
-        "avg_aln_len": 76,
-        "contigs": 0,
-        "contigs_nt": 0,
-        "contigs_N50": 0,
-        "contigs_reads": 0,
-        "tax_name": "Mycobacterium phage PegLeg"
-      },
-      "227470": {
-        "tax_level": 1,
-        "reads": 2,
-        "reads_dedup": 2,
-        "avg_aln_len": 46,
-        "contigs": 0,
-        "contigs_nt": 0,
-        "contigs_N50": 0,
-        "contigs_reads": 0,
-        "tax_name": "Aeromonas virus Aeh1"
-      },
-      "28321": {
-        "tax_level": 1,
-        "reads": 2,
-        "reads_dedup": 2,
-        "avg_aln_len": 39.5,
-        "contigs": 0,
-        "contigs_nt": 0,
-        "contigs_N50": 0,
-        "contigs_reads": 0,
-        "tax_name": "Amsacta moorei entomopoxvirus"
-      },
-      "445515": {
+      "320845": {
         "tax_level": 1,
         "reads": 1,
         "reads_dedup": 1,
@@ -273,9 +251,9 @@
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Staphylococcus phage tp310-1"
+        "tax_name": "Staphylococcus virus 55"
       },
-      "1168613": {
+      "387910": {
         "tax_level": 1,
         "reads": 1,
         "reads_dedup": 1,
@@ -284,9 +262,9 @@
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Staphylococcus phage TEM123"
+        "tax_name": "Staphylococcus virus phiNM4"
       },
-      "1168612": {
+      "1308896": {
         "tax_level": 1,
         "reads": 1,
         "reads_dedup": 1,
@@ -295,9 +273,9 @@
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Staphylococcus phage SMSAP5"
+        "tax_name": "Staphylococcus phage StauST398-4"
       },
-      "320844": {
+      "668618": {
         "tax_level": 1,
         "reads": 1,
         "reads_dedup": 1,
@@ -306,9 +284,9 @@
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Staphylococcus virus 71"
+        "tax_name": "Staphylococcus phage P954"
       },
-      "320847": {
+      "1519999": {
         "tax_level": 1,
         "reads": 1,
         "reads_dedup": 1,
@@ -317,7 +295,18 @@
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Staphylococcus virus 52a"
+        "tax_name": "Staphylococcus phage phiBU01"
+      },
+      "1273712": {
+        "tax_level": 1,
+        "reads": 1,
+        "reads_dedup": 1,
+        "avg_aln_len": 126,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Staphylococcus phage JS01"
       },
       "1505027": {
         "tax_level": 1,
@@ -330,7 +319,7 @@
         "contigs_reads": 0,
         "tax_name": "Staphylococcus phage 23MRA"
       },
-      "387908": {
+      "215167": {
         "tax_level": 1,
         "reads": 1,
         "reads_dedup": 1,
@@ -339,7 +328,40 @@
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Staphylococcus virus phiNM2"
+        "tax_name": "Staphylococcus virus 3a"
+      },
+      "320835": {
+        "tax_level": 1,
+        "reads": 1,
+        "reads_dedup": 1,
+        "avg_aln_len": 126,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Staphylococcus virus 53"
+      },
+      "186153": {
+        "tax_level": 1,
+        "reads": 1,
+        "reads_dedup": 1,
+        "avg_aln_len": 126,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Staphylococcus virus 13"
+      },
+      "1698421": {
+        "tax_level": 1,
+        "reads": 1,
+        "reads_dedup": 1,
+        "avg_aln_len": 126,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Staphylococcus phage phiJB"
       },
       "1347760": {
         "tax_level": 1,
@@ -352,18 +374,29 @@
         "contigs_reads": 0,
         "tax_name": "Staphylococcus phage SA12"
       },
-      "1407493": {
+      "53369": {
         "tax_level": 1,
         "reads": 1,
         "reads_dedup": 1,
-        "avg_aln_len": 123,
+        "avg_aln_len": 126,
         "contigs": 0,
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Shigella phage SfIV"
+        "tax_name": "Staphylococcus virus 80alpha"
       },
-      "458639": {
+      "405947": {
+        "tax_level": 1,
+        "reads": 1,
+        "reads_dedup": 1,
+        "avg_aln_len": 126,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Staphylococcus virus 80"
+      },
+      "10678": {
         "tax_level": 1,
         "reads": 1,
         "reads_dedup": 1,
@@ -372,29 +405,7 @@
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Bacillus phage 0305phi8-36"
-      },
-      "564886": {
-        "tax_level": 1,
-        "reads": 1,
-        "reads_dedup": 1,
-        "avg_aln_len": 113,
-        "contigs": 0,
-        "contigs_nt": 0,
-        "contigs_N50": 0,
-        "contigs_reads": 0,
-        "tax_name": "Enterobacteria phage YYZ-2008"
-      },
-      "984186": {
-        "tax_level": 1,
-        "reads": 1,
-        "reads_dedup": 1,
-        "avg_aln_len": 112,
-        "contigs": 0,
-        "contigs_nt": 0,
-        "contigs_N50": 0,
-        "contigs_reads": 0,
-        "tax_name": "Cronobacter phage ENT47670"
+        "tax_name": "Escherichia virus P1"
       },
       "12407": {
         "tax_level": 1,
@@ -407,214 +418,16 @@
         "contigs_reads": 0,
         "tax_name": "Salmonella virus PsP3"
       },
-      "1211643": {
+      "10742": {
         "tax_level": 1,
         "reads": 1,
         "reads_dedup": 1,
-        "avg_aln_len": 80,
+        "avg_aln_len": 49,
         "contigs": 0,
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Caulobacter virus Rogue"
-      },
-      "1674930": {
-        "tax_level": 1,
-        "reads": 1,
-        "reads_dedup": 1,
-        "avg_aln_len": 76,
-        "contigs": 0,
-        "contigs_nt": 0,
-        "contigs_N50": 0,
-        "contigs_reads": 0,
-        "tax_name": "Staphylococcus phage vB_SauS_phi2"
-      },
-      "1826170": {
-        "tax_level": 1,
-        "reads": 1,
-        "reads_dedup": 1,
-        "avg_aln_len": 76,
-        "contigs": 0,
-        "contigs_nt": 0,
-        "contigs_N50": 0,
-        "contigs_reads": 0,
-        "tax_name": "Tokyovirus A1"
-      },
-      "1498220": {
-        "tax_level": 1,
-        "reads": 1,
-        "reads_dedup": 1,
-        "avg_aln_len": 75,
-        "contigs": 0,
-        "contigs_nt": 0,
-        "contigs_N50": 0,
-        "contigs_reads": 0,
-        "tax_name": "Staphylococcus phage phiSa119"
-      },
-      "335797": {
-        "tax_level": 1,
-        "reads": 1,
-        "reads_dedup": 1,
-        "avg_aln_len": 74,
-        "contigs": 0,
-        "contigs_nt": 0,
-        "contigs_N50": 0,
-        "contigs_reads": 0,
-        "tax_name": "Burkholderia phage KS9"
-      },
-      "2560286": {
-        "tax_level": 1,
-        "reads": 1,
-        "reads_dedup": 1,
-        "avg_aln_len": 67,
-        "contigs": 0,
-        "contigs_nt": 0,
-        "contigs_N50": 0,
-        "contigs_reads": 0,
-        "tax_name": "Agrobacterium virus Atuph07"
-      },
-      "262175": {
-        "tax_level": 1,
-        "reads": 1,
-        "reads_dedup": 1,
-        "avg_aln_len": 59,
-        "contigs": 0,
-        "contigs_nt": 0,
-        "contigs_N50": 0,
-        "contigs_reads": 0,
-        "tax_name": "Plodia interpunctella granulovirus"
-      },
-      "2560425": {
-        "tax_level": 1,
-        "reads": 1,
-        "reads_dedup": 1,
-        "avg_aln_len": 55,
-        "contigs": 0,
-        "contigs_nt": 0,
-        "contigs_N50": 0,
-        "contigs_reads": 0,
-        "tax_name": "Enterococcus virus EfaCPT1"
-      },
-      "180230": {
-        "tax_level": 1,
-        "reads": 1,
-        "reads_dedup": 1,
-        "avg_aln_len": 52,
-        "contigs": 0,
-        "contigs_nt": 0,
-        "contigs_N50": 0,
-        "contigs_reads": 0,
-        "tax_name": "Cyprinid herpesvirus 3"
-      },
-      "2072209": {
-        "tax_level": 1,
-        "reads": 1,
-        "reads_dedup": 1,
-        "avg_aln_len": 50,
-        "contigs": 0,
-        "contigs_nt": 0,
-        "contigs_N50": 0,
-        "contigs_reads": 0,
-        "tax_name": "Esparto virus"
-      },
-      "1982927": {
-        "tax_level": 1,
-        "reads": 1,
-        "reads_dedup": 1,
-        "avg_aln_len": 42,
-        "contigs": 0,
-        "contigs_nt": 0,
-        "contigs_N50": 0,
-        "contigs_reads": 0,
-        "tax_name": "Mycobacterium virus Osmaximus"
-      },
-      "1285600": {
-        "tax_level": 1,
-        "reads": 1,
-        "reads_dedup": 1,
-        "avg_aln_len": 42,
-        "contigs": 0,
-        "contigs_nt": 0,
-        "contigs_N50": 0,
-        "contigs_reads": 0,
-        "tax_name": "Nile crocodilepox virus"
-      },
-      "1448273": {
-        "tax_level": 1,
-        "reads": 1,
-        "reads_dedup": 1,
-        "avg_aln_len": 41,
-        "contigs": 0,
-        "contigs_nt": 0,
-        "contigs_N50": 0,
-        "contigs_reads": 0,
-        "tax_name": "Streptococcus phage DCC1738"
-      },
-      "930168": {
-        "tax_level": 1,
-        "reads": 1,
-        "reads_dedup": 1,
-        "avg_aln_len": 40,
-        "contigs": 0,
-        "contigs_nt": 0,
-        "contigs_N50": 0,
-        "contigs_reads": 0,
-        "tax_name": "Sweet potato collusive virus"
-      },
-      "1980930": {
-        "tax_level": 1,
-        "reads": 1,
-        "reads_dedup": 1,
-        "avg_aln_len": 39,
-        "contigs": 0,
-        "contigs_nt": 0,
-        "contigs_N50": 0,
-        "contigs_reads": 0,
-        "tax_name": "Staphylococcus virus SEP1"
-      },
-      "1094892": {
-        "tax_level": 1,
-        "reads": 1,
-        "reads_dedup": 1,
-        "avg_aln_len": 39,
-        "contigs": 0,
-        "contigs_nt": 0,
-        "contigs_N50": 0,
-        "contigs_reads": 0,
-        "tax_name": "Megavirus chiliensis"
-      },
-      "1414747": {
-        "tax_level": 1,
-        "reads": 1,
-        "reads_dedup": 1,
-        "avg_aln_len": 38,
-        "contigs": 0,
-        "contigs_nt": 0,
-        "contigs_N50": 0,
-        "contigs_reads": 0,
-        "tax_name": "Mycobacterium phage Validus"
-      },
-      "1605721": {
-        "tax_level": 1,
-        "reads": 1,
-        "reads_dedup": 1,
-        "avg_aln_len": 36,
-        "contigs": 0,
-        "contigs_nt": 0,
-        "contigs_N50": 0,
-        "contigs_reads": 0,
-        "tax_name": "Pandoravirus inopinatum"
-      },
-      "2560360": {
-        "tax_level": 1,
-        "reads": 1,
-        "reads_dedup": 1,
-        "avg_aln_len": 36,
-        "contigs": 0,
-        "contigs_nt": 0,
-        "contigs_N50": 0,
-        "contigs_reads": 0,
-        "tax_name": "Burkholderia virus BcepNazgul"
+        "tax_name": "Escherichia virus HK022"
       }
     },
     "NR": {
@@ -642,47 +455,91 @@
       },
       "1084719": {
         "tax_level": 1,
-        "reads": 6,
-        "reads_dedup": 6,
-        "avg_aln_len": 51,
+        "reads": 14,
+        "reads_dedup": 14,
+        "avg_aln_len": 43.642857142857146,
         "contigs": 0,
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
         "tax_name": "Bacillus virus G"
       },
-      "129009": {
+      "2023057": {
         "tax_level": 1,
-        "reads": 5,
-        "reads_dedup": 5,
-        "avg_aln_len": 40.8,
+        "reads": 9,
+        "reads_dedup": 9,
+        "avg_aln_len": 26.11111111111111,
         "contigs": 0,
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Staphylococcus prophage phiPV83"
+        "tax_name": "Orpheovirus IHUMI-LCC2"
       },
       "2560286": {
         "tax_level": 1,
-        "reads": 4,
-        "reads_dedup": 4,
-        "avg_aln_len": 78.75,
+        "reads": 7,
+        "reads_dedup": 7,
+        "avg_aln_len": 62.57142857142857,
         "contigs": 0,
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
         "tax_name": "Agrobacterium virus Atuph07"
       },
-      "1165702": {
+      "455364": {
         "tax_level": 1,
-        "reads": 4,
-        "reads_dedup": 4,
-        "avg_aln_len": 36.25,
+        "reads": 5,
+        "reads_dedup": 5,
+        "avg_aln_len": 36.4,
         "contigs": 0,
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Staphylococcus phage phi7401PVL"
+        "tax_name": "Chrysochromulina ericina virus"
+      },
+      "2560334": {
+        "tax_level": 1,
+        "reads": 4,
+        "reads_dedup": 4,
+        "avg_aln_len": 47,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Bacillus virus Moonbeam"
+      },
+      "2560731": {
+        "tax_level": 1,
+        "reads": 4,
+        "reads_dedup": 4,
+        "avg_aln_len": 41,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Salmonella virus SEN34"
+      },
+      "71366": {
+        "tax_level": 1,
+        "reads": 4,
+        "reads_dedup": 4,
+        "avg_aln_len": 40.75,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Staphylococcus phage PVL"
+      },
+      "2560452": {
+        "tax_level": 1,
+        "reads": 4,
+        "reads_dedup": 4,
+        "avg_aln_len": 40.5,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Escherichia virus RCS47"
       },
       "2169701": {
         "tax_level": 1,
@@ -695,40 +552,51 @@
         "contigs_reads": 0,
         "tax_name": "Onyong-nyong virus"
       },
-      "147712": {
+      "1399949": {
         "tax_level": 1,
-        "reads": 3,
-        "reads_dedup": 3,
-        "avg_aln_len": 57,
+        "reads": 4,
+        "reads_dedup": 4,
+        "avg_aln_len": 30.75,
         "contigs": 0,
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Rhinovirus B"
+        "tax_name": "Staphylococcus phage YMC/09/04/R1988"
       },
-      "186152": {
+      "62099": {
         "tax_level": 1,
-        "reads": 3,
-        "reads_dedup": 3,
-        "avg_aln_len": 42,
+        "reads": 4,
+        "reads_dedup": 4,
+        "avg_aln_len": 29.25,
         "contigs": 0,
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Staphylococcus virus phi12"
+        "tax_name": "Anomala cuprea entomopoxvirus"
       },
-      "1674930": {
+      "1094892": {
         "tax_level": 1,
-        "reads": 3,
-        "reads_dedup": 3,
-        "avg_aln_len": 41.666666666666664,
+        "reads": 4,
+        "reads_dedup": 4,
+        "avg_aln_len": 29,
         "contigs": 0,
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Staphylococcus phage vB_SauS_phi2"
+        "tax_name": "Megavirus chiliensis"
       },
-      "2560452": {
+      "212035": {
+        "tax_level": 1,
+        "reads": 4,
+        "reads_dedup": 4,
+        "avg_aln_len": 26,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Acanthamoeba polyphaga mimivirus"
+      },
+      "129009": {
         "tax_level": 1,
         "reads": 3,
         "reads_dedup": 3,
@@ -737,7 +605,7 @@
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Escherichia virus RCS47"
+        "tax_name": "Staphylococcus prophage phiPV83"
       },
       "320839": {
         "tax_level": 1,
@@ -750,27 +618,60 @@
         "contigs_reads": 0,
         "tax_name": "Staphylococcus virus 47"
       },
-      "387907": {
+      "66797": {
         "tax_level": 1,
         "reads": 3,
         "reads_dedup": 3,
-        "avg_aln_len": 41,
+        "avg_aln_len": 38.333333333333336,
         "contigs": 0,
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Staphylococcus virus phiNM1"
+        "tax_name": "Bacillus virus SPbeta"
       },
-      "10678": {
+      "985782": {
         "tax_level": 1,
         "reads": 3,
         "reads_dedup": 3,
-        "avg_aln_len": 40,
+        "avg_aln_len": 36.333333333333336,
         "contigs": 0,
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Escherichia virus P1"
+        "tax_name": "Moumouvirus"
+      },
+      "215167": {
+        "tax_level": 1,
+        "reads": 3,
+        "reads_dedup": 3,
+        "avg_aln_len": 35,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Staphylococcus virus 3a"
+      },
+      "186152": {
+        "tax_level": 1,
+        "reads": 3,
+        "reads_dedup": 3,
+        "avg_aln_len": 34.666666666666664,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Staphylococcus virus phi12"
+      },
+      "12407": {
+        "tax_level": 1,
+        "reads": 3,
+        "reads_dedup": 3,
+        "avg_aln_len": 34.666666666666664,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Salmonella virus PsP3"
       },
       "2560732": {
         "tax_level": 1,
@@ -783,18 +684,18 @@
         "contigs_reads": 0,
         "tax_name": "Salmonella virus SJ46"
       },
-      "59506": {
+      "373996": {
         "tax_level": 1,
-        "reads": 2,
-        "reads_dedup": 2,
-        "avg_aln_len": 41.5,
+        "reads": 3,
+        "reads_dedup": 3,
+        "avg_aln_len": 30,
         "contigs": 0,
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Staphylococcus virus 85"
+        "tax_name": "Micromonas pusilla virus SP1"
       },
-      "320835": {
+      "320849": {
         "tax_level": 1,
         "reads": 2,
         "reads_dedup": 2,
@@ -803,7 +704,40 @@
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Staphylococcus virus 53"
+        "tax_name": "Staphylococcus virus 92"
+      },
+      "430796": {
+        "tax_level": 1,
+        "reads": 2,
+        "reads_dedup": 2,
+        "avg_aln_len": 41.5,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Staphylococcus phage phi2958PVL"
+      },
+      "1277672": {
+        "tax_level": 1,
+        "reads": 2,
+        "reads_dedup": 2,
+        "avg_aln_len": 41.5,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Staphylococcus phage StauST398-2"
+      },
+      "12360": {
+        "tax_level": 1,
+        "reads": 2,
+        "reads_dedup": 2,
+        "avg_aln_len": 41.5,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Staphylococcus virus 11"
       },
       "1147140": {
         "tax_level": 1,
@@ -838,7 +772,7 @@
         "contigs_reads": 0,
         "tax_name": "Enterobacteria phage YYZ-2008"
       },
-      "1347760": {
+      "2052899": {
         "tax_level": 1,
         "reads": 2,
         "reads_dedup": 2,
@@ -847,9 +781,9 @@
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Staphylococcus phage SA12"
+        "tax_name": "Cladosporium fulvum T-1 virus"
       },
-      "872294": {
+      "53369": {
         "tax_level": 1,
         "reads": 2,
         "reads_dedup": 2,
@@ -858,53 +792,53 @@
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Staphylococcus virus SAP26"
-      },
-      "12360": {
-        "tax_level": 1,
-        "reads": 2,
-        "reads_dedup": 2,
-        "avg_aln_len": 41,
-        "contigs": 0,
-        "contigs_nt": 0,
-        "contigs_N50": 0,
-        "contigs_reads": 0,
-        "tax_name": "Staphylococcus virus 11"
-      },
-      "2560731": {
-        "tax_level": 1,
-        "reads": 2,
-        "reads_dedup": 2,
-        "avg_aln_len": 41,
-        "contigs": 0,
-        "contigs_nt": 0,
-        "contigs_N50": 0,
-        "contigs_reads": 0,
-        "tax_name": "Salmonella virus SEN34"
+        "tax_name": "Staphylococcus virus 80alpha"
       },
       "1325953": {
         "tax_level": 1,
         "reads": 2,
         "reads_dedup": 2,
-        "avg_aln_len": 39.5,
+        "avg_aln_len": 41,
         "contigs": 0,
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
         "tax_name": "Mycobacterium phage PegLeg"
       },
+      "10678": {
+        "tax_level": 1,
+        "reads": 2,
+        "reads_dedup": 2,
+        "avg_aln_len": 41,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Escherichia virus P1"
+      },
       "1273712": {
         "tax_level": 1,
         "reads": 2,
         "reads_dedup": 2,
-        "avg_aln_len": 38.5,
+        "avg_aln_len": 38,
         "contigs": 0,
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
         "tax_name": "Staphylococcus phage JS01"
       },
-      "320837": {
+      "2734140": {
+        "tax_level": 1,
+        "reads": 2,
+        "reads_dedup": 2,
+        "avg_aln_len": 37.5,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Prochlorococcus virus PSSM2"
+      },
+      "387909": {
         "tax_level": 1,
         "reads": 2,
         "reads_dedup": 2,
@@ -913,62 +847,84 @@
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Staphylococcus virus 42e"
+        "tax_name": "Staphylococcus phage phiNM3"
       },
-      "12407": {
+      "755272": {
         "tax_level": 1,
         "reads": 2,
         "reads_dedup": 2,
-        "avg_aln_len": 33,
+        "avg_aln_len": 36.5,
         "contigs": 0,
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Salmonella virus PsP3"
+        "tax_name": "Micromonas pusilla virus 12T"
       },
-      "874267": {
+      "1513235": {
         "tax_level": 1,
         "reads": 2,
         "reads_dedup": 2,
-        "avg_aln_len": 32.5,
+        "avg_aln_len": 35.5,
         "contigs": 0,
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Staphylococcus phage phi5967PVL"
+        "tax_name": "Cafeteria roenbergensis virus"
       },
-      "44158": {
+      "1674930": {
         "tax_level": 1,
         "reads": 2,
         "reads_dedup": 2,
-        "avg_aln_len": 27,
+        "avg_aln_len": 35.5,
         "contigs": 0,
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Aura virus"
+        "tax_name": "Staphylococcus phage vB_SauS_phi2"
       },
-      "48544": {
+      "2560409": {
         "tax_level": 1,
         "reads": 2,
         "reads_dedup": 2,
-        "avg_aln_len": 25,
+        "avg_aln_len": 35,
         "contigs": 0,
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Fort Morgan virus"
+        "tax_name": "Edwardsiella virus GF2"
       },
-      "59300": {
+      "2107709": {
         "tax_level": 1,
         "reads": 2,
         "reads_dedup": 2,
-        "avg_aln_len": 24,
+        "avg_aln_len": 34.5,
         "contigs": 0,
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Getah virus"
+        "tax_name": "Pandoravirus quercus"
+      },
+      "445700": {
+        "tax_level": 1,
+        "reads": 2,
+        "reads_dedup": 2,
+        "avg_aln_len": 31,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Prochlorococcus phage P-HM1"
+      },
+      "387908": {
+        "tax_level": 1,
+        "reads": 2,
+        "reads_dedup": 2,
+        "avg_aln_len": 19.5,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Staphylococcus virus phiNM2"
       },
       "59302": {
         "tax_level": 1,
@@ -981,18 +937,18 @@
         "contigs_reads": 0,
         "tax_name": "Ndumu virus"
       },
-      "147711": {
+      "1034111": {
         "tax_level": 1,
-        "reads": 2,
-        "reads_dedup": 2,
-        "avg_aln_len": 15,
+        "reads": 1,
+        "reads_dedup": 1,
+        "avg_aln_len": 43,
         "contigs": 0,
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Rhinovirus A"
+        "tax_name": "Mycobacterium virus Littlee"
       },
-      "1732063": {
+      "994601": {
         "tax_level": 1,
         "reads": 1,
         "reads_dedup": 1,
@@ -1001,9 +957,9 @@
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Staphylococcus phage SPbeta-like"
+        "tax_name": "Planktothrix phage PaV-LD"
       },
-      "387910": {
+      "487152": {
         "tax_level": 1,
         "reads": 1,
         "reads_dedup": 1,
@@ -1012,9 +968,9 @@
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Staphylococcus virus phiNM4"
+        "tax_name": "Staphylococcus virus phiMR25"
       },
-      "387908": {
+      "115987": {
         "tax_level": 1,
         "reads": 1,
         "reads_dedup": 1,
@@ -1023,9 +979,9 @@
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Staphylococcus virus phiNM2"
+        "tax_name": "Aeromonas virus 44RR2"
       },
-      "1698421": {
+      "320844": {
         "tax_level": 1,
         "reads": 1,
         "reads_dedup": 1,
@@ -1034,7 +990,40 @@
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Staphylococcus phage phiJB"
+        "tax_name": "Staphylococcus virus 71"
+      },
+      "320834": {
+        "tax_level": 1,
+        "reads": 1,
+        "reads_dedup": 1,
+        "avg_aln_len": 42,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Staphylococcus virus 69"
+      },
+      "668618": {
+        "tax_level": 1,
+        "reads": 1,
+        "reads_dedup": 1,
+        "avg_aln_len": 42,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Staphylococcus phage P954"
+      },
+      "872294": {
+        "tax_level": 1,
+        "reads": 1,
+        "reads_dedup": 1,
+        "avg_aln_len": 42,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Staphylococcus virus SAP26"
       },
       "1195085": {
         "tax_level": 1,
@@ -1047,7 +1036,7 @@
         "contigs_reads": 0,
         "tax_name": "Cronobacter phage CR5"
       },
-      "889956": {
+      "10761": {
         "tax_level": 1,
         "reads": 1,
         "reads_dedup": 1,
@@ -1056,7 +1045,29 @@
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Prochlorococcus phage MED4-213"
+        "tax_name": "Shigella virus Sf6"
+      },
+      "1983750": {
+        "tax_level": 1,
+        "reads": 1,
+        "reads_dedup": 1,
+        "avg_aln_len": 42,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Mycobacterium virus Bongo"
+      },
+      "2734106": {
+        "tax_level": 1,
+        "reads": 1,
+        "reads_dedup": 1,
+        "avg_aln_len": 42,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Prochlorococcus virus MED4-213"
       },
       "444860": {
         "tax_level": 1,
@@ -1069,7 +1080,7 @@
         "contigs_reads": 0,
         "tax_name": "Synechococcus phage S-SM2"
       },
-      "2107708": {
+      "2107707": {
         "tax_level": 1,
         "reads": 1,
         "reads_dedup": 1,
@@ -1078,9 +1089,9 @@
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Pandoravirus neocaledonia"
+        "tax_name": "Pandoravirus macleodensis"
       },
-      "379501": {
+      "1195086": {
         "tax_level": 1,
         "reads": 1,
         "reads_dedup": 1,
@@ -1089,9 +1100,9 @@
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Staphylococcus virus phiMR11"
+        "tax_name": "Staphylococcus phage SA13"
       },
-      "430796": {
+      "387907": {
         "tax_level": 1,
         "reads": 1,
         "reads_dedup": 1,
@@ -1100,9 +1111,9 @@
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Staphylococcus phage phi2958PVL"
+        "tax_name": "Staphylococcus virus phiNM1"
       },
-      "445700": {
+      "320835": {
         "tax_level": 1,
         "reads": 1,
         "reads_dedup": 1,
@@ -1111,9 +1122,9 @@
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Prochlorococcus phage P-HM1"
+        "tax_name": "Staphylococcus virus 53"
       },
-      "215167": {
+      "251749": {
         "tax_level": 1,
         "reads": 1,
         "reads_dedup": 1,
@@ -1122,9 +1133,9 @@
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Staphylococcus virus 3a"
+        "tax_name": "Phaeocystis globosa virus"
       },
-      "445517": {
+      "59241": {
         "tax_level": 1,
         "reads": 1,
         "reads_dedup": 1,
@@ -1133,9 +1144,9 @@
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Staphylococcus phage tp310-3"
+        "tax_name": "Streptococcus phage Dp-1"
       },
-      "1308896": {
+      "186153": {
         "tax_level": 1,
         "reads": 1,
         "reads_dedup": 1,
@@ -1144,9 +1155,9 @@
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Staphylococcus phage StauST398-4"
+        "tax_name": "Staphylococcus virus 13"
       },
-      "55511": {
+      "320842": {
         "tax_level": 1,
         "reads": 1,
         "reads_dedup": 1,
@@ -1155,9 +1166,9 @@
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Staphylococcus virus 187"
+        "tax_name": "Staphylococcus virus 96"
       },
-      "445516": {
+      "1347760": {
         "tax_level": 1,
         "reads": 1,
         "reads_dedup": 1,
@@ -1166,9 +1177,9 @@
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Staphylococcus phage tp310-2"
+        "tax_name": "Staphylococcus phage SA12"
       },
-      "320847": {
+      "320846": {
         "tax_level": 1,
         "reads": 1,
         "reads_dedup": 1,
@@ -1177,9 +1188,9 @@
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Staphylococcus virus 52a"
+        "tax_name": "Staphylococcus virus 29"
       },
-      "320850": {
+      "575608": {
         "tax_level": 1,
         "reads": 1,
         "reads_dedup": 1,
@@ -1188,9 +1199,9 @@
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Staphylococcus virus X2"
+        "tax_name": "Staphylococcus virus IPLA88"
       },
-      "929814": {
+      "1168613": {
         "tax_level": 1,
         "reads": 1,
         "reads_dedup": 1,
@@ -1199,9 +1210,9 @@
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Salmonella phage RE-2010"
+        "tax_name": "Staphylococcus phage TEM123"
       },
-      "755272": {
+      "320840": {
         "tax_level": 1,
         "reads": 1,
         "reads_dedup": 1,
@@ -1210,7 +1221,84 @@
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Micromonas pusilla virus 12T"
+        "tax_name": "Staphylococcus virus 37"
+      },
+      "1392231": {
+        "tax_level": 1,
+        "reads": 1,
+        "reads_dedup": 1,
+        "avg_aln_len": 41,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Streptococcus phage 20617"
+      },
+      "573591": {
+        "tax_level": 1,
+        "reads": 1,
+        "reads_dedup": 1,
+        "avg_aln_len": 41,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Stenotrophomonas phage S1"
+      },
+      "936054": {
+        "tax_level": 1,
+        "reads": 1,
+        "reads_dedup": 1,
+        "avg_aln_len": 41,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Enterobacteria phage VT2phi_272"
+      },
+      "2560283": {
+        "tax_level": 1,
+        "reads": 1,
+        "reads_dedup": 1,
+        "avg_aln_len": 41,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Aeromonas virus 56"
+      },
+      "2734063": {
+        "tax_level": 1,
+        "reads": 1,
+        "reads_dedup": 1,
+        "avg_aln_len": 41,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Salmonella virus RE2010"
+      },
+      "10742": {
+        "tax_level": 1,
+        "reads": 1,
+        "reads_dedup": 1,
+        "avg_aln_len": 41,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Escherichia virus HK022"
+      },
+      "70600": {
+        "tax_level": 1,
+        "reads": 1,
+        "reads_dedup": 1,
+        "avg_aln_len": 41,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Epiphyas postvittana nucleopolyhedrovirus"
       },
       "1273749": {
         "tax_level": 1,
@@ -1223,7 +1311,7 @@
         "contigs_reads": 0,
         "tax_name": "Halovirus HGTV-1"
       },
-      "1982560": {
+      "1403390": {
         "tax_level": 1,
         "reads": 1,
         "reads_dedup": 1,
@@ -1232,7 +1320,7 @@
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Gordonia virus OneUp"
+        "tax_name": "Staphylococcus phage phiRS7"
       },
       "1127516": {
         "tax_level": 1,
@@ -1245,7 +1333,29 @@
         "contigs_reads": 0,
         "tax_name": "Pectobacterium phage ZF40"
       },
-      "1985339": {
+      "2560463": {
+        "tax_level": 1,
+        "reads": 1,
+        "reads_dedup": 1,
+        "avg_aln_len": 40,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Escherichia virus PBECO4"
+      },
+      "2107708": {
+        "tax_level": 1,
+        "reads": 1,
+        "reads_dedup": 1,
+        "avg_aln_len": 40,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Pandoravirus neocaledonia"
+      },
+      "1239381": {
         "tax_level": 1,
         "reads": 1,
         "reads_dedup": 1,
@@ -1254,9 +1364,53 @@
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Klebsiella virus Matisse"
+        "tax_name": "Streptococcus phage phiNJ2"
       },
-      "130478": {
+      "1985327": {
+        "tax_level": 1,
+        "reads": 1,
+        "reads_dedup": 1,
+        "avg_aln_len": 39,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Klebsiella virus PKO111"
+      },
+      "259901": {
+        "tax_level": 1,
+        "reads": 1,
+        "reads_dedup": 1,
+        "avg_aln_len": 39,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Staphylococcus virus 77"
+      },
+      "879630": {
+        "tax_level": 1,
+        "reads": 1,
+        "reads_dedup": 1,
+        "avg_aln_len": 39,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Aeromonas phage phiAS5"
+      },
+      "345199": {
+        "tax_level": 1,
+        "reads": 1,
+        "reads_dedup": 1,
+        "avg_aln_len": 39,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Invertebrate iridescent virus 31"
+      },
+      "1917232": {
         "tax_level": 1,
         "reads": 1,
         "reads_dedup": 1,
@@ -1265,9 +1419,9 @@
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Staphylococcus virus phiSLT"
+        "tax_name": "Only Syngen Nebraska virus 5"
       },
-      "66797": {
+      "1195071": {
         "tax_level": 1,
         "reads": 1,
         "reads_dedup": 1,
@@ -1276,9 +1430,75 @@
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Bacillus virus SPbeta"
+        "tax_name": "Staphylococcus phage StauST398-3"
       },
-      "1340709": {
+      "2560619": {
+        "tax_level": 1,
+        "reads": 1,
+        "reads_dedup": 1,
+        "avg_aln_len": 38,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Paenibacillus virus Tripp"
+      },
+      "173707": {
+        "tax_level": 1,
+        "reads": 1,
+        "reads_dedup": 1,
+        "avg_aln_len": 37,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Temperate phage phiNIH1.1"
+      },
+      "1349409": {
+        "tax_level": 1,
+        "reads": 1,
+        "reads_dedup": 1,
+        "avg_aln_len": 37,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Pandoravirus dulcis"
+      },
+      "658401": {
+        "tax_level": 1,
+        "reads": 1,
+        "reads_dedup": 1,
+        "avg_aln_len": 37,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Cyanophage PSS2"
+      },
+      "1915207": {
+        "tax_level": 1,
+        "reads": 1,
+        "reads_dedup": 1,
+        "avg_aln_len": 37,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Acinetobacter virus AB2"
+      },
+      "97195": {
+        "tax_level": 1,
+        "reads": 1,
+        "reads_dedup": 1,
+        "avg_aln_len": 36,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Heterosigma akashiwo virus 01"
+      },
+      "445696": {
         "tax_level": 1,
         "reads": 1,
         "reads_dedup": 1,
@@ -1287,7 +1507,7 @@
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Mycobacterium phage Redno2"
+        "tax_name": "Prochlorococcus phage P-HM2"
       },
       "2560434": {
         "tax_level": 1,
@@ -1322,7 +1542,29 @@
         "contigs_reads": 0,
         "tax_name": "Staphylococcus phage StauST398-1"
       },
-      "326037": {
+      "874267": {
+        "tax_level": 1,
+        "reads": 1,
+        "reads_dedup": 1,
+        "avg_aln_len": 26,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Staphylococcus phage phi5967PVL"
+      },
+      "1859492": {
+        "tax_level": 1,
+        "reads": 1,
+        "reads_dedup": 1,
+        "avg_aln_len": 26,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Kaumoebavirus"
+      },
+      "2734149": {
         "tax_level": 1,
         "reads": 1,
         "reads_dedup": 1,
@@ -1331,46 +1573,310 @@
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Staphylococcus virus phiETA3"
+        "tax_name": "Synechococcus virus SSM1"
       },
-      "1636205": {
+      "320837": {
         "tax_level": 1,
         "reads": 1,
         "reads_dedup": 1,
-        "avg_aln_len": 23,
+        "avg_aln_len": 24,
         "contigs": 0,
         "contigs_nt": 0,
         "contigs_N50": 0,
         "contigs_reads": 0,
-        "tax_name": "Staphylococcus phage B236"
+        "tax_name": "Staphylococcus virus 42e"
+      },
+      "2560689": {
+        "tax_level": 1,
+        "reads": 1,
+        "reads_dedup": 1,
+        "avg_aln_len": 21,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Pseudomonas virus pf16"
+      },
+      "360398": {
+        "tax_level": 1,
+        "reads": 1,
+        "reads_dedup": 1,
+        "avg_aln_len": 18,
+        "contigs": 0,
+        "contigs_nt": 0,
+        "contigs_N50": 0,
+        "contigs_reads": 0,
+        "tax_name": "Staphylococcus virus 108PVL"
       }
     }
   },
-  "inputs": {
-    "czid_short_read_mngs.docker_image_id": "idseq-short-read-mngs",
-    "czid_short_read_mngs.fastqs_1": "https://github.com/chanzuckerberg/czid-workflows/raw/main/tests/short-read-mngs/norg_6__nacc_27__uniform_weight_per_organism__hiseq_reads__v6__R2.fastq.gz",
-    "czid_short_read_mngs.fastqs_0": "https://github.com/chanzuckerberg/czid-workflows/raw/main/tests/short-read-mngs/norg_6__nacc_27__uniform_weight_per_organism__hiseq_reads__v6__R1.fastq.gz",
-    "czid_short_read_mngs.experimental.nt_info_db": "s3://czid-public-references/test/viral-alignment-indexes/viral_nt_info.db",
-    "czid_short_read_mngs.experimental.nt_loc_db": "s3://czid-public-references/test/viral-alignment-indexes/viral_nt_loc.db",
-    "czid_short_read_mngs.experimental.nt_db": "s3://czid-public-references/test/viral-alignment-indexes/viral_nt",
-    "czid_short_read_mngs.postprocess.nr_loc_db": "s3://czid-public-references/test/viral-alignment-indexes/viral_nr_loc.db",
-    "czid_short_read_mngs.postprocess.nr_db": "s3://czid-public-references/test/viral-alignment-indexes/viral_nr",
-    "czid_short_read_mngs.postprocess.nt_loc_db": "s3://czid-public-references/test/viral-alignment-indexes/viral_nt_loc.db",
-    "czid_short_read_mngs.postprocess.nt_db": "s3://czid-public-references/test/viral-alignment-indexes/viral_nt",
-    "czid_short_read_mngs.non_host_alignment.accession2taxid_db": "s3://czid-public-references/mini-database/alignment_indexes/2020-08-20-viral/viral_accessions2taxid.db",
-    "czid_short_read_mngs.non_host_gsnap_genome_name": "viral_nt_gsnap2018-10-26_k16",
-    "czid_short_read_mngs.non_host_gsnap_index": "s3://czid-public-references/test/viral-alignment-indexes/viral_nt_gsnap2018-10-26_k16.tar.gz",
-    "czid_short_read_mngs.non_host_rapsearch2_index": "s3://czid-public-references/test/viral-alignment-indexes/viral_nr_rapsearch.tar.gz",
-    "czid_short_read_mngs.host_filter.human_bowtie2_genome": "s3://czid-public-references/host_filter/ercc/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/bowtie2_genome.tar",
-    "czid_short_read_mngs.host_filter.human_star_genome": "s3://czid-public-references/host_filter/ercc/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/STAR_genome.tar",
-    "czid_short_read_mngs.host_filter.gsnap_genome": "s3://czid-public-references/test/gsnap/ERCC_gsnap2017-11-15_k16.tar",
-    "czid_short_read_mngs.host_filter.bowtie2_genome": "s3://czid-public-references/host_filter/ercc/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/bowtie2_genome.tar",
-    "czid_short_read_mngs.host_filter.star_genome": "s3://czid-public-references/host_filter/ercc/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/STAR_genome.tar",
-    "czid_short_read_mngs.host_filter.max_subsample_fragments": 1000000,
-    "czid_short_read_mngs.host_filter.max_input_fragments": 75000000,
-    "czid_short_read_mngs.host_filter.adapter_fasta": "https://raw.githubusercontent.com/broadinstitute/viral-pipelines/master/test/input/clipDb.fasta",
-    "czid_short_read_mngs.host_filter.host_genome": "human",
-    "czid_short_read_mngs.host_filter.nucleotide_type": "DNA",
-    "czid_short_read_mngs.host_filter.file_ext": "fastq"
+  "truth": {
+    "573": 0.162507734,
+    "746128": 0.176737472,
+    "5833": 0.166013611,
+    "37124": 0.170756857,
+    "463676": 0.167869664,
+    "1280": 0.156114663
+  },
+  "NT_aupr": 0.23745173745173745,
+  "NT_precision": [
+    0.14285714285714285,
+    0.02702702702702703,
+    0.06666666666666667,
+    0.09090909090909091,
+    0.16666666666666666,
+    0.2,
+    0.3333333333333333,
+    0.5,
+    1,
+    1
+  ],
+  "NT_recall": [
+    1,
+    0.16666666666666666,
+    0.16666666666666666,
+    0.16666666666666666,
+    0.16666666666666666,
+    0.16666666666666666,
+    0.16666666666666666,
+    0.16666666666666666,
+    0.16666666666666666,
+    0
+  ],
+  "NT_l2_norm": 0.3780393241956702,
+  "NR_aupr": 0.3575818809463669,
+  "NR_precision": [
+    0.05405405405405406,
+    0.018691588785046728,
+    0.043478260869565216,
+    0.08333333333333333,
+    0.13333333333333333,
+    0.3333333333333333,
+    0.4,
+    0.5,
+    0.6666666666666666,
+    1,
+    1,
+    1
+  ],
+  "NR_recall": [
+    1,
+    0.3333333333333333,
+    0.3333333333333333,
+    0.3333333333333333,
+    0.3333333333333333,
+    0.3333333333333333,
+    0.3333333333333333,
+    0.3333333333333333,
+    0.3333333333333333,
+    0.3333333333333333,
+    0.16666666666666666,
+    0
+  ],
+  "NR_l2_norm": 0.346065615161189,
+  "outputs": {
+    "czid_short_read_mngs.host_filter.validate_input_out_count": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/host_filter.validate_input_out_count/validate_input_out.count",
+    "czid_short_read_mngs.host_filter.czid_dedup_out_dedup2_fa": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/host_filter.czid_dedup_out_dedup2_fa/dedup2.fa",
+    "czid_short_read_mngs.host_filter.bowtie2_out_count": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/host_filter.bowtie2_out_count/bowtie2_out.count",
+    "czid_short_read_mngs.host_filter.lzw_out_lzw1_fa": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/host_filter.lzw_out_lzw1_fa/lzw1.fa",
+    "czid_short_read_mngs.host_filter.bowtie2_out_bowtie2_merged_fa": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/host_filter.bowtie2_out_bowtie2_merged_fa/bowtie2_merged.fa",
+    "czid_short_read_mngs.host_filter.validate_input_out_validate_input_summary_json": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/host_filter.validate_input_out_validate_input_summary_json/validate_input_summary.json",
+    "czid_short_read_mngs.host_filter.subsampled_out_count": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/host_filter.subsampled_out_count/subsampled_out.count",
+    "czid_short_read_mngs.host_filter.star_human_out_count": null,
+    "czid_short_read_mngs.host_filter.subsampled_out_subsampled_2_fa": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/host_filter.subsampled_out_subsampled_2_fa/subsampled_2.fa",
+    "czid_short_read_mngs.host_filter.czid_dedup_out_duplicate_cluster_sizes_tsv": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/host_filter.czid_dedup_out_duplicate_cluster_sizes_tsv/duplicate_cluster_sizes.tsv",
+    "czid_short_read_mngs.host_filter.subsampled_out_subsampled_merged_fa": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/host_filter.subsampled_out_subsampled_merged_fa/subsampled_merged.fa",
+    "czid_short_read_mngs.host_filter.gsnap_filter_out_gsnap_filter_2_fa": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/host_filter.gsnap_filter_out_gsnap_filter_2_fa/gsnap_filter_2.fa",
+    "czid_short_read_mngs.host_filter.star_out_log_file": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/host_filter.star_out_log_file/Log.final.out",
+    "czid_short_read_mngs.host_filter.star_out_unmapped1_fastq": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/host_filter.star_out_unmapped1_fastq/unmapped1.fastq",
+    "czid_short_read_mngs.host_filter.gsnap_filter_out_gsnap_filter_merged_fa": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/host_filter.gsnap_filter_out_gsnap_filter_merged_fa/gsnap_filter_merged.fa",
+    "czid_short_read_mngs.host_filter.output_histogram_file": null,
+    "czid_short_read_mngs.host_filter.output_metrics_file": null,
+    "czid_short_read_mngs.host_filter.gsnap_filter_out_gsnap_filter_1_fa": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/host_filter.gsnap_filter_out_gsnap_filter_1_fa/gsnap_filter_1.fa",
+    "czid_short_read_mngs.host_filter.star_human_out_unmapped_human_1_fa": null,
+    "czid_short_read_mngs.host_filter.czid_dedup_out_count": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/host_filter.czid_dedup_out_count/czid_dedup_out.count",
+    "czid_short_read_mngs.host_filter.lzw_out_count": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/host_filter.lzw_out_count/lzw_out.count",
+    "czid_short_read_mngs.host_filter.subsampled_out_subsampled_1_fa": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/host_filter.subsampled_out_subsampled_1_fa/subsampled_1.fa",
+    "czid_short_read_mngs.host_filter.output_gene_file": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/host_filter.output_gene_file/reads_per_gene.star.tab",
+    "czid_short_read_mngs.host_filter.bowtie2_human_out_count": null,
+    "czid_short_read_mngs.host_filter.star_human_out_unmapped_human_2_fa": null,
+    "czid_short_read_mngs.host_filter.priceseq_out_priceseq2_fa": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/host_filter.priceseq_out_priceseq2_fa/priceseq2.fa",
+    "czid_short_read_mngs.host_filter.trimmomatic_out_trimmomatic2_fastq": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/host_filter.trimmomatic_out_trimmomatic2_fastq/trimmomatic2.fastq",
+    "czid_short_read_mngs.host_filter.bowtie2_out_bowtie2_2_fa": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/host_filter.bowtie2_out_bowtie2_2_fa/bowtie2_2.fa",
+    "czid_short_read_mngs.host_filter.priceseq_out_count": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/host_filter.priceseq_out_count/priceseq_out.count",
+    "czid_short_read_mngs.host_filter.star_out_unmapped2_fastq": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/host_filter.star_out_unmapped2_fastq/unmapped2.fastq",
+    "czid_short_read_mngs.host_filter.input_read_count": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/host_filter.input_read_count/fastqs.count",
+    "czid_short_read_mngs.host_filter.bowtie2_human_out_bowtie2_human_merged_fa": null,
+    "czid_short_read_mngs.host_filter.trimmomatic_out_count": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/host_filter.trimmomatic_out_count/trimmomatic_out.count",
+    "czid_short_read_mngs.host_filter.czid_dedup_out_duplicate_clusters_csv": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/host_filter.czid_dedup_out_duplicate_clusters_csv/clusters.csv",
+    "czid_short_read_mngs.host_filter.bowtie2_human_out_bowtie2_human_1_fa": null,
+    "czid_short_read_mngs.host_filter.trimmomatic_out_trimmomatic1_fastq": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/host_filter.trimmomatic_out_trimmomatic1_fastq/trimmomatic1.fastq",
+    "czid_short_read_mngs.host_filter.lzw_out_lzw2_fa": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/host_filter.lzw_out_lzw2_fa/lzw2.fa",
+    "czid_short_read_mngs.host_filter.czid_dedup_out_dedup1_fa": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/host_filter.czid_dedup_out_dedup1_fa/dedup1.fa",
+    "czid_short_read_mngs.host_filter.bowtie2_out_bowtie2_1_fa": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/host_filter.bowtie2_out_bowtie2_1_fa/bowtie2_1.fa",
+    "czid_short_read_mngs.host_filter.priceseq_out_priceseq1_fa": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/host_filter.priceseq_out_priceseq1_fa/priceseq1.fa",
+    "czid_short_read_mngs.host_filter.star_out_count": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/host_filter.star_out_count/star_out.count",
+    "czid_short_read_mngs.host_filter.bowtie2_human_out_bowtie2_human_2_fa": null,
+    "czid_short_read_mngs.host_filter.gsnap_filter_out_count": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/host_filter.gsnap_filter_out_count/gsnap_filter_out.count",
+    "czid_short_read_mngs.experimental.coverage_viz": [
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.coverage_viz/0/NC_004162.2_coverage_viz.json"
+    ],
+    "czid_short_read_mngs.experimental.taxid_locator_out_taxid_locations_combined_json": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.taxid_locator_out_taxid_locations_combined_json/taxid_locations_combined.json",
+    "czid_short_read_mngs.experimental.taxid_locator_out_taxid_locations_nt_json": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.taxid_locator_out_taxid_locations_nt_json/taxid_locations_nt.json",
+    "czid_short_read_mngs.experimental.longest_reads": [
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.longest_reads/00/nt.family.10662.longest_5_reads.fasta",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.longest_reads/01/nt.family.10699.longest_5_reads.fasta",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.longest_reads/02/nt.family.11018.longest_5_reads.fasta",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.longest_reads/03/nt.family.12058.longest_5_reads.fasta",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.longest_reads/04/nt.genus.11019.longest_5_reads.fasta",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.longest_reads/05/nt.genus.12059.longest_5_reads.fasta",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.longest_reads/06/nt.genus.1623273.longest_5_reads.fasta",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.longest_reads/07/nt.genus.1623274.longest_5_reads.fasta",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.longest_reads/08/nt.genus.1623298.longest_5_reads.fasta",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.longest_reads/09/nt.genus.186789.longest_5_reads.fasta",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.longest_reads/10/nt.genus.2732978.longest_5_reads.fasta",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.longest_reads/11/nt.species.10678.longest_5_reads.fasta",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.longest_reads/12/nt.species.12360.longest_5_reads.fasta",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.longest_reads/13/nt.species.12407.longest_5_reads.fasta",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.longest_reads/14/nt.species.129009.longest_5_reads.fasta",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.longest_reads/15/nt.species.1308896.longest_5_reads.fasta",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.longest_reads/16/nt.species.1399949.longest_5_reads.fasta",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.longest_reads/17/nt.species.1505027.longest_5_reads.fasta",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.longest_reads/18/nt.species.1519999.longest_5_reads.fasta",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.longest_reads/19/nt.species.1698421.longest_5_reads.fasta",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.longest_reads/20/nt.species.2040663.longest_5_reads.fasta",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.longest_reads/21/nt.species.215167.longest_5_reads.fasta",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.longest_reads/22/nt.species.2560452.longest_5_reads.fasta",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.longest_reads/23/nt.species.2560732.longest_5_reads.fasta",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.longest_reads/24/nt.species.320835.longest_5_reads.fasta",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.longest_reads/25/nt.species.37124.longest_5_reads.fasta",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.longest_reads/26/nt.species.405947.longest_5_reads.fasta",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.longest_reads/27/nt.species.445516.longest_5_reads.fasta",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.longest_reads/28/nt.species.53369.longest_5_reads.fasta",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.longest_reads/29/nt.species.874267.longest_5_reads.fasta"
+    ],
+    "czid_short_read_mngs.experimental.srst2_out_count": null,
+    "czid_short_read_mngs.experimental.taxid_fasta_out_count": null,
+    "czid_short_read_mngs.experimental.coverage_viz_out_count": null,
+    "czid_short_read_mngs.experimental.coverage_viz_out_coverage_viz_summary_json": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.coverage_viz_out_coverage_viz_summary_json/coverage_viz_summary.json",
+    "czid_short_read_mngs.experimental.alignment_viz_out_align_viz_summary": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.alignment_viz_out_align_viz_summary/align_viz.summary",
+    "czid_short_read_mngs.experimental.taxid_locator_out_taxid_annot_sorted_genus_nr_fasta": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.taxid_locator_out_taxid_annot_sorted_genus_nr_fasta/taxid_annot_sorted_genus_nr.fasta",
+    "czid_short_read_mngs.experimental.taxid_locator_out_taxid_annot_sorted_family_nt_fasta": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.taxid_locator_out_taxid_annot_sorted_family_nt_fasta/taxid_annot_sorted_family_nt.fasta",
+    "czid_short_read_mngs.experimental.srst2_out_out__genes__ARGannot_r2__results_txt": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.srst2_out_out__genes__ARGannot_r2__results_txt/out__genes__ARGannot_r2__results.txt",
+    "czid_short_read_mngs.experimental.taxid_locator_out_taxid_annot_sorted_nr_fasta": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.taxid_locator_out_taxid_annot_sorted_nr_fasta/taxid_annot_sorted_nr.fasta",
+    "czid_short_read_mngs.experimental.nonhost_fastq_out_nonhost_R2_fastq": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.nonhost_fastq_out_nonhost_R2_fastq/nonhost_R2.fastq",
+    "czid_short_read_mngs.experimental.nonhost_fastq_out_count": null,
+    "czid_short_read_mngs.experimental.taxid_locator_out_taxid_locations_genus_nt_json": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.taxid_locator_out_taxid_locations_genus_nt_json/taxid_locations_genus_nt.json",
+    "czid_short_read_mngs.experimental.taxid_locator_out_taxid_annot_sorted_nt_fasta": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.taxid_locator_out_taxid_annot_sorted_nt_fasta/taxid_annot_sorted_nt.fasta",
+    "czid_short_read_mngs.experimental.srst2_out_out_log": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.srst2_out_out_log/out.log",
+    "czid_short_read_mngs.experimental.taxid_locator_out_taxid_annot_sorted_genus_nt_fasta": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.taxid_locator_out_taxid_annot_sorted_genus_nt_fasta/taxid_annot_sorted_genus_nt.fasta",
+    "czid_short_read_mngs.experimental.align_viz": [
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.align_viz/00/nt.family.10662.align_viz.json",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.align_viz/01/nt.family.10699.align_viz.json",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.align_viz/02/nt.family.11018.align_viz.json",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.align_viz/03/nt.family.12058.align_viz.json",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.align_viz/04/nt.genus.11019.align_viz.json",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.align_viz/05/nt.genus.12059.align_viz.json",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.align_viz/06/nt.genus.1623273.align_viz.json",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.align_viz/07/nt.genus.1623274.align_viz.json",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.align_viz/08/nt.genus.1623298.align_viz.json",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.align_viz/09/nt.genus.186789.align_viz.json",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.align_viz/10/nt.genus.2732978.align_viz.json",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.align_viz/11/nt.species.10678.align_viz.json",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.align_viz/12/nt.species.12360.align_viz.json",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.align_viz/13/nt.species.12407.align_viz.json",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.align_viz/14/nt.species.129009.align_viz.json",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.align_viz/15/nt.species.1308896.align_viz.json",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.align_viz/16/nt.species.1399949.align_viz.json",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.align_viz/17/nt.species.1505027.align_viz.json",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.align_viz/18/nt.species.1519999.align_viz.json",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.align_viz/19/nt.species.1698421.align_viz.json",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.align_viz/20/nt.species.2040663.align_viz.json",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.align_viz/21/nt.species.215167.align_viz.json",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.align_viz/22/nt.species.2560452.align_viz.json",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.align_viz/23/nt.species.2560732.align_viz.json",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.align_viz/24/nt.species.320835.align_viz.json",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.align_viz/25/nt.species.37124.align_viz.json",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.align_viz/26/nt.species.405947.align_viz.json",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.align_viz/27/nt.species.445516.align_viz.json",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.align_viz/28/nt.species.53369.align_viz.json",
+      "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.align_viz/29/nt.species.874267.align_viz.json"
+    ],
+    "czid_short_read_mngs.experimental.taxid_locator_out_taxid_locations_family_nr_json": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.taxid_locator_out_taxid_locations_family_nr_json/taxid_locations_family_nr.json",
+    "czid_short_read_mngs.experimental.srst2_out_amr_processed_results_csv": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.srst2_out_amr_processed_results_csv/amr_processed_results.csv",
+    "czid_short_read_mngs.experimental.srst2_out_amr_summary_results_csv": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.srst2_out_amr_summary_results_csv/amr_summary_results.csv",
+    "czid_short_read_mngs.experimental.taxid_fasta_out_taxid_annot_fasta": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.taxid_fasta_out_taxid_annot_fasta/taxid_annot.fasta",
+    "czid_short_read_mngs.experimental.alignment_viz_out_count": null,
+    "czid_short_read_mngs.experimental.taxid_locator_out_taxid_locations_family_nt_json": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.taxid_locator_out_taxid_locations_family_nt_json/taxid_locations_family_nt.json",
+    "czid_short_read_mngs.experimental.nonhost_fastq_out_nonhost_R1_fastq": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.nonhost_fastq_out_nonhost_R1_fastq/nonhost_R1.fastq",
+    "czid_short_read_mngs.experimental.taxid_locator_out_taxid_locations_nr_json": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.taxid_locator_out_taxid_locations_nr_json/taxid_locations_nr.json",
+    "czid_short_read_mngs.experimental.srst2_out_output___ARGannot_r2_sorted_bam": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.srst2_out_output___ARGannot_r2_sorted_bam/output__.ARGannot_r2.sorted.bam",
+    "czid_short_read_mngs.experimental.srst2_out_out__fullgenes__ARGannot_r2__results_txt": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.srst2_out_out__fullgenes__ARGannot_r2__results_txt/out__fullgenes__ARGannot_r2__results.txt",
+    "czid_short_read_mngs.experimental.taxid_locator_out_count": null,
+    "czid_short_read_mngs.experimental.taxid_locator_out_taxid_locations_genus_nr_json": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.taxid_locator_out_taxid_locations_genus_nr_json/taxid_locations_genus_nr.json",
+    "czid_short_read_mngs.experimental.taxid_locator_out_taxid_annot_sorted_family_nr_fasta": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/experimental.taxid_locator_out_taxid_annot_sorted_family_nr_fasta/taxid_annot_sorted_family_nr.fasta",
+    "czid_short_read_mngs.postprocess.refined_rapsearch2_out_assembly_rapsearch2_contig_summary_json": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/postprocess.refined_rapsearch2_out_assembly_rapsearch2_contig_summary_json/rapsearch2_contig_summary.json",
+    "czid_short_read_mngs.postprocess.refined_taxid_fasta_out_assembly_refined_taxid_annot_fasta": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/postprocess.refined_taxid_fasta_out_assembly_refined_taxid_annot_fasta/refined_taxid_annot.fasta",
+    "czid_short_read_mngs.postprocess.contig_summary_out_count": null,
+    "czid_short_read_mngs.postprocess.refined_rapsearch2_out_assembly_rapsearch2_blast_top_m8": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/postprocess.refined_rapsearch2_out_assembly_rapsearch2_blast_top_m8/rapsearch2.blast.top.m8",
+    "czid_short_read_mngs.postprocess.refined_rapsearch2_out_count": null,
+    "czid_short_read_mngs.postprocess.refined_taxon_count_out_assembly_refined_taxon_counts_with_dcr_json": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/postprocess.refined_taxon_count_out_assembly_refined_taxon_counts_with_dcr_json/refined_taxon_counts_with_dcr.json",
+    "czid_short_read_mngs.postprocess.refined_rapsearch2_out_assembly_rapsearch2_hitsummary2_tab": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/postprocess.refined_rapsearch2_out_assembly_rapsearch2_hitsummary2_tab/rapsearch2.hitsummary2.tab",
+    "czid_short_read_mngs.postprocess.refined_taxid_locator_out_assembly_refined_taxid_annot_sorted_genus_nr_fasta": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/postprocess.refined_taxid_locator_out_assembly_refined_taxid_annot_sorted_genus_nr_fasta/refined_taxid_annot_sorted_genus_nr.fasta",
+    "czid_short_read_mngs.postprocess.refined_taxid_locator_out_assembly_refined_taxid_locations_combined_json": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/postprocess.refined_taxid_locator_out_assembly_refined_taxid_locations_combined_json/refined_taxid_locations_combined.json",
+    "czid_short_read_mngs.postprocess.refined_gsnap_out_assembly_gsnap_hitsummary2_tab": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/postprocess.refined_gsnap_out_assembly_gsnap_hitsummary2_tab/gsnap.hitsummary2.tab",
+    "czid_short_read_mngs.postprocess.coverage_out_assembly_contig_coverage_json": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/postprocess.coverage_out_assembly_contig_coverage_json/contig_coverage.json",
+    "czid_short_read_mngs.postprocess.contig_summary_out_assembly_combined_contig_summary_json": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/postprocess.contig_summary_out_assembly_combined_contig_summary_json/combined_contig_summary.json",
+    "czid_short_read_mngs.postprocess.refined_rapsearch2_out_assembly_refined_rapsearch2_counts_with_dcr_json": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/postprocess.refined_rapsearch2_out_assembly_refined_rapsearch2_counts_with_dcr_json/refined_rapsearch2_counts_with_dcr.json",
+    "czid_short_read_mngs.postprocess.refined_taxid_locator_out_count": null,
+    "czid_short_read_mngs.postprocess.assembly_out_assembly_contigs_fasta": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/postprocess.assembly_out_assembly_contigs_fasta/contigs.fasta",
+    "czid_short_read_mngs.postprocess.refined_gsnap_out_count": null,
+    "czid_short_read_mngs.postprocess.refined_taxid_locator_out_assembly_refined_taxid_locations_family_nr_json": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/postprocess.refined_taxid_locator_out_assembly_refined_taxid_locations_family_nr_json/refined_taxid_locations_family_nr.json",
+    "czid_short_read_mngs.postprocess.refined_taxid_locator_out_assembly_refined_taxid_annot_sorted_family_nt_fasta": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/postprocess.refined_taxid_locator_out_assembly_refined_taxid_annot_sorted_family_nt_fasta/refined_taxid_annot_sorted_family_nt.fasta",
+    "czid_short_read_mngs.postprocess.refined_taxid_locator_out_assembly_refined_taxid_locations_nr_json": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/postprocess.refined_taxid_locator_out_assembly_refined_taxid_locations_nr_json/refined_taxid_locations_nr.json",
+    "czid_short_read_mngs.postprocess.gsnap_accessions_out_count": null,
+    "czid_short_read_mngs.postprocess.refined_rapsearch2_out_assembly_rapsearch2_reassigned_m8": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/postprocess.refined_rapsearch2_out_assembly_rapsearch2_reassigned_m8/rapsearch2.reassigned.m8",
+    "czid_short_read_mngs.postprocess.refined_rapsearch2_out_assembly_rapsearch2_blast_m8": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/postprocess.refined_rapsearch2_out_assembly_rapsearch2_blast_m8/rapsearch2.blast.m8",
+    "czid_short_read_mngs.postprocess.refined_taxid_locator_out_assembly_refined_taxid_locations_genus_nt_json": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/postprocess.refined_taxid_locator_out_assembly_refined_taxid_locations_genus_nt_json/refined_taxid_locations_genus_nt.json",
+    "czid_short_read_mngs.postprocess.refined_gsnap_out_assembly_gsnap_contig_summary_json": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/postprocess.refined_gsnap_out_assembly_gsnap_contig_summary_json/gsnap_contig_summary.json",
+    "czid_short_read_mngs.postprocess.refined_taxid_locator_out_assembly_refined_taxid_annot_sorted_nt_fasta": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/postprocess.refined_taxid_locator_out_assembly_refined_taxid_annot_sorted_nt_fasta/refined_taxid_annot_sorted_nt.fasta",
+    "czid_short_read_mngs.postprocess.refined_taxid_locator_out_assembly_refined_taxid_annot_sorted_genus_nt_fasta": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/postprocess.refined_taxid_locator_out_assembly_refined_taxid_annot_sorted_genus_nt_fasta/refined_taxid_annot_sorted_genus_nt.fasta",
+    "czid_short_read_mngs.postprocess.refined_taxid_locator_out_assembly_refined_taxid_annot_sorted_family_nr_fasta": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/postprocess.refined_taxid_locator_out_assembly_refined_taxid_annot_sorted_family_nr_fasta/refined_taxid_annot_sorted_family_nr.fasta",
+    "czid_short_read_mngs.postprocess.assembly_out_assembly_scaffolds_fasta": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/postprocess.assembly_out_assembly_scaffolds_fasta/scaffolds.fasta",
+    "czid_short_read_mngs.postprocess.assembly_out_assembly_read_contig_sam": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/postprocess.assembly_out_assembly_read_contig_sam/read-contig.sam",
+    "czid_short_read_mngs.postprocess.refined_annotated_out_assembly_refined_annotated_merged_fa": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/postprocess.refined_annotated_out_assembly_refined_annotated_merged_fa/refined_annotated_merged.fa",
+    "czid_short_read_mngs.postprocess.assembly_out_assembly_contigs_all_fasta": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/postprocess.assembly_out_assembly_contigs_all_fasta/contigs_all.fasta",
+    "czid_short_read_mngs.postprocess.refined_gsnap_out_assembly_gsnap_reassigned_m8": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/postprocess.refined_gsnap_out_assembly_gsnap_reassigned_m8/gsnap.reassigned.m8",
+    "czid_short_read_mngs.postprocess.assembly_out_count": null,
+    "czid_short_read_mngs.postprocess.rapsearch2_accessions_out_count": null,
+    "czid_short_read_mngs.postprocess.refined_taxon_count_out_count": null,
+    "czid_short_read_mngs.postprocess.refined_annotated_out_count": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/postprocess.refined_annotated_out_count/refined_annotated_out.count",
+    "czid_short_read_mngs.postprocess.coverage_out_count": null,
+    "czid_short_read_mngs.postprocess.refined_taxid_locator_out_assembly_refined_taxid_locations_nt_json": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/postprocess.refined_taxid_locator_out_assembly_refined_taxid_locations_nt_json/refined_taxid_locations_nt.json",
+    "czid_short_read_mngs.postprocess.refined_taxid_locator_out_assembly_refined_taxid_locations_family_nt_json": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/postprocess.refined_taxid_locator_out_assembly_refined_taxid_locations_family_nt_json/refined_taxid_locations_family_nt.json",
+    "czid_short_read_mngs.postprocess.coverage_out_assembly_contig_coverage_summary_csv": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/postprocess.coverage_out_assembly_contig_coverage_summary_csv/contig_coverage_summary.csv",
+    "czid_short_read_mngs.postprocess.refined_gsnap_out_assembly_refined_gsnap_counts_with_dcr_json": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/postprocess.refined_gsnap_out_assembly_refined_gsnap_counts_with_dcr_json/refined_gsnap_counts_with_dcr.json",
+    "czid_short_read_mngs.postprocess.refined_gsnap_out_assembly_gsnap_blast_top_m8": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/postprocess.refined_gsnap_out_assembly_gsnap_blast_top_m8/gsnap.blast.top.m8",
+    "czid_short_read_mngs.postprocess.refined_taxid_locator_out_assembly_refined_taxid_locations_genus_nr_json": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/postprocess.refined_taxid_locator_out_assembly_refined_taxid_locations_genus_nr_json/refined_taxid_locations_genus_nr.json",
+    "czid_short_read_mngs.postprocess.assembly_out_assembly_contig_stats_json": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/postprocess.assembly_out_assembly_contig_stats_json/contig_stats.json",
+    "czid_short_read_mngs.postprocess.refined_taxid_locator_out_assembly_refined_taxid_annot_sorted_nr_fasta": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/postprocess.refined_taxid_locator_out_assembly_refined_taxid_annot_sorted_nr_fasta/refined_taxid_annot_sorted_nr.fasta",
+    "czid_short_read_mngs.postprocess.refined_gsnap_out_assembly_gsnap_blast_m8": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/postprocess.refined_gsnap_out_assembly_gsnap_blast_m8/gsnap.blast.m8",
+    "czid_short_read_mngs.postprocess.refined_taxid_fasta_out_count": null,
+    "czid_short_read_mngs.postprocess.refined_annotated_out_assembly_refined_unidentified_fa": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/postprocess.refined_annotated_out_assembly_refined_unidentified_fa/refined_unidentified.fa",
+    "czid_short_read_mngs.non_host_alignment.taxon_count_out_taxon_counts_with_dcr_json": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/non_host_alignment.taxon_count_out_taxon_counts_with_dcr_json/taxon_counts_with_dcr.json",
+    "czid_short_read_mngs.non_host_alignment.rapsearch2_out_rapsearch2_m8": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/non_host_alignment.rapsearch2_out_rapsearch2_m8/rapsearch2.m8",
+    "czid_short_read_mngs.non_host_alignment.gsnap_out_gsnap_deduped_m8": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/non_host_alignment.gsnap_out_gsnap_deduped_m8/gsnap.deduped.m8",
+    "czid_short_read_mngs.non_host_alignment.rapsearch2_out_rapsearch2_counts_with_dcr_json": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/non_host_alignment.rapsearch2_out_rapsearch2_counts_with_dcr_json/rapsearch2_counts_with_dcr.json",
+    "czid_short_read_mngs.non_host_alignment.rapsearch2_out_rapsearch2_hitsummary_tab": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/non_host_alignment.rapsearch2_out_rapsearch2_hitsummary_tab/rapsearch2.hitsummary.tab",
+    "czid_short_read_mngs.non_host_alignment.annotated_out_annotated_merged_fa": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/non_host_alignment.annotated_out_annotated_merged_fa/annotated_merged.fa",
+    "czid_short_read_mngs.non_host_alignment.annotated_out_count": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/non_host_alignment.annotated_out_count/annotated_out.count",
+    "czid_short_read_mngs.non_host_alignment.gsnap_out_gsnap_m8": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/non_host_alignment.gsnap_out_gsnap_m8/gsnap.m8",
+    "czid_short_read_mngs.non_host_alignment.rapsearch2_out_rapsearch2_deduped_m8": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/non_host_alignment.rapsearch2_out_rapsearch2_deduped_m8/rapsearch2.deduped.m8",
+    "czid_short_read_mngs.non_host_alignment.gsnap_out_gsnap_hitsummary_tab": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/non_host_alignment.gsnap_out_gsnap_hitsummary_tab/gsnap.hitsummary.tab",
+    "czid_short_read_mngs.non_host_alignment.taxon_count_out_count": null,
+    "czid_short_read_mngs.non_host_alignment.gsnap_out_gsnap_counts_with_dcr_json": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/non_host_alignment.gsnap_out_gsnap_counts_with_dcr_json/gsnap_counts_with_dcr.json",
+    "czid_short_read_mngs.non_host_alignment.rapsearch2_out_count": null,
+    "czid_short_read_mngs.non_host_alignment.annotated_out_unidentified_fa": "/home/ubuntu/czid-workflows/my_benchmarks/idseq_bench_3/out/non_host_alignment.annotated_out_unidentified_fa/unidentified.fa",
+    "czid_short_read_mngs.non_host_alignment.gsnap_out_count": null
   }
 }

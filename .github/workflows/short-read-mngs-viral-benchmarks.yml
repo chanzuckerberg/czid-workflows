@@ -103,17 +103,17 @@ jobs:
             --env HARVEST_DATA=$(ls -1 *_viral.json | tr '\n' ':') \
             --env REF_LIB=/home/jovyan/work/short-read-mngs/auto_benchmark/ref_libs/${{ matrix.settings }}_viral \
             --env CHOWN_HOME=yes \
-                jupyter/scipy-notebook:latest jupyter nbconvert --to notebook --execute --inplace \
+                jupyter/scipy-notebook:2022-03-14 jupyter nbconvert --to notebook --execute --inplace \
                     short-read-mngs/auto_benchmark/short-read-mngs-benchmarks.ipynb
           cp short-read-mngs/auto_benchmark/short-read-mngs-benchmarks.ipynb short-read-mngs-benchmarks.${{ matrix.settings }}_viral.ipynb
           # make HTML with code
           docker run -v $(pwd):/home/jovyan/work --workdir /home/jovyan/work \
-                jupyter/scipy-notebook:latest jupyter nbconvert --to html \
+                jupyter/scipy-notebook:2022-03-14 jupyter nbconvert --to html \
                     short-read-mngs/auto_benchmark/short-read-mngs-benchmarks.ipynb
           mv short-read-mngs/auto_benchmark/short-read-mngs-benchmarks.html short-read-mngs-benchmarks.${{ matrix.settings }}_viral.with_code.html
           # make HTML without code
           docker run -v $(pwd):/home/jovyan/work --workdir /home/jovyan/work \
-                jupyter/scipy-notebook:latest jupyter nbconvert --to html --no-input \
+                jupyter/scipy-notebook:2022-03-14 jupyter nbconvert --to html --no-input \
                     short-read-mngs/auto_benchmark/short-read-mngs-benchmarks.ipynb
           mv short-read-mngs/auto_benchmark/short-read-mngs-benchmarks.html short-read-mngs-benchmarks.${{ matrix.settings }}_viral.html
           mkdir ref_libs
