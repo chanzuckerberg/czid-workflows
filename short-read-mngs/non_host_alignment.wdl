@@ -309,7 +309,7 @@ task RunCallHitsDiamond {
         String s3_wd_uri
     }
     command <<<
-    	# --step-name diamond_call_hits_out
+        # --step-name diamond_call_hits_out
         set -euxo pipefail
         python3 <<CODE
         from idseq_dag.util.m8 import call_hits_m8, generate_taxon_count_json_from_m8

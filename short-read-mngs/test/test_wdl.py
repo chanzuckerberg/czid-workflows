@@ -128,7 +128,8 @@ class TestAlign(WDLTestCase):
         )
         self.common_args = {
             "lineage_db": "s3://czid-public-references/taxonomy/2021-01-22/taxid-lineages.db",
-            "accession2taxid": "s3://czid-public-references/mini-database/alignment_indexes/2020-08-20-viral/viral_accessions2taxid.db",
+            "accession2taxid": "s3://czid-public-references/mini-database/alignment_indexes/"
+            "2020-08-20-viral/viral_accessions2taxid.db",
             "taxon_blacklist": "s3://czid-public-references/taxonomy/2021-01-22/taxon_blacklist.txt",
             "deuterostome_db": "s3://czid-public-references/taxonomy/2021-01-22/deuterostome_taxids.txt",
             "duplicate_cluster_size": os.path.join(
