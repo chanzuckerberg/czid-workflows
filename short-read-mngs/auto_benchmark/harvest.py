@@ -228,7 +228,7 @@ def read_outputs_json(rundir):
     )
     ans = {}
     for key, value in items:
-        ans["czid_short_read_mngs." + key[6:]] = value
+        ans["czid_short_read_mngs." + key.lstrip("czid_")] = value
     return ans
 
 
