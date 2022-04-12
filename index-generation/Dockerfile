@@ -5,13 +5,18 @@ ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
     apt-get install -y \
         # Build only dependencies
-        cmake \
+        ## diamond
         g++ \
-        libperl4-corelibs-perl \
+        gdb \
+        libclang-common-6.0-dev \
+        cmake\
+        g++\
+        zlib1g-dev \
+        ## minimap2
+        build-essential \
+        libz-dev \
         # Runtime dependencies
         make \
-        # On versions higher than 1.62 compilation errors because of an overloading ambiguity with the `advance` method
-        libboost1.62-all-dev \
         curl \
         git \
         wget \
