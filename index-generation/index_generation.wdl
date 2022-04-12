@@ -2,7 +2,7 @@ version development
 
 workflow index_generation {
     input {
-        String? index_name = ""
+        String index_name
         String docker_image_id
     }
 
@@ -29,6 +29,7 @@ workflow index_generation {
     call GenerateIndexLineages {
         input:
         taxdump = DownloadIndexSources.taxdump,
+        index_name = index_name,
         docker_image_id = docker_image_id
     }
 
