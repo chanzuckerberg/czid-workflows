@@ -149,6 +149,8 @@ task GenerateIndexDiamond {
 task GenerateIndexLineages {
     input {
         File taxdump
+        File? previous_lineages
+        String index_name
         String docker_image_id
     }
 
@@ -161,6 +163,16 @@ task GenerateIndexLineages {
         mkdir -p taxdump/taxdump
         tar zxf ~{taxdump} -C ./taxdump/taxdump
         make
+
+        # Add names to lineages
+
+        python3 /usr/local/bin/generate_lineage_csvs.py \
+            names.csv.gz \
+            taxid-lineages.csv.gz \
+            ~{index_name} \
+            named-taxid-lineages.csv.gz \
+            versioned-taxid-lineages.csv.gz \
+            ~{previous_lineages}
 
         # Build deuterostome list
         # decompress first and only read what we need to prevent pipefail

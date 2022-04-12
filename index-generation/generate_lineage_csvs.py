@@ -21,8 +21,7 @@ _fieldnames = [
     "taxid",
     "tax_name",
 ] + [
-    f"{level}_{label}" for level in _taxon_levels for label in ["taxid", "name", "common_name"]
-]
+    f"{level}_{label}" for level in _taxon_levels for label in ["taxid", "name", "comm~{index_name}
 
 _versioning_fieldnames = [
     "version_start",
