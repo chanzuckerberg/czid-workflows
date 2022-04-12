@@ -2,7 +2,7 @@ version development
 
 workflow index_generation {
     input {
-        String index_name
+        String? index_name = ""
         String docker_image_id
     }
 
@@ -34,7 +34,7 @@ workflow index_generation {
 
     call GenerateIndexMinimap2 {
         input:
-        nt = nt,
+        nt = DownloadIndexSources.nt,
         docker_image_id = docker_image_id
     }
 
@@ -63,12 +63,12 @@ workflow index_generation {
 
 task DownloadIndexSources {
     input {
-        String index_name
+        String? index_name = ""
         String docker_image_id
     }
 
     command <<<
-        python3 /usr/local/bin/download_index_sources.py
+        python3 /usr/local/bin/download_index_sources.py -d ~{index_name}
     >>>
 
     output {
@@ -129,13 +129,12 @@ task GenerateIndexAccessions {
 task GenerateIndexDiamond {
     input {
         File nr
+        Int chunksize = 5500000000
         String docker_image_id
     }
 
     command <<<
-        CHUNK_SIZE=5500000000 
-        #Run diamond
-        diamond/diamond makedb --in ~{nr} -d ref --scatter-gather -b $CHUNK_SIZE
+        diamond/diamond makedb --in ~{nr} -d ref --scatter-gather -b ~{chunksize}
     >>>
 
     output {
@@ -194,39 +193,34 @@ task GenerateIndexLineages {
 task GenerateIndexMinimap2 {
     input {
         File nt
+        Int k = 12 # Minimizer k-mer length default is 21 for short reads option
+        Int w = 8 # Minimizer window size default is 11 for short reads option
+        String I = "9999G" # Load at most NUM target bases into RAM for indexing
+        Int t = 20 # number of threads, doesn't really work for indexing I don't think
+        Int n_chunks = 20
         String docker_image_id
     }
 
     command <<<
         set -euxo pipefail
 
-        k=12 # Minimizer k-mer length default is 21 for short reads option
-        w=8 # Minimizer window size default is 11 for short reads option
-
-        I=9999G # Load at most NUM target bases into RAM for indexing
-        t=20 # number of threads, doesn't really work for indexing I don't think
-        CHUNKS=20
-
         # Split nt into 20
-        seqkit split2 ~{nt} -p $CHUNKS
+        seqkit split2 ~{nt} -p ~{n_chunks}
 
         # Make output directory
-        OUTDIR="nt_k"$k"_w"$w"_"$CHUNKS
+        OUTDIR="nt_k~{k}_w~{w}_~{n_chunks}"
         mkdir $OUTDIR
 
         # Run minimap2 on each chunk
         for i in nt.split/nt*
         do
                 path="${i##*_}"
-                minimap2 -cx sr -k $k -w $w -I $I -t $t -d $OUTDIR/"genome_"$path".mmi" $i
+                minimap2 -cx sr -k ~{k} -w ~{w} -I ~{I} -t ~{t} -d $OUTDIR/"genome_"$path".mmi" $i
         done
-
-        # Upload index
-        s3parcp --checksum --recursive $OUTDIR "$S3_OUTPUT_DIR/$OUTDIR"
     >>>
 
     output {
-        Directory minimap2_index = "nt_k*_w*_*/"
+        Directory minimap2_index = "nt_k~{k}_w~{w}_~{n_chunks}"
     }
 
     runtime {
