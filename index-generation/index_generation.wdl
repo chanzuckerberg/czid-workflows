@@ -1,4 +1,4 @@
-version 1.1
+version development
 
 workflow index_generation {
     input {
@@ -8,29 +8,34 @@ workflow index_generation {
 
     call DownloadIndexSources {
         input:
-        index_name = index_name
+        index_name = index_name,
+        docker_image_id = docker_image_id
     }
 
     call GenerateIndexAccessions {
         input:
         nr = DownloadIndexSources.nr,
         nt = DownloadIndexSources.nt,
-        accession2taxid = DownloadIndexSources.accession2taxid
+        accession2taxid = DownloadIndexSources.accession2taxid,
+        docker_image_id = docker_image_id
     }
 
     call GenerateIndexDiamond {
         input:
-        nr = DownloadIndexSources.nr
+        nr = DownloadIndexSources.nr,
+        docker_image_id = docker_image_id
     }
 
     call GenerateIndexLineages {
         input:
-        taxdump = DownloadIndexSources.taxdump
+        taxdump = DownloadIndexSources.taxdump,
+        docker_image_id = docker_image_id
     }
 
     call GenerateIndexMinimap2 {
         input:
-        nt = nt
+        nt = nt,
+        docker_image_id = docker_image_id
     }
 
     output {
@@ -59,6 +64,7 @@ workflow index_generation {
 task DownloadIndexSources {
     input {
         String index_name
+        String docker_image_id
     }
 
     command <<<
@@ -82,6 +88,7 @@ task GenerateIndexAccessions {
         File nr
         File nt
         Directory accession2taxid
+        String docker_image_id
     }
 
     command <<<
@@ -122,6 +129,7 @@ task GenerateIndexAccessions {
 task GenerateIndexDiamond {
     input {
         File nr
+        String docker_image_id
     }
 
     command <<<
@@ -142,6 +150,7 @@ task GenerateIndexDiamond {
 task GenerateIndexLineages {
     input {
         File taxdump
+        String docker_image_id
     }
 
     command <<<
@@ -185,6 +194,7 @@ task GenerateIndexLineages {
 task GenerateIndexMinimap2 {
     input {
         File nt
+        String docker_image_id
     }
 
     command <<<
