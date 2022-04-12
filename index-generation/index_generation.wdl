@@ -13,29 +13,47 @@ workflow index_generation {
 
     call GenerateIndexAccessions {
         input:
-        index_name = index_name,
-        dummy = DownloadIndexSources.dummy
+        nr = DownloadIndexSources.nr,
+        nt = DownloadIndexSources.nt,
+        accession2taxid = DownloadIndexSources.accession2taxid
     }
 
     call GenerateIndexDiamond {
         input:
-        index_name = index_name,
-        dummy = DownloadIndexSources.dummy
+        nr = DownloadIndexSources.nr
     }
 
     call GenerateIndexLineages {
         input:
-        index_name = index_name,
-        dummy = DownloadIndexSources.dummy
+        taxdump = DownloadIndexSources.taxdump
     }
 
     call GenerateIndexMinimap2 {
         input:
-        index_name = index_name,
-        dummy = DownloadIndexSources.dummy
+        nt = nt
     }
 
-    output {}
+    output {
+        File nr = DownloadIndexSources.nr
+        File nt = DownloadIndexSources.nt
+        Directory accession2taxid = DownloadIndexSources.accession2taxid
+        File taxdump = DownloadIndexSources.taxdump
+        File accession2taxid_gz = GenerateIndexAccessions.accession2taxid_gz
+        File accession2taxid_wgs = GenerateIndexAccessions.accession2taxid_wgs
+        File accession2taxid_db = GenerateIndexAccessions.accession2taxid_db
+        File taxid2wgs_accession_db = GenerateIndexAccessions.taxid2wgs_accession_db
+        File nt_loc_db = GenerateIndexAccessions.nt_loc_db
+        File nt_info_db = GenerateIndexAccessions.nt_info_db
+        File nr_loc_db = GenerateIndexAccessions.nr_loc_db
+        File nr_info_db = GenerateIndexAccessions.nr_info_db
+        Directory diamond_index = GenerateIndexDiamond.diamond_index
+        File taxid_lineages_db = GenerateIndexLineages.taxid_lineages_db
+        File taxid_lineages_csv = GenerateIndexLineages.taxid_lineages_csv
+        File names_csv = GenerateIndexLineages.names_csv
+        File deuterostom_taxids = GenerateIndexLineages.deuterostom_taxids
+        File taxon_ignore_list = GenerateIndexLineages.taxon_ignore_list
+        Directory minimap2_index = GenerateIndexMinimap2.minimap2_index
+    }
 }
 
 task DownloadIndexSources {
@@ -48,7 +66,10 @@ task DownloadIndexSources {
     >>>
 
     output {
-        String dummy = "dummy"
+        File nr = "nr"
+        File nt = "nt"
+        Directory accession2taxid = "accession2taxid"
+        File taxdump = "taxdump.tar.gz"
     }
 
     runtime {
@@ -58,62 +79,40 @@ task DownloadIndexSources {
 
 task GenerateIndexAccessions {
     input {
-        String index_name
-        String dummy
+        File nr
+        File nt
+        Directory accession2taxid
     }
 
     command <<<
-        #!/bin/bash -ex
-
-        set -o pipefail
-
-        # Get $INDEX_NAME
-        s3parcp "s3://$BUCKET/ncbi-sources/index_name"
-        INDEX_NAME=$(cat index_name)
-
-        # Download nr
-        s3parcp --checksum "s3://$BUCKET/ncbi-sources/$INDEX_NAME/nr"
-
-        # Download nt
-        s3parcp --checksum "s3://$BUCKET/ncbi-sources/$INDEX_NAME/nt"
-
-        # Download accession2taxid
-        s3parcp --checksum --recursive "s3://$BUCKET/ncbi-sources/$INDEX_NAME/accession2taxid/" accession2taxid/
+        set -euxo pipefail
 
         # Build index
         python3 /usr/local/bin/generate_accession2taxid.py \
-            accession2taxid/nucl_wgs.accession2taxid.gz \
-            accession2taxid/nucl_gb.accession2taxid.gz \
-            accession2taxid/pdb.accession2taxid.gz \
-            accession2taxid/prot.accession2taxid.FULL.gz \
-            --nt_file nt \
-            --nr_file nr \
+            ~{accession2taxid}/nucl_wgs.accession2taxid.gz \
+            ~{accession2taxid}/nucl_gb.accession2taxid.gz \
+            ~{accession2taxid}/pdb.accession2taxid.gz \
+            ~{accession2taxid}/prot.accession2taxid.FULL.gz \
+            --nt_file ~{nt} \
+            --nr_file ~{nr} \
             --output_gz accession2taxid.gz \
             --output_wgs_gz accession2taxid_wgs.gz \
             --accession2taxid_db accession2taxid.db \
             --taxid2wgs_accession_db taxid2wgs_accession.db
-        python3 /usr/local/bin/generate_loc_db.py nt nt_loc.db nt_info.db
-        python3 /usr/local/bin/generate_loc_db.py nr nr_loc.db nr_info.db
-
-        # Output dir in S3
-        S3_OUTPUT_DIR="s3://$BUCKET/alignment_data/$INDEX_NAME/"
-
-        # Upload index
-        s3parcp --checksum accession2taxid.gz "$S3_OUTPUT_DIR"
-        s3parcp --checksum accession2taxid_wgs.gz "$S3_OUTPUT_DIR"
-        s3parcp --checksum accession2taxid.db "$S3_OUTPUT_DIR"
-        s3parcp --checksum taxid2wgs_accession.db "$S3_OUTPUT_DIR"
-        s3parcp --checksum nt_loc.db "$S3_OUTPUT_DIR"
-        s3parcp --checksum nt_info.db "$S3_OUTPUT_DIR"
-        s3parcp --checksum nr_loc.db "$S3_OUTPUT_DIR"
-        s3parcp --checksum nr_info.db "$S3_OUTPUT_DIR"
-
-        # Generate and store stats report
-        python3 /usr/local/bin/compare_index_files.py "$S3_OUTPUT_DIR" > alignment_data_files_stats.txt
-        s3parcp --checksum alignment_data_files_stats.txt "$S3_OUTPUT_DIR"
+        python3 /usr/local/bin/generate_loc_db.py ~{nt} nt_loc.db nt_info.db
+        python3 /usr/local/bin/generate_loc_db.py ~{nr} nr_loc.db nr_info.db
     >>>
 
-    output {}
+    output {
+        File accession2taxid_gz = "accession2taxid.gz"
+        File accession2taxid_wgs = "accession2taxid_wgs.gz"
+        File accession2taxid_db = "accession2taxid.db"
+        File taxid2wgs_accession_db = "taxid2wgs_accession.db"
+        File nt_loc_db = "nt_loc.db"
+        File nt_info_db = "nt_info.db"
+        File nr_loc_db = "nr_loc.db"
+        File nr_info_db = "nr_info.db"
+    }
 
     runtime {
         docker: docker_image_id
@@ -122,33 +121,18 @@ task GenerateIndexAccessions {
 
 task GenerateIndexDiamond {
     input {
-        String index_name
-        String dummy
+        File nr
     }
 
     command <<<
-        #!/bin/bash
-
-        set -eo pipefail
-        CHUNK_SIZE=5500000000 # Not sure if there's a better way of doing this. 
-
-        # Get $INDEX_NAME
-        s3parcp "s3://$BUCKET/ncbi-sources/index_name"
-        INDEX_NAME=$(cat index_name)
-
-
-        # Download nt
-        s3parcp --checksum "s3://$BUCKET/ncbi-sources/$INDEX_NAME/nr
-        OUTDIR=ref
+        CHUNK_SIZE=5500000000 
         #Run diamond
-        diamond/diamond makedb --in nr -d $OUTDIR --scatter-gather -b $CHUNK_SIZE
-        # Output directory in S3. NOTE: no trailing slash.
-        S3_OUTPUT_DIR="s3://$BUCKET/alignment_indexes/$INDEX_NAME"
-        # Upload index
-        s3parcp --checksum --recursive $OUTDIR "$S3_OUTPUT_DIR/$OUTDIR"
+        diamond/diamond makedb --in ~{nr} -d ref --scatter-gather -b $CHUNK_SIZE
     >>>
 
-    output {}
+    output {
+        Directory diamond_index = "ref"
+    }
 
     runtime {
         docker: docker_image_id
@@ -157,39 +141,22 @@ task GenerateIndexDiamond {
 
 task GenerateIndexLineages {
     input {
-        String index_name
-        String dummy
+        File taxdump
     }
 
     command <<<
-        #!/bin/bash -ex
-
-        set -o pipefail
-
-        # Get $INDEX_NAME
-        s3parcp "s3://$BUCKET/ncbi-sources/index_name"
-        INDEX_NAME=$(cat index_name)
-
-        # Download taxdump
-        s3parcp --checksum "s3://$BUCKET/ncbi-sources/$INDEX_NAME/taxdump.tar.gz"
+        set -euxo pipefail
 
         # Build Indexes
         git clone https://github.com/chanzuckerberg/ncbitax2lin.git
         cd ncbitax2lin
         mkdir -p taxdump/taxdump
-        tar zxf ../taxdump.tar.gz -C ./taxdump/taxdump
+        tar zxf ~{taxdump} -C ./taxdump/taxdump
         make
-
-        # Output directory in S3
-        S3_OUTPUT_DIR="s3://$BUCKET/taxonomy/$INDEX_NAME/"
-
-        # Upload indexes
-        s3parcp --checksum taxid-lineages.db "$S3_OUTPUT_DIR"
-        s3parcp --checksum taxid-lineages.csv.gz "$S3_OUTPUT_DIR"
-        s3parcp --checksum names.csv.gz "$S3_OUTPUT_DIR"
 
         # Build deuterostome list
         # decompress first and only read what we need to prevent pipefail
+        # lineages.csv.gz generated by ncbitax2lin
         gzip -d lineages.csv.gz
         TAXID_COL_NUM=$(head -n1 "lineages.csv" | tr "," "\n" | grep -n 'tax_id' | cut -f1 -d":")
         if [[  "$TAXID_COL_NUM" == ""  ]]; then
@@ -198,29 +165,17 @@ task GenerateIndexLineages {
         fi
 
         cat lineages.csv |  grep 'Chordata\|Echinodermata\|Hemichordata' | cut -f"$TAXID_COL_NUM" -d"," > deuterostome_taxids.txt
-
-        # These keywords are based on reverse engineering the original taxon_blacklist at
-        # s3://czid-public-references/taxonomy/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/taxon_blacklist.txt
-        # KEYWORDS='\bvector\b|\bplasmid\b|\bPlasposon\b|\breplicon\b|\bsynthetic\b|\bconstruct\b|\bArtificial\b|\bRecombinant\b|\binsert\b|\bcassette\b'
-        # egrep "$KEYWORDS" lineages.csv | cut -f"$TAXID_COL_NUM" -d"," >
-        # taxon_blacklist.txt
-        # TODO: (gdingle): Decide on what to include in updated taxon_blacklist. Until
-        # then, we will simply continue to use the original. See
-        # https://github.com/chanzuckerberg/idseq/pull/131/ and
-        # https://jira.czi.team/browse/IDSEQ-2760 .
-        BLACKLIST_S3_PATH=${BLACKLIST_S3_PATH:-"s3://czid-public-references/taxonomy/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/taxon_blacklist.txt"}
-        s3parcp $BLACKLIST_S3_PATH
-
-        # Upload deuterostome and taxon_blacklist.txt lists
-        s3parcp --checksum deuterostome_taxids.txt "$S3_OUTPUT_DIR"
-        s3parcp --checksum taxon_blacklist.txt "$S3_OUTPUT_DIR"
-
-        # Generate and store stats report
-        python3 /usr/local/bin/compare_index_files.py "$S3_OUTPUT_DIR" > taxonomy_files_stats.txt
-        s3parcp --checksum taxonomy_files_stats.txt "$S3_OUTPUT_DIR"
+        # TODO: refine which taxa we want to ignore
+        cat lineages.csv |  grep 'vector\|plasmid\|Plasposon\|replicon\|synthetic\|construct\|Artificial\|Recombinant\|insert\|cassette' | cut -f"$TAXID_COL_NUM" -d"," > taxon_ignore_list.txt
     >>>
 
-    output {}
+    output {
+        File taxid_lineages_db = "taxid-lineages.db"
+        File taxid_lineages_csv = "taxid-lineages.csv.gz"
+        File names_csv = "names.csv.gz"
+        File deuterostom_taxids = "deuterostom_taxids.txt"
+        File taxon_ignore_list = "taxon_ignore_list.txt"
+    }
 
     runtime {
         docker: docker_image_id
@@ -229,14 +184,11 @@ task GenerateIndexLineages {
 
 task GenerateIndexMinimap2 {
     input {
-        String index_name
-        String dummy
+        File nt
     }
 
     command <<<
-        #!/bin/bash
-
-        set -eo pipefail
+        set -euxo pipefail
 
         k=12 # Minimizer k-mer length default is 21 for short reads option
         w=8 # Minimizer window size default is 11 for short reads option
@@ -245,15 +197,8 @@ task GenerateIndexMinimap2 {
         t=20 # number of threads, doesn't really work for indexing I don't think
         CHUNKS=20
 
-        # Get $INDEX_NAME
-        s3parcp "s3://$BUCKET/ncbi-sources/index_name"
-        INDEX_NAME=$(cat index_name)
-
-        # Download nt
-        s3parcp --checksum "s3://$BUCKET/ncbi-sources/$INDEX_NAME/nt"
-
         # Split nt into 20
-        seqkit split2 nt -p $CHUNKS
+        seqkit split2 ~{nt} -p $CHUNKS
 
         # Make output directory
         OUTDIR="nt_k"$k"_w"$w"_"$CHUNKS
@@ -266,15 +211,13 @@ task GenerateIndexMinimap2 {
                 minimap2 -cx sr -k $k -w $w -I $I -t $t -d $OUTDIR/"genome_"$path".mmi" $i
         done
 
-
-        # Output directory in S3. NOTE: no trailing slash.
-        S3_OUTPUT_DIR="s3://$BUCKET/alignment_indexes/$INDEX_NAME"
-
         # Upload index
         s3parcp --checksum --recursive $OUTDIR "$S3_OUTPUT_DIR/$OUTDIR"
     >>>
 
-    output {}
+    output {
+        Directory minimap2_index = "nt_k*_w*_*/"
+    }
 
     runtime {
         docker: docker_image_id
