@@ -36,7 +36,15 @@ RUN git clone --single-branch --branch distributed-mapping  https://github.com/m
 RUN curl -L https://github.com/shenwei356/seqkit/releases/download/v2.0.0/seqkit_linux_amd64.tar.gz | tar xz && mv seqkit /usr/local/bin/
 
 # install diamond 
-RUN git clone --single-branch --branch scatter-gather https://github.com/morsecodist/diamond && cmake -H. -B diamond/build diamond
+WORKDIR /tmp
+RUN git clone https://github.com/morsecodist/diamond
+WORKDIR /tmp/diamond
+RUN git checkout scatter-gather
+WORKDIR /tmp/diamond/build
+RUN cmake -DCMAKE_BUILD_TYPE=Release ..
+RUN make -j6
+RUN mv diamond /usr/local/bin
+WORKDIR /workspace
 
 # install boto 3 and awscli
 RUN python3 -m pip install boto3==1.12.27 botocore==1.15.39

@@ -134,11 +134,11 @@ task GenerateIndexDiamond {
     }
 
     command <<<
-        diamond/diamond makedb --in ~{nr} -d ref --scatter-gather -b ~{chunksize}
+        diamond/diamond makedb --in ~{nr} -d diamond_index_chunksize_~{chunksize} --scatter-gather -b ~{chunksize}
     >>>
 
     output {
-        Directory diamond_index = "ref"
+        Directory diamond_index = "diamond_index_chunksize_~{chunksize}"
     }
 
     runtime {
