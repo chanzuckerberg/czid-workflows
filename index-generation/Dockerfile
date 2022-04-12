@@ -5,6 +5,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
     apt-get install -y \
         # Build only dependencies
+        cmake \
         g++ \
         libperl4-corelibs-perl \
         # Runtime dependencies
