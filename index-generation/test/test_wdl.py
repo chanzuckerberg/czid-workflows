@@ -1,7 +1,4 @@
 import os
-import json
-import hashlib
-import yaml
 from test_util import WDLTestCase
 
 
