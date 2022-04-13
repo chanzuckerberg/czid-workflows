@@ -72,7 +72,7 @@ task DownloadIndexSources {
     command <<<
         set -euxo pipefail
 
-        function download {
+        download () {
             mkdir -p $(dirname $1)
             wget -P $(dirname $1) -cnv ~{ncbi_server}/$1
             wget -P $(dirname $1) -cnv ~{ncbi_server}/$1.md5
