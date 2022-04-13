@@ -3,12 +3,13 @@ version development
 workflow index_generation {
     input {
         String index_name
+        String ncbi_server = "https://ftp.ncbi.nih.gov"
         String docker_image_id
     }
 
     call DownloadIndexSources {
         input:
-        index_name = index_name,
+        ncbi_server = ncbi_server,
         docker_image_id = docker_image_id
     }
 
@@ -64,19 +65,47 @@ workflow index_generation {
 
 task DownloadIndexSources {
     input {
-        String? index_name = ""
+        String ncbi_server
         String docker_image_id
     }
 
     command <<<
-        python3 /usr/local/bin/download_index_sources.py -d ~{index_name}
+        set -euxo pipefail
+
+        function download {
+            mkdir -p $(dirname $1)
+            wget -P $(dirname $1) -cnv ~{ncbi_server}/$1
+            wget -P $(dirname $1) -cnv ~{ncbi_server}/$1.md5
+
+            if [[ $(md5sum $1 | cut -f 1 -d' ') != $(cat $1.md5 | cut -f 1 -d' ') ]]
+            then
+                exit 1
+            fi
+        }
+        
+        echo blast/db/FASTA/nt.gz >> paths.txt
+        echo blast/db/FASTA/nr.gz >> paths.txt
+        echo pub/taxonomy/taxdump.tar.gz >> paths.txt
+        echo pub/taxonomy/accession2taxid/dead_nucl.accession2taxid.gz >> paths.txt
+        echo pub/taxonomy/accession2taxid/dead_prot.accession2taxid.gz >> paths.txt
+        echo pub/taxonomy/accession2taxid/dead_wgs.accession2taxid.gz >> paths.txt
+        echo pub/taxonomy/accession2taxid/nucl_gb.accession2taxid.gz >> paths.txt
+        echo pub/taxonomy/accession2taxid/nucl_wgs.accession2taxid.gz >> paths.txt
+        echo pub/taxonomy/accession2taxid/pdb.accession2taxid.gz >> paths.txt
+        echo pub/taxonomy/accession2taxid/prot.accession2taxid.gz >> paths.txt
+        echo pub/taxonomy/accession2taxid/prot.accession2taxid.FULL.gz >> paths.txt
+
+        cat paths.txt | parallel download {}
+
+        gunzip blast/db/FASTA/nt.gz
+        gunzip blast/db/FASTA/nr.gz
     >>>
 
     output {
         File nr = "nr"
         File nt = "nt"
-        Directory accession2taxid = "accession2taxid"
-        File taxdump = "taxdump.tar.gz"
+        Directory accession2taxid = "pub/taxonomy/accession2taxid"
+        File taxdump = "pub/taxonomy/taxdump.tar.gz"
     }
 
     runtime {
