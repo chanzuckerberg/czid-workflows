@@ -97,8 +97,8 @@ task DownloadIndexSources {
 
         cat paths.txt | parallel download {}
 
-        gunzip blast/db/FASTA/nt.gz
-        gunzip blast/db/FASTA/nr.gz
+        pigz blast/db/FASTA/nt.gz
+        pigz blast/db/FASTA/nr.gz
     >>>
 
     output {

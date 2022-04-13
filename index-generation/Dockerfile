@@ -21,7 +21,7 @@ RUN apt-get update && \
         git \
         wget \
         liblz4-tool \
-        pigz \
+        parallel \
         python-pandas \
         python3-gdbm \
         python3-pip \
