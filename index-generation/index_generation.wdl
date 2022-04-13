@@ -83,19 +83,17 @@ task DownloadIndexSources {
             fi
         }
         
-        echo blast/db/FASTA/nt.gz >> paths.txt
-        echo blast/db/FASTA/nr.gz >> paths.txt
-        echo pub/taxonomy/taxdump.tar.gz >> paths.txt
-        echo pub/taxonomy/accession2taxid/dead_nucl.accession2taxid.gz >> paths.txt
-        echo pub/taxonomy/accession2taxid/dead_prot.accession2taxid.gz >> paths.txt
-        echo pub/taxonomy/accession2taxid/dead_wgs.accession2taxid.gz >> paths.txt
-        echo pub/taxonomy/accession2taxid/nucl_gb.accession2taxid.gz >> paths.txt
-        echo pub/taxonomy/accession2taxid/nucl_wgs.accession2taxid.gz >> paths.txt
-        echo pub/taxonomy/accession2taxid/pdb.accession2taxid.gz >> paths.txt
-        echo pub/taxonomy/accession2taxid/prot.accession2taxid.gz >> paths.txt
-        echo pub/taxonomy/accession2taxid/prot.accession2taxid.FULL.gz >> paths.txt
-
-        cat paths.txt | env_parallel download {}
+        download blast/db/FASTA/nt.gz
+        download blast/db/FASTA/nr.gz
+        download pub/taxonomy/taxdump.tar.gz
+        download pub/taxonomy/accession2taxid/dead_nucl.accession2taxid.gz
+        download pub/taxonomy/accession2taxid/dead_prot.accession2taxid.gz
+        download pub/taxonomy/accession2taxid/dead_wgs.accession2taxid.gz
+        download pub/taxonomy/accession2taxid/nucl_gb.accession2taxid.gz
+        download pub/taxonomy/accession2taxid/nucl_wgs.accession2taxid.gz
+        download pub/taxonomy/accession2taxid/pdb.accession2taxid.gz
+        download pub/taxonomy/accession2taxid/prot.accession2taxid.gz
+        download pub/taxonomy/accession2taxid/prot.accession2taxid.FULL.gz
 
         pigz -dc blast/db/FASTA/nt.gz > nt
         pigz -dc blast/db/FASTA/nr.gz > nr
