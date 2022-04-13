@@ -95,7 +95,7 @@ task DownloadIndexSources {
         echo pub/taxonomy/accession2taxid/prot.accession2taxid.gz >> paths.txt
         echo pub/taxonomy/accession2taxid/prot.accession2taxid.FULL.gz >> paths.txt
 
-        cat paths.txt | parallel download {}
+        cat paths.txt | env_parallel download {}
 
         pigz blast/db/FASTA/nt.gz
         pigz blast/db/FASTA/nr.gz
