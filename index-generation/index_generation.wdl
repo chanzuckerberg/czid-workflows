@@ -95,14 +95,10 @@ task DownloadIndexSources {
         echo pub/taxonomy/accession2taxid/prot.accession2taxid.gz >> paths.txt
         echo pub/taxonomy/accession2taxid/prot.accession2taxid.FULL.gz >> paths.txt
 
-        # cat paths.txt | env_parallel download {}
-        for path in $(cat paths.txt)
-        do
-            download $path
-        done
+        cat paths.txt | env_parallel download {}
 
-        pigz blast/db/FASTA/nt.gz
-        pigz blast/db/FASTA/nr.gz
+        pigz -dc blast/db/FASTA/nt.gz > nt
+        pigz -dc blast/db/FASTA/nr.gz > nr
     >>>
 
     output {
