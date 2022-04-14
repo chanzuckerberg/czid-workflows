@@ -247,7 +247,7 @@ task GenerateIndexMinimap2 {
         set -euxo pipefail
 
         # Split nt into 20
-        seqkit split2 ~{nt} -p ~{n_chunks} --out-dir nt.split --two-pass
+        seqkit split2 ~{nt} -p ~{n_chunks} --out-dir nt.split
 
         # Make output directory
         OUTDIR="nt_k~{k}_w~{w}_~{n_chunks}"
