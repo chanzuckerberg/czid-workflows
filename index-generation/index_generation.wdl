@@ -4,6 +4,7 @@ workflow index_generation {
     input {
         String index_name
         String ncbi_server = "https://ftp.ncbi.nih.gov"
+        File? previous_lineages = ""
         String docker_image_id
     }
 
@@ -179,7 +180,7 @@ task GenerateIndexDiamond {
 task GenerateIndexLineages {
     input {
         File taxdump
-        File? previous_lineages
+        File? previous_lineages = ""
         String index_name
         String docker_image_id
     }
@@ -214,15 +215,17 @@ task GenerateIndexLineages {
           exit 1
         fi
 
-        cat lineages.csv |  grep 'Chordata\|Echinodermata\|Hemichordata' | cut -f"$TAXID_COL_NUM" -d"," > deuterostome_taxids.txt
+        cat lineages.csv | grep 'Chordata\|Echinodermata\|Hemichordata' | cut -f"$TAXID_COL_NUM" -d"," > deuterostome_taxids.txt
         # TODO: refine which taxa we want to ignore
-        cat lineages.csv |  grep 'vector\|plasmid\|Plasposon\|replicon\|synthetic\|construct\|Artificial\|Recombinant\|insert\|cassette' | cut -f"$TAXID_COL_NUM" -d"," > taxon_ignore_list.txt
+        cat lineages.csv | grep 'vector\|plasmid\|Plasposon\|replicon\|synthetic\|construct\|Artificial\|Recombinant\|insert\|cassette' | cut -f"$TAXID_COL_NUM" -d"," > taxon_ignore_list.txt
     >>>
 
     output {
-        File taxid_lineages_db = "taxid-lineages.db"
+        File taxid_lineages_db = "lineage-by-taxid.db"
         File taxid_lineages_csv = "taxid-lineages.csv.gz"
         File names_csv = "names.csv.gz"
+        File named_taxid_lineages_csv = "named-taxid-lineages.csv.gz"
+        File versioned_taxid_lineages_csv = "versioned-taxid-lineages.csv.gz"
         File deuterostom_taxids = "deuterostom_taxids.txt"
         File taxon_ignore_list = "taxon_ignore_list.txt"
     }
