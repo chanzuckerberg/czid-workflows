@@ -20,7 +20,7 @@ def generage_phage_list(versioned_lineages_csv, output_filename):
             taxid = row["taxid"]
             if row["family_name"] in PHAGE_FAMILIES_NAMES:
                 entry = phages.get(taxid)
-                if entry:
+                if not entry:
                     phages[taxid] = {
                         "version_start": row["version_start"],
                         "version_end": row["version_end"],
