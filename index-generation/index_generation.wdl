@@ -58,7 +58,9 @@ workflow index_generation {
         File taxid_lineages_db = GenerateIndexLineages.taxid_lineages_db
         File taxid_lineages_csv = GenerateIndexLineages.taxid_lineages_csv
         File names_csv = GenerateIndexLineages.names_csv
-        File deuterostom_taxids = GenerateIndexLineages.deuterostom_taxids
+        File named_taxid_lineages_csv = GenerateIndexLineages.named_taxid_lineages_csv
+        File versioned_taxid_lineages_csv = GenerateIndexLineages.versioned_taxid_lineages_csv
+        File deuterostome_taxids = GenerateIndexLineages.deuterostome_taxids
         File taxon_ignore_list = GenerateIndexLineages.taxon_ignore_list
         Directory minimap2_index = GenerateIndexMinimap2.minimap2_index
     }
@@ -193,7 +195,7 @@ task GenerateIndexLineages {
         cd ncbitax2lin
         mkdir -p taxdump/taxdump
         tar zxf ~{taxdump} -C ./taxdump/taxdump
-        make
+        make 1>&2
 
         # Add names to lineages
 
@@ -218,18 +220,16 @@ task GenerateIndexLineages {
         cat lineages.csv | grep 'Chordata\|Echinodermata\|Hemichordata' | cut -f"$TAXID_COL_NUM" -d"," > deuterostome_taxids.txt
         # TODO: refine which taxa we want to ignore
         cat lineages.csv | grep 'vector\|plasmid\|Plasposon\|replicon\|synthetic\|construct\|Artificial\|Recombinant\|insert\|cassette' | cut -f"$TAXID_COL_NUM" -d"," > taxon_ignore_list.txt
-
-        find .
     >>>
 
     output {
-        File taxid_lineages_db = "taxid-lineages.db"
-        File taxid_lineages_csv = "taxid-lineages.csv.gz"
-        File names_csv = "names.csv.gz"
-        File named_taxid_lineages_csv = "named-taxid-lineages.csv.gz"
-        File versioned_taxid_lineages_csv = "versioned-taxid-lineages.csv.gz"
-        File deuterostom_taxids = "deuterostom_taxids.txt"
-        File taxon_ignore_list = "taxon_ignore_list.txt"
+        File taxid_lineages_db = "ncbitax2lin/taxid-lineages.db"
+        File taxid_lineages_csv = "ncbitax2lin/taxid-lineages.csv.gz"
+        File names_csv = "ncbitax2lin/names.csv.gz"
+        File named_taxid_lineages_csv = "ncbitax2lin/named-taxid-lineages.csv.gz"
+        File versioned_taxid_lineages_csv = "ncbitax2lin/versioned-taxid-lineages.csv.gz"
+        File deuterostome_taxids = "ncbitax2lin/deuterostome_taxids.txt"
+        File taxon_ignore_list = "ncbitax2lin/taxon_ignore_list.txt"
     }
 
     runtime {
