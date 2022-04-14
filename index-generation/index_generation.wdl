@@ -231,7 +231,7 @@ task GenerateIndexLineages {
         File names_csv = "ncbitax2lin/names.csv.gz"
         File named_taxid_lineages_csv = "ncbitax2lin/named-taxid-lineages.csv.gz"
         File versioned_taxid_lineages_csv = "ncbitax2lin/versioned-taxid-lineages.csv.gz"
-        File phage_list_csv = "ncbitax2lin/versioned_phage_list.csv"
+        File phage_list_csv = "ncbitax2lin/versioned_phage_list.csv.gz"
         File deuterostome_taxids = "ncbitax2lin/deuterostome_taxids.txt"
         File taxon_ignore_list = "ncbitax2lin/taxon_ignore_list.txt"
     }
