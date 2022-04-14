@@ -122,12 +122,14 @@ task GenerateIndexAccessions {
     command <<<
         set -euxo pipefail
 
+        cp -r ~{accession2taxid} accession2taxid
+
         # Build index
         python3 /usr/local/bin/generate_accession2taxid.py \
-            ~{accession2taxid}/nucl_wgs.accession2taxid.gz \
-            ~{accession2taxid}/nucl_gb.accession2taxid.gz \
-            ~{accession2taxid}/pdb.accession2taxid.gz \
-            ~{accession2taxid}/prot.accession2taxid.FULL.gz \
+            accession2taxid/nucl_wgs.accession2taxid.gz \
+            accession2taxid/nucl_gb.accession2taxid.gz \
+            accession2taxid/pdb.accession2taxid.gz \
+            accession2taxid/prot.accession2taxid.FULL.gz \
             --nt_file ~{nt} \
             --nr_file ~{nr} \
             --output_gz accession2taxid.gz \
