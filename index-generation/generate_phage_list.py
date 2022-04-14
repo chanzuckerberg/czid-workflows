@@ -15,23 +15,23 @@ phages = {}
 
 
 def generage_phage_list(versioned_lineages_csv, output_filename):
-    with gzip.open(versioned_lineages_csv, "rt") as in_f:
-        for row in csv.DictReader(in_f):
+    with gzip.open(versioned_lineages_csv, "rt") as f:
+        for row in csv.DictReader(f):
             taxid = row["taxid"]
             if row["family_name"] in PHAGE_FAMILIES_NAMES:
                 entry = phages.get(taxid)
                 if entry:
                     phages[taxid] = {
                         "version_start": row["version_start"],
-                        "version_end": row["version_start"],
+                        "version_end": row["version_end"],
                     }
                 else:
                     phages[taxid] = {
                         "version_start": min(row["version_start"], entry["version_start"]),
-                        "version_end": max(row["version_start"], entry["version_start"]),
+                        "version_end": max(row["version_end"], entry["version_end"]),
                     }
 
-    with open(output_filename, "w") as f:
+    with gzip.open(output_filename, "wt") as f:
         writer = csv.DictWriter(f, ["version_start", "version_end", "taxid"])
         for taxid, entry in phages.items():
             writer.writerow(dict(taxid=taxid, **entry))

@@ -208,7 +208,7 @@ task GenerateIndexLineages {
             versioned-taxid-lineages.csv.gz \
             ~{previous_lineages}
 
-        python3 /usr/local/bin/generate_phage_list.py versioned-taxid-lineages.csv.gz versioned_phage_list.csv
+        python3 /usr/local/bin/generate_phage_list.py versioned-taxid-lineages.csv.gz versioned_phage_list.csv.gz
 
         # Build deuterostome list
         # decompress first and only read what we need to prevent pipefail
