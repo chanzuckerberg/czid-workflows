@@ -247,14 +247,14 @@ task GenerateIndexMinimap2 {
         set -euxo pipefail
 
         # Split nt into 20
-        seqkit split2 ~{nt} -p ~{n_chunks}
+        seqkit split2 ~{nt} -p ~{n_chunks} --out-dir nt.split --two-pass
 
         # Make output directory
         OUTDIR="nt_k~{k}_w~{w}_~{n_chunks}"
         mkdir $OUTDIR
 
         # Run minimap2 on each chunk
-        for i in nt.split/nt*
+        for i in nt.split/*
         do
                 path="${i##*_}"
                 minimap2 -cx sr -k ~{k} -w ~{w} -I ~{I} -t ~{t} -d $OUTDIR/"genome_"$path".mmi" $i
