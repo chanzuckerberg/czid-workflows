@@ -218,10 +218,12 @@ task GenerateIndexLineages {
         cat lineages.csv | grep 'Chordata\|Echinodermata\|Hemichordata' | cut -f"$TAXID_COL_NUM" -d"," > deuterostome_taxids.txt
         # TODO: refine which taxa we want to ignore
         cat lineages.csv | grep 'vector\|plasmid\|Plasposon\|replicon\|synthetic\|construct\|Artificial\|Recombinant\|insert\|cassette' | cut -f"$TAXID_COL_NUM" -d"," > taxon_ignore_list.txt
+
+        find .
     >>>
 
     output {
-        File taxid_lineages_db = "lineage-by-taxid.db"
+        File taxid_lineages_db = "taxid-lineages.db"
         File taxid_lineages_csv = "taxid-lineages.csv.gz"
         File names_csv = "names.csv.gz"
         File named_taxid_lineages_csv = "named-taxid-lineages.csv.gz"
