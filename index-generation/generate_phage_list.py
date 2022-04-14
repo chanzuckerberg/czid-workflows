@@ -13,6 +13,7 @@ PHAGE_FAMILIES_NAMES = {'Myoviridae', 'Siphoviridae', 'Podoviridae', 'Lipothrixv
 
 phages = {}
 
+
 def generage_phage_list(versioned_lineages_csv, output_filename):
     with gzip.open(versioned_lineages_csv, "rt") as in_f:
         for row in csv.DictReader(in_f):

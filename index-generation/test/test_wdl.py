@@ -12,7 +12,6 @@ class TestIndexGeneration(WDLTestCase):
         "ncbi_server": "https://idseq-samples-test.s3-us-west-2.amazonaws.com/index-generation/inputs",
     }
 
-
     def testIndexGeneration(self):
         res = self.run_miniwdl(["index_name=2020-04-20"])
         outputs = res["outputs"]
