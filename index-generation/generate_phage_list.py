@@ -26,9 +26,21 @@ def generage_phage_list(versioned_lineages_csv, output_filename):
                         "version_end": row["version_end"],
                     }
                 else:
+                    version_start = entry["version_start"]
+                    if not version_start and row["version_start"]:
+                        version_start = row["version_start"]
+                    elif version_start:
+                        version_start = min(version_start, row["version_start"])
+
+                    version_end = entry["version_end"]
+                    if not version_end and row["version_end"]:
+                        version_end = row["version_end"]
+                    elif version_end:
+                        version_end = min(version_end, row["version_end"])
+
                     phages[taxid] = {
-                        "version_start": min(row["version_start"], entry["version_start"]),
-                        "version_end": max(row["version_end"], entry["version_end"]),
+                        "version_start": version_start,
+                        "version_end": version_end,
                     }
 
     with gzip.open(output_filename, "wt") as f:
