@@ -2,6 +2,7 @@ import os
 import json
 import hashlib
 import yaml
+import csv
 from test_util import WDLTestCase
 
 
@@ -110,3 +111,67 @@ class TestSTAR(WDLTestCase):
         with open(res["outputs"]["RunStar.output_read_count"]) as f:
             count = json.load(f)
         self.assertEqual(count["star_out"], 100)
+
+
+class TestAlign(WDLTestCase):
+    wdl = os.path.join(os.path.dirname(__file__), "..", "non_host_alignment.wdl")
+    with open(os.path.join(os.path.dirname(__file__), "local_test.yml")) as fh:
+        common_inputs = yaml.safe_load(fh)
+
+    @classmethod
+    def setUpClass(self):
+        self.m8_file = os.path.join(
+            os.path.dirname(__file__),
+            "non_host_alignment",
+            "call_hits_inputs",
+            "gsnap.m8",
+        )
+        self.common_args = {
+            "lineage_db": "s3://czid-public-references/taxonomy/2021-01-22/taxid-lineages.db",
+            "accession2taxid": "s3://czid-public-references/mini-database/alignment_indexes/"
+            "2020-08-20-viral/viral_accessions2taxid.db",
+            "taxon_blacklist": "s3://czid-public-references/taxonomy/2021-01-22/taxon_blacklist.txt",
+            "deuterostome_db": "s3://czid-public-references/taxonomy/2021-01-22/deuterostome_taxids.txt",
+            "duplicate_cluster_size": os.path.join(
+                os.path.dirname(__file__), "duplicate_cluster_sizes.tsv"
+            ),
+            "s3_wd_uri": "",
+        }
+
+    def testMinimap2CallHits(self):
+        args = dict(self.common_args)
+        args.update({"m8_file": self.m8_file, "prefix": "minimap2"})
+        res = self.run_miniwdl(task="RunCallHitsMinimap2", task_input=args)
+        m8_file = res["outputs"]["RunCallHitsMinimap2.deduped_out_m8"]
+        deduped = {}
+        with open(m8_file) as f:
+            rd = csv.reader(f, delimiter="\t")
+            for row in rd:
+                deduped[row[0]] = row[1]
+
+        self.assertEqual(len(deduped.keys()), 22)
+        self.assertEqual(
+            deduped[
+                "NC_007795.1_64__benchmark_lineage_93061_1280_1279_90964__s0000000966"
+            ],
+            "NC_004615.1",
+        )
+
+    def testDiamondCallHits(self):
+        args = dict(self.common_args)
+        args.update(
+            {
+                "m8_file": self.m8_file,
+                "prefix": "diamond",
+                "min_read_length": 0,
+                "count_type": "NR",
+            }
+        )
+        res = self.run_miniwdl(task="RunCallHitsDiamond", task_input=args)
+        m8_file = res["outputs"]["RunCallHitsDiamond.deduped_out_m8"]
+        deduped = {}
+        with open(m8_file) as f:
+            rd = csv.reader(f, delimiter="\t")
+            for row in rd:
+                deduped[row[0]] = row[1]
+        self.assertEqual(len(deduped.keys()), 22)
