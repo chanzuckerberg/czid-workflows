@@ -244,7 +244,7 @@ task GenerateIndexLineages {
 task GenerateIndexMinimap2 {
     input {
         File nt
-        Int k = 12 # Minimizer k-mer length default is 21 for short reads option
+        Int k = 14 # Minimizer k-mer length default is 21 for short reads option
         Int w = 8 # Minimizer window size default is 11 for short reads option
         String I = "9999G" # Load at most NUM target bases into RAM for indexing
         Int t = 20 # number of threads, doesn't really work for indexing I don't think
@@ -266,7 +266,7 @@ task GenerateIndexMinimap2 {
         for i in nt.split/*
         do
                 path="${i##*_}"
-                minimap2 -cx sr -k ~{k} -w ~{w} -I ~{I} -t ~{t} -d $OUTDIR/"genome_"$path".mmi" $i
+                minimap2 -cx sr -k ~{k} -w ~{w} -I ~{I} -t ~{t} -d $OUTDIR/"nt.part_"$path".idx" $i
         done
     >>>
 
