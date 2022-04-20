@@ -313,7 +313,7 @@ task ValidateInput{
         }
         if [[ "~{technology}" == "ONT" ]] && [[ "~{length(fastqs)}" -gt 1 ]]; then
             # ONT pipeline should only have one input
-            raise_error InvalidInputFileError "Multiple fastqs provided for ONT"
+            raise_error InvalidInputFileError "Oxford Nanopore pipeline should only have one input"
         fi 
 
         counter=1
@@ -322,7 +322,7 @@ task ValidateInput{
             seqkit head -n "~{max_reads}" $fastq -o "~{prefix}validated_$counter.fastq.gz" 2> read_error.txt
             if [[ -s read_error.txt ]]; then 
                 # Checks if seqkit can parse input files
-                raise_error InvalidFileFormatError "Error parsing one of the input files: ""$(cat read_error.txt)"
+                raise_error InvalidFileFormatError "Error parsing one of the input files: ""$(cat read_error.txt | cut -d" " -f2- | sed 's/[^[:alpha:] ]//g')"
             fi 
            ((counter++))
         done
@@ -336,7 +336,7 @@ task ValidateInput{
             # check if any of the input files has max length > 500bp
             MAXLEN=$(cut -f 8 input_stats.tsv | tail -n "~{length(fastqs)}" | sort -n | tail -n 1)
             if [[ $MAXLEN -gt 500 ]]; then 
-                raise_error InvalidInputFileError "Read longer than 500bp for Illumina"
+                raise_error InvalidInputFileError "A read is longer than 500bp for the Illumina pipeline"
             fi 
         fi
     >>>
