@@ -1,5 +1,7 @@
 import json
 import os
+import re
+import sys
 
 from idseq_dag.engine.pipeline_step import PipelineStep
 from idseq_dag.exceptions import InvalidFileFormatError, InsufficientReadsError
@@ -48,7 +50,10 @@ class PipelineStepRunValidateInput(PipelineStep):
                                     "-t",
                                     input_file
                                 ]
-                            )
+                            ), 
+                            capture_stdout = True,
+                            merge_stderr = True
+
                         )
                         # then decompress it
                         command.execute(
@@ -61,10 +66,13 @@ class PipelineStepRunValidateInput(PipelineStep):
                                     "num_lines": num_lines,
                                     "output_file": splited_input_file_name
                                 }
-                            )
+                            ),
+                            capture_stdout = True,
+                            merge_stderr = True
                         )
-                    except:
-                        raise InvalidFileFormatError("Invalid fastq/fasta/gzip file")
+                    except Exception as e:
+                        error_str = self.get_bash_error_output(e.output.decode("utf-8").strip())
+                        raise InvalidFileFormatError(error_str)
                 else:
                     # Validate and truncate the input file to keep behavior consistent with gz input files
                     try:
@@ -83,7 +91,8 @@ class PipelineStepRunValidateInput(PipelineStep):
                         )
                         input_files[i] = tmp_file
                     except:
-                        raise InvalidFileFormatError("Invalid fastq/fasta file")
+                        error_str = self.get_bash_error_output(e.output.decode("utf-8").strip())
+                        raise InvalidFileFormatError(error_str)
 
             # keep a dictionary of the distribution of read lengths in the files
             self.summary_dict = {vc.BUCKET_TOO_SHORT: 0,
@@ -293,3 +302,15 @@ class PipelineStepRunValidateInput(PipelineStep):
     def count_reads(self):
         self.should_count_reads = True
         self.counts_dict[self.name] = self.total_output_reads
+
+    @staticmethod
+    def get_bash_error_output(output: str) -> str:
+        if re.match("gzip.+not in gzip format", output):
+            return "Error unzipping input file"
+        elif re.match("PARSE ERROR: invalid line length.+max line length of 10000.", output):
+            return "Max line length of 10000 exceeded"
+        elif re.match("PARSE ERROR: not an ascii file.+", output):
+            return output
+        else: 
+            return "Invalid fastq/fasta/gzip file"
+
