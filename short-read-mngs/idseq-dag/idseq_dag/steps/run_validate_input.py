@@ -1,7 +1,6 @@
 import json
 import os
 import re
-import sys
 
 from idseq_dag.engine.pipeline_step import PipelineStep
 from idseq_dag.exceptions import InvalidFileFormatError, InsufficientReadsError
@@ -50,9 +49,9 @@ class PipelineStepRunValidateInput(PipelineStep):
                                     "-t",
                                     input_file
                                 ]
-                            ), 
-                            capture_stdout = True,
-                            merge_stderr = True
+                            ),
+                            capture_stdout=True,
+                            merge_stderr=True
 
                         )
                         # then decompress it
@@ -67,8 +66,8 @@ class PipelineStepRunValidateInput(PipelineStep):
                                     "output_file": splited_input_file_name
                                 }
                             ),
-                            capture_stdout = True,
-                            merge_stderr = True
+                            capture_stdout=True,
+                            merge_stderr=True
                         )
                     except Exception as e:
                         error_str = self.get_bash_error_output(e.output.decode("utf-8").strip())
@@ -87,10 +86,12 @@ class PipelineStepRunValidateInput(PipelineStep):
                                     "num_lines": num_lines,
                                     "output_file": tmp_file
                                 }
-                            )
+                            ),
+                            capture_stdout=True,
+                            merge_stderr=True
                         )
                         input_files[i] = tmp_file
-                    except:
+                    except Exception as e:
                         error_str = self.get_bash_error_output(e.output.decode("utf-8").strip())
                         raise InvalidFileFormatError(error_str)
 
@@ -311,6 +312,5 @@ class PipelineStepRunValidateInput(PipelineStep):
             return "Max line length of 10000 exceeded"
         elif re.match("PARSE ERROR: not an ascii file.+", output):
             return output
-        else: 
+        else:
             return "Invalid fastq/fasta/gzip file"
-
