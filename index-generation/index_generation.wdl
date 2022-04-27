@@ -81,7 +81,7 @@ task DownloadIndexSources {
             wget -P $(dirname $1) -cnv ~{ncbi_server}/$1
             wget -P $(dirname $1) -cnv ~{ncbi_server}/$1.md5
 
-            if [[ $(md5sum $1 | cut -f 1 -d' ') != $(cat $1.md5 | cut -f 1 -d' ') ]]
+            if [[ $(md5sum $1 | cut -f 1 -d' ') != $(cat $1.md5 | sed -e 's/^\s*//' | cut -f 1 -d' ') ]]
             then
                 exit 1
             fi
