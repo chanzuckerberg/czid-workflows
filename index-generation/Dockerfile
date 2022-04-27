@@ -53,4 +53,6 @@ ENV PATH="${PATH}:/usr/local/bin"
 
 COPY *.py /usr/local/bin/
 
+COPY ncbi_download /usr/local/bin/
+
 WORKDIR /workspace
