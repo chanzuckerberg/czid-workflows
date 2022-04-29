@@ -5,7 +5,6 @@ workflow index_generation {
         String index_name
         String ncbi_server = "https://ftp.ncbi.nih.gov"
         Boolean write_to_db = false
-        String env = "sandbox"
         File? previous_lineages
         String docker_image_id
     }
