@@ -28,7 +28,8 @@ RUN apt-get update && \
         python3-pandas \
         python3-gdbm \
         python3-pip \
-        software-properties-common
+        software-properties-common \
+        mysql-client
 
 # install aria2
 WORKDIR /tmp
