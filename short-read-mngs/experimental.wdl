@@ -167,6 +167,7 @@ task GenerateCoverageViz {
   }
   command<<<
   set -euxo pipefail
+  echo "Hi"
   idseq-dag-run-step --workflow-name experimental \
     --step-module idseq_dag.steps.generate_coverage_viz \
     --step-class PipelineStepGenerateCoverageViz \

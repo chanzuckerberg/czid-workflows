@@ -138,8 +138,6 @@ ENV PATH="${PATH}:/rapsearch2/Src/"
 RUN apt-get purge -y g++ libperl4-corelibs-perl make
 WORKDIR /
 
-COPY idseq-dag /tmp/idseq-dag
-RUN pip3 install /tmp/idseq-dag && rm -rf /tmp/idseq-dag
 
 RUN apt-get -y update && apt-get install -y build-essential libz-dev git python3-pip cmake
 
@@ -159,6 +157,9 @@ RUN make -j6
 RUN mv diamond /usr/local/bin
 
 RUN curl -Ls https://github.com/chanzuckerberg/s3parcp/releases/download/v0.2.0-alpha/s3parcp_0.2.0-alpha_Linux_x86_64.tar.gz | tar -C /usr/bin -xz s3parcp
+RUN apt-get -y update && apt-get install -y vim 
 
+COPY idseq-dag /tmp/idseq-dag
+RUN pip3 install /tmp/idseq-dag && rm -rf /tmp/idseq-dag
 COPY idseq_utils /tmp/idseq_utils
 RUN pip3 install /tmp/idseq_utils && rm -rf /tmp/idseq_utils
