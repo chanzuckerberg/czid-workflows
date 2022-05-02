@@ -613,7 +613,7 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
                 if not optimal_hit or accession_counts[optimal_hit.sseqid] < accession_counts[blast_candidate.sseqid]:
                     optimal_hit = blast_candidate
 
-            if summary==True:
+            if summary == True:
                 yield optimal_hit.summary()
             else:
                 for hsp in optimal_hit.optimal_cover:

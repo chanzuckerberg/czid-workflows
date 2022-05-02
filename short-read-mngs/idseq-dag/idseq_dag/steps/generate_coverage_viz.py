@@ -141,8 +141,6 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
             )
 
             # Calculate statistics for the accession.
-            if accession_id == "LR134375.1":
-                import pdb; pdb.set_trace()
             accession_stats = PipelineStepGenerateCoverageViz.calculate_accession_stats(
                 accession_obj,
                 contig_data,
@@ -319,17 +317,17 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
                     # function summary_row() in class CandidateHit.
                     if hits.get(hit["qseqid"], None):
                         hits[hit["qseqid"]].append({
-                        "accession": hit["sseqid"],
-                        "percent_id": hit["pident"],
-                        "alignment_length": hit["length"],
-                        "num_mismatches": hit["mismatch"],
-                        "num_gaps": hit["gapopen"],
-                        "query_start": hit["qstart"],
-                        "query_end": hit["qend"],
-                        "subject_start": hit["sstart"],
-                        "subject_end": hit["send"],
-                        "prop_mismatch": hit["mismatch"] / max(1, hit["length"]),
-                    })
+                            "accession": hit["sseqid"],
+                            "percent_id": hit["pident"],
+                            "alignment_length": hit["length"],
+                            "num_mismatches": hit["mismatch"],
+                            "num_gaps": hit["gapopen"],
+                            "query_start": hit["qstart"],
+                            "query_end": hit["qend"],
+                            "subject_start": hit["sstart"],
+                            "subject_end": hit["send"],
+                            "prop_mismatch": hit["mismatch"] / max(1, hit["length"])
+                        })
                     else:
                         hits[hit["qseqid"]] = [{
                             "accession": hit["sseqid"],
@@ -496,8 +494,6 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
                 log.write(f"Could not find {hit_type} in map: {hit_name}")
                 return
 
-            if hit_name == "NODE_6_length_12564_cov_4.569990":
-                import pdb; pdb.set_trace()
             hit_objs = hit_data[hit_name]
             for ind, hit_obj in enumerate(hit_objs):
 
@@ -552,8 +548,6 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
             if len(read_objs) + len(contig_objs) == 0:
                 continue
             else:
-                #read_objs = list(map(lambda read_name: read_data[read_name], reads))
-                #contig_objs = list(map(lambda contig_name: contig_data[contig_name], contigs))
                 hit_groups.append(PipelineStepGenerateCoverageViz.get_hit_group_json(contig_objs, read_objs, bin_size))
 
         return hit_groups
