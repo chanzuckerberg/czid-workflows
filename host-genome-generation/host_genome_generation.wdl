@@ -74,7 +74,7 @@ task GenerateHostGenome {
                 INPUT_GTF_PATH=input.gtf
             fi
             # Concatenate ercc and input
-            cat "~{ercc.gtf}" $INPUT_GTF_PATH > gtf_with_ercc.gtf
+            cat "~{ercc_gtf}" $INPUT_GTF_PATH > gtf_with_ercc.gtf
             GTF_PATH=gtf_with_ercc.gtf
         fi
 
