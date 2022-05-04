@@ -28,7 +28,6 @@ RUN apt-get -qq update && apt-get -qq -y install \
   freebayes \
   kraken2 \
   minimap2 \
-  muscle \
   samtools \
   seqtk \
   trim-galore \
@@ -100,11 +99,12 @@ RUN /bin/bash -c "set -e; mkdir -p /usr/local/lib/site_perl; \
   VADREASELDIR=/usr/local/bin \
   VADRBIOEASELDIR=/usr/local/bin > /etc/profile.d/vadr.sh"
 
-RUN wget https://www.drive5.com/muscle/downloads3.8.31/muscle3.8.31_i86linux32.tar.gz \
-&& tar zxvf muscle3.8.31_i86linux32.tar.gz && mv muscle3.8.31_i86linux32 muscle && rm muscle3.8.31_i86linux32.tar.gz
+RUN wget https://drive5.com/muscle/muscle_src_3.8.1551.tar.gz \
+&& mkdir muscle && tar zxvf muscle_src_3.8.1551.tar.gz -C muscle && cd muscle && sed -i 's/Str\[16\]/Str[32]/' progress.cpp && make && mv muscle /usr/local/bin/
+
 
 # ARTIC, Medaka and dependencies
-RUN apt-get install -y python3-cffi python3-h5py python3-intervaltree python3-edlib muscle git
+RUN apt-get install -y python3-cffi python3-h5py python3-intervaltree python3-edlib git
 RUN pip3 install ont-fast5-api parasail mappy pyspoa tensorflow==2.7.1 https://github.com/artic-network/fieldbioinformatics/archive/1.2.1.tar.gz
 RUN pip3 install medaka --no-deps
 RUN pip3 install git+https://github.com/rzlim08/PyVCF.git
