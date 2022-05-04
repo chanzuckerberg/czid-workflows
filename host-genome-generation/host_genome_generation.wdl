@@ -21,8 +21,8 @@ workflow index_generation {
     }
 
     output {
-        File input_fasta = GenerateHostGenome.input_fasta
-        File? input_gtf = GenerateHostGenome.input_gtf
+        File original_input_fasta = GenerateHostGenome.input_fasta
+        File? original_input_gtf = GenerateHostGenome.input_gtf
         File fasta_with_ercc_fa = GenerateHostGenome.fasta_with_ercc_fa
         File? gtf_with_ercc_gtf = GenerateHostGenome.gtf_with_ercc_gtf
         File star_genome_tar = GenerateHostGenome.star_genome_tar
