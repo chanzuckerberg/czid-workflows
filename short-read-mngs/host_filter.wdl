@@ -50,6 +50,11 @@ task RunStar {
   # --step-name star_out 
   set -euxo pipefail
 
+  mkdir /tmp/hack
+  echo -e '#!/bin/bash\n/bin/tar "$@" --no-same-owner' > /tmp/hack/tar
+  chmod +x /tmp/hack/tar
+  export PATH=/tmp/hack:$PATH
+
   python3 <<CODE
   """ save description to file """
   from idseq_utils.save_descriptions import star_description
@@ -309,6 +314,12 @@ task RunBowtie2_bowtie2_out {
   }
   command<<<
   set -euxo pipefail
+
+  mkdir /tmp/hack
+  echo -e '#!/bin/bash\n/bin/tar "$@" --no-same-owner' > /tmp/hack/tar
+  chmod +x /tmp/hack/tar
+  export PATH=/tmp/hack:$PATH
+
   idseq-dag-run-step --workflow-name host_filter \
     --step-module idseq_dag.steps.run_bowtie2 \
     --step-class PipelineStepRunBowtie2 \
@@ -446,6 +457,14 @@ task RunGsnapFilter {
   }
   command<<<
   set -euxo pipefail
+
+  mkdir /tmp/hack
+  echo -e '#!/bin/bash\n/usr/bin/gsnap "$@"' > /tmp/hack/gsnap
+  echo -e '#!/bin/bash\n/usr/bin/gsnapl "$@"' > /tmp/hack/gsnapl
+  echo -e '#!/bin/bash\n/bin/tar "$@" --no-same-owner' > /tmp/hack/tar
+  chmod +x /tmp/hack/gsnap /tmp/hack/gsnapl /tmp/hack/tar
+  export PATH=/tmp/hack:$PATH
+
   idseq-dag-run-step --workflow-name host_filter \
     --step-module idseq_dag.steps.run_gsnap_filter \
     --step-class PipelineStepRunGsnapFilter \
