@@ -64,7 +64,7 @@ task GenerateHostGenome {
         #
 
         INPUT_GTF_PATH="~{input_gtf}"
-        GTF_PATH=ercc.gtf
+        GTF_PATH="~{ercc_gtf}"
 
         # Download input gtf, if provided
         if [[ -n "${INPUT_GTF_PATH}" ]] ; then
