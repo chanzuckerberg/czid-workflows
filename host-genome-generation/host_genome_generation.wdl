@@ -5,8 +5,8 @@ workflow index_generation {
         File input_fasta
         File? input_gtf
         String host_name
-        File ercc_fasta_path
-        File ercc_gtf_path
+        File ercc_fasta
+        File ercc_gtf
         String docker_image_id
     }
 
@@ -49,7 +49,7 @@ task GenerateHostGenome {
         # Create fasta_with_ercc
         #
 
-        INPUT_FASTA_PATH="~{input_fasta_path}"
+        INPUT_FASTA_PATH="~{input_fasta}"
 
         # Download input fa
         if [ ${INPUT_FASTA_PATH: -3} == ".gz" ]
@@ -64,7 +64,7 @@ task GenerateHostGenome {
         # Create gtf_with_ercc
         #
 
-        INPUT_GTF_PATH="~{input_gtf_path}"
+        INPUT_GTF_PATH="~{input_gtf}"
         GTF_PATH=ercc.gtf
 
         # Download input gtf, if provided
