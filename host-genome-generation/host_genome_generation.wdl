@@ -41,9 +41,7 @@ task GenerateHostGenome {
     }
 
     command <<<
-        #!/bin/bash -ex
-
-        set -o pipefail
+        set -euxo pipefail
 
         #
         # Create fasta_with_ercc
@@ -54,11 +52,12 @@ task GenerateHostGenome {
         # Download input fa
         if [ ${INPUT_FASTA_PATH: -3} == ".gz" ]
         then
-            gunzip input.fa.gz
+            gunzip -c "~{input_fasta}" > input.fa
+            INPUT_FASTA_PATH=input.fa
         fi
 
         # Concatenate ercc and input
-        cat ercc.fa input.fa > fasta_with_ercc.fa
+        cat "~{ercc_fasta}" $INPUT_FASTA_PATH > fasta_with_ercc.fa
 
         #
         # Create gtf_with_ercc
@@ -71,10 +70,11 @@ task GenerateHostGenome {
         if [[ -n "${INPUT_GTF_PATH}" ]] ; then
             if [ ${INPUT_GTF_PATH: -3} == ".gz" ]
             then
-                gunzip input.gtf.gz
+                gunzip -c "~{input_gtf}" > input.gtf
+                INPUT_GTF_PATH=input.gtf
             fi
             # Concatenate ercc and input
-            cat ercc.gtf input.gtf > gtf_with_ercc.gtf
+            cat "~{ercc.gtf}" $INPUT_GTF_PATH > gtf_with_ercc.gtf
             GTF_PATH=gtf_with_ercc.gtf
         fi
 
