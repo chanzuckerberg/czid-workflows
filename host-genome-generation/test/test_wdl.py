@@ -1,5 +1,3 @@
-import csv
-import gzip
 import os
 from test_util import WDLTestCase
 
