@@ -52,7 +52,10 @@ task GenerateHostGenome {
         # Download input fa
         if [ ${INPUT_FASTA_PATH: -3} == ".gz" ]
         then
-            gunzip -c "~{input_fasta}" > input.fa
+            gunzip -c $INPUT_FASTA_PATH > input.fa
+            INPUT_FASTA_PATH=input.fa
+        else
+            cp $INPUT_FASTA_PATH input.fa
             INPUT_FASTA_PATH=input.fa
         fi
 
@@ -70,7 +73,10 @@ task GenerateHostGenome {
         if [[ -n "${INPUT_GTF_PATH}" ]] ; then
             if [ ${INPUT_GTF_PATH: -3} == ".gz" ]
             then
-                gunzip -c "~{input_gtf}" > input.gtf
+                gunzip -c $INPUT_GTF_PATH > input.gtf
+                INPUT_GTF_PATH=input.gtf
+            else
+                cp $INPUT_GTF_PATH input.gtf
                 INPUT_GTF_PATH=input.gtf
             fi
             # Concatenate ercc and input
