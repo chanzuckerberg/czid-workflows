@@ -110,7 +110,7 @@ task GenerateHostGenome {
         #
 
         # Make directory for bowtie2 genome
-        BOWTIE2_GENOME="${HOST_NAME}_bowtie2_genome"
+        BOWTIE2_GENOME="~{host_name}_bowtie2_genome"
         mkdir $BOWTIE2_GENOME
 
         # Change into the directory to contain the output and generate bowtie2 genome
