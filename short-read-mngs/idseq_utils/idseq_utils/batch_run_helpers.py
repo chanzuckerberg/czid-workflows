@@ -203,7 +203,7 @@ def _run_chunk(
             job_queue=_job_queue("SPOT"),
             job_definition=job_definition,
             environment=environment,
-            retries=2,
+            retries=5,
         )
     except BatchJobFailed:
         _run_batch_job(
@@ -211,7 +211,7 @@ def _run_chunk(
             job_queue=_job_queue("EC2"),
             job_definition=job_definition,
             environment=environment,
-            retries=1,
+            retries=3,
         )
 
 
