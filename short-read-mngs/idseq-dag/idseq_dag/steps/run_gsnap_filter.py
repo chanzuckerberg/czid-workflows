@@ -43,6 +43,10 @@ class PipelineStepRunGsnapFilter(PipelineCountingStep):
         if not count.files_have_min_reads(self.input_fas(), 1):
             raise InsufficientReadsError("Insufficient reads")
 
+    def validate_output_files(self):
+        if not count.files_have_min_reads(self.output_files_local(), 1):
+            raise InsufficientReadsError("No reads left after gsnap-filter")
+
     def run(self):
         input_fas = self.input_fas()
         output_fas = self.output_files_local()
@@ -87,3 +91,4 @@ class PipelineStepRunGsnapFilter(PipelineCountingStep):
         else:
             convert.generate_unmapped_singles_from_sam(
                 output_sam_file, output_fas[0])
+        self.validate_output_files()
