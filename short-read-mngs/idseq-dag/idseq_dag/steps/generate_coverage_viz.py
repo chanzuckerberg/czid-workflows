@@ -568,7 +568,7 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
             if tuple(contig_obj["byterange"]) not in seen:
                 contig_r += contig_obj["num_reads"]
                 contig_byteranges.append(contig_obj["byterange"])
-            seen.add(tuple(contig_obj["byteranges"]))
+            seen.add(tuple(contig_obj["byterange"]))
 
         # Treat read_objs and contig_objs the same from here onwards. They share many of the same fields.
         hit_objs = contig_objs + read_objs
