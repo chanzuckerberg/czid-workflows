@@ -17,6 +17,7 @@ from idseq_utils.minimap2_scatter import minimap2_merge
 
 import boto3
 from botocore.exceptions import ClientError
+from botocore.config import Config
 
 log = logging.getLogger(__name__)
 
@@ -26,8 +27,15 @@ ALIGNMENT_WDL_VERSIONS: Dict[str, str] = {
     "minimap2": "v1.0.0",
 }
 
+config = Config(
+    retries = {
+        "max_attempts": 10,
+        'mode': 'adaptive'
+    }
+)
 
-_batch_client = boto3.client("batch")
+
+_batch_client = boto3.client("batch", config=config)
 _s3_client = boto3.client("s3")
 
 try:
@@ -203,7 +211,7 @@ def _run_chunk(
             job_queue=_job_queue("SPOT"),
             job_definition=job_definition,
             environment=environment,
-            retries=5,
+            retries=2,
         )
     except BatchJobFailed:
         _run_batch_job(
@@ -211,7 +219,7 @@ def _run_chunk(
             job_queue=_job_queue("EC2"),
             job_definition=job_definition,
             environment=environment,
-            retries=3,
+            retries=1,
         )
 
 
