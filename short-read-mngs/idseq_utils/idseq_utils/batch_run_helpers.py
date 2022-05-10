@@ -28,7 +28,7 @@ ALIGNMENT_WDL_VERSIONS: Dict[str, str] = {
 }
 
 config = Config(
-    retries = {
+    retries={
         "max_attempts": 10,
         'mode': 'adaptive'
     }
