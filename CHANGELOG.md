@@ -16,6 +16,35 @@ In addition, if a modification is made that may affect the results of a pipeline
 
 ### Unreleased
 
+### consensus-genome-v3.4.9 
+- fix muscle buffer overflow bug
+
+### short-read-mngs-v7.0.4 short-read-mngs-v7.0.5
+- pass gsnap-dedup output to experimental
+- increase block-size fixes large diamond input bug
+
+### short-read-mngs-v7.0.3
+- fix remote benchmark runner
+
+### short-read-mngs-v7.0.2
+- fix local benchmarks
+
+### short-read-mngs-v7.0.1
+- clean up cache downloads
+
+### short-read-mngs-v7.0.0
+- [Pipeline Change] Use minimap2 and diamond instead of gsnap and rapsearch2
+	- Change: replace default alignment tools 
+	- Predicted Results: faster alignment results, no significant change in result quality
+
+### short-read-mngs-v6.10.1
+- longest reads memory optimization
+
+### short-read-mngs-v6.10.0
+- fix longest reads
+
+### consensus-genome-v3.4.8
+- fix no coverage throwing error
 
 ### consensus-genome-v3.4.5, consensus-genome-v3.4.6, consensus-genome-v3.4.7
 - [Pipeline Change] Reduce max number of reads
