@@ -17,6 +17,7 @@ from idseq_utils.minimap2_scatter import minimap2_merge
 
 import boto3
 from botocore.exceptions import ClientError
+from botocore.config import Config
 
 log = logging.getLogger(__name__)
 
@@ -26,8 +27,16 @@ ALIGNMENT_WDL_VERSIONS: Dict[str, str] = {
     "minimap2": "v1.0.0",
 }
 
+# mitigation for TooManyRequestExceptions
+config = Config(
+    retries={
+        "max_attempts": 10,
+        'mode': 'adaptive'   # adaptive mode prioritizes success over latency
+    }
+)
 
-_batch_client = boto3.client("batch")
+
+_batch_client = boto3.client("batch", config=config)
 _s3_client = boto3.client("s3")
 
 try:
