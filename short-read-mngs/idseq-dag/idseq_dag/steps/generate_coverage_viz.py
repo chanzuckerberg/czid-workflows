@@ -313,8 +313,8 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
 
                 if hit["qseqid"] in valid_hits:
                     # Blast output is per HSP, yet the hit represents a set of HSPs,
-                    # so these fields have been aggregated across that set by
-                    # function summary_row() in class CandidateHit.
+                    # so each HSP has it's own row in the output file. To aggregate the fields, each 
+                    # qseqid is associated with a list of HSPs. 
                     if hits.get(hit["qseqid"], None):
                         hits[hit["qseqid"]].append({
                             "accession": hit["sseqid"],
@@ -353,11 +353,11 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
         # Include some additional data.
         for contig_id, contig_obj in contigs.items():
             name_parts = contig_id.split("_")
-            for c in contig_obj:
+            for contig_hsp in contig_obj:
                 # Total length of the contig. We extract this from the contig name.
-                c["total_length"] = int(name_parts[3])
+                contig_hsp["total_length"] = int(name_parts[3])
                 # The contig read count.
-                c["num_reads"] = valid_contigs_with_read_counts[contig_id]
+                contig_hsp["num_reads"] = valid_contigs_with_read_counts[contig_id]
 
         return contigs
 
@@ -381,8 +381,8 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
 
             for contig_name in contig_coverage:
                 if contig_name in contig_data:
-                    for c in contig_data[contig_name]:
-                        c["coverage"] = contig_coverage[contig_name]["coverage"]
+                    for contig_hsp in contig_data[contig_name]:
+                        contig_hsp["coverage"] = contig_coverage[contig_name]["coverage"]
 
     @staticmethod
     def augment_contig_data_with_byteranges(contigs_fasta, contig_data):
@@ -399,8 +399,8 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
                 # If the line is a header file, process the contig we just traversed.
                 if line[0] == '>':  # header line
                     if seq_len > 0 and contig_name in contig_data:
-                        for c in contig_data[contig_name]:
-                            c["byterange"] = [seq_offset, seq_len]
+                        for contig_hsp in contig_data[contig_name]:
+                            contig_hsp["byterange"] = [seq_offset, seq_len]
 
                     seq_offset = seq_offset + seq_len
                     seq_len = len(line)
@@ -410,8 +410,8 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
 
             # Process the last contig once we reach the end of the file.
             if seq_len > 0 and contig_name in contig_data:
-                for c in contig_data[contig_name]:
-                    c["byterange"] = [seq_offset, seq_len]
+                for contig_hsp in contig_data[contig_name]:
+                    contig_hsp["byterange"] = [seq_offset, seq_len]
 
     @staticmethod
     def select_best_accessions_per_taxon(taxon_data, accession_data, contig_data, _read_data, num_accessions_per_taxon):
@@ -426,7 +426,7 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
             """
             accession_obj = accession_data[accession_id]
 
-            contig_lengths = [c["alignment_length"] for contig_name in accession_obj["contigs"] for c in contig_data[contig_name]]
+            contig_lengths = [contig_hsp["alignment_length"] for contig_name in accession_obj["contigs"] for contig_hsp in contig_data[contig_name]]
 
             max_contig_length = max(contig_lengths) if len(contig_lengths) > 0 else 0
             total_contig_length = sum(contig_lengths) if len(contig_lengths) > 0 else 0
@@ -496,6 +496,9 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
 
             hit_objs = hit_data[hit_name]
             for ind, hit_obj in enumerate(hit_objs):
+                # iterate over each of the hit hsps
+                # append the index to the name so the hit group lists will have a unique identity
+                # we later ensure we are selecting the correct hsp by indexing by name and index
 
                 # hitsummary is more strict than reassigned.
                 # Sometimes reassigned will have a value for accession, but hitsummary won't.
@@ -566,6 +569,8 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
         contig_byteranges = []
         for contig_obj in contig_objs:
             if tuple(contig_obj["byterange"]) not in seen:
+                # check if byterange has already been seen, we don't want to have 2 hsps listed in the same group
+                # or to double count the num_readds
                 contig_r += contig_obj["num_reads"]
                 contig_byteranges.append(contig_obj["byterange"])
             seen.add(tuple(contig_obj["byterange"]))
