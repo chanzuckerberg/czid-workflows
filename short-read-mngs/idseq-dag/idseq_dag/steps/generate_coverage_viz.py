@@ -313,8 +313,8 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
 
                 if hit["qseqid"] in valid_hits:
                     # Blast output is per HSP, yet the hit represents a set of HSPs,
-                    # so each HSP has it's own row in the output file. To aggregate the fields, each 
-                    # qseqid is associated with a list of HSPs. 
+                    # so each HSP has it's own row in the output file.
+                    # To aggregate the fields, each qseqid is associated with a list of HSPs.
                     if hits.get(hit["qseqid"], None):
                         hits[hit["qseqid"]].append({
                             "accession": hit["sseqid"],
