@@ -27,10 +27,11 @@ ALIGNMENT_WDL_VERSIONS: Dict[str, str] = {
     "minimap2": "v1.0.0",
 }
 
+# mitigation for TooManyRequestExceptions
 config = Config(
     retries={
-        "max_attempts": 10,
-        'mode': 'adaptive'
+        "max_attempts": 10, 
+        'mode': 'adaptive' # adaptive mode prioritizes success over latency
     }
 )
 
