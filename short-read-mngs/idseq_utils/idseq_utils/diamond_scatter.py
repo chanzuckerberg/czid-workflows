@@ -196,7 +196,7 @@ def blastx_join(chunk_dir: str, out: str, diamond_args: str, *query: str):
             diamond_blastx(
                 cwd=tmp_dir,
                 par_tmpdir="par-tmp",
-                block_size=1,
+                block_size=10,
                 database=db.name,
                 out=out,
                 join_chunks=chunks,

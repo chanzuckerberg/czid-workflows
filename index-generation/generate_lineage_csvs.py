@@ -20,6 +20,7 @@ _taxon_levels = [
 _fieldnames = [
     "taxid",
     "tax_name",
+    "is_phage",
 ] + [
     f"{level}_{label}" for level in _taxon_levels for label in ["taxid", "name", "common_name"]
 ]
@@ -30,6 +31,12 @@ _versioning_fieldnames = [
     "created_at",
     "updated_at",
 ]
+
+PHAGE_FAMILIES_NAMES = {'Myoviridae', 'Siphoviridae', 'Podoviridae', 'Lipothrixviridae',
+                        'Rudiviridae', 'Ampullaviridae', 'Bicaudaviridae', 'Clavaviridae',
+                        'Corticoviridae', 'Cystoviridae', 'Fuselloviridae', 'Globuloviridae',
+                        'Guttaviridae', 'Inoviridae', 'Leviviridae', 'Microviridae',
+                        'Plasmaviridae', 'Tectiviridae'}
 
 
 def generate_taxon_lineage_names(
@@ -48,6 +55,7 @@ def generate_taxon_lineage_names(
     Outputs a gzipped CSV with the following columns:
     - taxid
     - tax_name
+    - is_phage
     - superkingdom_taxid
     - phylum_taxid
     - class_taxid
@@ -83,9 +91,11 @@ def generate_taxon_lineage_names(
         writer.writeheader()
 
         for row in csv.DictReader(rf):
+            tax_name = names.get(row["tax_id"], ("", ""))[0]
             new_row = {
                 "taxid": row["tax_id"],
-                "tax_name": names.get(row["tax_id"], ("", ""))[0],
+                "tax_name": tax_name,
+                "is_phage": 1 if tax_name in PHAGE_FAMILIES_NAMES else 0,
             }
 
             for level in _taxon_levels:
@@ -121,11 +131,11 @@ def version_taxon_lineages(
     has historical versions of lineages and the version ranges for which those are valid.
     For example, let's say a lineage is just genus_taxid and species_taxid, the table may
     look something like:
-    taxid,version_start,version_end,genus_taxid,species_taxid
-      123,   2020-01-01, 2020-02-01,         10,          123
-      123,   2020-03-01, 2020-03-01,         20,          123
-      456,   2020-01-01, 2020-01-01,         10,          456
-      789,   2020-03-01, 2020-03-01,         20,          789
+    taxid,version_start,version_end,is_phage,genus_taxid,species_taxid
+      123,   2020-01-01, 2020-02-01,       0,         10,          123
+      123,   2020-03-01, 2020-03-01,       1,         20,          123
+      456,   2020-01-01, 2020-01-01,       0,         10,          456
+      789,   2020-03-01, 2020-03-01,       1,         20,          789
     In this table:
     - The 123 species had it's genus changed between the 2020-02-01 version and
       the 2020-03-01 version, so we see two lineages for it. The old one, valid from 2020-01-01
@@ -142,6 +152,7 @@ def version_taxon_lineages(
       created_at, updated_at):
         - taxid
         - tax_name
+        - is_phage
         - superkingdom_taxid
         - phylum_taxid
         - class_taxid

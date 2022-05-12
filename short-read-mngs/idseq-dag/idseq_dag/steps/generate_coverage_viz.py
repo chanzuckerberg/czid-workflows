@@ -313,9 +313,12 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
 
                 if hit["qseqid"] in valid_hits:
                     # Blast output is per HSP, yet the hit represents a set of HSPs,
-                    # so these fields have been aggregated across that set by
-                    # function summary_row() in class CandidateHit.
-                    hits[hit["qseqid"]] = {
+                    # so each HSP has it's own row in the output file.
+                    # To aggregate the fields, each qseqid is associated with a list of HSPs.
+                    if not hits.get(hit["qseqid"]):
+                        hits[hit["qseqid"]] = []
+
+                    hits[hit["qseqid"]].append({
                         "accession": hit["sseqid"],
                         "percent_id": hit["pident"],
                         "alignment_length": hit["length"],
@@ -325,9 +328,8 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
                         "query_end": hit["qend"],
                         "subject_start": hit["sstart"],
                         "subject_end": hit["send"],
-                        "prop_mismatch": hit["mismatch"] / max(1, hit["length"]),
-                    }
-
+                        "prop_mismatch": hit["mismatch"] / max(1, hit["length"])
+                    })
             return hits
 
     @staticmethod
@@ -340,10 +342,11 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
         # Include some additional data.
         for contig_id, contig_obj in contigs.items():
             name_parts = contig_id.split("_")
-            # Total length of the contig. We extract this from the contig name.
-            contig_obj["total_length"] = int(name_parts[3])
-            # The contig read count.
-            contig_obj["num_reads"] = valid_contigs_with_read_counts[contig_id]
+            for contig_hsp in contig_obj:
+                # Total length of the contig. We extract this from the contig name.
+                contig_hsp["total_length"] = int(name_parts[3])
+                # The contig read count.
+                contig_hsp["num_reads"] = valid_contigs_with_read_counts[contig_id]
 
         return contigs
 
@@ -367,7 +370,8 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
 
             for contig_name in contig_coverage:
                 if contig_name in contig_data:
-                    contig_data[contig_name]["coverage"] = contig_coverage[contig_name]["coverage"]
+                    for contig_hsp in contig_data[contig_name]:
+                        contig_hsp["coverage"] = contig_coverage[contig_name]["coverage"]
 
     @staticmethod
     def augment_contig_data_with_byteranges(contigs_fasta, contig_data):
@@ -384,7 +388,8 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
                 # If the line is a header file, process the contig we just traversed.
                 if line[0] == '>':  # header line
                     if seq_len > 0 and contig_name in contig_data:
-                        contig_data[contig_name]["byterange"] = [seq_offset, seq_len]
+                        for contig_hsp in contig_data[contig_name]:
+                            contig_hsp["byterange"] = [seq_offset, seq_len]
 
                     seq_offset = seq_offset + seq_len
                     seq_len = len(line)
@@ -394,7 +399,8 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
 
             # Process the last contig once we reach the end of the file.
             if seq_len > 0 and contig_name in contig_data:
-                contig_data[contig_name]["byterange"] = [seq_offset, seq_len]
+                for contig_hsp in contig_data[contig_name]:
+                    contig_hsp["byterange"] = [seq_offset, seq_len]
 
     @staticmethod
     def select_best_accessions_per_taxon(taxon_data, accession_data, contig_data, _read_data, num_accessions_per_taxon):
@@ -409,7 +415,7 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
             """
             accession_obj = accession_data[accession_id]
 
-            contig_lengths = [contig_data[contig_name]["alignment_length"] for contig_name in accession_obj["contigs"]]
+            contig_lengths = [contig_hsp["alignment_length"] for contig_name in accession_obj["contigs"] for contig_hsp in contig_data[contig_name]]
 
             max_contig_length = max(contig_lengths) if len(contig_lengths) > 0 else 0
             total_contig_length = sum(contig_lengths) if len(contig_lengths) > 0 else 0
@@ -477,60 +483,63 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
                 log.write(f"Could not find {hit_type} in map: {hit_name}")
                 return
 
-            hit_obj = hit_data[hit_name]
+            hit_objs = hit_data[hit_name]
+            for ind, hit_obj in enumerate(hit_objs):
+                # iterate over each of the hit hsps
+                # append the index to the name so the hit group lists will have a unique identity
+                # we later ensure we are selecting the correct hsp by indexing by name and index
 
-            # hitsummary is more strict than reassigned.
-            # Sometimes reassigned will have a value for accession, but hitsummary won't.
-            if hit_obj["accession"] != accession_id:
-                log.write(f"Mismatched accession for {hit_name}: {hit_obj['accession']} (reassigned) versus {accession_id} (hitsummary)")
-                return
+                # hitsummary is more strict than reassigned.
+                # Sometimes reassigned will have a value for accession, but hitsummary won't.
+                if hit_obj["accession"] != accession_id:
+                    log.write(f"Mismatched accession for {hit_name}: {hit_obj['accession']} (reassigned) versus {accession_id} (hitsummary)")
+                    return
 
-            (accession_start, accession_end) = _align_interval(_decrement_lower_bound((hit_obj["subject_start"], hit_obj["subject_end"])))
+                (accession_start, accession_end) = _align_interval(_decrement_lower_bound((hit_obj["subject_start"], hit_obj["subject_end"])))
 
-            # If the hit is larger than the bin size, treat it as an individual hit.
-            if accession_end - accession_start >= bin_size:
-                if hit_type == "read":
-                    individual_reads.append(hit_name)
+                # If the hit is larger than the bin size, treat it as an individual hit.
+                if accession_end - accession_start >= bin_size:
+                    if hit_type == "read":
+                        individual_reads.append((hit_name, ind))
+                    else:
+                        individual_contigs.append((hit_name, ind))
+
+                # Otherwise, put the hit into a bin based on its midpoint
                 else:
-                    individual_contigs.append(hit_name)
+                    hit_midpoint = (accession_end + accession_start) / 2
+                    hit_bin_index = _floor_with_min(hit_midpoint / bin_size, 0)
 
-            # Otherwise, put the hit into a bin based on its midpoint
-            else:
-                hit_midpoint = (accession_end + accession_start) / 2
-                hit_bin_index = _floor_with_min(hit_midpoint / bin_size, 0)
-
-                if hit_type == "read":
-                    read_bins[hit_bin_index].append(hit_name)
-                else:
-                    contig_bins[hit_bin_index].append(hit_name)
+                    if hit_type == "read":
+                        read_bins[hit_bin_index].append((hit_name, ind))
+                    else:
+                        contig_bins[hit_bin_index].append((hit_name, ind))
 
         for read_name in accession_data["reads"]:
             process_hit("read", read_name)
 
         for contig_name in accession_data["contigs"]:
+
             process_hit("contig", contig_name)
 
         # Generate the hit group JSON for individual hits.
         hit_groups = []
-        for read_name in individual_reads:
-            read_obj = read_data[read_name]
+        for read_name, ind in individual_reads:
+            read_obj = read_data[read_name][ind]
             hit_groups.append(PipelineStepGenerateCoverageViz.get_hit_group_json([], [read_obj], bin_size))
 
-        for contig_name in individual_contigs:
-            contig_obj = contig_data[contig_name]
+        for contig_name, ind in individual_contigs:
+            contig_obj = contig_data[contig_name][ind]
             hit_groups.append(PipelineStepGenerateCoverageViz.get_hit_group_json([contig_obj], [], bin_size))
 
         # Generate the hit group JSON for aggregated hits.
         for i in range(num_bins):
-            reads = read_bins[i]
-            contigs = contig_bins[i]
+            read_objs = [read_data[read][ind] for read, ind in read_bins[i]]
+            contig_objs = [contig_data[contig][ind] for contig, ind in contig_bins[i]]
 
             # Ignore empty bins.
-            if len(reads) + len(contigs) == 0:
+            if len(read_objs) + len(contig_objs) == 0:
                 continue
             else:
-                read_objs = list(map(lambda read_name: read_data[read_name], reads))
-                contig_objs = list(map(lambda contig_name: contig_data[contig_name], contigs))
                 hit_groups.append(PipelineStepGenerateCoverageViz.get_hit_group_json(contig_objs, read_objs, bin_size))
 
         return hit_groups
@@ -544,8 +553,16 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
         num_reads = len(read_objs)
 
         # Calculate some stats that only apply to contig_objs.
-        contig_r = sum([contig_obj["num_reads"] for contig_obj in contig_objs])
-        contig_byteranges = [contig_obj["byterange"] for contig_obj in contig_objs]
+        seen = set()
+        contig_r = 0
+        contig_byteranges = []
+        for contig_obj in contig_objs:
+            if tuple(contig_obj["byterange"]) not in seen:
+                # check if byterange has already been seen, we don't want to have 2 hsps listed in the same group
+                # or to double count the num_readds
+                contig_r += contig_obj["num_reads"]
+                contig_byteranges.append(contig_obj["byterange"])
+            seen.add(tuple(contig_obj["byterange"]))
 
         # Treat read_objs and contig_objs the same from here onwards. They share many of the same fields.
         hit_objs = contig_objs + read_objs
@@ -616,61 +633,62 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
                 log.write(f"Could not find contig in contig data: {contig_name}")
                 continue
 
-            contig_obj = contig_data[contig_name]
-            # Ignore contigs with accession mismatch
-            if contig_obj["accession"] != accession_id:
-                continue
+            contig_objs = contig_data[contig_name]
+            for contig_obj in contig_objs:
+                # Ignore contigs with accession mismatch
+                if contig_obj["accession"] != accession_id:
+                    continue
 
-            # The bins and coverage array are 0-indexed, but subject start/end and coverage start/end are 1-indexed.
-            # We convert everything to 0-index here and stay in 0-index for the rest of the function.
-            # NOTE: We decrement only the lower bound here so that we can treat the discrete integer indices as a continuous interval
-            # while converting from accession interval to contig interval to contig coverage interval. This makes the math easier.
-            # These conversions are necessary because the accession interval, contig interval, and contig coverage interval
-            # might all be different sizes.
-            # We convert back to integer indices when we calculate coverage_arr_start/_end.
-            (subject_start, subject_end) = _decrement_lower_bound((contig_obj["subject_start"], contig_obj["subject_end"]))
-            (query_start, query_end) = _decrement_lower_bound((contig_obj["query_start"], contig_obj["query_end"]))
+                # The bins and coverage array are 0-indexed, but subject start/end and coverage start/end are 1-indexed.
+                # We convert everything to 0-index here and stay in 0-index for the rest of the function.
+                # NOTE: We decrement only the lower bound here so that we can treat the discrete integer indices as a continuous interval
+                # while converting from accession interval to contig interval to contig coverage interval. This makes the math easier.
+                # These conversions are necessary because the accession interval, contig interval, and contig coverage interval
+                # might all be different sizes.
+                # We convert back to integer indices when we calculate coverage_arr_start/_end.
+                (subject_start, subject_end) = _decrement_lower_bound((contig_obj["subject_start"], contig_obj["subject_end"]))
+                (query_start, query_end) = _decrement_lower_bound((contig_obj["query_start"], contig_obj["query_end"]))
 
-            # Find all bins that this contig overlaps, and calculate average coverage for each bin separately.
-            (bin_start, bin_end) = _align_interval((subject_start / bin_size, subject_end / bin_size))
+                # Find all bins that this contig overlaps, and calculate average coverage for each bin separately.
+                (bin_start, bin_end) = _align_interval((subject_start / bin_size, subject_end / bin_size))
 
-            for i in range(_floor_with_min(bin_start, 0), _ceil_with_max(bin_end, num_bins)):
-                # Our goal is to figure out which part of the contig coverage array corresponds to this bin.
-                # Get the section of the accession that corresponds to the current bin and overlaps with the contig.
-                accession_interval = [bin_size * max(bin_start, i), bin_size * min(bin_end, i + 1)]
+                for i in range(_floor_with_min(bin_start, 0), _ceil_with_max(bin_end, num_bins)):
+                    # Our goal is to figure out which part of the contig coverage array corresponds to this bin.
+                    # Get the section of the accession that corresponds to the current bin and overlaps with the contig.
+                    accession_interval = [bin_size * max(bin_start, i), bin_size * min(bin_end, i + 1)]
 
-                # Convert the accession interval to a section of the contig by using the alignment data.
-                contig_interval = _transform_interval(accession_interval, subject_start, subject_end, query_start, query_end)
+                    # Convert the accession interval to a section of the contig by using the alignment data.
+                    contig_interval = _transform_interval(accession_interval, subject_start, subject_end, query_start, query_end)
 
-                # The contig coverage array should be the same length as the contig length.
-                # If not, convert to the appropriate range in the coverage array.
-                if contig_obj["total_length"] == len(contig_obj["coverage"]):
-                    coverage_interval = _align_interval((contig_interval[0], contig_interval[1]))
-                else:
-                    coverage_interval = _transform_interval(contig_interval, 0, contig_obj["total_length"], 0, len(contig_obj["coverage"]))
-                    coverage_interval = _align_interval((coverage_interval[0], coverage_interval[1]))
+                    # The contig coverage array should be the same length as the contig length.
+                    # If not, convert to the appropriate range in the coverage array.
+                    if contig_obj["total_length"] == len(contig_obj["coverage"]):
+                        coverage_interval = _align_interval((contig_interval[0], contig_interval[1]))
+                    else:
+                        coverage_interval = _transform_interval(contig_interval, 0, contig_obj["total_length"], 0, len(contig_obj["coverage"]))
+                        coverage_interval = _align_interval((coverage_interval[0], coverage_interval[1]))
 
-                # Convert back to integer indices.
-                # This is the range of values in the contig coverage array that corresponds to the section of the contig that overlaps with this bin.
-                (coverage_arr_start, coverage_arr_end) = (_floor_with_min(coverage_interval[0], 0), _ceil_with_max(coverage_interval[1], len(contig_obj["coverage"])))
+                    # Convert back to integer indices.
+                    # This is the range of values in the contig coverage array that corresponds to the section of the contig that overlaps with this bin.
+                    (coverage_arr_start, coverage_arr_end) = (_floor_with_min(coverage_interval[0], 0), _ceil_with_max(coverage_interval[1], len(contig_obj["coverage"])))
 
-                # Guard against a division-by-zero bug caused a rounding error.
-                # There are circumstances where a contig might have (bin_start, bin_end) = (200, 477.06) but with rounding errors this becomes (199.9999997, 477.06).
-                # This causes us to attempt to process bin 199 for the interval (199.99999997, 200). This interval is so small that
-                # the coverage interval for the contig ends up being (coverage_arr_start, coverage_arr_end) = (322.0, 322.0) and having length 0.
-                # In normal cases, this interval should have at least length 1 because of the floor and ceil.
-                # We should just disregard this edge case, because the contig doesn't really overlap this bin (it's a rounding error)
-                if coverage_arr_end - coverage_arr_start > 0:
-                    # Get the average coverage for the section of the contig that overlaps with this bin.
-                    avg_coverage_for_coverage_interval = sum(contig_obj["coverage"][coverage_arr_start: coverage_arr_end]) / (coverage_arr_end - coverage_arr_start)
+                    # Guard against a division-by-zero bug caused a rounding error.
+                    # There are circumstances where a contig might have (bin_start, bin_end) = (200, 477.06) but with rounding errors this becomes (199.9999997, 477.06).
+                    # This causes us to attempt to process bin 199 for the interval (199.99999997, 200). This interval is so small that
+                    # the coverage interval for the contig ends up being (coverage_arr_start, coverage_arr_end) = (322.0, 322.0) and having length 0.
+                    # In normal cases, this interval should have at least length 1 because of the floor and ceil.
+                    # We should just disregard this edge case, because the contig doesn't really overlap this bin (it's a rounding error)
+                    if coverage_arr_end - coverage_arr_start > 0:
+                        # Get the average coverage for the section of the contig that overlaps with this bin.
+                        avg_coverage_for_coverage_interval = sum(contig_obj["coverage"][coverage_arr_start: coverage_arr_end]) / (coverage_arr_end - coverage_arr_start)
 
-                    # Multiply by the proportion of the bin that the contig covers.
-                    avg_coverage_for_bin = avg_coverage_for_coverage_interval * (abs(accession_interval[1] - accession_interval[0]) / bin_size)
+                        # Multiply by the proportion of the bin that the contig covers.
+                        avg_coverage_for_bin = avg_coverage_for_coverage_interval * (abs(accession_interval[1] - accession_interval[0]) / bin_size)
 
-                    coverage[i]["depth"] += avg_coverage_for_bin
-                    coverage[i]["endpoints"].append([max(i * bin_size, accession_interval[0]), 1])
-                    coverage[i]["endpoints"].append([min((i + 1) * bin_size, accession_interval[1]), -1])
-                    coverage[i]["num_contigs"] += 1
+                        coverage[i]["depth"] += avg_coverage_for_bin
+                        coverage[i]["endpoints"].append([max(i * bin_size, accession_interval[0]), 1])
+                        coverage[i]["endpoints"].append([min((i + 1) * bin_size, accession_interval[1]), -1])
+                        coverage[i]["num_contigs"] += 1
 
         # The logic for processing reads is very similar to contigs above, but the avg coverage on the read is simply 1.
         for read_name in accession_data["reads"]:
@@ -678,27 +696,28 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
                 log.write(f"Could not find read in read data: {read_name}")
                 continue
 
-            read_obj = read_data[read_name]
-            # Ignore reads with accession mismatch
-            if read_obj["accession"] != accession_id:
-                continue
+            read_objs = read_data[read_name]
+            for read_obj in read_objs:
+                # Ignore reads with accession mismatch
+                if read_obj["accession"] != accession_id:
+                    continue
 
-            (subject_start, subject_end) = _decrement_lower_bound((read_obj["subject_start"], read_obj["subject_end"]))
+                (subject_start, subject_end) = _decrement_lower_bound((read_obj["subject_start"], read_obj["subject_end"]))
 
-            # Find all bins that this read overlaps, and calculate average coverage for each bin separately.
-            (bin_start, bin_end) = _align_interval((subject_start / bin_size, subject_end / bin_size))
+                # Find all bins that this read overlaps, and calculate average coverage for each bin separately.
+                (bin_start, bin_end) = _align_interval((subject_start / bin_size, subject_end / bin_size))
 
-            for i in range(_floor_with_min(bin_start, 0), _ceil_with_max(bin_end, num_bins)):
-                # Get the section of the accession that corresponds to the current bin and overlaps with the read.
-                accession_range = [bin_size * max(bin_start, i), bin_size * min(bin_end, i + 1)]
+                for i in range(_floor_with_min(bin_start, 0), _ceil_with_max(bin_end, num_bins)):
+                    # Get the section of the accession that corresponds to the current bin and overlaps with the read.
+                    accession_range = [bin_size * max(bin_start, i), bin_size * min(bin_end, i + 1)]
 
-                # The read coverage is 1. Multiply by the proportion of the bin that the read covers.
-                avg_coverage_for_bin = (abs(accession_range[1] - accession_range[0]) / bin_size)
+                    # The read coverage is 1. Multiply by the proportion of the bin that the read covers.
+                    avg_coverage_for_bin = (abs(accession_range[1] - accession_range[0]) / bin_size)
 
-                coverage[i]["depth"] += avg_coverage_for_bin
-                coverage[i]["endpoints"].append([max(i * bin_size, accession_range[0]), 1])
-                coverage[i]["endpoints"].append([min((i + 1) * bin_size, accession_range[1]), -1])
-                coverage[i]["num_reads"] += 1
+                    coverage[i]["depth"] += avg_coverage_for_bin
+                    coverage[i]["endpoints"].append([max(i * bin_size, accession_range[0]), 1])
+                    coverage[i]["endpoints"].append([min((i + 1) * bin_size, accession_range[1]), -1])
+                    coverage[i]["num_reads"] += 1
 
         final_coverage = []
 
@@ -768,50 +787,52 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
                 log.write(f"Could not find contig in contig data: {contig_name}")
                 continue
 
-            contig_obj = contig_data[contig_name]
+            contig_objs = contig_data[contig_name]
+            for contig_obj in contig_objs:
 
-            (accession_start, accession_end) = _align_interval(_decrement_lower_bound((contig_obj["subject_start"], contig_obj["subject_end"])))
-            (contig_start, contig_end) = _align_interval(_decrement_lower_bound((contig_obj["query_start"], contig_obj["query_end"])))
+                (accession_start, accession_end) = _align_interval(_decrement_lower_bound((contig_obj["subject_start"], contig_obj["subject_end"])))
+                (contig_start, contig_end) = _align_interval(_decrement_lower_bound((contig_obj["query_start"], contig_obj["query_end"])))
 
-            # For max_aligned_length
-            accession_alignment_length = accession_end - accession_start
-            if accession_alignment_length > max_aligned_length:
-                max_aligned_length = accession_alignment_length
+                # For max_aligned_length
+                accession_alignment_length = accession_end - accession_start
+                if accession_alignment_length > max_aligned_length:
+                    max_aligned_length = accession_alignment_length
 
-            # For coverage_depth
-            # Restrict to the part of the coverage that corresponds to the alignment.
-            coverage_sum += sum(contig_obj["coverage"][contig_start: contig_end])
+                # For coverage_depth
+                # Restrict to the part of the coverage that corresponds to the alignment.
+                coverage_sum += sum(contig_obj["coverage"][contig_start: contig_end])
 
-            # For avg_prop_mismatch
-            prop_total_mismatch += contig_obj["prop_mismatch"]
+                # For avg_prop_mismatch
+                prop_total_mismatch += contig_obj["prop_mismatch"]
 
-            # For coverage_breadth
-            endpoints.append([accession_start, 1])
-            endpoints.append([accession_end, -1])
+                # For coverage_breadth
+                endpoints.append([accession_start, 1])
+                endpoints.append([accession_end, -1])
 
         for read_name in accession_data["reads"]:
             if read_name not in read_data:
                 log.write(f"Could not find read in read data: {read_name}")
                 continue
 
-            read_obj = read_data[read_name]
+            read_objs = read_data[read_name]
+            for read_obj in read_objs:
 
-            (accession_start, accession_end) = _align_interval(_decrement_lower_bound((read_obj["subject_start"], read_obj["subject_end"])))
+                (accession_start, accession_end) = _align_interval(_decrement_lower_bound((read_obj["subject_start"], read_obj["subject_end"])))
 
-            # For max_aligned_length
-            read_length = accession_end - accession_start
-            if read_length > max_aligned_length:
-                max_aligned_length = read_length
+                # For max_aligned_length
+                read_length = accession_end - accession_start
+                if read_length > max_aligned_length:
+                    max_aligned_length = read_length
 
-            # For coverage_depth
-            coverage_sum += read_length
+                # For coverage_depth
+                coverage_sum += read_length
 
-            # For avg_prop_mismatch
-            prop_total_mismatch += read_obj["prop_mismatch"]
+                # For avg_prop_mismatch
+                prop_total_mismatch += read_obj["prop_mismatch"]
 
-            # For coverage_breadth
-            endpoints.append([accession_start, 1])
-            endpoints.append([accession_end, -1])
+                # For coverage_breadth
+                endpoints.append([accession_start, 1])
+                endpoints.append([accession_end, -1])
 
         return {
             "max_aligned_length": max_aligned_length,

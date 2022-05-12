@@ -579,7 +579,7 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
 
     @staticmethod
     # An iterator that, for contig, yields to optimal hit for the contig in the nt blast_output.
-    def optimal_hit_for_each_query_nt(blast_output, min_alignment_length, min_pident, max_evalue):
+    def optimal_hit_for_each_query_nt(blast_output, min_alignment_length, min_pident, max_evalue, summary=True):
         contigs_to_blast_candidates = {}
         accession_counts = defaultdict(lambda: 0)
 
@@ -613,7 +613,11 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
                 if not optimal_hit or accession_counts[optimal_hit.sseqid] < accession_counts[blast_candidate.sseqid]:
                     optimal_hit = blast_candidate
 
-            yield optimal_hit.summary()
+            if summary:
+                yield optimal_hit.summary()
+            else:
+                for hsp in optimal_hit.optimal_cover:
+                    yield hsp
 
     @staticmethod
     def get_top_m8_nt(blast_output, blast_top_blastn_6_path, min_alignment_length, min_pident, max_evalue):
@@ -637,7 +641,8 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
         # for documentation of Blast output.
 
         # Output the optimal hit for each query.
+
         with open(blast_top_blastn_6_path, "w") as blast_top_blastn_6_f:
             BlastnOutput6NTRerankedWriter(blast_top_blastn_6_f).writerows(
-                PipelineStepBlastContigs.optimal_hit_for_each_query_nt(blast_output, min_alignment_length, min_pident, max_evalue)
+                PipelineStepBlastContigs.optimal_hit_for_each_query_nt(blast_output, min_alignment_length, min_pident, max_evalue, False)
             )

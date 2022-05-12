@@ -1,0 +1,14 @@
+#!/bin/bash
+set -euxo pipefail
+
+NCBI_SERVER=$1
+DOWNLOAD_PATH=$2
+
+mkdir -p $(dirname $DOWNLOAD_PATH)
+wget -P $(dirname $DOWNLOAD_PATH) -cnv $NCBI_SERVER/$DOWNLOAD_PATH
+wget -P $(dirname $DOWNLOAD_PATH) -cnv $NCBI_SERVER/$DOWNLOAD_PATH.md5
+
+if [[ $(md5sum $DOWNLOAD_PATH | cut -f 1 -d' ') != $(cat $DOWNLOAD_PATH.md5 | sed -e 's/^\s*//' | cut -f 1 -d' ') ]]
+then
+    exit 1
+fi

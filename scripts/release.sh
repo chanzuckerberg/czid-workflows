@@ -28,11 +28,15 @@ else
     exit 1
 fi
 
+if [[ $( git branch --show-current) != "main" ]]; then 
+    TAG=$TAG"-beta"
+fi
+
 TAG_MSG=$(mktemp)
 echo "# Changes for ${TAG} ($(date +%Y-%m-%d))" > $TAG_MSG
 echo "$RELEASE_NOTES" >> $TAG_MSG
 git log --pretty=format:%s ${OLD_TAG}..HEAD >> $TAG_MSG || true
-git config --get user.name || git config user.name "IDseq release action triggered by ${GITHUB_ACTOR:-$(whoami)}"
+git config --get user.name || git config user.name "CZ ID release action triggered by ${GITHUB_ACTOR:-$(whoami)}"
 git tag --annotate --file $TAG_MSG "$TAG"
 git push origin "$TAG"
 
