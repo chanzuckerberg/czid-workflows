@@ -315,32 +315,21 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
                     # Blast output is per HSP, yet the hit represents a set of HSPs,
                     # so each HSP has it's own row in the output file.
                     # To aggregate the fields, each qseqid is associated with a list of HSPs.
-                    if hits.get(hit["qseqid"], None):
-                        hits[hit["qseqid"]].append({
-                            "accession": hit["sseqid"],
-                            "percent_id": hit["pident"],
-                            "alignment_length": hit["length"],
-                            "num_mismatches": hit["mismatch"],
-                            "num_gaps": hit["gapopen"],
-                            "query_start": hit["qstart"],
-                            "query_end": hit["qend"],
-                            "subject_start": hit["sstart"],
-                            "subject_end": hit["send"],
-                            "prop_mismatch": hit["mismatch"] / max(1, hit["length"])
-                        })
-                    else:
-                        hits[hit["qseqid"]] = [{
-                            "accession": hit["sseqid"],
-                            "percent_id": hit["pident"],
-                            "alignment_length": hit["length"],
-                            "num_mismatches": hit["mismatch"],
-                            "num_gaps": hit["gapopen"],
-                            "query_start": hit["qstart"],
-                            "query_end": hit["qend"],
-                            "subject_start": hit["sstart"],
-                            "subject_end": hit["send"],
-                            "prop_mismatch": hit["mismatch"] / max(1, hit["length"]),
-                        }]
+                    if not hits.get(hit["qseqid"]):
+                        hits[hit["qseqid"]] = []
+
+                    hits[hit["qseqid"]].append({
+                        "accession": hit["sseqid"],
+                        "percent_id": hit["pident"],
+                        "alignment_length": hit["length"],
+                        "num_mismatches": hit["mismatch"],
+                        "num_gaps": hit["gapopen"],
+                        "query_start": hit["qstart"],
+                        "query_end": hit["qend"],
+                        "subject_start": hit["sstart"],
+                        "subject_end": hit["send"],
+                        "prop_mismatch": hit["mismatch"] / max(1, hit["length"])
+                    })
             return hits
 
     @staticmethod
