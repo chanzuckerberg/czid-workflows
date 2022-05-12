@@ -4,6 +4,7 @@ import hashlib
 import yaml
 import csv
 from test_util import WDLTestCase
+from subprocess import CalledProcessError
 
 
 class TestRunValidate(WDLTestCase):
@@ -23,6 +24,18 @@ class TestRunValidate(WDLTestCase):
         with open(res["outputs"]["RunValidateInput.valid_input1_fastq"]) as f:
             hash = hashlib.md5(f.read().encode("utf-8")).hexdigest()
         self.assertEqual(hash, "a410dd184a01187d9c7c1823f5fc353e")
+
+    def testInvalidInput(self):
+        fastqs_0 = os.path.join(os.path.dirname(__file__), "host_filter", "test_RunValidateInput_invalid_char.fastq")
+        args = self.rv_args + [f"fastqs={fastqs_0}"]
+
+        with self.assertRaises(CalledProcessError) as ecm:
+            self.run_miniwdl(args, task="RunValidateInput")
+        miniwdl_error = json.loads(ecm.exception.output)
+        with open(miniwdl_error["cause"]["stderr_file"]) as stderr:
+            error_json = stderr.readlines()[-1]
+            cause = json.loads(error_json.strip())["cause"]
+            self.assertEqual(cause, "PARSE ERROR: not an ascii file. Line 4 contains non-ascii characters.")
 
 
 class TestSTAR(WDLTestCase):
