@@ -223,7 +223,8 @@ task GenerateIndexDiamond {
     }
 
     command <<<
-        diamond makedb --in ~{nr} -d diamond_index_chunksize_~{chunksize} --scatter-gather -b ~{chunksize}
+        # Ignore warning is needed because sometimes NR has sequences of only DNA characters which causes this to fail
+        diamond makedb --ignore-warnings --in ~{nr} -d diamond_index_chunksize_~{chunksize} --scatter-gather -b ~{chunksize}
     >>>
 
     output {
