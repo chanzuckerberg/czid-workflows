@@ -40,6 +40,18 @@ workflow index_generation {
         docker_image_id = docker_image_id
     }
 
+    call GenerateNTDB {
+        input:
+        nt = DownloadNT.nt,
+        docker_image_id = docker_image_id
+    }
+
+    call GenerateNRDB {
+        input:
+        nr = DownloadNR.nr,
+        docker_image_id = docker_image_id
+    }
+
     call GenerateIndexDiamond {
         input:
         nr = DownloadNR.nr,
@@ -68,10 +80,10 @@ workflow index_generation {
         File accession2taxid_wgs = GenerateIndexAccessions.accession2taxid_wgs
         File accession2taxid_db = GenerateIndexAccessions.accession2taxid_db
         File taxid2wgs_accession_db = GenerateIndexAccessions.taxid2wgs_accession_db
-        File nt_loc_db = GenerateIndexAccessions.nt_loc_db
-        File nt_info_db = GenerateIndexAccessions.nt_info_db
-        File nr_loc_db = GenerateIndexAccessions.nr_loc_db
-        File nr_info_db = GenerateIndexAccessions.nr_info_db
+        File nt_loc_db = GenerateNTDB.nt_loc_db
+        File nt_info_db = GenerateNTDB.nt_info_db
+        File nr_loc_db = GenerateNRDB.nr_loc_db
+        File nr_info_db = GenerateNRDB.nr_info_db
         Directory diamond_index = GenerateIndexDiamond.diamond_index
         File taxid_lineages_db = GenerateIndexLineages.taxid_lineages_db
         File taxid_lineages_csv = GenerateIndexLineages.taxid_lineages_csv
@@ -195,8 +207,6 @@ task GenerateIndexAccessions {
             --output_wgs_gz accession2taxid_wgs.gz \
             --accession2taxid_db accession2taxid.db \
             --taxid2wgs_accession_db taxid2wgs_accession.db
-        python3 /usr/local/bin/generate_loc_db.py ~{nt} nt_loc.db nt_info.db
-        python3 /usr/local/bin/generate_loc_db.py ~{nr} nr_loc.db nr_info.db
     >>>
 
     output {
@@ -204,8 +214,44 @@ task GenerateIndexAccessions {
         File accession2taxid_wgs = "accession2taxid_wgs.gz"
         File accession2taxid_db = "accession2taxid.db"
         File taxid2wgs_accession_db = "taxid2wgs_accession.db"
+    }
+
+    runtime {
+        docker: docker_image_id
+    }
+}
+
+task GenerateNTDB {
+    input {
+        File nt
+        String docker_image_id
+    }
+
+    command <<<
+        python3 /usr/local/bin/generate_loc_db.py ~{nt} nt_loc.db nt_info.db
+    >>>
+
+    output {
         File nt_loc_db = "nt_loc.db"
         File nt_info_db = "nt_info.db"
+    }
+
+    runtime {
+        docker: docker_image_id
+    }
+}
+
+task GenerateNRDB {
+    input {
+        File nr
+        String docker_image_id
+    }
+
+    command <<<
+        python3 /usr/local/bin/generate_loc_db.py ~{nr} nr_loc.db nr_info.db
+    >>>
+
+    output {
         File nr_loc_db = "nr_loc.db"
         File nr_info_db = "nr_info.db"
     }
