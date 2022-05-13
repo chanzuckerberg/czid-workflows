@@ -155,7 +155,9 @@ class TestConsensusGenomes(WDLTestCase):
         with self.assertRaises(CalledProcessError) as ecm:
             self.run_miniwdl(task="FetchSequenceByAccessionId", args=["accession_id=NO_ACCESSION_ID"])
         self.assertRunFailed(ecm, task="FetchSequenceByAccessionId",
-                             error="AccessionIdNotFound", cause="The Accession ID was not found in the CZ ID database, so a generalized consensus genome could not be run")
+                             error="AccessionIdNotFound",
+                             cause=("The Accession ID was not found in the CZ ID database, "
+                                    "so a generalized consensus genome could not be run"))
 
     def test_fetch_sequence_by_expired_accession_id(self):
         res = self.run_miniwdl(task="FetchSequenceByAccessionId", args=["accession_id=NC_000913.2"])
@@ -166,7 +168,9 @@ class TestConsensusGenomes(WDLTestCase):
         with self.assertRaises(CalledProcessError) as ecm:
             self.run_miniwdl(task="FetchSequenceByAccessionId", args=["accession_id=NO_ACCESSION_ID"])
         self.assertRunFailed(ecm, task="FetchSequenceByAccessionId",
-                             error="AccessionIdNotFound", cause="The Accession ID was not found in the CZ ID database, so a generalized consensus genome could not be run")
+                             error="AccessionIdNotFound",
+                             cause=("The Accession ID was not found in the CZ ID database, "
+                                    "so a generalized consensus genome could not be run"))
 
     def test_no_coverage_error(self):
         ref_host_blank = os.path.join(os.path.dirname(__file__), "blank.fastq.gz")
@@ -187,7 +191,8 @@ class TestConsensusGenomes(WDLTestCase):
                     "prefix": "",
                 })
         self.assertRunFailed(ecm, task="ComputeStats",
-                             error="InsufficientReadsError", cause="There was insufficient coverage so a consensus genome could not be created.")
+                             error="InsufficientReadsError",
+                             cause="There was insufficient coverage so a consensus genome could not be created.")
 
     def test_max_reads_illumina(self):
         fastq_0 = os.path.join(os.path.dirname(__file__), "SRR11741455_65054_nh_R1.fastq.gz")
