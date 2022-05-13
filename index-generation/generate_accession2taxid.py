@@ -47,9 +47,8 @@ import argparse
 import dbm
 import gzip
 import shelve
+import logging
 from multiprocessing.pool import ThreadPool
-
-NUM_PARTITIONS = 8
 
 
 def output_dicts_to_db(mapping_files, wgs_accessions,
@@ -118,12 +117,13 @@ def grab_accession_mapping_list(source_gz, num_partitions, partition_id,
                         out.write(line)
                 num_lines += 1
                 if num_lines % 1000000 == 0:
-                    print(f"{source_gz} partition {partition_id} line {num_lines/1000000}M")
+                    logging.info(f"{source_gz} partition {partition_id} line {num_lines/1000000}M")
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Generate accession2taxid.')
     parser.add_argument('accession_mapping_files', nargs=4)
+    parser.add_argument('--parallelism', type=int)
     parser.add_argument('--nt_file')
     parser.add_argument('--nr_file')
     parser.add_argument('--output_gz')
@@ -133,6 +133,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     accession_mapping_files = args.accession_mapping_files
+    num_partitions = args.parallelism
     nt_file = args.nt_file
     nr_file = args.nr_file
     output_gz = args.output_gz
@@ -159,12 +160,12 @@ if __name__ == '__main__':
     mapping_files = []
     for accession_mapping_file in accession_mapping_files:
         partition_list = []
-        for p in range(NUM_PARTITIONS):
+        for p in range(num_partitions):
             part_file = f"{accession_mapping_file}-{p}"
             partition_list.append(part_file)
             grab_accession_mapping_list_args.append([
                 accession_mapping_file,
-                NUM_PARTITIONS,
+                num_partitions,
                 p,
                 accessions,
                 part_file
@@ -173,6 +174,8 @@ if __name__ == '__main__':
 
     pool.starmap(grab_accession_mapping_list, grab_accession_mapping_list_args)
     accessions = set()  # reset accessions to release memory
+
+    logging.info("starting writing output dictionaries to db")
 
     output_dicts_to_db(mapping_files, wgs_accessions,
                        accession2taxid_db, taxid2wgs_accession_db,

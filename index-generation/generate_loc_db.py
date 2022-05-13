@@ -6,6 +6,7 @@ import dbm
 import re
 import shelve
 import sys
+import logging
 
 
 def generate_loc_db(db_file, loc_db_file, info_db_file):
@@ -24,7 +25,7 @@ def generate_loc_db(db_file, loc_db_file, info_db_file):
         for line in dbf:
             lines += 1
             if lines % 100000 == 0:
-                print(f"{lines/1000000.0}M lines")
+                logging.info(f"{lines/1000000.0}M lines")
             if line[0] == '>':  # header line
                 if seq_len > 0 and len(accession_id) > 0:
                     loc_dict[accession_id] = [seq_offset, header_len, seq_len]
