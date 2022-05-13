@@ -53,10 +53,18 @@ workflow index_generation {
         docker_image_id = docker_image_id
     }
 
-    call GenerateIndexMinimap2 {
+    call ChunkNT {
         input:
         nt = DownloadNT.nt,
         docker_image_id = docker_image_id
+    }
+
+    scatter (nt_chunk in ChunkNT.nt_chunks) {
+        call GenerateIndexMinimap2Chunk {
+            input:
+            nt_chunk = nt_chunk,
+            docker_image_id = docker_image_id
+        }
     }
 
     output {
@@ -80,7 +88,7 @@ workflow index_generation {
         File versioned_taxid_lineages_csv = GenerateIndexLineages.versioned_taxid_lineages_csv
         File deuterostome_taxids = GenerateIndexLineages.deuterostome_taxids
         File taxon_ignore_list = GenerateIndexLineages.taxon_ignore_list
-        Directory minimap2_index = GenerateIndexMinimap2.minimap2_index
+        Array[File] minimap2_index = GenerateIndexMinimap2Chunk.minimap2_index
     }
 }
 
@@ -294,37 +302,45 @@ task GenerateIndexLineages {
     }
 }
 
-task GenerateIndexMinimap2 {
+task ChunkNT {
     input {
         File nt
-        Int k = 14 # Minimizer k-mer length default is 21 for short reads option
-        Int w = 8 # Minimizer window size default is 11 for short reads option
-        String I = "9999G" # Load at most NUM target bases into RAM for indexing
-        Int t = 20 # number of threads, doesn't really work for indexing I don't think
         Int n_chunks = 20
         String docker_image_id
     }
 
     command <<<
-        set -euxo pipefail
-
-        # Split nt into 20
         seqkit split2 ~{nt} -p ~{n_chunks} --out-dir nt.split
-
-        # Make output directory
-        OUTDIR="nt_k~{k}_w~{w}_~{n_chunks}"
-        mkdir $OUTDIR
-
-        # Run minimap2 on each chunk
-        for i in nt.split/*
-        do
-                path="${i##*_}"
-                minimap2 -cx sr -k ~{k} -w ~{w} -I ~{I} -t ~{t} -d $OUTDIR/"nt.part_"$path".idx" $i
-        done
     >>>
 
     output {
-        Directory minimap2_index = "nt_k~{k}_w~{w}_~{n_chunks}"
+        Array[File] nt_chunks = "nt.split/*"
+    }
+
+    runtime {
+        docker: docker_image_id
+    }
+}
+
+task GenerateIndexMinimap2Chunk {
+    input {
+        File nt_chunk
+        Int k = 14 # Minimizer k-mer length default is 21 for short reads option
+        Int w = 8 # Minimizer window size default is 11 for short reads option
+        String I = "9999G" # Load at most NUM target bases into RAM for indexing
+        Int t = 20 # number of threads, doesn't really work for indexing I don't think
+        String docker_image_id
+    }
+
+    command <<<
+        set -euxo pipefail
+        chunk_path="~{nt_chunk}"
+        chunk_number="${chunk_path##*_}"
+        minimap2 -cx sr -k ~{k} -w ~{w} -I ~{I} -t ~{t} -d "nt.part_"$chunk_number".idx" ~{nt_chunk}
+    >>>
+
+    output {
+        File minimap2_index = "nt.part_*.idx"
     }
 
     runtime {
