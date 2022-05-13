@@ -314,7 +314,7 @@ task ChunkNT {
     >>>
 
     output {
-        Array[File] nt_chunks = "nt.split/*"
+        Array[File] nt_chunks = glob("nt.split/*")
     }
 
     runtime {
@@ -340,7 +340,7 @@ task GenerateIndexMinimap2Chunk {
     >>>
 
     output {
-        File minimap2_index = "nt.part_*.idx"
+        File minimap2_index = glob("nt.part_*.idx")[0]
     }
 
     runtime {
