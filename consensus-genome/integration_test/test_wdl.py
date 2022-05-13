@@ -138,7 +138,8 @@ class TestConsensusGenomes(WDLTestCase):
         with self.assertRaises(CalledProcessError) as ecm:
             self.run_miniwdl(args)
         self.assertRunFailed(ecm, task="MakeConsensus", error="InsufficientReadsError",
-                             cause="No reads after MakeConsensus")
+                             cause=("A consensus genome was not created because there were "
+                                    "too few reads to compute the consensus sequence"))
 
     def test_length_filter_midnight_primers(self):
         """
@@ -171,5 +172,5 @@ class TestConsensusGenomes(WDLTestCase):
             ecm,
             task="RemoveHost",
             error="InsufficientReadsError",
-            cause="No reads after RemoveHost"
+            cause="There were no reads left after the RemoveHost step of the pipeline."
         )
