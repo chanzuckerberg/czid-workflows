@@ -30,9 +30,6 @@ fi
 
 if [[ $( git branch --show-current) != "main" ]]; then 
     TAG=$TAG"-beta"
-else 
-    # adds release notes to changelog automatically, depends on GNU sed
-    sed -i '18a ### '$TAG'\n- '$RELEASE_NOTES'\n' CHANGELOG.md
 fi
 
 TAG_MSG=$(mktemp)
