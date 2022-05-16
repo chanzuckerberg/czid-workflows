@@ -318,12 +318,18 @@ task ValidateInput{
 
         for fastq in ~{sep=' ' fastqs}; do 
             # limit max # of reads to max_reads
-            seqkit head -n "~{max_reads}" $fastq -o $(basename $fastq) 2> read_error.txt
+            if [[ $fastq != *.gz ]]; then
+                filename=$(basename $fastq)".gz"
+            else
+                filename=$(basename $fastq)
+            fi
+
+            seqkit head -n "~{max_reads}" $fastq -o $filename 2> read_error.txt
             if [[ -s read_error.txt ]]; then 
                 # Checks if seqkit can parse input files
-                raise_error InvalidFileFormatError "Error parsing the input file $(basename $fastq): ""$(cat read_error.txt)"
+                raise_error InvalidFileFormatError "Error parsing the input file $filename: ""$(cat read_error.txt)"
             fi 
-            echo $(basename $fastq) >> file_list.txt
+            echo $filename >> file_list.txt
         done
         set -e
         seqkit stats --infile-list file_list.txt -T > input_stats.tsv
