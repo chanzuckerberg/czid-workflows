@@ -316,29 +316,35 @@ task ValidateInput{
             raise_error InvalidInputFileError "An Oxford Nanopore pipeline run can only have one input file. Please upload a single file"
         fi 
 
-        counter=1
         for fastq in ~{sep=' ' fastqs}; do 
             # limit max # of reads to max_reads
-            seqkit head -n "~{max_reads}" $fastq -o "~{prefix}validated_$counter.fastq.gz" 2> read_error.txt
+            seqkit head -n "~{max_reads}" $fastq -o $(basename $fastq) 2> read_error.txt
             if [[ -s read_error.txt ]]; then 
                 # Checks if seqkit can parse input files
-                raise_error InvalidFileFormatError "Error parsing one of the input files: ""$(cat read_error.txt)"
+                raise_error InvalidFileFormatError "Error parsing the input file $(basename $fastq): ""$(cat read_error.txt)"
             fi 
-           ((counter++))
+            echo $(basename $fastq) >> file_list.txt
         done
         set -e
-        seqkit stats "~{prefix}"validated*fastq.gz -T > input_stats.tsv
+        seqkit stats --infile-list file_list.txt -T > input_stats.tsv
         if grep  -q "FASTA" <<< $(cut -f 2 input_stats.tsv ); then 
             # Input files cannot be in FASTA format
-            raise_error InvalidInputFileError "One or more of the input files is in FASTA format"
+            filename=$(grep "FASTA" input_stats.tsv | head -n 1 | cut -f1)
+            raise_error InvalidInputFileError "The file(s) $filename is in .fasta format. CZ ID does not accept .fasta files to the consensus genome pipeline."
         fi 
         if [[ "~{technology}" == "Illumina" ]]; then 
             # check if any of the input files has max length > 500bp
+            MAX_FILENAME=$(tail -n "~{length(fastqs)}" input_stats.tsv | sort -n -k8 | tail -n 1 | cut -f1)
             MAXLEN=$(cut -f 8 input_stats.tsv | tail -n "~{length(fastqs)}" | sort -n | tail -n 1)
             if [[ $MAXLEN -gt 500 ]]; then 
-                raise_error InvalidInputFileError "Read longer than 500bp for Illumina"
+                raise_error InvalidInputFileError "The file(s) $MAX_FILENAME contain reads longer than the 500 bp limit for the Illumina-supported pipeline"
             fi 
         fi
+        counter=1
+        while read fastq; do 
+            mv $fastq "~{prefix}validated_$counter.fastq.gz"
+            ((counter++))
+        done < file_list.txt
     >>>
 
     output {
