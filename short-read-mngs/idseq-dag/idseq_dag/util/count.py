@@ -1,7 +1,7 @@
 import gzip
 from enum import Enum
 from subprocess import run, PIPE
-
+import os
 import idseq_dag.util.fasta as fasta
 from idseq_dag import __version__
 from idseq_dag.exceptions import InvalidFileFormatError
@@ -38,9 +38,9 @@ def count_reads(filename):
                 cmd = "gunzip | " + cmd
             num_lines = int(run(cmd, stdin=fh, stdout=PIPE, check=True, shell=True).stdout)
             if num_lines % 4 != 0:
-                raise InvalidFileFormatError("File does not follow fastq format")
+                raise InvalidFileFormatError(f"The .fastq file {os.path.basename(filename)} has an invalid number of lines.")
             return num_lines // 4
-        raise InvalidFileFormatError("Unable to recognize file format")
+        raise InvalidFileFormatError(f"The file format of {os.path.basename(filename)} was not recognized.  Please ensure your file is a valid .fasta/.fastq file.")
 
 
 reads = count_reads
