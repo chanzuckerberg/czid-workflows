@@ -34,7 +34,7 @@ class PipelineStepRunPriceSeq(PipelineStep):
     """
     def validate_input_files(self):
         if not count.files_have_min_reads(self.input_files_local[0][0:2], 1):
-            raise InsufficientReadsError("Insufficient reads")
+            raise InsufficientReadsError("There was an insufficient number of reads in the sample after the host and quality filtering steps.")
 
     def run(self):
         """PriceSeqFilter is used to filter input data based on quality. Two FASTQ
