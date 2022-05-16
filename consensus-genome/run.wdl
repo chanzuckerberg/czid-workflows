@@ -313,7 +313,7 @@ task ValidateInput{
         }
         if [[ "~{technology}" == "ONT" ]] && [[ "~{length(fastqs)}" -gt 1 ]]; then
             # ONT pipeline should only have one input
-            raise_error InvalidInputFileError "Multiple fastqs provided for ONT"
+            raise_error InvalidInputFileError "An Oxford Nanopore pipeline run can only have one input file. Please upload a single file"
         fi 
 
         counter=1
@@ -366,7 +366,7 @@ task FetchSequenceByAccessionId {
         { taxoniq get-from-s3 --accession-id $(incrementAccession "~{accession_id}"); } \
         || exit 4; ) > sequence.fa;
         if [[ $? == 4 ]]; then
-            export error=AccessionIdNotFound cause="Accession ID ~{accession_id} not found in the index"
+            export error=AccessionIdNotFound cause="The Accession ID was not found in the CZ ID database, so a generalized consensus genome could not be run"
             jq -nc ".wdl_error_message=true | .error=env.error | .cause=env.cause" > /dev/stderr
             exit 4
         fi
@@ -435,7 +435,7 @@ task RemoveHost {
 
         if [[ -z $(gzip -cd "~{prefix}no_host_1.fq.gz" | head -c1) ]]; then
             set +x
-            export error=InsufficientReadsError cause="No reads after RemoveHost"
+            export error=InsufficientReadsError cause="There were no reads left after the RemoveHost step of the pipeline."
             jq -nc ".wdl_error_message=true | .error=env.error | .cause=env.cause" > /dev/stderr
             exit 1
         fi
@@ -491,7 +491,7 @@ task FilterReads {
     command <<<
         _no_reads_error() {
             set +x
-            export error=InsufficientReadsError cause="No reads after FilterReads"
+            export error=InsufficientReadsError cause="There were no reads left after the FilterReads step of the pipeline."
             jq -nc ".wdl_error_message=true | .error=env.error | .cause=env.cause" > /dev/stderr
             exit 1
         }
@@ -578,7 +578,7 @@ task TrimReads {
 
         if [[ -z $(gzip -cd "${BASENAME}_val_1.fq.gz" | head -c1) ]]; then
             set +x
-            export error=InsufficientReadsError cause="No reads after TrimReads"
+            export error=InsufficientReadsError cause="There were no reads left after the TrimReads step of the pipeline. This step removes adapter sequences and filters out short, low-quality reads."
             jq -nc ".wdl_error_message=true | .error=env.error | .cause=env.cause" > /dev/stderr
             exit 1
         fi
@@ -688,7 +688,7 @@ task MakeConsensus {
         # One-line file means just the fasta header with no reads
         if [[ $(wc -l "~{prefix}consensus.fa" | cut -d' ' -f1) == 1 ]]; then
             set +x
-            export error=InsufficientReadsError cause="No reads after MakeConsensus"
+            export error=InsufficientReadsError cause="A consensus genome was not created because there were too few reads to compute the consensus sequence"
             jq -nc ".wdl_error_message=true | .error=env.error | .cause=env.cause" > /dev/stderr
             exit 1
         fi
@@ -911,7 +911,7 @@ task ComputeStats {
         if depths:
             depths = np.array([int(d) for d in depths])
         else:
-            error("InsufficientReadsError", "Insufficient coverage to proceed with CG analysis")
+            error("InsufficientReadsError", "There was insufficient coverage so a consensus genome could not be created.")
 
         stats["depth_avg"] = depths.mean()
         stats["depth_q.25"] = np.quantile(depths, .25)

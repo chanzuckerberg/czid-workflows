@@ -10,6 +10,7 @@ import idseq_dag.util.count as count
 import idseq_dag.util.validate_constants as vc
 import idseq_dag.util.s3 as s3
 
+
 class PipelineStepRunValidateInput(PipelineStep):
     """ Validates that the input files are .fastq format and truncates to 75 million fragments
     (specifically, 75 million reads for single-end libraries or 150 million reads for paired-end libraries).
@@ -70,7 +71,7 @@ class PipelineStepRunValidateInput(PipelineStep):
                             merge_stderr=True
                         )
                     except Exception as e:
-                        error_str = self.get_bash_error_output(e.output.decode("utf-8").strip())
+                        error_str = self.get_bash_error_output(e.output.decode("utf-8").strip(), filename=input_file)
                         raise InvalidFileFormatError(error_str)
                 else:
                     # Validate and truncate the input file to keep behavior consistent with gz input files
@@ -117,7 +118,7 @@ class PipelineStepRunValidateInput(PipelineStep):
                 all_fragments.append(num_fragments)
 
             if len(all_fragments) == 2 and abs(all_fragments[1] - all_fragments[0]) > 1000:
-                raise InvalidFileFormatError("Paired input files need to contain the same number of reads")
+                raise InvalidFileFormatError(f"Paired input files {', '.join(input_files)} were detected to be of different lengths. Paired input files must contain the same number of reads")
 
             with open(summary_file, 'w') as summary_f:
                 json.dump(self.summary_dict, summary_f)
@@ -139,11 +140,11 @@ class PipelineStepRunValidateInput(PipelineStep):
     #   all identical or if there is another possibly recoverable error
     #
     #   Throws an exception in the case of an unrecoverable abnormality
-    def quick_check_file(self, file, is_fastq, max_fragments_to_check=100):
+    def quick_check_file(self, infile, is_fastq, max_fragments_to_check=100):
         num_fragments = 0
         fragment_length = 0
 
-        with open(file, 'r', encoding='utf-8') as input_f:
+        with open(infile, 'r', encoding='utf-8') as input_f:
             while True:
                 num_fragments += 1
                 if num_fragments > max_fragments_to_check:
@@ -157,16 +158,16 @@ class PipelineStepRunValidateInput(PipelineStep):
 
                 read_l = input_f.readline()
                 if len(read_l) == 0:  # unexpected EOF
-                    raise InvalidFileFormatError("Invalid input file")
+                    raise InvalidFileFormatError(f"The input file {infile} is invalid.")
 
                 if is_fastq:
                     identifier2_l = input_f.readline()
                     if len(identifier2_l) == 0:
-                        raise InvalidFileFormatError("Invalid FASTQ file")
+                        raise InvalidFileFormatError(f"The input file {infile} is invalid.")
 
                     quality_l = input_f.readline()
                     if len(quality_l) == 0:
-                        raise InvalidFileFormatError("Invalid FASTQ file")
+                        raise InvalidFileFormatError(f"The input file {infile} is invalid.")
 
                 if is_fastq:
                     if identifier_l[0] != '@' or identifier2_l[0] != '+':
@@ -237,7 +238,7 @@ class PipelineStepRunValidateInput(PipelineStep):
 
                 read_l = input_f.readline()
                 if len(read_l) == 0:
-                    raise InvalidFileFormatError("Invalid input file")
+                    raise InvalidFileFormatError(f"The input file {infile} is invalid.")
 
                 read_l = read_l.rstrip()
                 next_line = input_f.readline()
@@ -248,11 +249,11 @@ class PipelineStepRunValidateInput(PipelineStep):
                 if is_fastq:
                     identifier2_l = next_line
                     if len(identifier2_l) == 0:
-                        raise InvalidFileFormatError("Invalid FASTQ file")
+                        raise InvalidFileFormatError(f"The file format of {infile} was not recognized.")
 
                     quality_l = input_f.readline()
                     if len(quality_l) == 0:
-                        raise InvalidFileFormatError("Invalid FASTQ file")
+                        raise InvalidFileFormatError(f"The file format of {infile} was not recognized.")
 
                     quality_l = quality_l.rstrip()
                     next_line = input_f.readline()
@@ -262,12 +263,12 @@ class PipelineStepRunValidateInput(PipelineStep):
 
                 if is_fastq:
                     if identifier_l[0] != '@':
-                        raise InvalidFileFormatError("Invalid FASTQ file")
+                        raise InvalidFileFormatError(f"The input .fastq file {infile} did not begin with an '@'")
                     if identifier2_l[0] != '+':
-                        raise InvalidFileFormatError("Invalid FASTQ file")
+                        raise InvalidFileFormatError(f"The file format of {infile} was not recognized.")
                 else:
                     if identifier_l[0] != '>':
-                        raise InvalidFileFormatError("Invalid FASTA file")
+                        raise InvalidFileFormatError(f"The input .fasta file {infile} read ID did not begin with a '>'")
 
                 # At this point, identifier_l and identifier2_l end in a newline and
                 # read_l and quality_l do not end in a newline
@@ -305,12 +306,12 @@ class PipelineStepRunValidateInput(PipelineStep):
         self.counts_dict[self.name] = self.total_output_reads
 
     @staticmethod
-    def get_bash_error_output(output: str) -> str:
+    def get_bash_error_output(output: str, filename: str = "") -> str:
         if re.match("gzip.+not in gzip format", output):
-            return "Error unzipping input file"
+            return f"There was an error unzipping the input file {filename}.  Please verify that this file is a proper .gz file"
         elif re.match("PARSE ERROR: invalid line length.+max line length of 10000.", output):
-            return "Max line length of 10000 exceeded"
+            return f"The maximum line length was exceeded for the input file {filename}. Please verify that .fastq headers or sequences are less than 10,000 characters long."
         elif re.match("PARSE ERROR: not an ascii file.+", output):
             return output
         else:
-            return "Invalid fastq/fasta/gzip file"
+            return f"The input file {filename} is invalid."
