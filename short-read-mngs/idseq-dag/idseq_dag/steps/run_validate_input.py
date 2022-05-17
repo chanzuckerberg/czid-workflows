@@ -71,7 +71,7 @@ class PipelineStepRunValidateInput(PipelineStep):
                             merge_stderr=True
                         )
                     except Exception as e:
-                        error_str = self.get_bash_error_output(e.output.decode("utf-8").strip(), filename=input_file)
+                        error_str = self.get_bash_error_output(e.output.decode("utf-8").strip(), filename=os.path.basename(input_file))
                         raise InvalidFileFormatError(error_str)
                 else:
                     # Validate and truncate the input file to keep behavior consistent with gz input files
@@ -93,7 +93,7 @@ class PipelineStepRunValidateInput(PipelineStep):
                         )
                         input_files[i] = tmp_file
                     except Exception as e:
-                        error_str = self.get_bash_error_output(e.output.decode("utf-8").strip())
+                        error_str = self.get_bash_error_output(e.output.decode("utf-8").strip(), filename=os.path.basename(input_file))
                         raise InvalidFileFormatError(error_str)
 
             # keep a dictionary of the distribution of read lengths in the files
@@ -310,7 +310,7 @@ class PipelineStepRunValidateInput(PipelineStep):
         if re.match("gzip.+not in gzip format", output):
             return f"There was an error unzipping the input file {filename}.  Please verify that this file is a proper .gz file"
         elif re.match("PARSE ERROR: invalid line length.+max line length of 10000.", output):
-            return f"The maximum line length was exceeded for the input file {filename}. Please verify that .fastq headers or sequences are less than 10,000 characters long."
+            return f"The maximum line length was exceeded for the input file {filename}."
         elif re.match("PARSE ERROR: not an ascii file.+", output):
             return output
         else:

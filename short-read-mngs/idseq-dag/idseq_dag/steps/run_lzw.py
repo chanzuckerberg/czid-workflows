@@ -44,7 +44,7 @@ class PipelineStepRunLZW(PipelineCountingStep):
 
     def validate_input_files(self):
         if not count.files_have_min_reads(self.input_fas(), 1):
-            raise InsufficientReadsError("Insufficient reads")
+            raise InsufficientReadsError("There was an insufficient number of reads in the sample after the host and quality filtering steps.")
 
     def run(self):
         input_fas = self.input_fas()

@@ -41,11 +41,11 @@ class PipelineStepRunGsnapFilter(PipelineCountingStep):
 
     def validate_input_files(self):
         if not count.files_have_min_reads(self.input_fas(), 1):
-            raise InsufficientReadsError("Insufficient reads")
+            raise InsufficientReadsError("There was an insufficient number of reads in the sample after the host and quality filtering steps.")
 
     def validate_output_files(self):
         if not count.files_have_min_reads(self.output_files_local(), 1):
-            raise InsufficientReadsError("No reads left after gsnap-filter")
+            raise InsufficientReadsError("There was an insufficient number of reads in the sample after the host and quality filtering steps.")
 
     def run(self):
         input_fas = self.input_fas()

@@ -42,7 +42,7 @@ def input_file_type(input_file):
     with open(input_file, 'r') as f:
         first_line = f.readline()
     if not first_line:
-        raise InsufficientReadsError("Insufficient reads")
+        raise InsufficientReadsError("There was an insufficient number of reads in the sample after the host and quality filtering steps.")
     if first_line[0] == '@':
         return 'fastq'
     elif first_line[0] == '>':
