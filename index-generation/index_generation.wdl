@@ -291,7 +291,7 @@ task ChunkNR {
     >>>
 
     output {
-        Array[File] nt_chunks = glob("nr.split/*")
+        Array[File] nr_chunks = glob("nr.split/*")
     }
 
     runtime {

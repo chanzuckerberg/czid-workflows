@@ -1,4 +1,4 @@
-FROM ubuntu:18.04
+FROM ubuntu:22.04
 ARG DEBIAN_FRONTEND=noninteractive
 ARG ARIA2_VERSION=1.36.0
 
@@ -9,7 +9,7 @@ RUN apt-get update && \
         ## diamond
         g++ \
         gdb \
-        libclang-common-6.0-dev \
+        libclang-common-12-dev \
         cmake\
         g++\
         zlib1g-dev \
@@ -23,8 +23,9 @@ RUN apt-get update && \
         wget \
         liblz4-tool \
         libssl-dev \
+        pkg-config \
         pigz \
-        python-pandas \
+        python3-pandas \
         python3-gdbm \
         python3-pip \
         software-properties-common
