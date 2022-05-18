@@ -82,7 +82,7 @@ workflow index_generation {
     scatter (nr_chunk in ChunkNR.nr_chunks) {
         call GenerateIndexDiamondChunk {
             input:
-            nr = DownloadNR.nr,
+            nr = nr_chunk,
             docker_image_id = docker_image_id
         }
     }
