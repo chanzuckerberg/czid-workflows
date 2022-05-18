@@ -93,9 +93,7 @@ workflow index_generation {
         Directory accession2taxid = DownloadAccession2Taxid.accession2taxid
         File taxdump = DownloadTaxdump.taxdump
         File accession2taxid_gz = GenerateIndexAccessions.accession2taxid_gz
-        File accession2taxid_wgs = GenerateIndexAccessions.accession2taxid_wgs
         File accession2taxid_db = GenerateIndexAccessions.accession2taxid_db
-        File taxid2wgs_accession_db = GenerateIndexAccessions.taxid2wgs_accession_db
         File nt_loc_db = GenerateNTDB.nt_loc_db
         File nt_info_db = GenerateNTDB.nt_info_db
         File nr_loc_db = GenerateNRDB.nr_loc_db
@@ -160,13 +158,9 @@ task DownloadAccession2Taxid {
     }
 
     command <<<
-        ncbi_download "~{ncbi_server}" pub/taxonomy/accession2taxid/dead_nucl.accession2taxid.gz
-        ncbi_download "~{ncbi_server}" pub/taxonomy/accession2taxid/dead_prot.accession2taxid.gz
-        ncbi_download "~{ncbi_server}" pub/taxonomy/accession2taxid/dead_wgs.accession2taxid.gz
         ncbi_download "~{ncbi_server}" pub/taxonomy/accession2taxid/nucl_gb.accession2taxid.gz
         ncbi_download "~{ncbi_server}" pub/taxonomy/accession2taxid/nucl_wgs.accession2taxid.gz
         ncbi_download "~{ncbi_server}" pub/taxonomy/accession2taxid/pdb.accession2taxid.gz
-        ncbi_download "~{ncbi_server}" pub/taxonomy/accession2taxid/prot.accession2taxid.gz
         ncbi_download "~{ncbi_server}" pub/taxonomy/accession2taxid/prot.accession2taxid.FULL.gz
     >>>
 
@@ -210,14 +204,12 @@ task GenerateIndexAccessions {
     command <<<
         set -euxo pipefail
 
-        cp -r ~{accession2taxid} accession2taxid
-
         # Build index
         python3 /usr/local/bin/generate_accession2taxid.py \
-            accession2taxid/nucl_wgs.accession2taxid.gz \
-            accession2taxid/nucl_gb.accession2taxid.gz \
-            accession2taxid/pdb.accession2taxid.gz \
-            accession2taxid/prot.accession2taxid.FULL.gz \
+            ~{accession2taxid}/nucl_wgs.accession2taxid.gz \
+            ~{accession2taxid}/nucl_gb.accession2taxid.gz \
+            ~{accession2taxid}/pdb.accession2taxid.gz \
+            ~{accession2taxid}/prot.accession2taxid.FULL.gz \
             --parallelism ~{parallelism} \
             --nt_file ~{nt} \
             --nr_file ~{nr} \
@@ -229,9 +221,7 @@ task GenerateIndexAccessions {
 
     output {
         File accession2taxid_gz = "accession2taxid.gz"
-        File accession2taxid_wgs = "accession2taxid_wgs.gz"
         File accession2taxid_db = "accession2taxid.db"
-        File taxid2wgs_accession_db = "taxid2wgs_accession.db"
     }
 
     runtime {
@@ -310,7 +300,8 @@ task GenerateIndexDiamondChunk {
         chunk_path="~{nr_chunk}"
         chunk_number="${chunk_path##*_}"
         # Ignore warning is needed because sometimes NR has sequences of only DNA characters which causes this to fail
-        diamond makedb --ignore-warnings --in ~{nr_chunk} --db "diamond_index_part_${chunk_number}" -b $(cat ~{nr_chunk} | grep '^>' | wc -l)
+        diamond makedb --ignore-warnings --in ~{nr_chunk} -d "diamond_index_part_${chunk_number}" --scatter-gather -b $(cat ~{nr_chunk} | grep '^>' | wc -l)
+        mv "diamond_index_part_${chunk_number}_*" "diamond_index_part_${chunk_number}"
     >>>
 
     output {
