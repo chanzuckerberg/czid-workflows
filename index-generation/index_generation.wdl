@@ -310,7 +310,7 @@ task GenerateIndexDiamondChunk {
         chunk_path="~{nr_chunk}"
         chunk_number="${chunk_path##*_}"
         # Ignore warning is needed because sometimes NR has sequences of only DNA characters which causes this to fail
-        diamond makedb --ignore-warnings --in ~{nr_chunk} --db "diamond_index_part_${chunk_number}"
+        diamond makedb --ignore-warnings --in ~{nr_chunk} --db "diamond_index_part_${chunk_number}" -b $(cat ~{nr_chunk} | grep '^>' | wc -l)
     >>>
 
     output {
