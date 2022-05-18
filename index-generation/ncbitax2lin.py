@@ -135,6 +135,7 @@ def to_name_dict(lineage):
         dd[numbered_rank] = name_txt
     return dd
 
+
 def to_taxid_dict(lineage):
     """
     convert the lineage from a list of tuples in the form of
@@ -166,6 +167,7 @@ def to_taxid_dict(lineage):
         dd[numbered_rank] = int(tax_id)
     return dd
 
+
 def find_lineage(tax_id):
     if tax_id % 50000 == 0:
         logging.debug('working on tax_id: {0}'.format(tax_id))
@@ -183,10 +185,12 @@ def find_lineage(tax_id):
     lineage.reverse()
     return to_name_dict(lineage), to_taxid_dict(lineage)
 
+
 def process_lineage_dd(lineage_dd):
     dd_for_df = dict(zip(range(len(lineage_dd)), lineage_dd))
     lineages_df = pd.DataFrame.from_dict(dd_for_df, orient='index')
     return lineages_df.sort_values('tax_id')
+
 
 def write_output(output_prefix, output_name_log, df, cols=None, undef_taxids=None):
     output = os.path.join('{0}.csv.gz'.format(output_prefix))
@@ -206,6 +210,7 @@ def write_output(output_prefix, output_name_log, df, cols=None, undef_taxids=Non
             df.to_csv(opf_gz, index=False)
         opf_gz.close()
 
+
 def generate_name_output(nodes_df, names_file, name_class):
     names_df = load_names(names_file, name_class)
     df = nodes_df.merge(names_df, on='tax_id')
@@ -215,9 +220,11 @@ def generate_name_output(nodes_df, names_file, name_class):
     df.info()
     return df
 
+
 @timeit
 def generate_lineage_outputs(df, taxid_lineages_output_prefix, name_lineages_output_prefix):
-    global TAXONOMY_DICT # example item: (16, {'parent_tax_id': 32011, 'name_txt': 'Methylophilus', 'rank': 'genus', 'tax_id': 16})
+    # example item: (16, {'parent_tax_id': 32011, 'name_txt': 'Methylophilus', 'rank': 'genus', 'tax_id': 16})
+    global TAXONOMY_DICT
     logging.info('generating TAXONOMY_DICT...')
     TAXONOMY_DICT = dict(zip(df.tax_id.values, df.to_dict('records')))
 
@@ -225,7 +232,7 @@ def generate_lineage_outputs(df, taxid_lineages_output_prefix, name_lineages_out
     logging.info('found {0} cpus, and will use all of them to find lineages '
                  'for all tax ids'.format(ncpus))
     pool = multiprocessing.Pool(ncpus)
-    name_lineages_dd, taxid_lineages_dd = zip(*pool.map(find_lineage, df.tax_id.values)) # take about 18G memory
+    name_lineages_dd, taxid_lineages_dd = zip(*pool.map(find_lineage, df.tax_id.values))  # take about 18G memory
     pool.close()
 
     logging.info('generating lineage-by-name output...')
@@ -258,6 +265,7 @@ def generate_lineage_outputs(df, taxid_lineages_output_prefix, name_lineages_out
         d[str(int(row['tax_id']))] = (str(int(row['species'])), str(int(row['genus'])), str(int(row['family'])))
     d.close()
 
+
 def main():
     args = parse_args()
 
@@ -273,6 +281,7 @@ def main():
 
     logging.info('PART II: lineage and scientific name outputs')
     generate_lineage_outputs(scientific_df, args.taxid_lineages_output_prefix, args.name_lineages_output_prefix)
+
 
 if __name__ == "__main__":
     main()
