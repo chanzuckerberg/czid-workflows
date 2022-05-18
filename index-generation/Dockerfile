@@ -22,6 +22,7 @@ RUN apt-get update && \
         git \
         wget \
         liblz4-tool \
+        libssl-dev \
         pigz \
         python-pandas \
         python3-gdbm \

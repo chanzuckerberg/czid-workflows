@@ -3,7 +3,7 @@ version development
 workflow index_generation {
     input {
         String index_name
-        String ncbi_server = "https://ftp.ncbi.nih.gov"
+        String ncbi_server = "ftp://ftp.ncbi.nih.gov"
         File? previous_lineages = ""
         String docker_image_id
     }
@@ -52,12 +52,6 @@ workflow index_generation {
         docker_image_id = docker_image_id
     }
 
-    call GenerateIndexDiamond {
-        input:
-        nr = DownloadNR.nr,
-        docker_image_id = docker_image_id
-    }
-
     call GenerateIndexLineages {
         input:
         taxdump = DownloadTaxdump.taxdump,
@@ -79,6 +73,20 @@ workflow index_generation {
         }
     }
 
+    call ChunkNR {
+        input:
+        nr = DownloadNR.nr,
+        docker_image_id = docker_image_id
+    }
+
+    scatter (nr_chunk in ChunkNR.nr_chunks) {
+        call GenerateIndexDiamondChunk {
+            input:
+            nr = DownloadNR.nr,
+            docker_image_id = docker_image_id
+        }
+    }
+
     output {
         File nr = DownloadNR.nr
         File nt = DownloadNT.nt
@@ -92,7 +100,6 @@ workflow index_generation {
         File nt_info_db = GenerateNTDB.nt_info_db
         File nr_loc_db = GenerateNRDB.nr_loc_db
         File nr_info_db = GenerateNRDB.nr_info_db
-        Directory diamond_index = GenerateIndexDiamond.diamond_index
         File taxid_lineages_db = GenerateIndexLineages.taxid_lineages_db
         File taxid_lineages_csv = GenerateIndexLineages.taxid_lineages_csv
         File names_csv = GenerateIndexLineages.names_csv
@@ -101,6 +108,7 @@ workflow index_generation {
         File deuterostome_taxids = GenerateIndexLineages.deuterostome_taxids
         File taxon_ignore_list = GenerateIndexLineages.taxon_ignore_list
         Array[File] minimap2_index = GenerateIndexMinimap2Chunk.minimap2_index
+        Array[File] diamond_index = GenerateIndexDiamondChunk.diamond_index
     }
 }
 
@@ -271,20 +279,42 @@ task GenerateNRDB {
     }
 }
 
-task GenerateIndexDiamond {
+task ChunkNR {
     input {
         File nr
-        Int chunksize = 5500000000
+        Int n_chunks = 20
         String docker_image_id
     }
 
     command <<<
-        # Ignore warning is needed because sometimes NR has sequences of only DNA characters which causes this to fail
-        diamond makedb --ignore-warnings --in ~{nr} -d diamond_index_chunksize_~{chunksize} --scatter-gather -b ~{chunksize}
+        seqkit split2 ~{nr} -p ~{n_chunks} --out-dir nr.split
     >>>
 
     output {
-        Directory diamond_index = "diamond_index_chunksize_~{chunksize}"
+        Array[File] nt_chunks = glob("nr.split/*")
+    }
+
+    runtime {
+        docker: docker_image_id
+    }
+}
+
+task GenerateIndexDiamondChunk {
+    input {
+        File nr_chunk
+        String docker_image_id
+    }
+
+    command <<<
+        set -euxo pipefail
+        chunk_path="~{nr_chunk}"
+        chunk_number="${chunk_path##*_}"
+        # Ignore warning is needed because sometimes NR has sequences of only DNA characters which causes this to fail
+        diamond makedb --ignore-warnings --in ~{nr_chunk} --db "diamond_index_part_${chunk_number}"
+    >>>
+
+    output {
+        File diamond_index = glob("diamond_index_part_*")[0]
     }
 
     runtime {
