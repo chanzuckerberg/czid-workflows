@@ -1,5 +1,6 @@
 FROM ubuntu:18.04
 ARG DEBIAN_FRONTEND=noninteractive
+ARG ARIA2_VERSION=1.36.0
 
 # Install dependencies
 RUN apt-get update && \
@@ -29,9 +30,9 @@ RUN apt-get update && \
 
 # install aria2
 WORKDIR /tmp
-RUN git clone https://github.com/aria2/aria2.git
-WORKDIR /tmp/aria2
-RUN ./configure && make && mv ./src/aria2c /usr/local/bin/
+RUN curl -L https://github.com/aria2/aria2/releases/download/release-${ARIA2_VERSION}/aria2-${ARIA2_VERSION}.tar.gz -o aria2-${ARIA2_VERSION}.tar.gz && \
+    tar xzvf aria2-${ARIA2_VERSION}.tar.gz
+RUN cd /tmp/aria2-${ARIA2_VERSION} && ./configure && make && mv ./src/aria2c /usr/local/bin/
 
 # install minimap2 and seqkit
 RUN git clone --single-branch --branch distributed-mapping  https://github.com/mlin/minimap2.git \
