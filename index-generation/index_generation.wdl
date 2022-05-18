@@ -334,11 +334,15 @@ task GenerateIndexLineages {
         set -euxo pipefail
 
         # Build Indexes
-        git clone https://github.com/chanzuckerberg/ncbitax2lin.git
-        cd ncbitax2lin
         mkdir -p taxdump/taxdump
         tar zxf ~{taxdump} -C ./taxdump/taxdump
-        make 1>&2
+
+        python3 ncbitax2lin.py \
+            --nodes-file taxdump/taxdump/nodes.dmp \
+            --names-file taxdump/taxdump/names.dmp \
+            --names-output-prefix names.csv.gz \
+            --taxid-lineages-output-prefix taxid-lineages.csv.gz \
+            --name-lineages-output-prefix lineages.csv.gz
 
         # Add names to lineages
 
