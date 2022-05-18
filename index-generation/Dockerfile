@@ -27,8 +27,11 @@ RUN apt-get update && \
         python3-pip \
         software-properties-common
 
-# Install s3parcp
-RUN curl -Ls https://github.com/chanzuckerberg/s3parcp/releases/download/v0.2.0-alpha/s3parcp_0.2.0-alpha_Linux_x86_64.tar.gz | tar -C /usr/bin -xz s3parcp
+# install aria2
+WORKDIR /tmp
+RUN git clone https://github.com/aria2/aria2.git
+WORKDIR /tmp/aria2
+RUN ./configure && make && mv ./src/aria2c /usr/local/bin/
 
 # install minimap2 and seqkit
 RUN git clone --single-branch --branch distributed-mapping  https://github.com/mlin/minimap2.git \
