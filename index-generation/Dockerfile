@@ -32,7 +32,7 @@ RUN apt-get update && \
 WORKDIR /tmp
 RUN curl -L https://github.com/aria2/aria2/releases/download/release-${ARIA2_VERSION}/aria2-${ARIA2_VERSION}.tar.gz -o aria2-${ARIA2_VERSION}.tar.gz && \
     tar xzvf aria2-${ARIA2_VERSION}.tar.gz
-RUN cd /tmp/aria2-${ARIA2_VERSION} && ./configure && make && mv ./src/aria2c /usr/local/bin/
+RUN cd /tmp/aria2-${ARIA2_VERSION} && ./configure --without-gnutls --with-openssl && make && mv ./src/aria2c /usr/local/bin/
 
 # install minimap2 and seqkit
 RUN git clone --single-branch --branch distributed-mapping  https://github.com/mlin/minimap2.git \
