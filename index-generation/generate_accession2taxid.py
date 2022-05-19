@@ -46,6 +46,7 @@ __note:__ columns 3 and 10 of the hitsummary2.xxx.tab files should always be ide
 import argparse
 import dbm
 import gzip
+import os
 import shelve
 import logging
 from multiprocessing.pool import ThreadPool
@@ -161,7 +162,7 @@ if __name__ == '__main__':
     for accession_mapping_file in accession_mapping_files:
         partition_list = []
         for p in range(num_partitions):
-            part_file = f"{accession_mapping_file}-{p}"
+            part_file = f"{os.path.basename(accession_mapping_file)}-{p}"
             partition_list.append(part_file)
             grab_accession_mapping_list_args.append([
                 accession_mapping_file,
