@@ -81,7 +81,7 @@ def grab_accession_names(source_file, dest_file):
 def grab_accession_mapping_list(source_gz, num_partitions, partition_id,
                                 accessions, output_file):
     num_lines = 0
-    with open(output_file, 'w') as out, gzip.open(source_gz, 'r') as mapf:
+    with open(output_file, 'w') as out, open(source_gz, 'r') as mapf:
         for line_encoded in mapf:
             if num_lines % num_partitions == partition_id:
                 line = line_encoded.decode('utf-8')
