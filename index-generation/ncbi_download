@@ -12,3 +12,5 @@ if [[ $(md5sum $DOWNLOAD_PATH | cut -f 1 -d' ') != $(cat $DOWNLOAD_PATH.md5 | se
 then
     exit 1
 fi
+
+pigz -d $DOWNLOAD_PATH

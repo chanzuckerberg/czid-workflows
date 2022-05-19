@@ -118,11 +118,10 @@ task DownloadNR {
 
     command <<<
         ncbi_download "~{ncbi_server}" blast/db/FASTA/nr.gz
-        pigz -dc blast/db/FASTA/nr.gz > nr
     >>>
 
     output {
-        File nr = "nr"
+        File nr = "blast/db/FASTA/nr"
     }
 
     runtime {
@@ -138,12 +137,11 @@ task DownloadNT {
 
     command <<<
         ncbi_download "~{ncbi_server}" blast/db/FASTA/nt.gz
-        pigz -dc blast/db/FASTA/nt.gz > nt
         
     >>>
 
     output {
-        File nt = "nt"
+        File nt = "blast/db/FASTA/nt"
     }
 
     runtime {
@@ -184,7 +182,7 @@ task DownloadTaxdump {
     >>>
 
     output {
-        File taxdump = "pub/taxonomy/taxdump.tar.gz"
+        File taxdump = "pub/taxonomy/taxdump.tar"
     }
 
     runtime {
@@ -206,10 +204,10 @@ task GenerateIndexAccessions {
 
         # Build index
         python3 /usr/local/bin/generate_accession2taxid.py \
-            ~{accession2taxid}/nucl_wgs.accession2taxid.gz \
-            ~{accession2taxid}/nucl_gb.accession2taxid.gz \
-            ~{accession2taxid}/pdb.accession2taxid.gz \
-            ~{accession2taxid}/prot.accession2taxid.FULL.gz \
+            ~{accession2taxid}/nucl_wgs.accession2taxid \
+            ~{accession2taxid}/nucl_gb.accession2taxid \
+            ~{accession2taxid}/pdb.accession2taxid \
+            ~{accession2taxid}/prot.accession2taxid.FULL \
             --parallelism ~{parallelism} \
             --nt_file ~{nt} \
             --nr_file ~{nr} \
