@@ -78,16 +78,15 @@ def grab_accession_names(source_file, dest_file):
                     dest.write(line.split(' ')[0] + "\n")
 
 
-def grab_accession_mapping_list(source_gz, num_partitions, partition_id,
+def grab_accession_mapping_list(source, num_partitions, partition_id,
                                 accessions, output_file):
     num_lines = 0
-    with open(output_file, 'w') as out, open(source_gz, 'r') as mapf:
-        for line_encoded in mapf:
+    with open(output_file, 'w') as out, open(source, 'r') as mapf:
+        for line in mapf:
             if num_lines % num_partitions == partition_id:
-                line = line_encoded.decode('utf-8')
                 accession_line = line.split("\t")
                 accession = accession_line[0]
-                # If using the prot.accession2taxid.FULL.gz file, should add a column with no version
+                # If using the prot.accession2taxid.FULL file, should add a column with no version
                 if len(accession_line) < 3 and accession.split(".")[0] in accessions:
                     accession_no_version = accession.split(".")[0]
                     out.write(f"{accession_no_version}\t{line}")
@@ -95,7 +94,7 @@ def grab_accession_mapping_list(source_gz, num_partitions, partition_id,
                     out.write(line)
             num_lines += 1
             if num_lines % 1000000 == 0:
-                print(f"{source_gz} partition {partition_id} line {num_lines/1000000}M", file=sys.stderr)
+                print(f"{source} partition {partition_id} line {num_lines/1000000}M", file=sys.stderr)
 
 
 if __name__ == '__main__':
