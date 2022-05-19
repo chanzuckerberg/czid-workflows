@@ -214,9 +214,7 @@ task GenerateIndexAccessions {
             --nt_file ~{nt} \
             --nr_file ~{nr} \
             --output_gz accession2taxid.gz \
-            --output_wgs_gz accession2taxid_wgs.gz \
             --accession2taxid_db accession2taxid.db \
-            --taxid2wgs_accession_db taxid2wgs_accession.db
     >>>
 
     output {
