@@ -297,7 +297,7 @@ task GenerateIndexDiamondChunk {
         chunk_number="${chunk_path##*_}"
         # Ignore warning is needed because sometimes NR has sequences of only DNA characters which causes this to fail
         diamond makedb --ignore-warnings --in ~{nr_chunk} -d dir --scatter-gather -b $(cat ~{nr_chunk} | grep '^>' | wc -l)
-        mv "dir/*" "diamond_index_part_${chunk_number}"
+        mv dir/* "diamond_index_part_${chunk_number}"
     >>>
 
     output {
@@ -327,9 +327,9 @@ task GenerateIndexLineages {
         python3 /usr/local/bin/ncbitax2lin.py \
             --nodes-file taxdump/taxdump/nodes.dmp \
             --names-file taxdump/taxdump/names.dmp \
-            --names-output-prefix names.csv.gz \
-            --taxid-lineages-output-prefix taxid-lineages.csv.gz \
-            --name-lineages-output-prefix lineages.csv.gz
+            --names-output-prefix names \
+            --taxid-lineages-output-prefix taxid-lineages \
+            --name-lineages-output-prefix lineages
 
         # Add names to lineages
 
@@ -357,13 +357,13 @@ task GenerateIndexLineages {
     >>>
 
     output {
-        File taxid_lineages_db = "ncbitax2lin/taxid-lineages.db"
-        File taxid_lineages_csv = "ncbitax2lin/taxid-lineages.csv.gz"
-        File names_csv = "ncbitax2lin/names.csv.gz"
-        File named_taxid_lineages_csv = "ncbitax2lin/named-taxid-lineages.csv.gz"
-        File versioned_taxid_lineages_csv = "ncbitax2lin/versioned-taxid-lineages.csv.gz"
-        File deuterostome_taxids = "ncbitax2lin/deuterostome_taxids.txt"
-        File taxon_ignore_list = "ncbitax2lin/taxon_ignore_list.txt"
+        File taxid_lineages_db = "taxid-lineages.db"
+        File taxid_lineages_csv = "taxid-lineages.csv.gz"
+        File names_csv = "names.csv.gz"
+        File named_taxid_lineages_csv = "named-taxid-lineages.csv.gz"
+        File versioned_taxid_lineages_csv = "versioned-taxid-lineages.csv.gz"
+        File deuterostome_taxids = "deuterostome_taxids.txt"
+        File taxon_ignore_list = "taxon_ignore_list.txt"
     }
 
     runtime {
