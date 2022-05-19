@@ -46,15 +46,14 @@ __note:__ columns 3 and 10 of the hitsummary2.xxx.tab files should always be ide
 import argparse
 import dbm
 import gzip
+import logging
 import os
 import shelve
-import logging
+import sys
 from multiprocessing.pool import ThreadPool
 
 
-def output_dicts_to_db(mapping_files, wgs_accessions,
-                       accession2taxid_db, taxid2wgs_accession_db,
-                       output_gz, output_wgs_gz):
+def output_dicts_to_db(mapping_files, accession2taxid_db, output_gz):
     # generate the accession2taxid db and file
     accession_dict = shelve.Shelf(dbm.ndbm.open(accession2taxid_db.replace(".db", ""), 'c'))  # type: ignore
     with gzip.open(output_gz, "wt") as gzf:
@@ -68,19 +67,6 @@ def output_dicts_to_db(mapping_files, wgs_accessions,
                         accession_dict[fields[0]] = fields[2]
                         gzf.write(line)
 
-    # generate taxid2 accession
-    db_fh = dbm.ndbm.open(taxid2wgs_accession_db.replace(".db", ""), 'c')  # type: ignore
-    with shelve.Shelf(db_fh) as taxid2accession_dict:  # type: ignore
-        with gzip.open(output_wgs_gz, "wt") as gzf:
-            with open(wgs_accessions, 'r', encoding="utf-8") as wgsf:
-                for line in wgsf:
-                    accession = line[1:].split(".")[0]
-                    taxid = accession_dict.get(accession)
-                    if taxid:
-                        current_match = taxid2accession_dict.get(taxid, "")
-                        taxid2accession_dict[taxid] = f"{current_match},{accession}"
-                        gzf.write(line)
-
     accession_dict.close()
 
 
@@ -92,33 +78,24 @@ def grab_accession_names(source_file, dest_file):
                     dest.write(line.split(' ')[0] + "\n")
 
 
-def grab_wgs_accessions(source_file, dest_file):
-    with open(source_file) as source:
-        with open(dest_file, 'w') as dest:
-            for line in source:
-                if line[0] == '>' and 'complete genome' in line:
-                    dest.write(line.split(' ')[0] + "\n")
-
-
 def grab_accession_mapping_list(source_gz, num_partitions, partition_id,
                                 accessions, output_file):
     num_lines = 0
-    with open(output_file, 'w') as out:
-        with gzip.open(source_gz, 'r') as mapf:
-            for line_encoded in mapf:
-                if num_lines % num_partitions == partition_id:
-                    line = line_encoded.decode('utf-8')
-                    accession_line = line.split("\t")
-                    accession = accession_line[0]
-                    # If using the prot.accession2taxid.FULL.gz file, should add a column with no version
-                    if len(accession_line) < 3 and accession.split(".")[0] in accessions:
-                        accession_no_version = accession.split(".")[0]
-                        out.write(f"{accession_no_version}\t{line}")
-                    elif accession in accessions:
-                        out.write(line)
-                num_lines += 1
-                if num_lines % 1000000 == 0:
-                    logging.info(f"{source_gz} partition {partition_id} line {num_lines/1000000}M")
+    with open(output_file, 'w') as out, gzip.open(source_gz, 'r') as mapf:
+        for line_encoded in mapf:
+            if num_lines % num_partitions == partition_id:
+                line = line_encoded.decode('utf-8')
+                accession_line = line.split("\t")
+                accession = accession_line[0]
+                # If using the prot.accession2taxid.FULL.gz file, should add a column with no version
+                if len(accession_line) < 3 and accession.split(".")[0] in accessions:
+                    accession_no_version = accession.split(".")[0]
+                    out.write(f"{accession_no_version}\t{line}")
+                elif accession in accessions:
+                    out.write(line)
+            num_lines += 1
+            if num_lines % 1000000 == 0:
+                print(f"{source_gz} partition {partition_id} line {num_lines/1000000}M", file=sys.stderr)
 
 
 if __name__ == '__main__':
@@ -128,9 +105,7 @@ if __name__ == '__main__':
     parser.add_argument('--nt_file')
     parser.add_argument('--nr_file')
     parser.add_argument('--output_gz')
-    parser.add_argument('--output_wgs_gz')
     parser.add_argument('--accession2taxid_db')
-    parser.add_argument('--taxid2wgs_accession_db')
     args = parser.parse_args()
 
     accession_mapping_files = args.accession_mapping_files
@@ -138,17 +113,13 @@ if __name__ == '__main__':
     nt_file = args.nt_file
     nr_file = args.nr_file
     output_gz = args.output_gz
-    output_wgs_gz = args.output_wgs_gz
     accession2taxid_db = args.accession2taxid_db
-    taxid2wgs_accession_db = args.taxid2wgs_accession_db
 
     # Get accession_list
     source_files = [nt_file, nr_file]
     accessions_files = [f"{source_file}.accessions" for source_file in source_files]
     pool = ThreadPool()
     pool.starmap(grab_accession_names, zip(source_files, accessions_files))
-    wgs_accessions = f"{nt_file}.wgs_acc"
-    grab_wgs_accessions(nt_file, wgs_accessions)
 
     accessions = set()
     for accession_file in accessions_files:
@@ -178,6 +149,4 @@ if __name__ == '__main__':
 
     logging.info("starting writing output dictionaries to db")
 
-    output_dicts_to_db(mapping_files, wgs_accessions,
-                       accession2taxid_db, taxid2wgs_accession_db,
-                       output_gz, output_wgs_gz)
+    output_dicts_to_db(mapping_files, accession2taxid_db, output_gz)

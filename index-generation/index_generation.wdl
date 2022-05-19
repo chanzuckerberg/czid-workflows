@@ -300,8 +300,8 @@ task GenerateIndexDiamondChunk {
         chunk_path="~{nr_chunk}"
         chunk_number="${chunk_path##*_}"
         # Ignore warning is needed because sometimes NR has sequences of only DNA characters which causes this to fail
-        diamond makedb --ignore-warnings --in ~{nr_chunk} -d "diamond_index_part_${chunk_number}" --scatter-gather -b $(cat ~{nr_chunk} | grep '^>' | wc -l)
-        mv "diamond_index_part_${chunk_number}_*" "diamond_index_part_${chunk_number}"
+        diamond makedb --ignore-warnings --in ~{nr_chunk} -d dir --scatter-gather -b $(cat ~{nr_chunk} | grep '^>' | wc -l)
+        mv "dir/*" "diamond_index_part_${chunk_number}"
     >>>
 
     output {
@@ -326,7 +326,7 @@ task GenerateIndexLineages {
 
         # Build Indexes
         mkdir -p taxdump/taxdump
-        tar zxf ~{taxdump} -C ./taxdump/taxdump
+        tar xf ~{taxdump} -C ./taxdump/taxdump
 
         python3 ncbitax2lin.py \
             --nodes-file taxdump/taxdump/nodes.dmp \
