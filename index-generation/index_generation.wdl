@@ -324,7 +324,7 @@ task GenerateIndexLineages {
         mkdir -p taxdump/taxdump
         tar xf ~{taxdump} -C ./taxdump/taxdump
 
-        python3 ncbitax2lin.py \
+        python3 /usr/local/bin/ncbitax2lin.py \
             --nodes-file taxdump/taxdump/nodes.dmp \
             --names-file taxdump/taxdump/names.dmp \
             --names-output-prefix names.csv.gz \
