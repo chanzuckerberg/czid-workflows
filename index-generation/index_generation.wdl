@@ -52,39 +52,23 @@ workflow index_generation {
         docker_image_id = docker_image_id
     }
 
+    call GenerateIndexDiamond {
+        input:
+        nr = DownloadNR.nr,
+        docker_image_id = docker_image_id
+    }
+
     call GenerateIndexLineages {
         input:
         taxdump = DownloadTaxdump.taxdump,
         index_name = index_name,
         docker_image_id = docker_image_id
     }
-
-    call ChunkNT {
+    
+    call GenerateIndexMinimap2 {
         input:
         nt = DownloadNT.nt,
         docker_image_id = docker_image_id
-    }
-
-    scatter (nt_chunk in ChunkNT.nt_chunks) {
-        call GenerateIndexMinimap2Chunk {
-            input:
-            nt_chunk = nt_chunk,
-            docker_image_id = docker_image_id
-        }
-    }
-
-    call ChunkNR {
-        input:
-        nr = DownloadNR.nr,
-        docker_image_id = docker_image_id
-    }
-
-    scatter (nr_chunk in ChunkNR.nr_chunks) {
-        call GenerateIndexDiamondChunk {
-            input:
-            nr_chunk = nr_chunk,
-            docker_image_id = docker_image_id
-        }
     }
 
     output {
@@ -98,6 +82,7 @@ workflow index_generation {
         File nt_info_db = GenerateNTDB.nt_info_db
         File nr_loc_db = GenerateNRDB.nr_loc_db
         File nr_info_db = GenerateNRDB.nr_info_db
+        Directory diamond_index = GenerateIndexDiamond.diamond_index
         File taxid_lineages_db = GenerateIndexLineages.taxid_lineages_db
         File taxid_lineages_csv = GenerateIndexLineages.taxid_lineages_csv
         File names_csv = GenerateIndexLineages.names_csv
@@ -105,8 +90,7 @@ workflow index_generation {
         File versioned_taxid_lineages_csv = GenerateIndexLineages.versioned_taxid_lineages_csv
         File deuterostome_taxids = GenerateIndexLineages.deuterostome_taxids
         File taxon_ignore_list = GenerateIndexLineages.taxon_ignore_list
-        Array[File] minimap2_index = GenerateIndexMinimap2Chunk.minimap2_index
-        Array[File] diamond_index = GenerateIndexDiamondChunk.diamond_index
+        Directory minimap2_index = GenerateIndexMinimap2.minimap2_index
     }
 }
 
@@ -265,42 +249,20 @@ task GenerateNRDB {
     }
 }
 
-task ChunkNR {
+task GenerateIndexDiamond {
     input {
         File nr
-        Int n_chunks = 20
+        Int chunksize = 5500000000
         String docker_image_id
     }
 
     command <<<
-        seqkit split2 ~{nr} -p ~{n_chunks} --out-dir nr.split
-    >>>
-
-    output {
-        Array[File] nr_chunks = glob("nr.split/*")
-    }
-
-    runtime {
-        docker: docker_image_id
-    }
-}
-
-task GenerateIndexDiamondChunk {
-    input {
-        File nr_chunk
-        String docker_image_id
-    }
-
-    command <<<
-        set -euxo pipefail
-        chunk_path="~{nr_chunk}"
-        chunk_number="${chunk_path##*_}"
         # Ignore warning is needed because sometimes NR has sequences of only DNA characters which causes this to fail
-        diamond makedb --ignore-warnings --in ~{nr_chunk} -d "diamond_index_part_${chunk_number}"
+        diamond makedb --ignore-warnings --in ~{nr} -d diamond_index_chunksize_~{chunksize} --scatter-gather -b ~{chunksize}
     >>>
 
     output {
-        File diamond_index = glob("diamond_index_part_*")[0]
+        Directory diamond_index = "diamond_index_chunksize_~{chunksize}"
     }
 
     runtime {
@@ -370,45 +332,37 @@ task GenerateIndexLineages {
     }
 }
 
-task ChunkNT {
+task GenerateIndexMinimap2 {
     input {
         File nt
+        Int k = 14 # Minimizer k-mer length default is 21 for short reads option
+        Int w = 8 # Minimizer window size default is 11 for short reads option
+        String I = "9999G" # Load at most NUM target bases into RAM for indexing
+        Int t = 20 # number of threads, doesn't really work for indexing I don't think
         Int n_chunks = 20
         String docker_image_id
     }
 
     command <<<
-        seqkit split2 ~{nt} -p ~{n_chunks} --out-dir nt.split
-    >>>
-
-    output {
-        Array[File] nt_chunks = glob("nt.split/*")
-    }
-
-    runtime {
-        docker: docker_image_id
-    }
-}
-
-task GenerateIndexMinimap2Chunk {
-    input {
-        File nt_chunk
-        Int k = 14 # Minimizer k-mer length default is 21 for short reads option
-        Int w = 8 # Minimizer window size default is 11 for short reads option
-        String I = "9999G" # Load at most NUM target bases into RAM for indexing
-        Int t = 20 # number of threads, doesn't really work for indexing I don't think
-        String docker_image_id
-    }
-
-    command <<<
         set -euxo pipefail
-        chunk_path="~{nt_chunk}"
-        chunk_number="${chunk_path##*_}"
-        minimap2 -cx sr -k ~{k} -w ~{w} -I ~{I} -t ~{t} -d "nt.part_"$chunk_number".idx" ~{nt_chunk}
+
+        # Split nt into 20
+        seqkit split2 ~{nt} -p ~{n_chunks} --out-dir nt.split
+
+        # Make output directory
+        OUTDIR="nt_k~{k}_w~{w}_~{n_chunks}"
+        mkdir $OUTDIR
+
+        # Run minimap2 on each chunk
+        for i in nt.split/*
+        do
+                path="${i##*_}"
+                minimap2 -cx sr -k ~{k} -w ~{w} -I ~{I} -t ~{t} -d $OUTDIR/"nt.part_"$path".idx" $i
+        done
     >>>
 
     output {
-        File minimap2_index = glob("nt.part_*.idx")[0]
+        Directory minimap2_index = "nt_k~{k}_w~{w}_~{n_chunks}"
     }
 
     runtime {
