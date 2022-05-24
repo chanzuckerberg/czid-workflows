@@ -71,11 +71,10 @@ workflow index_generation {
         docker_image_id = docker_image_id
     }
 
+    # only include an output if it is confirmed that it is used elsewhere
     output {
         File nr = DownloadNR.nr
         File nt = DownloadNT.nt
-        Directory accession2taxid = DownloadAccession2Taxid.accession2taxid
-        File taxdump = DownloadTaxdump.taxdump
         File accession2taxid_gz = GenerateIndexAccessions.accession2taxid_gz
         File accession2taxid_db = GenerateIndexAccessions.accession2taxid_db
         File nt_loc_db = GenerateNTDB.nt_loc_db
@@ -84,9 +83,6 @@ workflow index_generation {
         File nr_info_db = GenerateNRDB.nr_info_db
         Directory diamond_index = GenerateIndexDiamond.diamond_index
         File taxid_lineages_db = GenerateIndexLineages.taxid_lineages_db
-        File taxid_lineages_csv = GenerateIndexLineages.taxid_lineages_csv
-        File names_csv = GenerateIndexLineages.names_csv
-        File named_taxid_lineages_csv = GenerateIndexLineages.named_taxid_lineages_csv
         File versioned_taxid_lineages_csv = GenerateIndexLineages.versioned_taxid_lineages_csv
         File deuterostome_taxids = GenerateIndexLineages.deuterostome_taxids
         File taxon_ignore_list = GenerateIndexLineages.taxon_ignore_list
@@ -195,12 +191,10 @@ task GenerateIndexAccessions {
             --parallelism ~{parallelism} \
             --nt_file ~{nt} \
             --nr_file ~{nr} \
-            --output_gz accession2taxid.gz \
             --accession2taxid_db accession2taxid.db \
     >>>
 
     output {
-        File accession2taxid_gz = "accession2taxid.gz"
         File accession2taxid_db = "accession2taxid.db"
     }
 
@@ -319,9 +313,6 @@ task GenerateIndexLineages {
 
     output {
         File taxid_lineages_db = "taxid-lineages.db"
-        File taxid_lineages_csv = "taxid-lineages.csv.gz"
-        File names_csv = "names.csv.gz"
-        File named_taxid_lineages_csv = "named-taxid-lineages.csv.gz"
         File versioned_taxid_lineages_csv = "versioned-taxid-lineages.csv.gz"
         File deuterostome_taxids = "deuterostome_taxids.txt"
         File taxon_ignore_list = "taxon_ignore_list.txt"

@@ -45,7 +45,6 @@ __note:__ columns 3 and 10 of the hitsummary2.xxx.tab files should always be ide
 """
 import argparse
 import dbm
-import gzip
 import logging
 import os
 import shelve
@@ -53,19 +52,17 @@ import sys
 from multiprocessing.pool import ThreadPool
 
 
-def output_dicts_to_db(mapping_files, accession2taxid_db, output_gz):
+def output_dicts_to_db(mapping_files, accession2taxid_db):
     # generate the accession2taxid db and file
     accession_dict = shelve.Shelf(dbm.ndbm.open(accession2taxid_db.replace(".db", ""), 'c'))  # type: ignore
-    with gzip.open(output_gz, "wt") as gzf:
-        for partition_list in mapping_files:
-            for partition in partition_list:
-                with open(partition, 'r', encoding="utf-8") as pf:
-                    for line in pf:
-                        if len(line) <= 1:
-                            break
-                        fields = line.rstrip().split("\t")
-                        accession_dict[fields[0]] = fields[2]
-                        gzf.write(line)
+    for partition_list in mapping_files:
+        for partition in partition_list:
+            with open(partition, 'r', encoding="utf-8") as pf:
+                for line in pf:
+                    if len(line) <= 1:
+                        break
+                    fields = line.rstrip().split("\t")
+                    accession_dict[fields[0]] = fields[2]
 
     accession_dict.close()
 
@@ -111,7 +108,6 @@ if __name__ == '__main__':
     num_partitions = args.parallelism
     nt_file = args.nt_file
     nr_file = args.nr_file
-    output_gz = args.output_gz
     accession2taxid_db = args.accession2taxid_db
 
     # Get accession_list
@@ -148,4 +144,4 @@ if __name__ == '__main__':
 
     logging.info("starting writing output dictionaries to db")
 
-    output_dicts_to_db(mapping_files, accession2taxid_db, output_gz)
+    output_dicts_to_db(mapping_files, accession2taxid_db)
