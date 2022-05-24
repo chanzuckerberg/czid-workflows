@@ -75,7 +75,6 @@ workflow index_generation {
     output {
         File nr = DownloadNR.nr
         File nt = DownloadNT.nt
-        File accession2taxid_gz = GenerateIndexAccessions.accession2taxid_gz
         File accession2taxid_db = GenerateIndexAccessions.accession2taxid_db
         File nt_loc_db = GenerateNTDB.nt_loc_db
         File nt_info_db = GenerateNTDB.nt_info_db
