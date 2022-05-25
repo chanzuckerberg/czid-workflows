@@ -46,18 +46,22 @@ task fastp {
 
     Int cpu = 8
   }
+  Boolean paired = defined(reads2_fastq)
   command<<<
     set -euxo pipefail
     fastp \
         -i ~{reads1_fastq} ~{"-I " + reads2_fastq} \
-        -o fastp1.fastq ~{if (defined(reads2_fastq)) then "-O fastp2.fastq" else ""} \
+        -o fastp1.fastq ~{if (paired) then "-O fastp2.fastq" else ""} \
         -w ~{cpu} \
         --dont_eval_duplication --length_required 35 \
         --qualified_quality_phred 17 --unqualified_percent_limit 15 --n_base_limit 15 \
         --low_complexity_filter --complexity_threshold 30 \
-        --adapter_fasta ~{adapter_fasta} ~{if (defined(reads2_fastq)) then "--detect_adapter_for_pe" else ""}
-    # TODO: double the count & make sure this works right for non-paired
-    jq .read1_after_filtering.total_reads fastp.json > fastp_out.count
+        --adapter_fasta ~{adapter_fasta} ~{if (paired) then "--detect_adapter_for_pe" else ""}
+    if [ '~{paired}' == 'true' ]; then
+        expr 2 \* $(jq .read1_after_filtering.total_reads fastp.json) > fastp_out.count
+    else
+        jq .read1_after_filtering.total_reads fastp.json > fastp_out.count
+    fi
   >>>
   output {
     #String step_description_md = read_string("fastp_out.description.md")
