@@ -184,27 +184,21 @@ task RunCZIDDedup {
   Boolean paired = defined(reads2_fastq)
   command<<<
     set -euxo pipefail
-    TMPDIR="${TMPDIR:-/tmp}"
 
-    seqtk seq -a '~{reads1_fastq}' > "$TMPDIR/reads1.fa"
-    if [[ '~{paired}' == 'true' ]]; then
-        seqtk seq -a '~{reads2_fastq}' > "$TMPDIR/reads2.fa"
-    fi
-
-    idseq-dag-run-step --workflow-name host_filter \
+    >&2 idseq-dag-run-step --workflow-name host_filter \
       --step-module idseq_dag.steps.run_czid_dedup \
       --step-class PipelineStepRunCZIDDedup \
       --step-name czid_dedup_out \
       --input-files '[["~{sep='","' select_all([reads1_fastq, reads2_fastq])}"]]' \
-      --output-files '[~{if paired then '"dedup1.fa", "dedup2.fa"' else '"dedup1.fa"'}, "clusters.csv", "duplicate_cluster_sizes.tsv"]' \
+      --output-files '[~{if paired then '"dedup1.fastq","dedup2.fastq"' else '"dedup1.fastq"'}, "clusters.csv", "duplicate_cluster_sizes.tsv"]' \
       --output-dir-s3 '~{s3_wd_uri}' \
       --additional-files '{}' \
       --additional-attributes '{}'
   >>>
   output {
     String step_description_md = read_string("czid_dedup_out.description.md")
-    File dedup1_fa = "dedup1.fa"
-    File? dedup2_fa = "dedup2.fa"
+    File dedup1_fastq = "dedup1.fastq"
+    File? dedup2_fastq = "dedup2.fastq"
     File duplicate_clusters_csv = "clusters.csv"
     File duplicate_cluster_sizes_tsv = "duplicate_cluster_sizes.tsv"
     File? output_read_count = "czid_dedup_out.count"
@@ -216,22 +210,50 @@ task RunCZIDDedup {
 
 task RunSubsample {
   input {
-    String docker_image_id
-    String s3_wd_uri
-    Array[File] bowtie2_fa
-    Array[File] dedup_fa
-    File duplicate_clusters_csv
+    File reads1_fastq
+    File? reads2_fastq
     File duplicate_cluster_sizes_tsv
     Int max_subsample_fragments
+
+    String docker_image_id
+    String s3_wd_uri
   }
+  Boolean paired = defined(reads2_fastq)
   command<<<
   set -euxo pipefail
+  TMPDIR="${TMPDIR:-/tmp}"
+
+  # FASTQ to FASTA
+  seqtk seq -a '~{reads1_fastq}' > "$TMPDIR/reads1.fasta"
+  fastas="\"$TMPDIR/reads1.fasta\""
+  if [[ '~{paired}' == 'true' ]]; then
+    seqtk seq -a '~{reads2_fastq}' > "$TMPDIR/reads2.fasta"
+    # also generate merged FASTA. seqtk interleaves the reads but doesn't append /1 /2 to the
+    # names, so we add an awk kludge to do that.
+    seqtk mergepe "$TMPDIR/reads1.fasta" "$TMPDIR/reads2.fasta" | awk '
+        BEGIN {
+          name = "";
+        }
+        /^>.*/ {
+          if ($0 != name) {
+            name = $0;
+            printf("%s/1\n", $0);
+          } else {
+            printf("%s/2\n", $0);
+          }
+        }
+        ! /^>.*/ { print; }
+      ' > "$TMPDIR/reads_merged.fasta"
+    fastas="\"$TMPDIR/reads1.fasta\",\"$TMPDIR/reads2.fasta\",\"$TMPDIR/reads_merged.fasta\""
+  fi
+
+  # subsample FASTAs
   idseq-dag-run-step --workflow-name host_filter \
     --step-module idseq_dag.steps.run_subsample \
     --step-class PipelineStepRunSubsample \
     --step-name subsampled_out \
-    --input-files '[["~{sep='","' bowtie2_fa}"], ["~{sep='","' dedup_fa}", "~{duplicate_clusters_csv}", "~{duplicate_cluster_sizes_tsv}"]]' \
-    --output-files '[~{if length(dedup_fa) == 2 then '"subsampled_1.fa", "subsampled_2.fa", "subsampled_merged.fa"' else '"subsampled_1.fa"'}]' \
+    --input-files '[['"$fastas"'], ["~{duplicate_cluster_sizes_tsv}"]]' \
+    --output-files '[~{if paired then '"subsampled_1.fa", "subsampled_2.fa", "subsampled_merged.fa"' else '"subsampled_1.fa"'}]' \
     --output-dir-s3 '~{s3_wd_uri}' \
     --additional-files '{}' \
     --additional-attributes '{"max_fragments": ~{max_subsample_fragments}}'
@@ -265,7 +287,7 @@ workflow czid_host_filter {
     #String human_star_genome
     #String human_bowtie2_genome
     Int max_input_fragments
-    #Int max_subsample_fragments
+    Int max_subsample_fragments
 
     Int cpu = 16
   }
@@ -314,6 +336,16 @@ workflow czid_host_filter {
     s3_wd_uri = s3_wd_uri
   }
 
+  call RunSubsample {
+    input:
+    reads1_fastq = RunCZIDDedup.dedup1_fastq,
+    reads2_fastq = RunCZIDDedup.dedup2_fastq,
+    duplicate_cluster_sizes_tsv = RunCZIDDedup.duplicate_cluster_sizes_tsv,
+    max_subsample_fragments = max_subsample_fragments,
+    docker_image_id = docker_image_id,
+    s3_wd_uri = s3_wd_uri
+  }
+
   output {
     File validate_input_out_validate_input_summary_json = RunValidateInput.validate_input_summary_json
     File? validate_input_out_count = RunValidateInput.output_read_count
@@ -325,10 +357,14 @@ workflow czid_host_filter {
     File? bowtie2_filtered2_fastq = bowtie2_filter.filtered2_fastq
     File hisat2_filtered1_fastq = hisat2_filter.filtered1_fastq
     File? hisat2_filtered2_fastq = hisat2_filter.filtered2_fastq
-    File czid_dedup_out_dedup1_fa = RunCZIDDedup.dedup1_fa
-    File? czid_dedup_out_dedup2_fa = RunCZIDDedup.dedup2_fa
+    File czid_dedup_out_dedup1_fastq = RunCZIDDedup.dedup1_fastq
+    File? czid_dedup_out_dedup2_fastq = RunCZIDDedup.dedup2_fastq
     File czid_dedup_out_duplicate_clusters_csv = RunCZIDDedup.duplicate_clusters_csv
     File czid_dedup_out_duplicate_cluster_sizes_tsv = RunCZIDDedup.duplicate_cluster_sizes_tsv
     File? czid_dedup_out_count = RunCZIDDedup.output_read_count
+    File subsampled_out_subsampled_1_fa = RunSubsample.subsampled_1_fa
+    File? subsampled_out_subsampled_2_fa = RunSubsample.subsampled_2_fa
+    File? subsampled_out_subsampled_merged_fa = RunSubsample.subsampled_merged_fa
+    File? subsampled_out_count = RunSubsample.output_read_count
   }
 }
