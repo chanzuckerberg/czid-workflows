@@ -62,7 +62,11 @@ def _bucket_and_key(s3_path: str):
 
 def _get_job_status(job_id, use_batch_api=False):
     if use_batch_api:
-        return _batch_client.describe_jobs(jobs=[job_id])["jobs"][0]["status"]
+        jobs = _batch_client.describe_jobs(jobs=[job_id])["jobs"]
+        if not jobs:
+            log.debug(f"missing_job_description_from_api: {job_id}")
+            return "SUBMITTED"
+        return jobs[0]["status"]
     batch_job_desc_bucket = boto3.resource("s3").Bucket(
         f"aegea-batch-jobs-{account_id}"
     )
@@ -129,7 +133,7 @@ def _run_batch_job(
     i = 0
     while True:
         try:
-            status = _get_job_status(job_id, use_batch_api=(i % 30 == 0))
+            status = _get_job_status(job_id, use_batch_api=(i > 0 and i % 30 == 0))
         except ClientError as e:
             # If we get throttled, randomly wait to de-synchronize the requests
             if e.response["Error"]["Code"] == "TooManyRequestsException":
