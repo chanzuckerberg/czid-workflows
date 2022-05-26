@@ -3,7 +3,7 @@ version development
 workflow index_generation {
     input {
         String index_name
-        String ncbi_server = "https://ftp.ncbi.nih.gov"
+        String ncbi_server = "ftp://ftp.ncbi.nih.gov"
         File? previous_lineages = ""
         String docker_image_id
     }
@@ -64,31 +64,24 @@ workflow index_generation {
         index_name = index_name,
         docker_image_id = docker_image_id
     }
-
+    
     call GenerateIndexMinimap2 {
         input:
         nt = DownloadNT.nt,
         docker_image_id = docker_image_id
     }
 
+    # only include an output if it is confirmed that it is used elsewhere
     output {
         File nr = DownloadNR.nr
         File nt = DownloadNT.nt
-        Directory accession2taxid = DownloadAccession2Taxid.accession2taxid
-        File taxdump = DownloadTaxdump.taxdump
-        File accession2taxid_gz = GenerateIndexAccessions.accession2taxid_gz
-        File accession2taxid_wgs = GenerateIndexAccessions.accession2taxid_wgs
         File accession2taxid_db = GenerateIndexAccessions.accession2taxid_db
-        File taxid2wgs_accession_db = GenerateIndexAccessions.taxid2wgs_accession_db
         File nt_loc_db = GenerateNTDB.nt_loc_db
         File nt_info_db = GenerateNTDB.nt_info_db
         File nr_loc_db = GenerateNRDB.nr_loc_db
         File nr_info_db = GenerateNRDB.nr_info_db
         Directory diamond_index = GenerateIndexDiamond.diamond_index
         File taxid_lineages_db = GenerateIndexLineages.taxid_lineages_db
-        File taxid_lineages_csv = GenerateIndexLineages.taxid_lineages_csv
-        File names_csv = GenerateIndexLineages.names_csv
-        File named_taxid_lineages_csv = GenerateIndexLineages.named_taxid_lineages_csv
         File versioned_taxid_lineages_csv = GenerateIndexLineages.versioned_taxid_lineages_csv
         File deuterostome_taxids = GenerateIndexLineages.deuterostome_taxids
         File taxon_ignore_list = GenerateIndexLineages.taxon_ignore_list
@@ -104,11 +97,10 @@ task DownloadNR {
 
     command <<<
         ncbi_download "~{ncbi_server}" blast/db/FASTA/nr.gz
-        pigz -dc blast/db/FASTA/nr.gz > nr
     >>>
 
     output {
-        File nr = "nr"
+        File nr = "blast/db/FASTA/nr"
     }
 
     runtime {
@@ -124,12 +116,11 @@ task DownloadNT {
 
     command <<<
         ncbi_download "~{ncbi_server}" blast/db/FASTA/nt.gz
-        pigz -dc blast/db/FASTA/nt.gz > nt
         
     >>>
 
     output {
-        File nt = "nt"
+        File nt = "blast/db/FASTA/nt"
     }
 
     runtime {
@@ -144,13 +135,9 @@ task DownloadAccession2Taxid {
     }
 
     command <<<
-        ncbi_download "~{ncbi_server}" pub/taxonomy/accession2taxid/dead_nucl.accession2taxid.gz
-        ncbi_download "~{ncbi_server}" pub/taxonomy/accession2taxid/dead_prot.accession2taxid.gz
-        ncbi_download "~{ncbi_server}" pub/taxonomy/accession2taxid/dead_wgs.accession2taxid.gz
         ncbi_download "~{ncbi_server}" pub/taxonomy/accession2taxid/nucl_gb.accession2taxid.gz
         ncbi_download "~{ncbi_server}" pub/taxonomy/accession2taxid/nucl_wgs.accession2taxid.gz
         ncbi_download "~{ncbi_server}" pub/taxonomy/accession2taxid/pdb.accession2taxid.gz
-        ncbi_download "~{ncbi_server}" pub/taxonomy/accession2taxid/prot.accession2taxid.gz
         ncbi_download "~{ncbi_server}" pub/taxonomy/accession2taxid/prot.accession2taxid.FULL.gz
     >>>
 
@@ -174,7 +161,7 @@ task DownloadTaxdump {
     >>>
 
     output {
-        File taxdump = "pub/taxonomy/taxdump.tar.gz"
+        File taxdump = "pub/taxonomy/taxdump.tar"
     }
 
     runtime {
@@ -194,28 +181,20 @@ task GenerateIndexAccessions {
     command <<<
         set -euxo pipefail
 
-        cp -r ~{accession2taxid} accession2taxid
-
         # Build index
         python3 /usr/local/bin/generate_accession2taxid.py \
-            accession2taxid/nucl_wgs.accession2taxid.gz \
-            accession2taxid/nucl_gb.accession2taxid.gz \
-            accession2taxid/pdb.accession2taxid.gz \
-            accession2taxid/prot.accession2taxid.FULL.gz \
+            ~{accession2taxid}/nucl_wgs.accession2taxid \
+            ~{accession2taxid}/nucl_gb.accession2taxid \
+            ~{accession2taxid}/pdb.accession2taxid \
+            ~{accession2taxid}/prot.accession2taxid.FULL \
             --parallelism ~{parallelism} \
             --nt_file ~{nt} \
             --nr_file ~{nr} \
-            --output_gz accession2taxid.gz \
-            --output_wgs_gz accession2taxid_wgs.gz \
             --accession2taxid_db accession2taxid.db \
-            --taxid2wgs_accession_db taxid2wgs_accession.db
     >>>
 
     output {
-        File accession2taxid_gz = "accession2taxid.gz"
-        File accession2taxid_wgs = "accession2taxid_wgs.gz"
         File accession2taxid_db = "accession2taxid.db"
-        File taxid2wgs_accession_db = "taxid2wgs_accession.db"
     }
 
     runtime {
@@ -296,11 +275,15 @@ task GenerateIndexLineages {
         set -euxo pipefail
 
         # Build Indexes
-        git clone https://github.com/chanzuckerberg/ncbitax2lin.git
-        cd ncbitax2lin
         mkdir -p taxdump/taxdump
-        tar zxf ~{taxdump} -C ./taxdump/taxdump
-        make 1>&2
+        tar xf ~{taxdump} -C ./taxdump/taxdump
+
+        python3 /usr/local/bin/ncbitax2lin.py \
+            --nodes-file taxdump/taxdump/nodes.dmp \
+            --names-file taxdump/taxdump/names.dmp \
+            --names-output-prefix names \
+            --taxid-lineages-output-prefix taxid-lineages \
+            --name-lineages-output-prefix lineages
 
         # Add names to lineages
 
@@ -328,13 +311,10 @@ task GenerateIndexLineages {
     >>>
 
     output {
-        File taxid_lineages_db = "ncbitax2lin/taxid-lineages.db"
-        File taxid_lineages_csv = "ncbitax2lin/taxid-lineages.csv.gz"
-        File names_csv = "ncbitax2lin/names.csv.gz"
-        File named_taxid_lineages_csv = "ncbitax2lin/named-taxid-lineages.csv.gz"
-        File versioned_taxid_lineages_csv = "ncbitax2lin/versioned-taxid-lineages.csv.gz"
-        File deuterostome_taxids = "ncbitax2lin/deuterostome_taxids.txt"
-        File taxon_ignore_list = "ncbitax2lin/taxon_ignore_list.txt"
+        File taxid_lineages_db = "taxid-lineages.db"
+        File versioned_taxid_lineages_csv = "versioned-taxid-lineages.csv.gz"
+        File deuterostome_taxids = "deuterostome_taxids.txt"
+        File taxon_ignore_list = "taxon_ignore_list.txt"
     }
 
     runtime {
