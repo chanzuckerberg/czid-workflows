@@ -82,7 +82,7 @@ task bowtie2_filter {
     File reads1_fastq
     File? reads2_fastq
 
-    # GENOME_NAME.tar should contain GENOME_NAME/GENOME_NAME.bt*
+    # GENOME_NAME.tar should contain GENOME_NAME/GENOME_NAME.*.bt*
     File index_tar
     String bowtie2_options = "--very-sensitive-local"
 
@@ -107,17 +107,66 @@ task bowtie2_filter {
             -S "$TMPDIR/bowtie2.sam"
     fi
 
-    samtools fastq -1 bowtie2_filtered1.fastq -f 13 "$TMPDIR/bowtie2.sam" -0 /dev/null -s /dev/null & pid=$!
     if [[ '~{paired}' == 'true' ]]; then
-        samtools fastq -2 bowtie2_filtered2.fastq -f 13 "$TMPDIR/bowtie2.sam" -0 /dev/null -s /dev/null
+        samtools fastq -f 13 -1 bowtie2_filtered1.fastq -2 bowtie2_filtered2.fastq -0 /dev/null -s /dev/null "$TMPDIR/bowtie2.sam"
+    else
+        samtools fastq -f 4 "$TMPDIR/bowtie2.sam" > bowtie2_filtered1.fastq
     fi
-    wait $pid
   >>>
 
   output {
     #String step_description_md = read_string("fastp_out.description.md")
     File filtered1_fastq = "bowtie2_filtered1.fastq"
     File? filtered2_fastq = "bowtie2_filtered2.fastq"
+    #File output_read_count = "fastp_out.count"
+  }
+  runtime {
+    docker: docker_image_id
+  }
+}
+
+task hisat2_filter {
+  # Remove reads [pairs] with HISAT2 hits to the given index
+  input {
+    File reads1_fastq
+    File? reads2_fastq
+
+    # GENOME_NAME.tar should contain GENOME_NAME/GENOME_NAME.*.ht2
+    File index_tar
+    String hisat2_options = ""
+
+    String docker_image_id
+    Int cpu = 16
+  }
+  Boolean paired = defined(reads2_fastq)
+  command <<<
+    set -euxo pipefail
+    TMPDIR="${TMPDIR:-/tmp}"
+
+    genome_name="$(basename '~{index_tar}' .tar)"
+    tar xf '~{index_tar}' -C "$TMPDIR"
+
+    if [[ '~{paired}' == 'true' ]]; then
+        /hisat2/hisat2 -x "$TMPDIR/$genome_name/$genome_name" ~{hisat2_options} -p ~{cpu} \
+            -q -1 '~{reads1_fastq}' -2 '~{reads2_fastq}' \
+            -S "$TMPDIR/hisat2.sam"
+    else
+        /hisat2/hisat2 -x "$TMPDIR/$genome_name/$genome_name" ~{hisat2_options} -p ~{cpu} \
+            -q -U '~{reads1_fastq}' \
+            -S "$TMPDIR/hisat2.sam"
+    fi
+
+    if [[ '~{paired}' == 'true' ]]; then
+        samtools fastq -f 13 -1 hisat2_filtered1.fastq -2 hisat2_filtered2.fastq -0 /dev/null -s /dev/null "$TMPDIR/hisat2.sam"
+    else
+        samtools fastq -f 4 "$TMPDIR/hisat2.sam" > hisat2_filtered1.fastq
+    fi
+  >>>
+
+  output {
+    #String step_description_md = read_string("fastp_out.description.md")
+    File filtered1_fastq = "hisat2_filtered1.fastq"
+    File? filtered2_fastq = "hisat2_filtered2.fastq"
     #File output_read_count = "fastp_out.count"
   }
   runtime {
@@ -202,6 +251,7 @@ workflow czid_host_filter {
     File adapter_fasta
     #File star_genome
     File bowtie2_index_tar
+    File hisat2_index_tar
     #File gsnap_genome = "s3://czid-public-references/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/hg38_pantro5_k16.tar"
     #String human_star_genome
     #String human_bowtie2_genome
@@ -238,6 +288,15 @@ workflow czid_host_filter {
     cpu = cpu
   }
 
+  call hisat2_filter {
+    input:
+    reads1_fastq = bowtie2_filter.filtered1_fastq,
+    reads2_fastq = bowtie2_filter.filtered2_fastq,
+    index_tar = hisat2_index_tar,
+    docker_image_id = docker_image_id,
+    cpu = cpu
+  }
+
   output {
     File validate_input_out_validate_input_summary_json = RunValidateInput.validate_input_summary_json
     File? validate_input_out_count = RunValidateInput.output_read_count
@@ -247,5 +306,7 @@ workflow czid_host_filter {
     File fastp_out_count = fastp_qc.output_read_count
     File bowtie2_filtered1_fastq = bowtie2_filter.filtered1_fastq
     File? bowtie2_filtered2_fastq = bowtie2_filter.filtered2_fastq
+    File hisat2_filtered1_fastq = hisat2_filter.filtered1_fastq
+    File? hisat2_filtered2_fastq = hisat2_filter.filtered2_fastq
   }
 }
