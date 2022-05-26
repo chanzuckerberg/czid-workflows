@@ -176,21 +176,30 @@ task hisat2_filter {
 
 task RunCZIDDedup {
   input {
+    File reads1_fastq
+    File? reads2_fastq
     String docker_image_id
     String s3_wd_uri
-    Array[File] priceseq_fa
   }
+  Boolean paired = defined(reads2_fastq)
   command<<<
-  set -euxo pipefail
-  idseq-dag-run-step --workflow-name host_filter \
-    --step-module idseq_dag.steps.run_czid_dedup \
-    --step-class PipelineStepRunCZIDDedup \
-    --step-name czid_dedup_out \
-    --input-files '[["~{sep='","' priceseq_fa}"]]' \
-    --output-files '[~{if length(priceseq_fa) == 2 then '"dedup1.fa", "dedup2.fa"' else '"dedup1.fa"'}, "clusters.csv", "duplicate_cluster_sizes.tsv"]' \
-    --output-dir-s3 '~{s3_wd_uri}' \
-    --additional-files '{}' \
-    --additional-attributes '{}'
+    set -euxo pipefail
+    TMPDIR="${TMPDIR:-/tmp}"
+
+    seqtk seq -a '~{reads1_fastq}' > "$TMPDIR/reads1.fa"
+    if [[ '~{paired}' == 'true' ]]; then
+        seqtk seq -a '~{reads2_fastq}' > "$TMPDIR/reads2.fa"
+    fi
+
+    idseq-dag-run-step --workflow-name host_filter \
+      --step-module idseq_dag.steps.run_czid_dedup \
+      --step-class PipelineStepRunCZIDDedup \
+      --step-name czid_dedup_out \
+      --input-files '[["~{sep='","' select_all([reads1_fastq, reads2_fastq])}"]]' \
+      --output-files '[~{if paired then '"dedup1.fa", "dedup2.fa"' else '"dedup1.fa"'}, "clusters.csv", "duplicate_cluster_sizes.tsv"]' \
+      --output-dir-s3 '~{s3_wd_uri}' \
+      --additional-files '{}' \
+      --additional-attributes '{}'
   >>>
   output {
     String step_description_md = read_string("czid_dedup_out.description.md")
@@ -297,6 +306,14 @@ workflow czid_host_filter {
     cpu = cpu
   }
 
+  call RunCZIDDedup {
+    input:
+    reads1_fastq = hisat2_filter.filtered1_fastq,
+    reads2_fastq = hisat2_filter.filtered2_fastq,
+    docker_image_id = docker_image_id,
+    s3_wd_uri = s3_wd_uri
+  }
+
   output {
     File validate_input_out_validate_input_summary_json = RunValidateInput.validate_input_summary_json
     File? validate_input_out_count = RunValidateInput.output_read_count
@@ -308,5 +325,10 @@ workflow czid_host_filter {
     File? bowtie2_filtered2_fastq = bowtie2_filter.filtered2_fastq
     File hisat2_filtered1_fastq = hisat2_filter.filtered1_fastq
     File? hisat2_filtered2_fastq = hisat2_filter.filtered2_fastq
+    File czid_dedup_out_dedup1_fa = RunCZIDDedup.dedup1_fa
+    File? czid_dedup_out_dedup2_fa = RunCZIDDedup.dedup2_fa
+    File czid_dedup_out_duplicate_clusters_csv = RunCZIDDedup.duplicate_clusters_csv
+    File czid_dedup_out_duplicate_cluster_sizes_tsv = RunCZIDDedup.duplicate_cluster_sizes_tsv
+    File? czid_dedup_out_count = RunCZIDDedup.output_read_count
   }
 }
