@@ -8,6 +8,10 @@ RUN sed -i s/archive.ubuntu.com/us-west-2.ec2.archive.ubuntu.com/ /etc/apt/sourc
   echo 'APT::Install-Recommends "false";' > /etc/apt/apt.conf.d/98czid; \
   echo 'APT::Install-Suggests "false";' > /etc/apt/apt.conf.d/99czid
 
+# script to raise error as json
+RUN echo  'set +x \nexport error=$1 cause=$2 \njq -nc ".wdl_error_message=true | .error=env.error | .cause=env.cause" > /dev/stderr \nexit 1' >> /usr/local/bin/raise_error; \
+  chmod +x /usr/local/bin/raise_error
+
 RUN apt-get -qq update && apt-get -qq -y install \
   jq \
   moreutils \
@@ -110,6 +114,7 @@ RUN pip3 install medaka --no-deps
 RUN pip3 install git+https://github.com/rzlim08/PyVCF.git
 
 
+
 # General CG dependencies
 RUN pip3 install taxoniq==0.6.0 && \
     pip3 install --upgrade \
@@ -119,3 +124,4 @@ RUN pip3 install taxoniq==0.6.0 && \
 
 RUN wget https://github.com/shenwei356/seqkit/releases/download/v2.0.0/seqkit_linux_amd64.tar.gz && tar zxvf seqkit_linux_amd64.tar.gz \
 && mv seqkit /usr/local/bin/ && rm seqkit_linux_amd64.tar.gz
+

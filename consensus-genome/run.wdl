@@ -305,12 +305,6 @@ task ValidateInput{
 
     command <<<
         set -uxo pipefail 
-        function raise_error {
-            set +x
-            export error=$1 cause=$2
-            jq -nc ".wdl_error_message=true | .error=env.error | .cause=env.cause" > /dev/stderr
-            exit 1 
-        }
         if [[ "~{technology}" == "ONT" ]] && [[ "~{length(fastqs)}" -gt 1 ]]; then
             # ONT pipeline should only have one input
             raise_error InvalidInputFileError "An Oxford Nanopore pipeline run can only have one input file. Please upload a single file"
