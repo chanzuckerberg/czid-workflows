@@ -76,6 +76,40 @@ task fastp_qc {
   }
 }
 
+task kallisto {
+  input {
+    File reads1_fastq
+    File? reads2_fastq
+    File kallisto_idx
+    String kallisto_options = ""
+
+    String docker_image_id
+    Int cpu = 16
+  }
+  Boolean paired = defined(reads2_fastq)
+
+  command <<<
+    set -euxo pipefail
+
+    single=""
+    if [[ '~{paired}' != 'true' ]]; then
+      # TODO: input fragment length parameters (l = average, s = std dev)
+      single="--single -l 200 -s 20"
+    fi
+    /kallisto/kallisto quant -i '~{kallisto_idx}' -o $(pwd) --plaintext $single ~{kallisto_options} -t ~{cpu} \
+      ~{sep=' ' select_all([reads1_fastq, reads2_fastq])}
+    >&2 jq . run_info.json
+  >>>
+
+  output {
+    File abundance_tsv = "abundance.tsv"
+  }
+
+  runtime {
+    docker: docker_image_id
+  }
+}
+
 task bowtie2_filter {
   # Remove reads [pairs] with bowtie2 hits to the given index
   input {
@@ -283,6 +317,7 @@ workflow czid_host_filter {
     #File star_genome
     File bowtie2_index_tar
     File hisat2_index_tar
+    File kallisto_idx
     #File gsnap_genome = "s3://czid-public-references/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/hg38_pantro5_k16.tar"
     #String human_star_genome
     #String human_bowtie2_genome
@@ -307,6 +342,15 @@ workflow czid_host_filter {
     reads1_fastq = RunValidateInput.valid_input1_fastq,
     reads2_fastq = RunValidateInput.valid_input2_fastq,
     adapter_fasta = adapter_fasta,
+    cpu = cpu
+  }
+
+  call kallisto {
+    input:
+    reads1_fastq = fastp_qc.fastp1_fastq,
+    reads2_fastq = fastp_qc.fastp2_fastq,
+    kallisto_idx = kallisto_idx,
+    docker_image_id = docker_image_id,
     cpu = cpu
   }
 
@@ -353,6 +397,7 @@ workflow czid_host_filter {
     File fastp_out_fastp1_fastq = fastp_qc.fastp1_fastq
     File? fastp_out_fastp2_fastq = fastp_qc.fastp2_fastq
     File fastp_out_count = fastp_qc.output_read_count
+    File kallisto_abundance_tsv = kallisto.abundance_tsv
     File bowtie2_filtered1_fastq = bowtie2_filter.filtered1_fastq
     File? bowtie2_filtered2_fastq = bowtie2_filter.filtered2_fastq
     File hisat2_filtered1_fastq = hisat2_filter.filtered1_fastq
