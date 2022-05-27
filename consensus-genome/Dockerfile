@@ -115,6 +115,7 @@ RUN pip3 install marisa-trie
 RUN pip3 install boto3
 RUN pip3 install git+https://github.com/rzlim08/PyVCF.git
 
+
 RUN wget https://github.com/shenwei356/seqkit/releases/download/v2.0.0/seqkit_linux_amd64.tar.gz && tar zxvf seqkit_linux_amd64.tar.gz \
 && mv seqkit /usr/local/bin/ && rm seqkit_linux_amd64.tar.gz
 
