@@ -142,6 +142,6 @@ if __name__ == '__main__':
     pool.starmap(grab_accession_mapping_list, grab_accession_mapping_list_args)
     accessions = set()  # reset accessions to release memory
 
-    logging.info("starting writing output dictionaries to db")
+    print("starting writing output dictionaries to db", file=sys.stderr)
 
     output_dicts_to_db(mapping_files, accession2taxid_db)

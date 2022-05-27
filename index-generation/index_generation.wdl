@@ -92,7 +92,6 @@ workflow index_generation {
         File nt_loc_db = GenerateNTDB.nt_loc_db
         File nt_info_db = GenerateNTDB.nt_info_db
         File nr_loc_db = GenerateNRDB.nr_loc_db
-        File nr_info_db = GenerateNRDB.nr_info_db
         Directory diamond_index = GenerateIndexDiamond.diamond_index
         File taxid_lineages_db = GenerateIndexLineages.taxid_lineages_db
         File versioned_taxid_lineages_csv = GenerateIndexLineages.versioned_taxid_lineages_csv
@@ -247,7 +246,6 @@ task GenerateNRDB {
 
     output {
         File nr_loc_db = "nr_loc.db"
-        File nr_info_db = "nr_info.db"
     }
 
     runtime {
