@@ -372,9 +372,7 @@ task FetchSequenceByAccessionId {
         { taxoniq get-from-s3 --accession-id $(incrementAccession "~{accession_id}"); } \
         || exit 4; ) > sequence.fa;
         if [[ $? == 4 ]]; then
-            export error=AccessionIdNotFound cause="The Accession ID was not found in the CZ ID database, so a generalized consensus genome could not be run"
-            jq -nc ".wdl_error_message=true | .error=env.error | .cause=env.cause" > /dev/stderr
-            exit 4
+	    raise_error AccessionIdNotFound "The Accession ID was not found in the CZ ID database, so a generalized consensus genome could not be run" 
         fi
         exit $?
     >>>
@@ -440,10 +438,7 @@ task RemoveHost {
         fi
 
         if [[ -z $(gzip -cd "~{prefix}no_host_1.fq.gz" | head -c1) ]]; then
-            set +x
-            export error=InsufficientReadsError cause="There were no reads left after the RemoveHost step of the pipeline."
-            jq -nc ".wdl_error_message=true | .error=env.error | .cause=env.cause" > /dev/stderr
-            exit 1
+            raise_error InsufficientReadsError "There were no reads left after the RemoveHost step of the pipeline."
         fi
     >>>
 
@@ -495,13 +490,6 @@ task FilterReads {
     }
 
     command <<<
-        _no_reads_error() {
-            set +x
-            export error=InsufficientReadsError cause="There were no reads left after the FilterReads step of the pipeline."
-            jq -nc ".wdl_error_message=true | .error=env.error | .cause=env.cause" > /dev/stderr
-            exit 1
-        }
-
         set -euxo pipefail
 
         export TMPDIR=${TMPDIR:-/tmp}
@@ -551,7 +539,7 @@ task FilterReads {
         fi
 
         if [[ -z $(gzip -cd "~{prefix}filtered_1.fq.gz" | head -c1) ]]; then
-            _no_reads_error
+	    raise_error InsufficientReadsError "There were no reads left after the FilterReads step of the pipeline."
         fi
     >>>
 
@@ -583,10 +571,7 @@ task TrimReads {
         fi
 
         if [[ -z $(gzip -cd "${BASENAME}_val_1.fq.gz" | head -c1) ]]; then
-            set +x
-            export error=InsufficientReadsError cause="There were no reads left after the TrimReads step of the pipeline. This step removes adapter sequences and filters out short, low-quality reads."
-            jq -nc ".wdl_error_message=true | .error=env.error | .cause=env.cause" > /dev/stderr
-            exit 1
+            raise_error InsufficientReadsError "There were no reads left after the TrimReads step of the pipeline. This step removes adapter sequences and filters out short, low-quality reads."
         fi
     >>>
 
@@ -693,10 +678,7 @@ task MakeConsensus {
 
         # One-line file means just the fasta header with no reads
         if [[ $(wc -l "~{prefix}consensus.fa" | cut -d' ' -f1) == 1 ]]; then
-            set +x
-            export error=InsufficientReadsError cause="A consensus genome was not created because there were too few reads to compute the consensus sequence"
-            jq -nc ".wdl_error_message=true | .error=env.error | .cause=env.cause" > /dev/stderr
-            exit 1
+            raise_error InsufficientReadsError "A consensus genome was not created because there were too few reads to compute the consensus sequence"
         fi
     >>>
 
