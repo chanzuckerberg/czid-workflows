@@ -116,7 +116,7 @@ task bowtie2_filter {
     File reads1_fastq
     File? reads2_fastq
 
-    # GENOME_NAME.tar should contain GENOME_NAME/GENOME_NAME.*.bt*
+    # GENOME_NAME.bowtie2.tar should contain GENOME_NAME/GENOME_NAME.*.bt*
     File index_tar
     String bowtie2_options = "--very-sensitive-local"
 
@@ -128,7 +128,7 @@ task bowtie2_filter {
     set -euxo pipefail
     TMPDIR="${TMPDIR:-/tmp}"
 
-    genome_name="$(basename '~{index_tar}' .tar)"
+    genome_name="$(basename '~{index_tar}' .bowtie2.tar)"
     tar xf '~{index_tar}' -C "$TMPDIR"
 
     if [[ '~{paired}' == 'true' ]]; then
@@ -165,7 +165,7 @@ task hisat2_filter {
     File reads1_fastq
     File? reads2_fastq
 
-    # GENOME_NAME.tar should contain GENOME_NAME/GENOME_NAME.*.ht2
+    # GENOME_NAME.hisat2.tar should contain GENOME_NAME/GENOME_NAME.*.ht2
     File index_tar
     String hisat2_options = ""
 
@@ -177,7 +177,7 @@ task hisat2_filter {
     set -euxo pipefail
     TMPDIR="${TMPDIR:-/tmp}"
 
-    genome_name="$(basename '~{index_tar}' .tar)"
+    genome_name="$(basename '~{index_tar}' .hisat2.tar)"
     tar xf '~{index_tar}' -C "$TMPDIR"
 
     if [[ '~{paired}' == 'true' ]]; then
