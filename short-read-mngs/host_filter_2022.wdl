@@ -9,7 +9,8 @@ workflow czid_host_filter {
   input {
     File reads1_fastq
     File? reads2_fastq
-    String file_ext
+    # TODO: do we still need to to input either FASTQ or FASTA?
+    String file_ext = "fastq"
 
     File adapter_fasta
 
@@ -85,18 +86,20 @@ workflow czid_host_filter {
 
   # Also filter out human reads, if the host is non-human.
   if (host_genome != "human") {
-    call bowtie2_filter as human_bowtie2_filter {
+    call bowtie2_filter as bowtie2_human_filter {
       input:
       reads1_fastq = hisat2_filter.filtered1_fastq,
       reads2_fastq = hisat2_filter.filtered2_fastq,
+      filter_type = "human",
       index_tar = human_bowtie2_index_tar,
       docker_image_id = docker_image_id,
       cpu = cpu
     }
-    call hisat2_filter as human_hisat2_filter {
+    call hisat2_filter as hisat2_human_filter {
       input:
-      reads1_fastq = human_bowtie2_filter.filtered1_fastq,
-      reads2_fastq = human_bowtie2_filter.filtered2_fastq,
+      reads1_fastq = bowtie2_human_filter.filtered1_fastq,
+      reads2_fastq = bowtie2_human_filter.filtered2_fastq,
+      filter_type = "human",
       index_tar = human_hisat2_index_tar,
       docker_image_id = docker_image_id,
       cpu = cpu
@@ -104,8 +107,8 @@ workflow czid_host_filter {
   }
 
   # Collect effectively filtered reads from the previous conditional
-  File filtered1_fastq = select_first([human_hisat2_filter.filtered1_fastq, hisat2_filter.filtered1_fastq])
-  File? filtered2_fastq = if defined(human_hisat2_filter.filtered2_fastq) then human_hisat2_filter.filtered2_fastq
+  File filtered1_fastq = select_first([hisat2_human_filter.filtered1_fastq, hisat2_filter.filtered1_fastq])
+  File? filtered2_fastq = if defined(hisat2_human_filter.filtered2_fastq) then hisat2_human_filter.filtered2_fastq
                                                                           else hisat2_filter.filtered2_fastq
 
   # Deduplicate reads using custom czid-dedup tool.
@@ -131,26 +134,40 @@ workflow czid_host_filter {
   }
 
   output {
+    File reads_in_count = RunValidateInput.reads_in_count
     File validate_input_out_validate_input_summary_json = RunValidateInput.validate_input_summary_json
-    File? validate_input_out_count = RunValidateInput.output_read_count
-    File? input_read_count = RunValidateInput.input_read_count
+    File validate_input_out_count = RunValidateInput.reads_out_count
+
     File fastp_out_fastp1_fastq = fastp_qc.fastp1_fastq
     File? fastp_out_fastp2_fastq = fastp_qc.fastp2_fastq
-    File fastp_out_count = fastp_qc.output_read_count
+    File fastp_out_count = fastp_qc.reads_out_count
+
     File kallisto_abundance_tsv = kallisto.abundance_tsv
+
     File bowtie2_filtered1_fastq = bowtie2_filter.filtered1_fastq
     File? bowtie2_filtered2_fastq = bowtie2_filter.filtered2_fastq
+    File bowtie2_filtered_out_count = bowtie2_filter.reads_out_count
     File hisat2_filtered1_fastq = hisat2_filter.filtered1_fastq
     File? hisat2_filtered2_fastq = hisat2_filter.filtered2_fastq
+    File hisat2_filtered_out_count = hisat2_filter.reads_out_count
+
+    File? bowtie2_human_filtered1_fastq = bowtie2_human_filter.filtered1_fastq
+    File? bowtie2_human_filtered2_fastq = bowtie2_human_filter.filtered2_fastq
+    File? bowtie2_human_filtered_out_count = bowtie2_human_filter.reads_out_count
+    File? hisat2_human_filtered1_fastq = hisat2_human_filter.filtered1_fastq
+    File? hisat2_human_filtered2_fastq = hisat2_human_filter.filtered2_fastq
+    File? hisat2_human_filtered_out_count = hisat2_human_filter.reads_out_count
+
     File czid_dedup_out_dedup1_fastq = RunCZIDDedup.dedup1_fastq
     File? czid_dedup_out_dedup2_fastq = RunCZIDDedup.dedup2_fastq
     File czid_dedup_out_duplicate_clusters_csv = RunCZIDDedup.duplicate_clusters_csv
     File czid_dedup_out_duplicate_cluster_sizes_tsv = RunCZIDDedup.duplicate_cluster_sizes_tsv
-    File? czid_dedup_out_count = RunCZIDDedup.output_read_count
+    File czid_dedup_out_count = RunCZIDDedup.reads_out_count
+
     File subsampled_out_subsampled_1_fa = RunSubsample.subsampled_1_fa
     File? subsampled_out_subsampled_2_fa = RunSubsample.subsampled_2_fa
     File? subsampled_out_subsampled_merged_fa = RunSubsample.subsampled_merged_fa
-    File? subsampled_out_count = RunSubsample.output_read_count
+    File subsampled_out_count = RunSubsample.reads_out_count
   }
 }
 
@@ -183,8 +200,8 @@ task RunValidateInput {
     File validate_input_summary_json = "validate_input_summary.json"
     File valid_input1_fastq = "valid_input1.fastq"
     File? valid_input2_fastq = "valid_input2.fastq"
-    File? output_read_count = "validate_input_out.count"
-    File? input_read_count = "fastqs.count"
+    File reads_out_count = "validate_input_out.count"
+    File reads_in_count = "fastqs.count"
   }
   runtime {
     docker: docker_image_id
@@ -219,19 +236,18 @@ task fastp_qc {
         -o fastp1.fastq ~{if (paired) then "-O fastp2.fastq" else ""} \
         -w ~{cpu} ~{fastp_options} \
         --adapter_fasta ~{adapter_fasta} ~{if (paired) then "--detect_adapter_for_pe" else ""}
+    count="$(jq .read1_after_filtering.total_reads fastp.json)"
     if [ '~{paired}' == 'true' ]; then
-        pairs="$(jq .read1_after_filtering.total_reads fastp.json)"
-        echo $((2 * pairs)) > fastp_out.count
-    else
-        jq .read1_after_filtering.total_reads fastp.json > fastp_out.count
+        count=$((2 * count))
     fi
+    jq --null-input --arg count "$count" '{"fastp_out":$count}' > fastp_out.count
   >>>
   output {
     File fastp1_fastq = "fastp1.fastq"
     File? fastp2_fastq = "fastp2.fastq"
     File fastp_html = "fastp.html"
     File fastp_json = "fastp.json"
-    File output_read_count = "fastp_out.count"
+    File reads_out_count = "fastp_out.count"
 
     # TODO:
     #String step_description_md = read_string("fastp_out.description.md")
@@ -288,6 +304,7 @@ task bowtie2_filter {
   input {
     File reads1_fastq
     File? reads2_fastq
+    String filter_type = "host" # or human
 
     # GENOME_NAME.bowtie2.tar should contain GENOME_NAME/GENOME_NAME.*.bt*
     File index_tar
@@ -321,19 +338,23 @@ task bowtie2_filter {
         # +  8 (mate unmapped)
         # ----
         #   13
-        samtools fastq -f 13 -1 "bowtie2_${genome_name}_filtered1.fastq" -2 "bowtie2_${genome_name}_filtered2.fastq" -0 /dev/null -s /dev/null "$TMPDIR/bowtie2.sam"
+        samtools fastq -f 13 -1 'bowtie2_~{filter_type}_filtered1.fastq' -2 'bowtie2_~{filter_type}_filtered2.fastq' -0 /dev/null -s /dev/null "$TMPDIR/bowtie2.sam"
     else
-        samtools fastq -f 4 "$TMPDIR/bowtie2.sam" > "bowtie2_${genome_name}_filtered1.fastq"
+        samtools fastq -f 4 "$TMPDIR/bowtie2.sam" > 'bowtie2_~{filter_type}_filtered1.fastq'
     fi
+
+    count="$(cat bowtie2_~{filter_type}_filtered{1,2}.fastq | wc -l)"
+    count=$((count / 4))
+    jq --null-input --arg count "$count" '{"bowtie2_~{filter_type}_filtered_out":$count}' > 'bowtie2_~{filter_type}_filtered_out.count'
   >>>
 
   output {
     File filtered1_fastq = glob("bowtie2_*_filtered1.fastq")[0]
     File? filtered2_fastq = if paired then glob("bowtie2_*_filtered2.fastq")[0] else reads2_fastq
+    File reads_out_count = "bowtie2_~{filter_type}_filtered_out.count"
 
     # TODO:
     #String step_description_md = read_string("bowtie2.description.md")
-    #File output_read_count = ...
   }
   runtime {
     docker: docker_image_id
@@ -347,6 +368,7 @@ task hisat2_filter {
   input {
     File reads1_fastq
     File? reads2_fastq
+    String filter_type = "host" # or human
 
     # GENOME_NAME.hisat2.tar should contain GENOME_NAME/GENOME_NAME.*.ht2
     File index_tar
@@ -380,19 +402,23 @@ task hisat2_filter {
         # +  8 (mate unmapped)
         # ----
         #   13
-        samtools fastq -f 13 -1 "hisat2_${genome_name}_filtered1.fastq" -2 "hisat2_${genome_name}_filtered2.fastq" -0 /dev/null -s /dev/null "$TMPDIR/hisat2.sam"
+        samtools fastq -f 13 -1 'hisat2_~{filter_type}_filtered1.fastq' -2 'hisat2_~{filter_type}_filtered2.fastq' -0 /dev/null -s /dev/null "$TMPDIR/hisat2.sam"
     else
-        samtools fastq -f 4 "$TMPDIR/hisat2.sam" > "hisat2_${genome_name}_filtered1.fastq"
+        samtools fastq -f 4 "$TMPDIR/hisat2.sam" > 'hisat2_~{filter_type}_filtered1.fastq'
     fi
+
+    count="$(cat hisat2_~{filter_type}_filtered{1,2}.fastq | wc -l)"
+    count=$((count / 4))
+    jq --null-input --arg count "$count" '{"hisat2_~{filter_type}_filtered_out":$count}' > 'hisat2_~{filter_type}_filtered_out.count'
   >>>
 
   output {
     File filtered1_fastq = glob("hisat2_*_filtered1.fastq")[0]
     File? filtered2_fastq = if paired then glob("hisat2_*_filtered2.fastq")[0] else reads2_fastq
+    File reads_out_count = "hisat2_~{filter_type}_filtered_out.count"
 
     # TODO:
     #String step_description_md = read_string("hisat2.description.md")
-    #File output_read_count = ...
   }
   runtime {
     docker: docker_image_id
@@ -428,7 +454,7 @@ task RunCZIDDedup {
     File? dedup2_fastq = "dedup2.fastq"
     File duplicate_clusters_csv = "clusters.csv"
     File duplicate_cluster_sizes_tsv = "duplicate_cluster_sizes.tsv"
-    File? output_read_count = "czid_dedup_out.count"
+    File reads_out_count = "czid_dedup_out.count"
   }
   runtime {
     docker: docker_image_id
@@ -496,7 +522,7 @@ task RunSubsample {
     File subsampled_1_fa = "subsampled_1.fa"
     File? subsampled_2_fa = "subsampled_2.fa"
     File? subsampled_merged_fa = "subsampled_merged.fa"
-    File? output_read_count = "subsampled_out.count"
+    File reads_out_count = "subsampled_out.count"
   }
   runtime {
     docker: docker_image_id
