@@ -3,8 +3,10 @@ version development
 workflow index_generation {
     input {
         String index_name
-        String ncbi_server = "ftp://ftp.ncbi.nih.gov"
-        File? previous_lineages = ""
+        String ncbi_server = "https://ftp.ncbi.nih.gov"
+        Boolean write_to_db = false
+        String env = "sandbox"
+        File? previous_lineages
         String docker_image_id
     }
 
@@ -62,6 +64,7 @@ workflow index_generation {
         input:
         taxdump = DownloadTaxdump.taxdump,
         index_name = index_name,
+        previous_lineages = previous_lineages,
         docker_image_id = docker_image_id
     }
     
@@ -71,7 +74,17 @@ workflow index_generation {
         docker_image_id = docker_image_id
     }
 
-    # only include an output if it is confirmed that it is used elsewhere
+
+    if (write_to_db) {
+        call LoadTaxonLineages {
+            input:
+            env = env,
+            versioned_taxid_lineages_csv = GenerateIndexLineages.versioned_taxid_lineages_csv,
+            docker_image_id = docker_image_id
+        } 
+    }
+
+
     output {
         File nr = DownloadNR.nr
         File nt = DownloadNT.nt
@@ -79,7 +92,6 @@ workflow index_generation {
         File nt_loc_db = GenerateNTDB.nt_loc_db
         File nt_info_db = GenerateNTDB.nt_info_db
         File nr_loc_db = GenerateNRDB.nr_loc_db
-        File nr_info_db = GenerateNRDB.nr_info_db
         Directory diamond_index = GenerateIndexDiamond.diamond_index
         File taxid_lineages_db = GenerateIndexLineages.taxid_lineages_db
         File versioned_taxid_lineages_csv = GenerateIndexLineages.versioned_taxid_lineages_csv
@@ -234,7 +246,6 @@ task GenerateNRDB {
 
     output {
         File nr_loc_db = "nr_loc.db"
-        File nr_info_db = "nr_info.db"
     }
 
     runtime {
@@ -266,7 +277,7 @@ task GenerateIndexDiamond {
 task GenerateIndexLineages {
     input {
         File taxdump
-        File? previous_lineages = ""
+        File? previous_lineages
         String index_name
         String docker_image_id
     }
@@ -316,6 +327,36 @@ task GenerateIndexLineages {
         File deuterostome_taxids = "deuterostome_taxids.txt"
         File taxon_ignore_list = "taxon_ignore_list.txt"
     }
+
+    runtime {
+        docker: docker_image_id
+    }
+}
+
+task LoadTaxonLineages {    
+    input {
+        String env
+        File versioned_taxid_lineages_csv
+        String docker_image_id
+    }
+
+    command <<<
+        get_param () {
+            aws ssm get-parameter --name "$1" --with-decryption | jq -r '.Parameter.Value'
+        }
+
+        HOST=$(get_param "/idseq-~{env}-web/RDS_ADDRESS")
+        USER=$(get_param "/idseq-~{env}-web/DB_USERNAME")
+        PASSWORD=$(get_param "/idseq-~{env}-web/db_password")
+        DATABASE="idseq_~{env}"
+
+        COLS=$(head -n 1 ~{versioned_taxid_lineages_csv})
+        mysql -h "$HOST" --user="$USER" --password="$PASSWORD" -D "$DATABASE" -e "CREATE TABLE taxon_lineages_new LIKE taxon_lineages"
+        mysqlimport --verbose --local --host="$HOST" --user="$USER" --password="$PASSWORD" --columns="$COLS" --fields-terminated-by=',' "$DATABASE" ~{versioned_taxid_lineages_csv}
+        mysql -h "$HOST" --user="$USER" --password="$PASSWORD" -D "$DATABASE" -e "RENAME TABLE taxon_lineages TO taxon_lineages_old, taxon_lineages_new To taxon_lineages; DROP TABLE taxon_lineages_old"
+    >>>
+
+    output {}
 
     runtime {
         docker: docker_image_id
