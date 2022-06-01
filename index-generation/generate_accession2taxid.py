@@ -45,7 +45,6 @@ __note:__ columns 3 and 10 of the hitsummary2.xxx.tab files should always be ide
 """
 import argparse
 import dbm
-import logging
 import os
 import shelve
 import sys
