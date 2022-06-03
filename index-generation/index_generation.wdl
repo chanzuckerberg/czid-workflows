@@ -347,20 +347,35 @@ task LoadTaxonLineages {
     }
 
     command <<<
+        set -euxo pipefail
+
         get_param () {
             aws ssm get-parameter --name "$1" --with-decryption | jq -r '.Parameter.Value'
         }
 
         HOST=$(get_param "/idseq-~{env}-web/RDS_ADDRESS")
         USER=$(get_param "/idseq-~{env}-web/DB_USERNAME")
-        PASSWORD=$(get_param "/idseq-~{env}-web/db_password")
         DATABASE="idseq_~{env}"
+
+        echo "[client]" > my.cnf
+        echo "protocol=tcp" >> my.cnf
+        echo "host=$HOST" >> my.cnf
+        echo "user=$USER" >> my.cnf
+        echo "database=$DATABASE" >> my.cnf
+
+        # Add the password without making it a part of the command so we can print commands via set -x without exposing the password
+        # Add the password= for the config
+        echo "password=" >> my.cnf
+        # Remove the newline at end of file
+        truncate -s -1 my.cnf
+        # Append the password after the =
+        get_param "/idseq-~{env}-web/db_password" >> my.cnf
 
         gzip -dc ~{versioned_taxid_lineages_csv} > "taxon_lineages_new.csv"
         COLS=$(head -n 1 "taxon_lineages_new.csv")
-        mysql -h "$HOST" --user="$USER" --password="$PASSWORD" -D "$DATABASE" -e "CREATE TABLE taxon_lineages_new LIKE taxon_lineages"
-        mysqlimport --verbose --local --host="$HOST" --user="$USER" --password="$PASSWORD" --columns="$COLS" --fields-terminated-by=',' --fields-optionally-enclosed-by='"' --ignore-lines 1 "$DATABASE" "taxon_lineages_new.csv"
-        mysql -h "$HOST" --user="$USER" --password="$PASSWORD" -D "$DATABASE" -e "RENAME TABLE taxon_lineages TO taxon_lineages_old, taxon_lineages_new To taxon_lineages"
+        mysql --defaults-extra-file=my.cnf -e "CREATE TABLE taxon_lineages_new LIKE taxon_lineages"
+        mysqlimport --verbose --local --defaults-extra-file=my.cnf --columns="$COLS" --fields-terminated-by=',' --fields-optionally-enclosed-by='"' --ignore-lines 1 "$DATABASE" "taxon_lineages_new.csv"
+        mysql --defaults-extra-file=my.cnf -e "RENAME TABLE taxon_lineages TO taxon_lineages_old, taxon_lineages_new To taxon_lineages"
         # TODO: remove old table once we feel safe
         # mysql -h "$HOST" --user="$USER" --password="$PASSWORD" -D "$DATABASE" -e "DROP TABLE taxon_lineages_old"
         # TODO: (alignment_config) remove after alignment config table is removed
