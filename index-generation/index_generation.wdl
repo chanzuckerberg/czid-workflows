@@ -5,7 +5,9 @@ workflow index_generation {
         String index_name
         String ncbi_server = "https://ftp.ncbi.nih.gov"
         Boolean write_to_db = false
-        String env = "sandbox"
+        String? env
+        # TODO: (alignment_config) remove after alignment config table is removed
+        String? s3_dir
         File? previous_lineages
         String docker_image_id
     }
@@ -75,10 +77,12 @@ workflow index_generation {
     }
 
 
-    if (write_to_db) {
+    if (write_to_db && defined(env) && defined(s3_dir)) {
         call LoadTaxonLineages {
             input:
             env = env,
+            index_name = index_name,
+            s3_dir = s3_dir,
             versioned_taxid_lineages_csv = GenerateIndexLineages.versioned_taxid_lineages_csv,
             docker_image_id = docker_image_id
         } 
@@ -333,9 +337,11 @@ task GenerateIndexLineages {
     }
 }
 
-task LoadTaxonLineages {    
+task LoadTaxonLineages {
     input {
-        String env
+        String? env
+        String index_name
+        String? s3_dir
         File versioned_taxid_lineages_csv
         String docker_image_id
     }
@@ -348,12 +354,47 @@ task LoadTaxonLineages {
         HOST=$(get_param "/idseq-~{env}-web/RDS_ADDRESS")
         USER=$(get_param "/idseq-~{env}-web/DB_USERNAME")
         PASSWORD=$(get_param "/idseq-~{env}-web/db_password")
-        DATABASE="idseq_~{env}"
+        DATABASE="idseq_sandbox"
 
-        COLS=$(head -n 1 ~{versioned_taxid_lineages_csv})
+        gzip -dc ~{versioned_taxid_lineages_csv} > "taxon_lineages_new.csv"
+        COLS=$(head -n 1 "taxon_lineages_new.csv")
         mysql -h "$HOST" --user="$USER" --password="$PASSWORD" -D "$DATABASE" -e "CREATE TABLE taxon_lineages_new LIKE taxon_lineages"
-        mysqlimport --verbose --local --host="$HOST" --user="$USER" --password="$PASSWORD" --columns="$COLS" --fields-terminated-by=',' "$DATABASE" ~{versioned_taxid_lineages_csv}
-        mysql -h "$HOST" --user="$USER" --password="$PASSWORD" -D "$DATABASE" -e "RENAME TABLE taxon_lineages TO taxon_lineages_old, taxon_lineages_new To taxon_lineages; DROP TABLE taxon_lineages_old"
+        mysqlimport --verbose --local --host="$HOST" --user="$USER" --password="$PASSWORD" --columns="$COLS" --fields-terminated-by=',' --fields-optionally-enclosed-by='"' --ignore-lines 1 "$DATABASE" "taxon_lineages_new.csv"
+        mysql -h "$HOST" --user="$USER" --password="$PASSWORD" -D "$DATABASE" -e "RENAME TABLE taxon_lineages TO taxon_lineages_old, taxon_lineages_new To taxon_lineages"
+        # TODO: remove old table once we feel safe
+        # mysql -h "$HOST" --user="$USER" --password="$PASSWORD" -D "$DATABASE" -e "DROP TABLE taxon_lineages_old"
+        # TODO: (alignment_config) remove after alignment config table is removed
+        mysql -h "$HOST" --user="$USER" --password="$PASSWORD" -D "$DATABASE" -e "
+            INSERT INTO alignment_configs(
+                name,
+                s3_nt_db_path,
+                s3_nt_loc_db_path,
+                s3_nr_db_path,
+                s3_nr_loc_db_path,
+                s3_lineage_path,
+                s3_accession2taxid_path,
+                s3_deuterostome_db_path,
+                s3_nt_info_db_path,
+                s3_taxon_blacklist_path,
+                lineage_version,
+                created_at,
+                updated_at
+            ) VALUES(
+                '~{index_name}',
+                '~{s3_dir}/nt',
+                '~{s3_dir}/nt_loc.db',
+                '~{s3_dir}/nr',
+                '~{s3_dir}/nr_loc.db',
+                '~{s3_dir}/taxid-lineages.db',
+                '~{s3_dir}/accession2taxid.db',
+                '~{s3_dir}/deuterostome_taxids.txt',
+                '~{s3_dir}/nt_info.db',
+                '~{s3_dir}/taxon_ignore_list.txt',
+                '~{index_name}',
+                NOW(),
+                NOW()
+            ); 
+        "
     >>>
 
     output {}
