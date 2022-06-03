@@ -354,7 +354,7 @@ task LoadTaxonLineages {
         HOST=$(get_param "/idseq-~{env}-web/RDS_ADDRESS")
         USER=$(get_param "/idseq-~{env}-web/DB_USERNAME")
         PASSWORD=$(get_param "/idseq-~{env}-web/db_password")
-        DATABASE="idseq_sandbox"
+        DATABASE="idseq_~{env}"
 
         gzip -dc ~{versioned_taxid_lineages_csv} > "taxon_lineages_new.csv"
         COLS=$(head -n 1 "taxon_lineages_new.csv")
