@@ -363,7 +363,6 @@ task LoadTaxonLineages {
         echo "protocol=tcp" >> my.cnf
         echo "host=$HOST" >> my.cnf
         echo "user=$USER" >> my.cnf
-        echo "database=$DATABASE" >> my.cnf
 
         # Add the password without making it a part of the command so we can print commands via set -x without exposing the password
         # Add the password= for the config
@@ -375,9 +374,9 @@ task LoadTaxonLineages {
 
         gzip -dc ~{versioned_taxid_lineages_csv} > "taxon_lineages_new.csv"
         COLS=$(head -n 1 "taxon_lineages_new.csv")
-        mysql --defaults-extra-file=my.cnf -e "CREATE TABLE taxon_lineages_new LIKE taxon_lineages"
+        mysql --defaults-extra-file=my.cnf -D "$DATABASE" -e "CREATE TABLE taxon_lineages_new LIKE taxon_lineages"
         mysqlimport --defaults-extra-file=my.cnf --verbose --local --columns="$COLS" --fields-terminated-by=',' --fields-optionally-enclosed-by='"' --ignore-lines 1 "$DATABASE" "taxon_lineages_new.csv"
-        mysql --defaults-extra-file=my.cnf -e "RENAME TABLE taxon_lineages TO taxon_lineages_old, taxon_lineages_new To taxon_lineages"
+        mysql --defaults-extra-file=my.cnf -D "$DATABASE" -e "RENAME TABLE taxon_lineages TO taxon_lineages_old, taxon_lineages_new To taxon_lineages"
         # TODO: remove old table once we feel safe
         # mysql --defaults-extra-file=my.cnf -e "DROP TABLE taxon_lineages_old"
         # TODO: (alignment_config) remove after alignment config table is removed
