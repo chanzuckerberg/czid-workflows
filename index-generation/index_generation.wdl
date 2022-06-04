@@ -378,9 +378,9 @@ task LoadTaxonLineages {
         mysqlimport --defaults-extra-file=my.cnf --verbose --local --columns="$COLS" --fields-terminated-by=',' --fields-optionally-enclosed-by='"' --ignore-lines 1 "$DATABASE" "taxon_lineages_new.csv"
         mysql --defaults-extra-file=my.cnf -D "$DATABASE" -e "RENAME TABLE taxon_lineages TO taxon_lineages_old, taxon_lineages_new To taxon_lineages"
         # TODO: remove old table once we feel safe
-        # mysql --defaults-extra-file=my.cnf -e "DROP TABLE taxon_lineages_old"
+        # mysql --defaults-extra-file=my.cnf -D "$DATABASE" -e "DROP TABLE taxon_lineages_old"
         # TODO: (alignment_config) remove after alignment config table is removed
-        mysql --defaults-extra-file=my.cnf -e "
+        mysql --defaults-extra-file=my.cnf -D "$DATABASE" -e "
             INSERT INTO alignment_configs(
                 name,
                 s3_nt_db_path,
