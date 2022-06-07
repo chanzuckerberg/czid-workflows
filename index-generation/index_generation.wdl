@@ -349,8 +349,6 @@ task LoadTaxonLineages {
     command <<<
         set -euxo pipefail
 
-        apt-get update && apt-get install jq
-
         get_param () {
             aws ssm get-parameter --name "$1" --with-decryption | jq -r '.Parameter.Value'
         }

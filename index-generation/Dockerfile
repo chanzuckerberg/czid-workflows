@@ -29,7 +29,8 @@ RUN apt-get update && \
         python3-gdbm \
         python3-pip \
         software-properties-common \
-        mysql-client
+        mysql-client \
+        jq
 
 # install aria2
 WORKDIR /tmp
