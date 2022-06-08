@@ -40,7 +40,6 @@ RUN apt-get -q install -y \
         python3-cutadapt \
         python3-scipy \
         samtools \
-        fastx-toolkit \
         seqtk \
         bedtools
 
