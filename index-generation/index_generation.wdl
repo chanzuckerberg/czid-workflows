@@ -4,7 +4,11 @@ workflow index_generation {
     input {
         String index_name
         String ncbi_server = "https://ftp.ncbi.nih.gov"
-        File? previous_lineages = ""
+        Boolean write_to_db = false
+        String? env
+        # TODO: (alignment_config) remove after alignment config table is removed
+        String? s3_dir
+        File? previous_lineages
         String docker_image_id
     }
 
@@ -62,33 +66,38 @@ workflow index_generation {
         input:
         taxdump = DownloadTaxdump.taxdump,
         index_name = index_name,
+        previous_lineages = previous_lineages,
         docker_image_id = docker_image_id
     }
-
+    
     call GenerateIndexMinimap2 {
         input:
         nt = DownloadNT.nt,
         docker_image_id = docker_image_id
     }
 
+
+    if (write_to_db && defined(env) && defined(s3_dir)) {
+        call LoadTaxonLineages {
+            input:
+            env = env,
+            index_name = index_name,
+            s3_dir = s3_dir,
+            versioned_taxid_lineages_csv = GenerateIndexLineages.versioned_taxid_lineages_csv,
+            docker_image_id = docker_image_id
+        } 
+    }
+
+
     output {
         File nr = DownloadNR.nr
         File nt = DownloadNT.nt
-        Directory accession2taxid = DownloadAccession2Taxid.accession2taxid
-        File taxdump = DownloadTaxdump.taxdump
-        File accession2taxid_gz = GenerateIndexAccessions.accession2taxid_gz
-        File accession2taxid_wgs = GenerateIndexAccessions.accession2taxid_wgs
         File accession2taxid_db = GenerateIndexAccessions.accession2taxid_db
-        File taxid2wgs_accession_db = GenerateIndexAccessions.taxid2wgs_accession_db
         File nt_loc_db = GenerateNTDB.nt_loc_db
         File nt_info_db = GenerateNTDB.nt_info_db
         File nr_loc_db = GenerateNRDB.nr_loc_db
-        File nr_info_db = GenerateNRDB.nr_info_db
         Directory diamond_index = GenerateIndexDiamond.diamond_index
         File taxid_lineages_db = GenerateIndexLineages.taxid_lineages_db
-        File taxid_lineages_csv = GenerateIndexLineages.taxid_lineages_csv
-        File names_csv = GenerateIndexLineages.names_csv
-        File named_taxid_lineages_csv = GenerateIndexLineages.named_taxid_lineages_csv
         File versioned_taxid_lineages_csv = GenerateIndexLineages.versioned_taxid_lineages_csv
         File deuterostome_taxids = GenerateIndexLineages.deuterostome_taxids
         File taxon_ignore_list = GenerateIndexLineages.taxon_ignore_list
@@ -104,11 +113,10 @@ task DownloadNR {
 
     command <<<
         ncbi_download "~{ncbi_server}" blast/db/FASTA/nr.gz
-        pigz -dc blast/db/FASTA/nr.gz > nr
     >>>
 
     output {
-        File nr = "nr"
+        File nr = "blast/db/FASTA/nr"
     }
 
     runtime {
@@ -124,12 +132,11 @@ task DownloadNT {
 
     command <<<
         ncbi_download "~{ncbi_server}" blast/db/FASTA/nt.gz
-        pigz -dc blast/db/FASTA/nt.gz > nt
         
     >>>
 
     output {
-        File nt = "nt"
+        File nt = "blast/db/FASTA/nt"
     }
 
     runtime {
@@ -144,13 +151,9 @@ task DownloadAccession2Taxid {
     }
 
     command <<<
-        ncbi_download "~{ncbi_server}" pub/taxonomy/accession2taxid/dead_nucl.accession2taxid.gz
-        ncbi_download "~{ncbi_server}" pub/taxonomy/accession2taxid/dead_prot.accession2taxid.gz
-        ncbi_download "~{ncbi_server}" pub/taxonomy/accession2taxid/dead_wgs.accession2taxid.gz
         ncbi_download "~{ncbi_server}" pub/taxonomy/accession2taxid/nucl_gb.accession2taxid.gz
         ncbi_download "~{ncbi_server}" pub/taxonomy/accession2taxid/nucl_wgs.accession2taxid.gz
         ncbi_download "~{ncbi_server}" pub/taxonomy/accession2taxid/pdb.accession2taxid.gz
-        ncbi_download "~{ncbi_server}" pub/taxonomy/accession2taxid/prot.accession2taxid.gz
         ncbi_download "~{ncbi_server}" pub/taxonomy/accession2taxid/prot.accession2taxid.FULL.gz
     >>>
 
@@ -174,7 +177,7 @@ task DownloadTaxdump {
     >>>
 
     output {
-        File taxdump = "pub/taxonomy/taxdump.tar.gz"
+        File taxdump = "pub/taxonomy/taxdump.tar"
     }
 
     runtime {
@@ -194,28 +197,20 @@ task GenerateIndexAccessions {
     command <<<
         set -euxo pipefail
 
-        cp -r ~{accession2taxid} accession2taxid
-
         # Build index
         python3 /usr/local/bin/generate_accession2taxid.py \
-            accession2taxid/nucl_wgs.accession2taxid.gz \
-            accession2taxid/nucl_gb.accession2taxid.gz \
-            accession2taxid/pdb.accession2taxid.gz \
-            accession2taxid/prot.accession2taxid.FULL.gz \
+            ~{accession2taxid}/nucl_wgs.accession2taxid \
+            ~{accession2taxid}/nucl_gb.accession2taxid \
+            ~{accession2taxid}/pdb.accession2taxid \
+            ~{accession2taxid}/prot.accession2taxid.FULL \
             --parallelism ~{parallelism} \
             --nt_file ~{nt} \
             --nr_file ~{nr} \
-            --output_gz accession2taxid.gz \
-            --output_wgs_gz accession2taxid_wgs.gz \
             --accession2taxid_db accession2taxid.db \
-            --taxid2wgs_accession_db taxid2wgs_accession.db
     >>>
 
     output {
-        File accession2taxid_gz = "accession2taxid.gz"
-        File accession2taxid_wgs = "accession2taxid_wgs.gz"
         File accession2taxid_db = "accession2taxid.db"
-        File taxid2wgs_accession_db = "taxid2wgs_accession.db"
     }
 
     runtime {
@@ -255,7 +250,6 @@ task GenerateNRDB {
 
     output {
         File nr_loc_db = "nr_loc.db"
-        File nr_info_db = "nr_info.db"
     }
 
     runtime {
@@ -287,7 +281,7 @@ task GenerateIndexDiamond {
 task GenerateIndexLineages {
     input {
         File taxdump
-        File? previous_lineages = ""
+        File? previous_lineages
         String index_name
         String docker_image_id
     }
@@ -296,11 +290,15 @@ task GenerateIndexLineages {
         set -euxo pipefail
 
         # Build Indexes
-        git clone https://github.com/chanzuckerberg/ncbitax2lin.git
-        cd ncbitax2lin
         mkdir -p taxdump/taxdump
-        tar zxf ~{taxdump} -C ./taxdump/taxdump
-        make 1>&2
+        tar xf ~{taxdump} -C ./taxdump/taxdump
+
+        python3 /usr/local/bin/ncbitax2lin.py \
+            --nodes-file taxdump/taxdump/nodes.dmp \
+            --names-file taxdump/taxdump/names.dmp \
+            --names-output-prefix names \
+            --taxid-lineages-output-prefix taxid-lineages \
+            --name-lineages-output-prefix lineages
 
         # Add names to lineages
 
@@ -328,14 +326,92 @@ task GenerateIndexLineages {
     >>>
 
     output {
-        File taxid_lineages_db = "ncbitax2lin/taxid-lineages.db"
-        File taxid_lineages_csv = "ncbitax2lin/taxid-lineages.csv.gz"
-        File names_csv = "ncbitax2lin/names.csv.gz"
-        File named_taxid_lineages_csv = "ncbitax2lin/named-taxid-lineages.csv.gz"
-        File versioned_taxid_lineages_csv = "ncbitax2lin/versioned-taxid-lineages.csv.gz"
-        File deuterostome_taxids = "ncbitax2lin/deuterostome_taxids.txt"
-        File taxon_ignore_list = "ncbitax2lin/taxon_ignore_list.txt"
+        File taxid_lineages_db = "taxid-lineages.db"
+        File versioned_taxid_lineages_csv = "versioned-taxid-lineages.csv.gz"
+        File deuterostome_taxids = "deuterostome_taxids.txt"
+        File taxon_ignore_list = "taxon_ignore_list.txt"
     }
+
+    runtime {
+        docker: docker_image_id
+    }
+}
+
+task LoadTaxonLineages {
+    input {
+        String? env
+        String index_name
+        String? s3_dir
+        File versioned_taxid_lineages_csv
+        String docker_image_id
+    }
+
+    command <<<
+        set -euxo pipefail
+
+        get_param () {
+            aws ssm get-parameter --name "$1" --with-decryption | jq -r '.Parameter.Value'
+        }
+
+        HOST=$(get_param "/idseq-~{env}-web/RDS_ADDRESS")
+        USER=$(get_param "/idseq-~{env}-web/DB_USERNAME")
+        DATABASE="idseq_~{env}"
+
+        echo "[client]" > my.cnf
+        echo "protocol=tcp" >> my.cnf
+        echo "host=$HOST" >> my.cnf
+        echo "user=$USER" >> my.cnf
+
+        # Add the password without making it a part of the command so we can print commands via set -x without exposing the password
+        # Add the password= for the config
+        echo "password=" >> my.cnf
+        # Remove the newline at end of file
+        truncate -s -1 my.cnf
+        # Append the password after the =
+        get_param "/idseq-~{env}-web/db_password" >> my.cnf
+
+        gzip -dc ~{versioned_taxid_lineages_csv} > "taxon_lineages_new.csv"
+        COLS=$(head -n 1 "taxon_lineages_new.csv")
+        mysql --defaults-extra-file=my.cnf -D "$DATABASE" -e "CREATE TABLE taxon_lineages_new LIKE taxon_lineages"
+        mysqlimport --defaults-extra-file=my.cnf --verbose --local --columns="$COLS" --fields-terminated-by=',' --fields-optionally-enclosed-by='"' --ignore-lines 1 "$DATABASE" "taxon_lineages_new.csv"
+        mysql --defaults-extra-file=my.cnf -D "$DATABASE" -e "RENAME TABLE taxon_lineages TO taxon_lineages_old, taxon_lineages_new To taxon_lineages"
+        # TODO: remove old table once we feel safe
+        # mysql --defaults-extra-file=my.cnf -D "$DATABASE" -e "DROP TABLE taxon_lineages_old"
+        # TODO: (alignment_config) remove after alignment config table is removed
+        mysql --defaults-extra-file=my.cnf -D "$DATABASE" -e "
+            INSERT INTO alignment_configs(
+                name,
+                s3_nt_db_path,
+                s3_nt_loc_db_path,
+                s3_nr_db_path,
+                s3_nr_loc_db_path,
+                s3_lineage_path,
+                s3_accession2taxid_path,
+                s3_deuterostome_db_path,
+                s3_nt_info_db_path,
+                s3_taxon_blacklist_path,
+                lineage_version,
+                created_at,
+                updated_at
+            ) VALUES(
+                '~{index_name}',
+                '~{s3_dir}/nt',
+                '~{s3_dir}/nt_loc.db',
+                '~{s3_dir}/nr',
+                '~{s3_dir}/nr_loc.db',
+                '~{s3_dir}/taxid-lineages.db',
+                '~{s3_dir}/accession2taxid.db',
+                '~{s3_dir}/deuterostome_taxids.txt',
+                '~{s3_dir}/nt_info.db',
+                '~{s3_dir}/taxon_ignore_list.txt',
+                '~{index_name}',
+                NOW(),
+                NOW()
+            ); 
+        "
+    >>>
+
+    output {}
 
     runtime {
         docker: docker_image_id

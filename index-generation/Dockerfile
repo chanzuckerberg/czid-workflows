@@ -1,5 +1,6 @@
-FROM ubuntu:18.04
+FROM ubuntu:22.04
 ARG DEBIAN_FRONTEND=noninteractive
+ARG ARIA2_VERSION=1.36.0
 
 # Install dependencies
 RUN apt-get update && \
@@ -8,7 +9,7 @@ RUN apt-get update && \
         ## diamond
         g++ \
         gdb \
-        libclang-common-6.0-dev \
+        libclang-common-12-dev \
         cmake\
         g++\
         zlib1g-dev \
@@ -21,14 +22,21 @@ RUN apt-get update && \
         git \
         wget \
         liblz4-tool \
+        libssl-dev \
+        pkg-config \
         pigz \
-        python-pandas \
+        python3-pandas \
         python3-gdbm \
         python3-pip \
-        software-properties-common
+        software-properties-common \
+        mysql-client \
+        jq
 
-# Install s3parcp
-RUN curl -Ls https://github.com/chanzuckerberg/s3parcp/releases/download/v0.2.0-alpha/s3parcp_0.2.0-alpha_Linux_x86_64.tar.gz | tar -C /usr/bin -xz s3parcp
+# install aria2
+WORKDIR /tmp
+RUN curl -L https://github.com/aria2/aria2/releases/download/release-${ARIA2_VERSION}/aria2-${ARIA2_VERSION}.tar.gz -o aria2-${ARIA2_VERSION}.tar.gz && \
+    tar xzvf aria2-${ARIA2_VERSION}.tar.gz
+RUN cd /tmp/aria2-${ARIA2_VERSION} && ./configure --without-gnutls --with-openssl && make && mv ./src/aria2c /usr/local/bin/
 
 # install minimap2 and seqkit
 RUN git clone --single-branch --branch distributed-mapping  https://github.com/mlin/minimap2.git \

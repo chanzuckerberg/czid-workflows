@@ -102,7 +102,7 @@ def generate_taxon_lineage_names(
                 new_row[f"{level}_taxid"] = row[level]
                 name, common_name = names.get(row[level], ("", ""))
                 new_row[f"{level}_name"], new_row[f"{level}_common_name"] = name, common_name
-                writer.writerow(new_row)
+            writer.writerow(new_row)
 
 
 def _equals(previous_row: Dict[str, str], row: Dict[str, str]):
@@ -207,8 +207,8 @@ def version_taxon_lineages(
                     # We already have this lineage, update it's version_end
                     #   to keep it from expiring
                     previous_row["version_end"] = version
-                    row["updated_at"] = str(datetime.now())
-                    writer.writerow(row)
+                    previous_row["updated_at"] = str(datetime.now())
+                    writer.writerow(previous_row)
                 else:
                     # This is either a brand new lineage, or an updated
                     #   lineage. Create a new lineage, and don't update
