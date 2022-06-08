@@ -42,45 +42,6 @@ task RunAlignment_gsnap_out {
   }
 }
 
-task RunAlignment_rapsearch2_out {
-  input {
-    String docker_image_id
-    String s3_wd_uri
-    Array[File] host_filter_out_gsnap_filter_fa
-    File duplicate_cluster_sizes_tsv
-    File lineage_db
-    File accession2taxid_db
-    File taxon_blacklist
-    File? index
-    String index_dir_suffix
-    Boolean use_taxon_whitelist
-	  Boolean? run_locally = false
-  }
-  command<<<
-  set -euxo pipefail
-  idseq-dag-run-step --workflow-name non_host_alignment \
-    --step-module idseq_dag.steps.run_alignment \
-    --step-class PipelineStepRunAlignment \
-    --step-name rapsearch2_out \
-    --input-files '[["~{sep='","' host_filter_out_gsnap_filter_fa}"], ["~{duplicate_cluster_sizes_tsv}"]]' \
-    --output-files '["rapsearch2.m8", "rapsearch2.deduped.m8", "rapsearch2.hitsummary.tab", "rapsearch2_counts_with_dcr.json"]' \
-    --output-dir-s3 '~{s3_wd_uri}' \
-    --additional-files '{"lineage_db": "~{lineage_db}", "accession2taxid_db": "~{accession2taxid_db}", "taxon_blacklist": "~{taxon_blacklist}" ~{if defined(index) then ', "index": "~{index}"' else ''} }' \
-    --additional-attributes '{"alignment_algorithm": "rapsearch2", "index_dir_suffix": "~{index_dir_suffix}", "use_taxon_whitelist": ~{use_taxon_whitelist}, "run_locally": ~{run_locally} }'
-  >>>
-  output {
-    String step_description_md = read_string("rapsearch2_out.description.md")
-    File rapsearch2_m8 = "rapsearch2.m8"
-    File rapsearch2_deduped_m8 = "rapsearch2.deduped.m8"
-    File rapsearch2_hitsummary_tab = "rapsearch2.hitsummary.tab"
-    File rapsearch2_counts_with_dcr_json = "rapsearch2_counts_with_dcr.json"
-    File? output_read_count = "rapsearch2_out.count"
-  }
-  runtime {
-    docker: docker_image_id
-  }
-}
-
 task CombineTaxonCounts {
   input {
     String docker_image_id

@@ -108,34 +108,6 @@ RUN curl -L https://github.com/alexdobin/STAR/archive/2.5.3a.tar.gz | tar xz
 RUN mv STAR-2.5.3a/bin/Linux_x86_64_static/* /usr/local/bin
 RUN rm -rf STAR-2.5.3a
 
-# install gsnap and rapsearch2 for local alignment
-RUN apt-get install -y \
-        g++ \
-        libperl4-corelibs-perl \
-        make \
-        # Runtime dependencies
-        # On versions higher than 1.62 compilation errors because of an overloading ambiguity with the `advance` method
-        libboost1.62-all-dev
-
-
-# install gsnap, we are using a pinned version for alignment
-#  we are also using a different version for host filtering so we append -208-10-26 to each binary.
-WORKDIR /gmap-gsnap-2018-10-26
-RUN curl -L  https://idseq-gsnap-prerelease.s3-us-west-2.amazonaws.com/gmap-2018-10-26.tar.gz | tar xz -C /gmap-gsnap-2018-10-26 --strip-components 1
-RUN ./configure --prefix=/gmap-gsnap-2018-10-26 --with-simd-level=avx2 && make -j 8 && make install
-RUN ls bin | xargs -I % mv bin/% bin/%-2018-10-26
-ENV PATH="${PATH}:/gmap-gsnap-2018-10-26/bin/"
-
-WORKDIR /rapsearch2/Src
-RUN curl -L  https://idseq-rapsearch2.s3-us-west-2.amazonaws.com/RAPSearch2.24_64bits.tar.gz  | tar xz -C /rapsearch2 --strip-components 1
-# Use the version of boost we installed
-RUN sed -i -e 's|^INC.*|INC := -I /usr/include/boost|' -e 's|^LIB.*|LIB :=|' Makefile
-RUN make
-ENV PATH="${PATH}:/rapsearch2/Src/"
-# Uninstall build only dependencies
-RUN apt-get purge -y g++ libperl4-corelibs-perl make
-WORKDIR /
-
 RUN apt-get -y update && apt-get install -y build-essential libz-dev git python3-pip cmake
 
 WORKDIR /tmp
