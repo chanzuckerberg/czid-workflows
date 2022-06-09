@@ -1,6 +1,5 @@
 import argparse
 import datetime
-import gzip
 import logging
 import multiprocessing
 import os
