@@ -129,6 +129,7 @@ def run_local_sample(sample, docker_image_id, dir, databases, settings, verbose)
     cmd = [
         "miniwdl",
         "run",
+        "--verbose",
         local_driver_wdl,
         "--input",
         json.dumps(wdl_input),
