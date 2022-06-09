@@ -242,7 +242,7 @@ def write_output(output_prefix, output_name_log, df, cols=None, undef_taxids=Non
     logging.info("writing %s to %s" % (output_name_log, output))
     with open(output, 'wb') as opf:
         # make sure the name and timestamp are not gzipped, (like gzip -n)
-        opf_gz = gzip.GzipFile('', 'wb', 9, opf, 0.)
+        opf_gz = gzip.GzipFile('', 'w', 9, opf, 0.)
         if undef_taxids and cols:
             for col in undef_taxids.keys():
                 df[[col]] = df[[col]].fillna(value=undef_taxids[col])
