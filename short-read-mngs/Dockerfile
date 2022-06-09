@@ -8,6 +8,7 @@ RUN sed -i s/archive.ubuntu.com/us-west-2.ec2.archive.ubuntu.com/ /etc/apt/sourc
         echo 'APT::Install-Recommends "false";' > /etc/apt/apt.conf.d/98czid; \
         echo 'APT::Install-Suggests "false";' > /etc/apt/apt.conf.d/99czid
 
+RUN add-apt-repository ppa:deadsnakes/ppa
 RUN apt-get -q update
 RUN apt-get -q install -y \
         jq \
@@ -30,6 +31,7 @@ RUN apt-get -q install -y \
         liblz4-tool \
         lbzip2 \
         docker.io \
+        python3.10 \
         python3-pip \
         python3-setuptools \
         python3-wheel \
