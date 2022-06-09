@@ -1,4 +1,4 @@
-FROM ubuntu:22.04
+FROM ubuntu:18.04
 ARG DEBIAN_FRONTEND=noninteractive
 ARG ARIA2_VERSION=1.36.0
 
