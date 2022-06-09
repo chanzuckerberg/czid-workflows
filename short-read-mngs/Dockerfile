@@ -8,7 +8,7 @@ RUN sed -i s/archive.ubuntu.com/us-west-2.ec2.archive.ubuntu.com/ /etc/apt/sourc
         echo 'APT::Install-Recommends "false";' > /etc/apt/apt.conf.d/98czid; \
         echo 'APT::Install-Suggests "false";' > /etc/apt/apt.conf.d/99czid
 
-RUN apt-get -q update && add-apt-repository ppa:deadsnakes/ppa
+RUN apt-get -q update && apt-get -q install -y software-properties-common && add-apt-repository ppa:deadsnakes/ppa
 RUN apt-get -q update && apt-get -q install -y \
         jq \
         moreutils \
