@@ -1,3 +1,4 @@
+## TODO: upgrade to 22.04 once we replace shelve
 FROM ubuntu:18.04
 ARG DEBIAN_FRONTEND=noninteractive
 ARG ARIA2_VERSION=1.36.0
@@ -9,7 +10,8 @@ RUN apt-get update && \
         ## diamond
         g++ \
         gdb \
-        libclang-common-12-dev \
+        libclang-common-6.0-dev \
+        # libclang-common-12-dev \
         cmake\
         g++\
         zlib1g-dev \
