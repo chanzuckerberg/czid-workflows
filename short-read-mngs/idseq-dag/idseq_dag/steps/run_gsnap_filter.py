@@ -67,7 +67,7 @@ class PipelineStepRunGsnapFilter(PipelineCountingStep):
             stderr=subprocess.PIPE,
             stdout=subprocess.PIPE
         ).stderr
-        gsnap_exe = "gsnap" if 'please run gsnap instead' in error_message.decode('utf-8') else "gsnapl"
+        gsnap_exe = "gsnap" if 'You should run gsnapl instead.' in error_message.decode('utf-8') else "gsnapl"
         # Run Gsnap
         gsnap_params = [
             '-A', 'sam', '--batch=0', '--use-shared-memory=0',
