@@ -12,7 +12,7 @@ class PipelineStepRunTrimmomatic(PipelineStep):
     """ Removes adapter sequences.
 
     ```
-    java -jar /usr/local/bin/trimmomatic-0.38.jar
+    java -jar /usr/local/bin/trimmomatic-0.39.jar
     PE|SE
     -phred33
     [input_files]
@@ -99,7 +99,7 @@ class PipelineStepRunTrimmomatic(PipelineStep):
             output_args = output_files
 
         params = [
-            "-jar", "/usr/local/bin/trimmomatic-0.38.jar",
+            "-jar", "/usr/local/bin/trimmomatic-0.39.jar",
             paired_arg,
             "-phred33",
             *input_files,

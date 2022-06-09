@@ -79,7 +79,7 @@ RUN apt-get -q install -y gmap
 
 # FIXME: replace trimmomatic with cutadapt (trimmomatic pulls in too many deps)
 RUN apt-get -q install -y trimmomatic
-RUN ln -sf /usr/share/java/trimmomatic-0.36.jar /usr/local/bin/trimmomatic-0.38.jar
+RUN ln -sf /usr/share/java/trimmomatic-0.39.jar /usr/local/bin/trimmomatic-0.39.jar
 
 # FIXME: replace PriceSeqFilter with cutadapt quality/N-fraction cutoff
 RUN curl -s https://idseq-prod-pipeline-public-assets-us-west-2.s3-us-west-2.amazonaws.com/PriceSource140408/PriceSeqFilter > /usr/bin/PriceSeqFilter
