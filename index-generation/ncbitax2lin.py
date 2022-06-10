@@ -296,8 +296,7 @@ def generate_lineage_outputs(df, taxid_lineages_output_prefix, name_lineages_out
                  undef_taxids=undef_taxids)
 
     logging.info('writing lineage-by-taxid shelf...')
-    taxid_lineages_shelf_output = os.path.join('{0}.db'.format(taxid_lineages_output_prefix))
-    d = shelve.open(taxid_lineages_shelf_output)
+    d = shelve.open(taxid_lineages_output_prefix)
     for _, row in taxid_lineages_df.iterrows():
         d[str(int(row['tax_id']))] = (str(int(row['species'])), str(int(row['genus'])), str(int(row['family'])))
     d.close()
