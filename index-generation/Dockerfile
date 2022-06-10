@@ -28,7 +28,6 @@ RUN apt-get update && \
         pkg-config \
         pigz \
         python3-pandas \
-        python3-gdbm \
         python3-pip \
         software-properties-common \
         mysql-client \
