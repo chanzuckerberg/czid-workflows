@@ -141,6 +141,8 @@ workflow czid_host_filter {
     File fastp_out_fastp1_fastq = fastp_qc.fastp1_fastq
     File? fastp_out_fastp2_fastq = fastp_qc.fastp2_fastq
     File fastp_out_count = fastp_qc.reads_out_count
+    File fastp_html = fastp_qc.fastp_html
+    File fastp_json = fastp_qc.fastp_json
 
     File kallisto_abundance_tsv = kallisto.abundance_tsv
 
@@ -223,7 +225,7 @@ task fastp_qc {
     # These default QC thresholds are loosely based on the pre-2022 pipeline using PriceSeq & LZW
     String fastp_options = "--dont_eval_duplication --length_required 35" +
                            " --qualified_quality_phred 17 --unqualified_percent_limit 15 --n_base_limit 15" +
-                           " --low_complexity_filter --complexity_threshold 40"
+                           " --low_complexity_filter --complexity_threshold 50"
 
     String docker_image_id
     Int cpu = 16
