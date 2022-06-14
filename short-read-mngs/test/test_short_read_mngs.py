@@ -40,13 +40,13 @@ def test_bench3_viral(short_read_mngs_bench3_viral_outputs):
     longest_reads = outp["outputs"]["czid_short_read_mngs.experimental.longest_reads"]
     basenames = [os.path.basename(fn) for fn in longest_reads]
     assert basenames, basenames
-    assert all(re.match(r"nt\.[a-z]+\.-?[0-9]+\.longest_5_reads.fasta", fn) for fn in basenames), basenames
+    assert all(re.match(r"n[rt]\.[a-z]+\.-?[0-9]+\.longest_5_reads.fasta", fn) for fn in basenames), basenames
 
     db_types = []
     for fn in longest_reads:
         if ".nt." in fn:
             db_types.append("nt")
-        if ".nr." in longest_reads:
+        if ".nr." in fn:
             db_types.append("nr")
 
         with open(fn) as f:
