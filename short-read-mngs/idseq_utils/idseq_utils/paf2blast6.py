@@ -78,7 +78,7 @@ def main(paf_file):
     ]
     df = df.round({"bitscore": 3, "percent_ident": 3})
     m = df["strand"] == "-"
-    df.loc[m, ["tstart", "tend"]] = ( df.loc[m, ["tend", "tstart"]].values)
+    df.loc[m, ["tstart", "tend"]] = (df.loc[m, ["tend", "tstart"]].values)
 
     blast = df.loc[
         :,
