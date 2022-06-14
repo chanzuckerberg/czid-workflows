@@ -6,7 +6,6 @@ import traceback
 from collections import defaultdict
 import subprocess
 import threading
-from typing import Dict, Union
 
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
