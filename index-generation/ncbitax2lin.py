@@ -1,6 +1,5 @@
 import argparse
 import datetime
-import gzip
 import logging
 import multiprocessing
 import os
@@ -240,20 +239,13 @@ def process_lineage_dd(lineage_dd):
 def write_output(output_prefix, output_name_log, df, cols=None, undef_taxids=None):
     output = os.path.join('{0}.csv.gz'.format(output_prefix))
     logging.info("writing %s to %s" % (output_name_log, output))
-    with open(output, 'wb') as opf:
-        # make sure the name and timestamp are not gzipped, (like gzip -n)
-        opf_gz = gzip.GzipFile('', 'wb', 9, opf, 0.)
-        if undef_taxids and cols:
-            for col in undef_taxids.keys():
-                df[[col]] = df[[col]].fillna(value=undef_taxids[col])
-            # filling remaing na values as 0
-            df[cols] = df[cols].fillna(0)
-            df[cols] = df[cols].astype(int)
-        if cols:
-            df.to_csv(opf_gz, index=False, columns=cols)
-        else:
-            df.to_csv(opf_gz, index=False)
-        opf_gz.close()
+    if undef_taxids and cols:
+        for col in undef_taxids.keys():
+            df[[col]] = df[[col]].fillna(value=undef_taxids[col])
+        # filling remaing na values as 0
+        df[cols] = df[cols].fillna(0)
+        df[cols] = df[cols].astype(int)
+    df.to_csv(output, index=False, columns=cols, compression='gzip')
 
 
 def generate_name_output(nodes_df, names_file, name_class):
@@ -304,8 +296,7 @@ def generate_lineage_outputs(df, taxid_lineages_output_prefix, name_lineages_out
                  undef_taxids=undef_taxids)
 
     logging.info('writing lineage-by-taxid shelf...')
-    taxid_lineages_shelf_output = os.path.join('{0}.db'.format(taxid_lineages_output_prefix))
-    d = shelve.open(taxid_lineages_shelf_output)
+    d = shelve.open(taxid_lineages_output_prefix)
     for _, row in taxid_lineages_df.iterrows():
         d[str(int(row['tax_id']))] = (str(int(row['species'])), str(int(row['genus'])), str(int(row['family'])))
     d.close()
