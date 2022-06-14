@@ -103,7 +103,6 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
         with open(summary_file_name, 'w') as summary_f:
             summary_f.write(summary_msg)
 
-
     @staticmethod
     def output_n_longest_reads(db_type: str, annotated_fasta: str, output_longest_reads_dir: str, n=5):
         n_longest = {}
@@ -127,7 +126,7 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
                         break
                 else:
                     if len(n_longest[level][ids[level]]) < n and not duplicate:
-                       n_longest[level][ids[level]].append(read)
+                        n_longest[level][ids[level]].append(read)
 
         for level in n_longest:
             for taxid, sequences in n_longest[level]:
@@ -135,7 +134,6 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
                 with open(fn, "w") as f:
                     writer = FastaWriter(f, wrap=None)
                     writer.write_file(sequences)
-
 
     def process_reads_from_m8_file(self, annotated_m8, read2seq):
         # Go through m8 file and infer the alignment info. Grab the fasta
