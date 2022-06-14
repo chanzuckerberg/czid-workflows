@@ -42,7 +42,13 @@ def test_bench3_viral(short_read_mngs_bench3_viral_outputs):
     assert basenames, basenames
     assert all(re.match(r"nt\.[a-z]+\.-?[0-9]+\.longest_5_reads.fasta", fn) for fn in basenames), basenames
 
+    db_types = []
     for fn in longest_reads:
+        if ".nt." in fn:
+            db_types.append("nt")
+        if ".nr." in longest_reads:
+            db_types.append("nr")
+
         with open(fn) as f:
             lines = list(f)
             assert 2 <= len(lines) <= 10, len(lines)
@@ -54,4 +60,6 @@ def test_bench3_viral(short_read_mngs_bench3_viral_outputs):
                 assert prev is None or len(read) <= prev, (len(read), prev)
                 prev = len(read)
                 assert all(c in "ACTGUN" for c in read.strip()), read
+    assert "nt" in db_types, f"'nt' not in {db_types}"
+    assert "nr" in db_types, f"'nr' not in {db_types}"
     # TODO: further correctness tests
