@@ -129,7 +129,7 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
                         n_longest[level][ids[level]].append(read)
 
         for level in n_longest:
-            for taxid, sequences in n_longest[level]:
+            for taxid, sequences in n_longest[level].items():
                 fn = f"{output_longest_reads_dir}/{db_type}.{level}.{taxid}.longest_5_reads.fasta"
                 with open(fn, "w") as f:
                     writer = FastaWriter(f, wrap=None)
