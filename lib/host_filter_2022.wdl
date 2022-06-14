@@ -223,7 +223,7 @@ task fastp_qc {
     # These default QC thresholds are loosely based on the pre-2022 pipeline using PriceSeq & LZW
     String fastp_options = "--dont_eval_duplication --length_required 35" +
                            " --qualified_quality_phred 17 --unqualified_percent_limit 15 --n_base_limit 15" +
-                           " --low_complexity_filter --complexity_threshold 30"
+                           " --low_complexity_filter --complexity_threshold 40"
 
     String docker_image_id
     Int cpu = 16
@@ -241,6 +241,7 @@ task fastp_qc {
         count=$((2 * count))
     fi
     jq --null-input --arg count "$count" '{"fastp_out":$count}' > fastp_out.count
+    # TODO: extract insert size metrics from JSON, also render histogram?
   >>>
   output {
     File fastp1_fastq = "fastp1.fastq"
