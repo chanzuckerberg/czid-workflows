@@ -6,7 +6,6 @@ import traceback
 from collections import defaultdict
 import subprocess
 import threading
-from typing import Dict
 
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
@@ -42,14 +41,15 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
         db_type = "nt"  # Only NT supported for now
         # TODO: Design a way to map in/out files more robustly, e.g. by name/type
         annotated_m8 = self.input_files_local[0][0]
-        annotated_fasta = self.input_files_local[1][0]
+        annotated_nt_fasta = self.input_files_local[1][0]
+        annotated_nr_fasta = self.input_files_local[1][2]
         output_json_dir = os.path.join(self.output_dir_local, "align_viz")
         output_longest_reads_dir = os.path.join(self.output_dir_local, "longest_reads")
 
-        # Go through annotated_fasta with a db_type (NT/NR match). Infer the
+        # Go through annotated_nt_fasta with a db_type (NT/NR match). Infer the
         # family/genus/species info
         read2seq = PipelineStepGenerateAlignmentViz.parse_reads(
-            annotated_fasta, db_type)
+            annotated_nt_fasta, db_type)
         log.write(f"Read to Seq dictionary size: {len(read2seq)}")
 
         groups, line_count = self.process_reads_from_m8_file(
@@ -88,9 +88,13 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
             target=safe_multi_delete, args=[to_be_deleted])
         deleter_thread.start()
 
-        self.dump_align_viz_json(output_json_dir, output_longest_reads_dir, db_type, result_dict)
+        self.dump_align_viz_json(output_json_dir, db_type, result_dict)
 
         deleter_thread.join()
+        read2seq = {}  # to free up memory
+        command.make_dirs(output_longest_reads_dir)
+        PipelineStepGenerateAlignmentViz.output_n_longest_reads("nt", annotated_nt_fasta, output_longest_reads_dir)
+        PipelineStepGenerateAlignmentViz.output_n_longest_reads("nr", annotated_nr_fasta, output_longest_reads_dir)
 
         # Write summary file
         summary_msg = f"Read2Seq Size: {len(read2seq)}, M8 lines {line_count}, " \
@@ -98,6 +102,38 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
         summary_file_name = f"{output_json_dir}.summary"
         with open(summary_file_name, 'w') as summary_f:
             summary_f.write(summary_msg)
+
+    @staticmethod
+    def output_n_longest_reads(db_type: str, annotated_fasta: str, output_longest_reads_dir: str, n=5):
+        n_longest = {}
+        for level in ["family", "genus", "species"]:
+            n_longest[level] = defaultdict(list)
+
+        read2seq = PipelineStepGenerateAlignmentViz.parse_reads(annotated_fasta, db_type)
+        for read_id, seq_info in read2seq.items():
+            ids = {}
+            sequence, ids["family"], ids["genus"], ids["species"] = seq_info
+            read = SeqRecord(Seq(sequence), id=read_id, description="")
+            for level in ["family", "genus", "species"]:
+                n_longest_reads = n_longest[level][ids[level]]
+                duplicate = False
+                for i, r in enumerate(n_longest_reads):
+                    if read.seq == r.seq:
+                        duplicate = True
+                        break
+                    if len(read.seq) > len(r.seq):
+                        n_longest[level][ids[level]] = n_longest_reads[:i] + [read] + n_longest_reads[i:n - 1]
+                        break
+                else:
+                    if len(n_longest[level][ids[level]]) < n and not duplicate:
+                        n_longest[level][ids[level]].append(read)
+
+        for level in n_longest:
+            for taxid, sequences in n_longest[level].items():
+                fn = f"{output_longest_reads_dir}/{db_type}.{level}.{taxid}.longest_5_reads.fasta"
+                with open(fn, "w") as f:
+                    writer = FastaWriter(f, wrap=None)
+                    writer.write_file(sequences)
 
     def process_reads_from_m8_file(self, annotated_m8, read2seq):
         # Go through m8 file and infer the alignment info. Grab the fasta
@@ -225,7 +261,7 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
 
         return result_dict, to_be_deleted
 
-    def dump_align_viz_json(self, output_json_dir, output_longest_reads_dir, db_type, result_dict):
+    def dump_align_viz_json(self, output_json_dir, db_type, result_dict):
         def align_viz_name(tag, lin_id):
             return f"{output_json_dir}/{db_type}.{tag}.{int(lin_id)}.align_viz.json"
 
@@ -238,49 +274,22 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
                 for read_entry in read_arr.get("reads", []):
                     yield SeqRecord(Seq(read_entry[1]), id=read_entry[0], description="")
 
-        def write_n_longest(tag, lin_id, d, n):
-            if db_type.lower() != "nt":
-                return
-
-            longest_n_reads = []
-            for read in reads_from_dict(d):
-                duplicate = False
-                for i, r in enumerate(longest_n_reads):
-                    if read.seq == r.seq:
-                        duplicate = True
-                        break
-                    if len(read.seq) > len(r.seq):
-                        longest_n_reads = longest_n_reads[:i] + [read] + longest_n_reads[i:n - 1]
-                        break
-                else:
-                    if len(longest_n_reads) < n and not duplicate:
-                        longest_n_reads.append(read)
-
-            fn = f"{output_longest_reads_dir}/{db_type}.{tag}.{int(lin_id)}.longest_5_reads.fasta"
-            with open(fn, "w") as f:
-                writer = FastaWriter(f, wrap=None)
-                writer.write_file(longest_n_reads)
-
         # Generate JSON files for the align_viz folder
         command.make_dirs(output_json_dir)
-        command.make_dirs(output_longest_reads_dir)
         for (family_id, family_dict) in result_dict.items():
             fn = align_viz_name("family", family_id)
             with open(fn, 'w') as out_f:
                 json.dump(family_dict, out_f)
-            write_n_longest("family", family_id, family_dict, 5)
 
             for (genus_id, genus_dict) in family_dict.items():
                 fn = align_viz_name("genus", genus_id)
                 with open(fn, 'w') as out_f:
                     json.dump(genus_dict, out_f)
-                write_n_longest("genus", genus_id, genus_dict, 5)
 
                 for (species_id, species_dict) in genus_dict.items():
                     fn = align_viz_name("species", species_id)
                     with open(fn, 'w') as out_f:
                         json.dump(species_dict, out_f)
-                    write_n_longest("species", species_id, species_dict, 5)
         self.additional_output_folders_hidden.append(output_json_dir)
 
     @staticmethod
