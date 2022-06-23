@@ -183,10 +183,12 @@ task RunAlignment_minimap2_out {
         fi
         python3 /usr/local/lib/python3.6/dist-packages/idseq_utils/paf2blast6.py gsnap.paf
         mv *frompaf.m8 "gsnap.m8" # TODO: rewrite paf2blast6.py to output in this format
+        minimap2 --version > minimap2_version.txt
     >>>
     output {
         File out_paf = "gsnap.paf"
         File out_m8 = "gsnap.m8"
+        File? version = "minimap2_version.txt"
     }
 
     runtime {
@@ -225,12 +227,13 @@ task RunAlignment_diamond_out {
             queries=["~{sep='", "' fastas}"],
         )
         CODE
-
+        diamond --version > diamond_version.txt
         fi
     >>>
 
     output {
         File out_m8 = "rapsearch2.m8"
+        File? version = "diamond_version.txt"
     }
 
     runtime {

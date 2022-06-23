@@ -157,6 +157,7 @@ task RunStar {
     mv ReadsPerGene.out.tab reads_per_gene.star.tab
   fi
 
+  STAR --version > version.txt
   rm "~{genome_dir}"/SAindex # the star genome is pretty big (1.5G)
   rm "~{genome_dir}"/Genome 
   >>>
@@ -170,6 +171,7 @@ task RunStar {
     File? output_gene_file = "reads_per_gene.star.tab"
     File? output_metrics_file = "picard_insert_metrics.txt"
     File? output_histogram_file = "insert_size_histogram.pdf"
+    File? version = "star_out_version.txt"
   }
   runtime {
     docker: docker_image_id
@@ -194,12 +196,15 @@ task RunTrimmomatic {
     --output-dir-s3 '~{s3_wd_uri}' \
     --additional-files '{"adapter_fasta": "~{adapter_fasta}"}' \
     --additional-attributes '{}'
+  java -jar /usr/local/bin/trimmomatic-0.38.jar -version > trimmomatic_version.txt
+  
   >>>
   output {
     String step_description_md = read_string("trimmomatic_out.description.md")
     File trimmomatic1_fastq = "trimmomatic1.fastq"
     File? trimmomatic2_fastq = "trimmomatic2.fastq"
     File? output_read_count = "trimmomatic_out.count"
+    File? version = "trimmomatic_version.txt"
   }
   runtime {
     docker: docker_image_id
@@ -223,12 +228,14 @@ task RunPriceSeq {
     --output-dir-s3 '~{s3_wd_uri}' \
     --additional-files '{}' \
     --additional-attributes '{}'
+  PriceSeqFilter 2> /dev/null | head -n1 > priceseq_version.txt
   >>>
   output {
     String step_description_md = read_string("priceseq_out.description.md")
     File priceseq1_fa = "priceseq1.fa"
     File? priceseq2_fa = "priceseq2.fa"
     File? output_read_count = "priceseq_out.count"
+    File? version = "priceseq_version.txt"
   }
   runtime {
     docker: docker_image_id
@@ -252,6 +259,7 @@ task RunCZIDDedup {
     --output-dir-s3 '~{s3_wd_uri}' \
     --additional-files '{}' \
     --additional-attributes '{}'
+  czid-dedup --version > czid_dedup_version.txt
   >>>
   output {
     String step_description_md = read_string("czid_dedup_out.description.md")
@@ -260,6 +268,7 @@ task RunCZIDDedup {
     File duplicate_clusters_csv = "clusters.csv"
     File duplicate_cluster_sizes_tsv = "duplicate_cluster_sizes.tsv"
     File? output_read_count = "czid_dedup_out.count"
+    File? version = "czid_dedup_version.txt"
   }
   runtime {
     docker: docker_image_id
@@ -318,6 +327,7 @@ task RunBowtie2_bowtie2_out {
     --output-dir-s3 '~{s3_wd_uri}' \
     --additional-files '{"bowtie2_genome": "~{bowtie2_genome}"}' \
     --additional-attributes '{"output_sam_file": "bowtie2.sam"}'
+  bowtie2 --version > bowtie2_version.txt
   >>>
   output {
     String step_description_md = read_string("bowtie2_out.description.md")
@@ -325,6 +335,7 @@ task RunBowtie2_bowtie2_out {
     File? bowtie2_2_fa = "bowtie2_2.fa"
     File? bowtie2_merged_fa = "bowtie2_merged.fa"
     File? output_read_count = "bowtie2_out.count"
+    File? version = "bowtie2_version.txt"
   }
   runtime {
     docker: docker_image_id
@@ -388,12 +399,14 @@ task RunStarDownstream {
     --output-dir-s3 '~{s3_wd_uri}' \
     --additional-files '{"star_genome": "~{human_star_genome}"}' \
     --additional-attributes '{}'
+  STAR --version > star_human_version.txt
   >>>
   output {
     String step_description_md = read_string("star_human_out.description.md")
     File unmapped_human_1_fa = "unmapped_human_1.fa"
     File? unmapped_human_2_fa = "unmapped_human_2.fa"
     File? output_read_count = "star_human_out.count"
+    File? version = "star_human_version.txt"
   }
   runtime {
     docker: docker_image_id
@@ -421,6 +434,7 @@ task RunBowtie2_bowtie2_human_out {
     --output-dir-s3 '~{s3_wd_uri}' \
     --additional-files '{"bowtie2_genome": "~{human_bowtie2_genome}"}' \
     --additional-attributes '{"output_sam_file": "bowtie2_human.sam"}'
+  bowtie2 --version > bowtie2_human_version.txt
   >>>
   output {
     String step_description_md = read_string("bowtie2_human_out.description.md")
@@ -428,6 +442,7 @@ task RunBowtie2_bowtie2_human_out {
     File? bowtie2_human_2_fa = "bowtie2_human_2.fa"
     File? bowtie2_human_merged_fa = "bowtie2_human_merged.fa"
     File? output_read_count = "bowtie2_human_out.count"
+    File? version = "bowtie2_human_version.txt"
   }
   runtime {
     docker: docker_image_id
@@ -455,6 +470,7 @@ task RunGsnapFilter {
     --output-dir-s3 '~{s3_wd_uri}' \
     --additional-files '{"gsnap_genome": "~{gsnap_genome}"}' \
     --additional-attributes '{"output_sam_file": "gsnap_filter.sam"}'
+  gsnap --version > gsnap_filter_version.txt
   >>>
   output {
     String step_description_md = read_string("gsnap_filter_out.description.md")
@@ -462,6 +478,7 @@ task RunGsnapFilter {
     File? gsnap_filter_2_fa = "gsnap_filter_2.fa"
     File? gsnap_filter_merged_fa = "gsnap_filter_merged.fa"
     File? output_read_count = "gsnap_filter_out.count"
+    File? version = "gsnap_filter_version.txt"
   }
   runtime {
     docker: docker_image_id

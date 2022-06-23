@@ -19,6 +19,7 @@ task RunAssembly {
     --output-dir-s3 '~{s3_wd_uri}' \
     --additional-files '{}' \
     --additional-attributes '{"memory": 200, "min_contig_length": ~{min_contig_length}}'
+  spades.py -v > assembly_version.txt
   >>>
   output {
     String step_description_md = read_string("assembly_out.description.md")
@@ -28,6 +29,7 @@ task RunAssembly {
     File assembly_read_contig_sam = "assembly/read-contig.sam"
     File assembly_contig_stats_json = "assembly/contig_stats.json"
     File? output_read_count = "assembly_out.count"
+    File? version = "assembly_version.txt"
   }
   runtime {
     docker: docker_image_id
