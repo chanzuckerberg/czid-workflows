@@ -157,7 +157,7 @@ task RunStar {
     mv ReadsPerGene.out.tab reads_per_gene.star.tab
   fi
 
-  STAR --version > version.txt
+  STAR --version > star_out_version.txt
   rm "~{genome_dir}"/SAindex # the star genome is pretty big (1.5G)
   rm "~{genome_dir}"/Genome 
   >>>
