@@ -669,6 +669,7 @@ workflow czid_postprocess {
     File assembly_out_assembly_scaffolds_fasta = RunAssembly.assembly_scaffolds_fasta
     File assembly_out_assembly_read_contig_sam = RunAssembly.assembly_read_contig_sam
     File assembly_out_assembly_contig_stats_json = RunAssembly.assembly_contig_stats_json
+    File? spades_version = RunAssembly.version
     File? assembly_out_count = RunAssembly.output_read_count
     File coverage_out_assembly_contig_coverage_json = GenerateCoverageStats.assembly_contig_coverage_json
     File coverage_out_assembly_contig_coverage_summary_csv = GenerateCoverageStats.assembly_contig_coverage_summary_csv

@@ -465,11 +465,13 @@ workflow czid_non_host_alignment {
     File gsnap_out_gsnap_deduped_m8 = RunCallHitsMinimap2.deduped_out_m8
     File gsnap_out_gsnap_hitsummary_tab = RunCallHitsMinimap2.hitsummary
     File gsnap_out_gsnap_counts_with_dcr_json = RunCallHitsMinimap2.counts_json
+    File? minimap2_version = RunAlignment_minimap2_out.version
     File? gsnap_out_count = RunCallHitsMinimap2.output_read_count
     File rapsearch2_out_rapsearch2_m8 = RunAlignment_diamond_out.out_m8
     File rapsearch2_out_rapsearch2_deduped_m8 = RunCallHitsDiamond.deduped_out_m8
     File rapsearch2_out_rapsearch2_hitsummary_tab = RunCallHitsDiamond.hitsummary
     File rapsearch2_out_rapsearch2_counts_with_dcr_json = RunCallHitsDiamond.counts_json
+    File? diamond_version = RunAlignment_diamond_out.version
     File? rapsearch2_out_count = RunCallHitsDiamond.output_read_count
     File taxon_count_out_taxon_counts_with_dcr_json = CombineTaxonCounts.taxon_counts_with_dcr_json
     File? taxon_count_out_count = CombineTaxonCounts.output_read_count
