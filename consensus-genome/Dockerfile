@@ -113,9 +113,13 @@ RUN pip3 install git+https://github.com/rzlim08/PyVCF.git
 # General CG dependencies
 RUN pip3 install taxoniq==0.6.0 && \
     pip3 install --upgrade \
-    https://czid-public-references.s3.us-west-2.amazonaws.com/test/taxoniq/ncbi_genbank_accession_db-2022_05_17-py3-none-any.whl \
-    https://czid-public-references.s3.us-west-2.amazonaws.com/test/taxoniq/ncbi_genbank_accession_lengths-2022_05_17-py3-none-any.whl \
-    https://czid-public-references.s3.us-west-2.amazonaws.com/test/taxoniq/ncbi_genbank_accession_offsets-2022_05_17-py3-none-any.whl 
+    https://czid-public-references.s3.us-west-2.amazonaws.com/test/taxoniq/ncbi_genbank_accession_db-2022.6.25-py3-none-any.whl \
+    https://czid-public-references.s3.us-west-2.amazonaws.com/test/taxoniq/ncbi_genbank_accession_lengths-2022.6.25-py3-none-any.whl \
+    https://czid-public-references.s3.us-west-2.amazonaws.com/test/taxoniq/ncbi_genbank_accession_offsets-2022.6.25-py3-none-any.whl \
+    https://czid-public-references.s3.us-west-2.amazonaws.com/test/taxoniq/ncbi_refseq_accession_db-2022.6.25-py3-none-any.whl \
+    https://czid-public-references.s3.us-west-2.amazonaws.com/test/taxoniq/ncbi_refseq_accession_lengths-2022.6.25-py3-none-any.whl \
+    https://czid-public-references.s3.us-west-2.amazonaws.com/test/taxoniq/ncbi_refseq_accession_offsets-2022.6.25-py3-none-any.whl \
+    https://czid-public-references.s3.us-west-2.amazonaws.com/test/taxoniq/ncbi_taxon_db-2022.6.25-py3-none-any.whl
 
 RUN wget https://github.com/shenwei356/seqkit/releases/download/v2.0.0/seqkit_linux_amd64.tar.gz && tar zxvf seqkit_linux_amd64.tar.gz \
 && mv seqkit /usr/local/bin/ && rm seqkit_linux_amd64.tar.gz
