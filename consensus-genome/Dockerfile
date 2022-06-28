@@ -105,8 +105,8 @@ RUN wget https://drive5.com/muscle/muscle_src_3.8.1551.tar.gz \
 
 # ARTIC, Medaka and dependencies
 RUN apt-get install -y python3-cffi python3-h5py python3-intervaltree python3-edlib git
-RUN pip3 install ont-fast5-api parasail mappy pyspoa tensorflow==2.7.1 https://github.com/artic-network/fieldbioinformatics/archive/1.2.1.tar.gz
-RUN pip3 install medaka --no-deps
+RUN pip3 install ont-fast5-api parasail mappy pyspoa protobuf==3.19.* tensorflow==2.7.1 https://github.com/artic-network/fieldbioinformatics/archive/1.2.1.tar.gz
+RUN pip3 install medaka==1.6.0 --no-deps
 RUN pip3 install git+https://github.com/rzlim08/PyVCF.git
 
 
