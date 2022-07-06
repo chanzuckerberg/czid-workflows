@@ -351,11 +351,13 @@ task ValidateInput{
             mv $fastq "~{prefix}validated_$counter.fastq.gz"
             ((counter++))
         done < file_list.txt
+	seqkit version > seqkit_version.txt
     >>>
 
     output {
         Array[File]+ validated_fastqs = glob("~{prefix}validated*.fastq.gz")
         File? input_stats = "input_stats.tsv"
+	File? seqkit_version = "seqkit_version.txt"
     }
 
     runtime {
@@ -405,10 +407,12 @@ task ApplyLengthFilter {
 
     command <<<
         artic guppyplex --min-length ~{min_length} --max-length ~{max_length} --directory $(dirname "~{fastqs[0]}") --output filtered.fastq
+	artic -v > artic_version.txt
     >>>
 
     output {
         Array[File]+ filtered_fastqs = ["filtered.fastq"]
+	File? artic_version = "artic_version.txt"
     }
 
     runtime {
@@ -451,10 +455,15 @@ task RemoveHost {
             jq -nc ".wdl_error_message=true | .error=env.error | .cause=env.cause" > /dev/stderr
             exit 1
         fi
+	minimap2 --version > minimap2_version.txt
+	samtools --version > samtools_version.txt
     >>>
 
     output {
         Array[File] host_removed_fastqs = glob("~{prefix}no_host_*.fq.gz")
+	File? minimap2_version = "minimap2_version.txt"
+	File? samtools_version = "samtools_version.txt"
+	
     }
 
     runtime {
@@ -559,10 +568,12 @@ task FilterReads {
         if [[ -z $(gzip -cd "~{prefix}filtered_1.fq.gz" | head -c1) ]]; then
             _no_reads_error
         fi
+	kraken2 -v > kraken2_version.txt
     >>>
 
     output {
         Array[File]+ filtered_fastqs = glob("~{prefix}filtered_*.fq.gz")
+	File? kraken2_version = "kraken2_version.txt"
     }
 
     runtime {
@@ -594,10 +605,12 @@ task TrimReads {
             jq -nc ".wdl_error_message=true | .error=env.error | .cause=env.cause" > /dev/stderr
             exit 1
         fi
+	trim_galore --version > trim_galore_version.txt
     >>>
 
     output {
         Array[File]+ trimmed_fastqs = glob("*_val_[12].fq.gz")
+	File? trim_galore_version = "trim_galore_version.txt"
     }
 
     runtime {
@@ -663,11 +676,13 @@ task TrimPrimers {
         ivar trim -x $primerOffset -e -i ivar.bam -b "~{primer_bed}" -p ivar.out
         samtools sort -O bam -o "~{prefix}primertrimmed.bam" ivar.out.bam
         samtools index "~{prefix}primertrimmed.bam"
+	ivar version > ivar_version.txt
     >>>
 
     output {
         File trimmed_bam_ch = "~{prefix}primertrimmed.bam"
         File trimmed_bam_bai = "~{prefix}primertrimmed.bam.bai"
+	File? ivar_version = "ivar_version.txt"
     }
 
     runtime {
@@ -704,10 +719,12 @@ task MakeConsensus {
             jq -nc ".wdl_error_message=true | .error=env.error | .cause=env.cause" > /dev/stderr
             exit 1
         fi
+	seqtk 2> seqtk_version.txt || true
     >>>
 
     output {
         File consensus_fa = "~{prefix}consensus.fa"
+	File? seqtk_version = "seqtk_version.txt"
     }
 
     runtime {
@@ -735,11 +752,13 @@ task CallVariants {
         bgzip "~{prefix}variants.vcf"
         tabix "~{prefix}variants.vcf.gz"
         bcftools stats "~{prefix}variants.vcf.gz" > "~{prefix}bcftools_stats.txt"
+	bcftools --version > bcftools_version.txt
     >>>
 
     output {
         File variants_ch = "~{prefix}variants.vcf.gz"
         File bcftools_stats_ch = "~{prefix}bcftools_stats.txt"
+	File? bcftools_version = "bcftools_version.txt"
     }
 
     runtime {
@@ -762,11 +781,12 @@ task RealignConsensus {
         # Some documentation here: https://www.drive5.com/muscle/manual/basic_alignment.html
         cat "~{consensus}" "~{ref_fasta}" > "~{sample}.muscle.in.fasta" 
         muscle -in "~{sample}.muscle.in.fasta" -out "~{sample}.muscle.out.fasta"
-
+	muscle -version > muscle_version.txt
     >>>
 
     output{
         File muscle_output = "~{sample}.muscle.out.fasta"
+	File? muscle_version = "muscle_version.txt"
     }
 
     runtime {
@@ -866,12 +886,14 @@ task Quast {
             mkdir quast
             echo "quast folder is empty" > "quast/report.txt"
         fi
+	quast.py -v > quast_version.txt
     >>>
 
     output {
         Array[File] quast_dir = glob("quast/*")
         File quast_txt = "quast/report.txt"
         File? quast_tsv = "quast/report.tsv"
+	File? quast_version = "quast_version.txt"
     }
 
     runtime {
