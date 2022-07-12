@@ -38,9 +38,9 @@ def count_reads(filename):
                 cmd = "gunzip | " + cmd
             num_lines = int(run(cmd, stdin=fh, stdout=PIPE, check=True, shell=True).stdout)
             if num_lines % 4 != 0:
-                raise InvalidFileFormatError(f"The .fastq file {os.path.basename(filename)} has an invalid number of lines.")
+                raise InvalidFileFormatError(f"The .fastq file {os.path.basename(filename)} has an invalid number of lines.", "Please verify the number of lines in the file is divisible by 4.")
             return num_lines // 4
-        raise InvalidFileFormatError(f"The file format of {os.path.basename(filename)} was not recognized.  Please ensure your file is a valid .fasta/.fastq file.")
+        raise InvalidFileFormatError(f"The file format of {os.path.basename(filename)} was not recognized.", "Please ensure your file is a valid .fasta/.fastq file.")
 
 
 reads = count_reads
