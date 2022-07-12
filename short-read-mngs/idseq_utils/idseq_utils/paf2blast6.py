@@ -100,6 +100,8 @@ def main(paf_file):
     blast["qstart"] = blast["qstart"] + 1
     blast.loc[~m, "tstart"] = blast.loc[~m, "tstart"] + 1
     blast.loc[m, "tend"] = blast.loc[m, "tend"] + 1
+    blast.loc[:, "tstart"] = blast.loc[:, "tstart"].astype(int)
+    blast.loc[:, "tend"] = blast.loc[:, "tend"].astype(int)
 
     blast.to_csv(f"{name}_frompaf.m8", sep="\t", index=None, header=False)
 
