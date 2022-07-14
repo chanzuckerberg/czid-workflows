@@ -127,6 +127,7 @@ RUN pip3 install taxoniq==0.6.0 && \
     https://czid-public-references.s3.us-west-2.amazonaws.com/test/taxoniq/ncbi_taxon_db-2022.6.25-py3-none-any.whl
 RUN sed -i 's/ncbi-blast-databases.s3.amazonaws.com/czid-public-references.s3.amazonaws.com\/test\/taxoniq/g' \
     /usr/local/lib/python3.8/dist-packages/taxoniq/__init__.py
+RUN sed -i 's/, "Betacoronavirus"//g' /usr/local/lib/python3.8/dist-packages/taxoniq/__init__.py
 
 RUN wget https://github.com/shenwei356/seqkit/releases/download/v2.0.0/seqkit_linux_amd64.tar.gz && tar zxvf seqkit_linux_amd64.tar.gz \
 && mv seqkit /usr/local/bin/ && rm seqkit_linux_amd64.tar.gz
