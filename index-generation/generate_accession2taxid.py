@@ -62,7 +62,6 @@ def output_dicts_to_db(mapping_files: List[List[str]], accession2taxid_db: str):
                         if len(line) <= 1:
                             break
                         fields = line.rstrip().split("\t")
-                        print(fields[0], file=sys.stderr)
                         yield (fields[0], (int(fields[2]),))
     marisa_trie.RecordTrie("<L", accession_id_to_taxid()).save(accession2taxid_db)
 
