@@ -4,10 +4,10 @@ import logging
 import multiprocessing
 import os
 import re
-import shelve
 import time
 from functools import update_wrapper
 
+import marisa_trie
 import pandas as pd
 
 
@@ -260,46 +260,46 @@ def generate_name_output(nodes_df, names_file, name_class):
 
 @timeit
 def generate_lineage_outputs(df, taxid_lineages_output_prefix, name_lineages_output_prefix):
-    # example item: (16, {'parent_tax_id': 32011, 'name_txt': 'Methylophilus', 'rank': 'genus', 'tax_id': 16})
-    global TAXONOMY_DICT
-    logging.info('generating TAXONOMY_DICT...')
-    TAXONOMY_DICT = dict(zip(df.tax_id.values, df.to_dict('records')))
+    def lineage_by_taxid():
+        # example item: (16, {'parent_tax_id': 32011, 'name_txt': 'Methylophilus', 'rank': 'genus', 'tax_id': 16})
+        global TAXONOMY_DICT
+        logging.info('generating TAXONOMY_DICT...')
+        TAXONOMY_DICT = dict(zip(df.tax_id.values, df.to_dict('records')))
 
-    ncpus = multiprocessing.cpu_count()
-    logging.info('found {0} cpus, and will use all of them to find lineages '
-                 'for all tax ids'.format(ncpus))
-    pool = multiprocessing.Pool(ncpus)
-    name_lineages_dd, taxid_lineages_dd = zip(*pool.map(find_lineage, df.tax_id.values))  # take about 18G memory
-    pool.close()
+        ncpus = multiprocessing.cpu_count()
+        logging.info('found {0} cpus, and will use all of them to find lineages '
+                    'for all tax ids'.format(ncpus))
+        pool = multiprocessing.Pool(ncpus)
+        name_lineages_dd, taxid_lineages_dd = zip(*pool.map(find_lineage, df.tax_id.values))  # take about 18G memory
+        pool.close()
 
-    logging.info('generating lineage-by-name output...')
-    name_lineages_df = process_lineage_dd(name_lineages_dd)
-    name_lineages_df.columns = name_lineages_df.columns.str.replace('no rank', 'no_rank')
-    write_output(name_lineages_output_prefix, "name lineages", name_lineages_df,
-                 ['tax_id', 'superkingdom', 'kingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species'] +
-                 [col for col in name_lineages_df if col.startswith('no_rank')])
+        logging.info('generating lineage-by-name output...')
+        name_lineages_df = process_lineage_dd(name_lineages_dd)
+        name_lineages_df.columns = name_lineages_df.columns.str.replace('no rank', 'no_rank')
+        write_output(name_lineages_output_prefix, "name lineages", name_lineages_df,
+                    ['tax_id', 'superkingdom', 'kingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species'] +
+                    [col for col in name_lineages_df if col.startswith('no_rank')])
 
-    logging.info('generating lineage-by-taxid output...')
-    taxid_lineages_df = process_lineage_dd(taxid_lineages_dd)
-    taxid_lineages_df.columns = taxid_lineages_df.columns.str.replace(' ', '_')
-    undef_taxids = {'species': -100,
-                    'genus': -200,
-                    'family': -300,
-                    'order': -400,
-                    'class': -500,
-                    'phylum': -600,
-                    'kingdom': -650,
-                    'superkingdom': -700}
-    write_output(taxid_lineages_output_prefix, "taxid lineages", taxid_lineages_df,
-                 ['tax_id', 'superkingdom', 'kingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species'] +
-                 [col for col in taxid_lineages_df if col.startswith('no_rank')],
-                 undef_taxids=undef_taxids)
+        logging.info('generating lineage-by-taxid output...')
+        taxid_lineages_df = process_lineage_dd(taxid_lineages_dd)
+        taxid_lineages_df.columns = taxid_lineages_df.columns.str.replace(' ', '_')
+        undef_taxids = {'species': -100,
+                        'genus': -200,
+                        'family': -300,
+                        'order': -400,
+                        'class': -500,
+                        'phylum': -600,
+                        'kingdom': -650,
+                        'superkingdom': -700}
+        write_output(taxid_lineages_output_prefix, "taxid lineages", taxid_lineages_df,
+                    ['tax_id', 'superkingdom', 'kingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species'] +
+                    [col for col in taxid_lineages_df if col.startswith('no_rank')],
+                    undef_taxids=undef_taxids)
 
-    logging.info('writing lineage-by-taxid shelf...')
-    d = shelve.open(taxid_lineages_output_prefix)
-    for _, row in taxid_lineages_df.iterrows():
-        d[str(int(row['tax_id']))] = (str(int(row['species'])), str(int(row['genus'])), str(int(row['family'])))
-    d.close()
+        logging.info('writing lineage-by-taxid ...')
+        for _, row in taxid_lineages_df.iterrows():
+            yield (str(int(row['tax_id'])), (int(row['species']), int(row['genus']), int(row['family'])))
+    marisa_trie.RecordTrie("III", lineage_by_taxid()).save()
 
 
 def main():

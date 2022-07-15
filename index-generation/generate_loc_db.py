@@ -2,18 +2,17 @@
 Generate loc db
 Generate Loc DB for NT/NR
 """
-import dbm
 import re
-import shelve
 import sys
 import logging
+
+import marisa_trie
 
 
 def generate_loc_db(db_file, loc_db_file, info_db_file):
     # Logic copied from generate_loc_db_work
-    #   slightly changed for writing to shelve format
-    loc_dict = shelve.Shelf(dbm.ndbm.open(loc_db_file.replace(".db", ""), 'c'))  # type: ignore
-    info_dict = shelve.Shelf(dbm.ndbm.open(info_db_file.replace(".db", ""), 'c'))  # type: ignore
+    loc_pairs = []
+    info_pairs = []
     with open(db_file) as dbf:
         seq_offset = 0
         seq_len = 0
@@ -28,9 +27,9 @@ def generate_loc_db(db_file, loc_db_file, info_db_file):
                 logging.info(f"{lines/1000000.0}M lines")
             if line[0] == '>':  # header line
                 if seq_len > 0 and len(accession_id) > 0:
-                    loc_dict[accession_id] = [seq_offset, header_len, seq_len]
+                    loc_pairs.append((accession_id, (seq_offset, header_len, seq_len)))
                 if seq_bp_len > 0 and len(accession_name) > 0:
-                    info_dict[accession_id] = [accession_name, seq_bp_len]
+                    info_pairs.append((accession_id, (seq_bp_len, accession_name.encode())))
 
                 seq_offset = seq_offset + header_len + seq_len
                 header_len = len(line)
@@ -48,11 +47,13 @@ def generate_loc_db(db_file, loc_db_file, info_db_file):
                 seq_len += len(line)
                 seq_bp_len += len(line.strip())
         if seq_len > 0 and len(accession_id) > 0:
-            loc_dict[accession_id] = [seq_offset, header_len, seq_len]
+            loc_pairs.append((accession_id, (seq_offset, header_len, seq_len)))
         if seq_bp_len > 0 and len(accession_name) > 0:
-            info_dict[accession_id] = [accession_name, seq_bp_len]
-    loc_dict.close()
-    info_dict.close()
+            info_pairs.append((accession_id, (seq_bp_len, accession_name.encode())))
+    loc_dict = marisa_trie.RecordTrie("<LII", loc_pairs)
+    info_dict = marisa_trie.RecordTrie("<I256p", info_pairs)
+    loc_dict.save(loc_db_file)
+    info_dict.save(info_db_file)
 
 
 if __name__ == '__main__':
