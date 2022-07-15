@@ -299,7 +299,7 @@ def generate_lineage_outputs(df, taxid_lineages_output_prefix, name_lineages_out
         logging.info('writing lineage-by-taxid ...')
         for _, row in taxid_lineages_df.iterrows():
             yield (str(int(row['tax_id'])), (int(row['species']), int(row['genus']), int(row['family'])))
-    marisa_trie.RecordTrie("III", lineage_by_taxid()).save()
+    marisa_trie.RecordTrie("III", lineage_by_taxid(f"{taxid_lineages_output_prefix}.marisa")).save()
 
 
 def main():
