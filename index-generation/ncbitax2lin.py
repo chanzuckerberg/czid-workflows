@@ -268,7 +268,7 @@ def generate_lineage_outputs(df, taxid_lineages_output_prefix, name_lineages_out
 
         ncpus = multiprocessing.cpu_count()
         logging.info('found {0} cpus, and will use all of them to find lineages '
-                    'for all tax ids'.format(ncpus))
+                     'for all tax ids'.format(ncpus))
         pool = multiprocessing.Pool(ncpus)
         name_lineages_dd, taxid_lineages_dd = zip(*pool.map(find_lineage, df.tax_id.values))  # take about 18G memory
         pool.close()
@@ -277,8 +277,8 @@ def generate_lineage_outputs(df, taxid_lineages_output_prefix, name_lineages_out
         name_lineages_df = process_lineage_dd(name_lineages_dd)
         name_lineages_df.columns = name_lineages_df.columns.str.replace('no rank', 'no_rank')
         write_output(name_lineages_output_prefix, "name lineages", name_lineages_df,
-                    ['tax_id', 'superkingdom', 'kingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species'] +
-                    [col for col in name_lineages_df if col.startswith('no_rank')])
+                     ['tax_id', 'superkingdom', 'kingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species'] +
+                     [col for col in name_lineages_df if col.startswith('no_rank')])
 
         logging.info('generating lineage-by-taxid output...')
         taxid_lineages_df = process_lineage_dd(taxid_lineages_dd)
@@ -292,9 +292,9 @@ def generate_lineage_outputs(df, taxid_lineages_output_prefix, name_lineages_out
                         'kingdom': -650,
                         'superkingdom': -700}
         write_output(taxid_lineages_output_prefix, "taxid lineages", taxid_lineages_df,
-                    ['tax_id', 'superkingdom', 'kingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species'] +
-                    [col for col in taxid_lineages_df if col.startswith('no_rank')],
-                    undef_taxids=undef_taxids)
+                     ['tax_id', 'superkingdom', 'kingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species'] +
+                     [col for col in taxid_lineages_df if col.startswith('no_rank')],
+                     undef_taxids=undef_taxids)
 
         logging.info('writing lineage-by-taxid ...')
         for _, row in taxid_lineages_df.iterrows():
