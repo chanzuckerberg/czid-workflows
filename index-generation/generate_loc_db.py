@@ -50,8 +50,8 @@ def generate_loc_db(db_file, loc_db_file, info_db_file):
             loc_pairs.append((accession_id, (seq_offset, header_len, seq_len)))
         if seq_bp_len > 0 and len(accession_name) > 0:
             info_pairs.append((accession_id, (seq_bp_len, accession_name.encode())))
-    loc_dict = marisa_trie.RecordTrie("<LII", loc_pairs)
-    info_dict = marisa_trie.RecordTrie("<I256p", info_pairs)
+    loc_dict = marisa_trie.RecordTrie("QII", loc_pairs)
+    info_dict = marisa_trie.RecordTrie("I256p", info_pairs)
     loc_dict.save(loc_db_file)
     info_dict.save(info_db_file)
 

@@ -63,7 +63,7 @@ def output_dicts_to_db(mapping_files: List[List[str]], accession2taxid_db: str):
                             break
                         fields = line.rstrip().split("\t")
                         yield (fields[0], (int(fields[2]),))
-    marisa_trie.RecordTrie("<L", accession_id_to_taxid()).save(accession2taxid_db)
+    marisa_trie.RecordTrie("L", accession_id_to_taxid()).save(accession2taxid_db)
 
 
 def grab_accession_names(source_file: str, dest_file: str):
