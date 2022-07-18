@@ -50,7 +50,7 @@ def main():
         "--index-version",
         metavar="YYYY-MM-DD",
         type=str,
-        defaut=None,
+        default=None,
         help="version of ncbi index"
     )
     parser.add_argument(
