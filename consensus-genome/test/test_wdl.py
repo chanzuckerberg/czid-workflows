@@ -170,7 +170,7 @@ class TestConsensusGenomes(WDLTestCase):
         ])
         with open(res["outputs"]["FetchSequenceByAccessionId.sequence_fa"]) as fh:
             self.assertEqual(fh.readline().strip(), ">HIN71308.1 hypothetical protein [Dehalococcoidia bacterium]")
-            self.assertTrue(fh.readline().startswith("AGCTTTTCATTCTGACTGCAACGGGCAATATGTCTCTG"))
+            self.assertTrue(fh.readline().startswith("MSMIIQSGKLTQTRVEAQHMDFEPRYTEEQQTFRTEVRDWLKDNVPDDLANPADSAD"))
 
         with self.assertRaises(CalledProcessError) as ecm:
             self.run_miniwdl(task="FetchSequenceByAccessionId", args=[
