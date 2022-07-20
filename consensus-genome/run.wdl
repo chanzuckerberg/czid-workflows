@@ -404,7 +404,7 @@ task FetchSequenceByAccessionId {
                 (seq_offset, header_len, seq_len), = t['~{accession_id}']
                 s3_path = '~{nr_s3_path}'
             else:
-                error("AccessionIdNotFound", "The Accession ID was not found in the CZ ID database, so a generalized consensus genome could not be run.")
+                error("AccessionIdNotFound", "The Accession ID was not found in the CZ ID database, so a generalized consensus genome could not be run")
 
         to = seq_offset + header_len + seq_len - 1
         parsed = urlparse(s3_path)
