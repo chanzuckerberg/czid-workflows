@@ -7,6 +7,12 @@ import tempfile
 from subprocess import CalledProcessError
 
 
+nt_s3_path = "s3://czid-public-references/ncbi-indexes-prod/2021-01-22/index-generation-2/nt"
+nt_loc_db = "s3://czid-public-references/ncbi-indexes-prod/2021-01-22/index-generation-2/nt_loc.marisa"
+nr_s3_path = "s3://czid-public-references/ncbi-indexes-prod/2021-01-22/index-generation-2/nr"
+nr_loc_db = "s3://czid-public-references/ncbi-indexes-prod/2021-01-22/index-generation-2/nr_loc.marisa"
+
+
 class TestConsensusGenomes(WDLTestCase):
     wdl = os.path.join(os.path.dirname(__file__), "..", "run.wdl")
     with open(os.path.join(os.path.dirname(__file__), "local_test.yml")) as fh:
@@ -17,7 +23,8 @@ class TestConsensusGenomes(WDLTestCase):
         fastqs_0 = os.path.join(os.path.dirname(__file__), "sample_sars-cov-2_paired_r1.fastq.gz")
         fastqs_1 = os.path.join(os.path.dirname(__file__), "sample_sars-cov-2_paired_r2.fastq.gz")
         args = ["sample=test_sample", f"fastqs_0={fastqs_0}", f"fastqs_1={fastqs_1}", "technology=Illumina",
-                f"ref_fasta={self.sc2_ref_fasta}"]
+                f"ref_fasta={self.sc2_ref_fasta}"f"nt_s3_path={nt_s3_path}", f"nt_loc_db={nt_loc_db}",
+                f"nr_s3_path={nr_s3_path}", f"nr_loc_db={nr_loc_db}"]
         res = self.run_miniwdl(args)
         outputs = res["outputs"]
         with open(outputs["consensus_genome.compute_stats_out_output_stats"]) as fh:
@@ -41,7 +48,9 @@ class TestConsensusGenomes(WDLTestCase):
 
     def test_sars_cov2_ont_cg(self):
         fastqs_0 = os.path.join(os.path.dirname(__file__), "Ct20K.fastq.gz")
-        args = ["sample=test_sample", f"fastqs_0={fastqs_0}", "technology=ONT", f"ref_fasta={self.sc2_ref_fasta}"]
+        args = ["sample=test_sample", f"fastqs_0={fastqs_0}", "technology=ONT", f"ref_fasta={self.sc2_ref_fasta}",
+                f"nt_s3_path={nt_s3_path}", f"nt_loc_db={nt_loc_db}",
+                f"nr_s3_path={nr_s3_path}", f"nr_loc_db={nr_loc_db}"]
         res = self.run_miniwdl(args)
         outputs = res["outputs"]
         with open(outputs["consensus_genome.compute_stats_out_output_stats"]) as fh:
@@ -90,7 +99,8 @@ class TestConsensusGenomes(WDLTestCase):
                 out_fh.write(header + seq + sep + qual)
                 lineno += 1
         args = ["sample=test_sample", f"fastqs_0={tf.name}", "technology=ONT", f"ref_fasta={self.sc2_ref_fasta}",
-                "apply_length_filter=false"]
+                "apply_length_filter=false", f"nt_s3_path={nt_s3_path}", f"nt_loc_db={nt_loc_db}",
+                f"nr_s3_path={nr_s3_path}", f"nr_loc_db={nr_loc_db}"]
         res = self.run_miniwdl(args)
         outputs = res["outputs"]
         with open(outputs["consensus_genome.compute_stats_out_output_stats"]) as fh:
@@ -104,7 +114,9 @@ class TestConsensusGenomes(WDLTestCase):
         fastqs_1 = os.path.join(os.path.dirname(__file__), "SRR11741455_65054_nh_R2.fastq.gz")
         args = ["sample=test_sample", f"fastqs_0={fastqs_0}", f"fastqs_1={fastqs_1}", "technology=Illumina",
                 "filter_reads=false", "ref_accession_id=MF965207.1",
-                "primer_bed=s3://czid-public-references/consensus-genome/na_primers.bed"]
+                "primer_bed=s3://czid-public-references/consensus-genome/na_primers.bed",
+                f"nt_s3_path={nt_s3_path}", f"nt_loc_db={nt_loc_db}",
+                f"nr_s3_path={nr_s3_path}", f"nr_loc_db={nr_loc_db}"]
         res = self.run_miniwdl(args)
         for output_name, output in res["outputs"].items():
             if isinstance(output, str):
@@ -152,6 +164,10 @@ class TestConsensusGenomes(WDLTestCase):
             "technology=ONT",
             f"ref_fasta={self.sc2_ref_fasta}",
             "primer_set=nCoV-2019/V1200",
+            f"nt_s3_path={nt_s3_path}",
+            f"nt_loc_db={nt_loc_db}",
+            f"nr_s3_path={nr_s3_path}",
+            f"nr_loc_db={nr_loc_db}",
         ]
         with self.assertRaises(CalledProcessError) as ecm:
             self.run_miniwdl(args)
@@ -165,7 +181,9 @@ class TestConsensusGenomes(WDLTestCase):
 
     def test_sars_cov2_ont_cg_no_reads(self):
         fastqs_0 = os.path.join(os.path.dirname(__file__), "blank.fastq.gz")
-        args = ["sample=test_sample", f"fastqs_0={fastqs_0}", "technology=ONT", f"ref_fasta={self.sc2_ref_fasta}"]
+        args = ["sample=test_sample", f"fastqs_0={fastqs_0}", "technology=ONT", f"ref_fasta={self.sc2_ref_fasta}",
+                f"nt_s3_path={nt_s3_path}", f"nt_loc_db={nt_loc_db}",
+                f"nr_s3_path={nr_s3_path}", f"nr_loc_db={nr_loc_db}"]
         with self.assertRaises(CalledProcessError) as ecm:
             self.run_miniwdl(args)
         self.assertRunFailed(
