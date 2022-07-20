@@ -135,11 +135,6 @@ task GetReferenceAccessionFastas {
 
         error = lambda err, cause: sys.exit(json.dumps(dict(wdl_error_message=True, error=err, cause=cause)))
 
-        try:
-            s3 = boto3.resource('s3')
-        except botocore.exceptions.NoCredentialsError:
-            s3 = boto3.resource('s3', config=Config(signature_version=UNSIGNED))
-
         nt = marisa_trie.RecordTrie("QII").mmap('~{nt_loc_db}')
         nr = marisa_trie.RecordTrie("QII").mmap('~{nr_loc_db}')
         for accession_id in ["~{sep='", "' accession_ids}"]:
