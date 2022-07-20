@@ -157,7 +157,7 @@ task GetReferenceAccessionFastas {
             except botocore.exceptions.NoCredentialsError:
                 data = boto3.resource('s3', config=Config(signature_version=UNSIGNED)).Object(bucket, key).get(Range=f'bytes={seq_offset}-{to}')['Body'].read()
 
-            with open('sequence.fa', 'wb') as f:
+            with open(f'{accession_id}.fasta', 'wb') as f:
                 f.write(data)
         CODE
     >>>
