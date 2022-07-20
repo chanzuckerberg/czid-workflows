@@ -23,7 +23,7 @@ class TestConsensusGenomes(WDLTestCase):
         fastqs_0 = os.path.join(os.path.dirname(__file__), "sample_sars-cov-2_paired_r1.fastq.gz")
         fastqs_1 = os.path.join(os.path.dirname(__file__), "sample_sars-cov-2_paired_r2.fastq.gz")
         args = ["sample=test_sample", f"fastqs_0={fastqs_0}", f"fastqs_1={fastqs_1}", "technology=Illumina",
-                f"ref_fasta={self.sc2_ref_fasta}"f"nt_s3_path={nt_s3_path}", f"nt_loc_db={nt_loc_db}",
+                f"ref_fasta={self.sc2_ref_fasta}", f"nt_s3_path={nt_s3_path}", f"nt_loc_db={nt_loc_db}",
                 f"nr_s3_path={nr_s3_path}", f"nr_loc_db={nr_loc_db}"]
         res = self.run_miniwdl(args)
         outputs = res["outputs"]
