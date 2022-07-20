@@ -156,8 +156,14 @@ task GetReferenceAccessionFastas {
             to = seq_offset + header_len + seq_len - 1
             parsed = urlparse(s3_path)
             bucket, key = parsed.netloc, parsed.path[1:]
+
+            try:
+                data = boto3.resource('s3').Object(bucket, key).get(Range=f'bytes={seq_offset}-{to}')['Body'].read()
+            except botocore.exceptions.NoCredentialsError:
+                data = boto3.resource('s3', config=Config(signature_version=UNSIGNED)).Object(bucket, key).get(Range=f'bytes={seq_offset}-{to}')['Body'].read()
+
             with open('sequence.fa', 'wb') as f:
-                f.write(s3.Object(bucket, key).get(Range=f'bytes={seq_offset}-{to}')['Body'].read())
+                f.write(data)
         CODE
     >>>
 
