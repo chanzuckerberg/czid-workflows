@@ -18,6 +18,11 @@ workflow phylotree {
         # allow the user to pass specific refaccessions to include with the tree
         Array[String] additional_reference_accession_ids = []
 
+        String nt_s3_path
+        File nt_loc_db
+        String nr_s3_path
+        File nr_loc_db
+
         String cut_height = .16
         String ska_align_p = .9
         String docker_image_id
@@ -36,6 +41,10 @@ workflow phylotree {
     call GetReferenceAccessionFastas {
         input:
         accession_ids = additional_reference_accession_ids,
+        nt_s3_path = nt_s3_path,
+        nt_loc_db = nt_loc_db,
+        nr_s3_path = nr_s3_path,
+        nr_loc_db = nr_loc_db,
         docker_image_id = docker_image_id
     }
 
@@ -104,25 +113,52 @@ workflow phylotree {
 task GetReferenceAccessionFastas {
     input {
         Array[String] accession_ids
+        String nt_s3_path
+        File nt_loc_db
+        String nr_s3_path
+        File nr_loc_db
         String docker_image_id
     }
 
     command <<<
-    set -euxo pipefail
-        function incrementAccession { 
-            ( [[ $1 =~ ([A-Z0-9_]*)\.([0-9]+) ]] && echo "${BASH_REMATCH[1]}.$(( ${BASH_REMATCH[2]} + 1 ))");
-        }
-        for accession_id in ~{sep=' ' accession_ids}; do
-            # Try fetching accession id. If not found, try incrementing the version. 
-            ({ taxoniq get-from-s3 --accession-id $accession_id; } || \
-            { taxoniq get-from-s3 --accession-id $(incrementAccession $accession_id); } \
-            || exit 4; ) > $accession_id.fasta;
-            if [[ $? == 4 ]]; then
-                export error=AccessionIdNotFound cause="Accession ID $accession_id not found in the index"
-                jq -nc ".wdl_error_message=true | .error=env.error | .cause=env.cause" > /dev/stderr
-                exit 4
-            fi
-        done
+        python3 <<CODE
+        import json
+        import sys
+        from urllib.parse import urlparse
+
+        import boto3
+        import botocore.exceptions
+        import marisa_trie
+        from botocore import UNSIGNED
+        from botocore.client import Config
+
+
+        error = lambda err, cause: sys.exit(json.dumps(dict(wdl_error_message=True, error=err, cause=cause)))
+
+        try:
+            s3 = boto3.resource('s3')
+        except botocore.exceptions.NoCredentialsError:
+            s3 = boto3.resource('s3', config=Config(signature_version=UNSIGNED))
+
+        nt = marisa_trie.RecordTrie("QII").mmap('~{nt_loc_db}')
+        nr = marisa_trie.RecordTrie("QII").mmap('~{nr_loc_db}')
+        for accession_id in ["~{sep='", "' accession_ids}"]:
+            if accession_id in nt:
+                (seq_offset, header_len, seq_len), = nt[accession_id]
+                s3_path = '~{nt_s3_path}'
+            else:
+                if accession_id in nr:
+                    (seq_offset, header_len, seq_len), = nr[accession_id]
+                    s3_path = '~{nr_s3_path}'
+                else:
+                    error("AccessionIdNotFound", "The Accession ID was not found in the CZ ID database, so a generalized consensus genome could not be run.")
+
+            to = seq_offset + header_len + seq_len - 1
+            parsed = urlparse(s3_path)
+            bucket, key = parsed.netloc, parsed.path[1:]
+            with open('sequence.fa', 'wb') as f:
+                f.write(s3.Object(bucket, key).get(Range=f'bytes={seq_offset}-{to}')['Body'].read())
+        CODE
     >>>
 
     output {
