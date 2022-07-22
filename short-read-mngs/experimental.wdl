@@ -219,6 +219,35 @@ task NonhostFastq {
     docker: docker_image_id
   }
 }
+task RunGlueJob {
+  input {
+    String docker_image_id
+    String s3_wd_uri
+  }
+  command<<<
+  # This command is specific to the CZ ID system
+  
+  set -euxo pipefail 
+  BUCKET=$(echo "~{s3_wd_uri}" | cut -d/ -f 3)
+  PIPELINE_RUN_ID=$(echo "~{s3_wd_uri}" | cut -d/ -f 7)
+  echo $BUCKET
+  if [[ $BUCKET == "idseq-samples-sandbox" ]]; then
+   ENV=sandbox
+  elif [[ $BUCKET == "idseq-samples-staging" ]]; then
+   echo here
+   ENV=staging
+  elif [[ $BUCKET == "idseq-prod-samples-us-west-2" ]]; then
+   ENV=prod
+  else 
+    exit 0
+  fi
+  aws glue start-job-run --job-name "$ENV"_heatmap_es_job --region us-west-2 --arguments "--user_pipeline_run_ids=$PIPELINE_RUN_ID --user_background_id=26 --job_type=selected_runs" 
+  >>>
+  runtime { 
+    docker: docker_image_id
+  }
+}
+  
 
 workflow czid_experimental {
   input {
@@ -320,6 +349,11 @@ workflow czid_experimental {
       nonhost_fasta_refined_taxid_annot_fasta = nonhost_fasta_refined_taxid_annot_fasta,
       duplicate_clusters_csv = duplicate_clusters_csv,
       use_taxon_whitelist = use_taxon_whitelist
+  }
+  call RunGlueJob {
+    input:
+      docker_image_id = docker_image_id,
+      s3_wd_uri = s3_wd_uri,
   }
 
   output {
