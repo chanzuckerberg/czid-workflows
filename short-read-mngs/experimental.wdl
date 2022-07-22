@@ -230,11 +230,9 @@ task RunGlueJob {
   set -euxo pipefail 
   BUCKET=$(echo "~{s3_wd_uri}" | cut -d/ -f 3)
   PIPELINE_RUN_ID=$(echo "~{s3_wd_uri}" | cut -d/ -f 7)
-  echo $BUCKET
   if [[ $BUCKET == "idseq-samples-sandbox" ]]; then
    ENV=sandbox
   elif [[ $BUCKET == "idseq-samples-staging" ]]; then
-   echo here
    ENV=staging
   elif [[ $BUCKET == "idseq-prod-samples-us-west-2" ]]; then
    ENV=prod
@@ -243,6 +241,7 @@ task RunGlueJob {
   fi
   aws glue start-job-run --job-name "$ENV"_heatmap_es_job --region us-west-2 --arguments "--user_pipeline_run_ids=$PIPELINE_RUN_ID --user_background_id=26 --job_type=selected_runs" 
   >>>
+
   runtime { 
     docker: docker_image_id
   }
