@@ -239,10 +239,10 @@ task RunGlueJob {
   else 
     exit 0
   fi
-  JOBID=$(aws glue start-job-run --job-name "$ENV"_heatmap_es_job --region us-west-2 --arguments="--user_pipeline_run_ids=$PIPELINE_RUN_ID,--user_background_id=26,--job_type=selected_runs" | jq .JobRunId) 
+  JOBID=$(aws glue start-job-run --job-name "$ENV"_heatmap_es_job --region us-west-2 --arguments="--user_pipeline_run_ids=$PIPELINE_RUN_ID,--user_background_id=26,--job_type=selected_runs" | jq -r .JobRunId) 
   i=0
   while true; do 
-    JOBSTATE=$(aws glue get-job-run --job-name staging_heatmap_es_job --run-id jr_66ce4deeff7e60bc31c51dd0b3d85ba5878ac0cf160cf6ed79f0df3d391ab03f | jq .JobRun.JobRunState)
+    JOBSTATE=$(aws glue get-job-run --job-name staging_heatmap_es_job --run-id $JOBID | jq -r .JobRun.JobRunState)
     if [[ $JOBSTATE == "SUCCEEDED" ]]; then 
       exit 0 
     elif [[ $JOBSTATE == "FAILED" ]]; then 
