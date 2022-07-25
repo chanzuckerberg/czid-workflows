@@ -247,6 +247,10 @@ task RunGlueJob {
       exit 0 
     elif [[ $JOBSTATE == "FAILED" ]]; then 
       exit 1
+    elif [[ $JOBSTATE == "ERROR" ]]; then 
+      exit 1
+    elif [[ $JOBSTATE == "TIMEOUT" ]]; then 
+      exit 1
     else 
       sleep 60
     fi
