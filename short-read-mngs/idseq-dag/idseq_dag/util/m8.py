@@ -129,8 +129,8 @@ def call_hits_m8(input_m8, lineage_map_path, accession2taxid_dict_path,
         * http://www.metagenomics.wiki/tools/blast/blastn-output-format-6
         * http://www.metagenomics.wiki/tools/blast/evalue
     """
-    with open_file_db_by_extension(lineage_map_path) as lineage_map, \
-         open_file_db_by_extension(accession2taxid_dict_path) as accession2taxid_dict:  # noqa
+    with open_file_db_by_extension(lineage_map_path, "lll") as lineage_map, \
+         open_file_db_by_extension(accession2taxid_dict_path, "l") as accession2taxid_dict:  # noqa
         _call_hits_m8_work(input_m8, lineage_map, accession2taxid_dict,
                            output_m8, output_summary, min_alignment_length,
                            deuterostome_path, taxon_whitelist_path, taxon_blacklist_path)
@@ -305,7 +305,7 @@ def generate_taxon_count_json_from_m8(
     aggregation = {}
     with open(hit_level_path) as hit_level_f, \
          open(blastn_6_path) as blastn_6_f, \
-         open_file_db_by_extension(lineage_map_path) as lineage_map:
+         open_file_db_by_extension(lineage_map_path, "lll") as lineage_map:
 
         num_ranks = len(lineage.NULL_LINEAGE)
         # See https://en.wikipedia.org/wiki/Double-precision_floating-point_format

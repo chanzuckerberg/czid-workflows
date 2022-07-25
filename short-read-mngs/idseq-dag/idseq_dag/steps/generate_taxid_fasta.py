@@ -34,7 +34,7 @@ class PipelineStepGenerateTaxidFasta(PipelineStep):
             nt_hits_by_read_id = {row["read_id"]: (row["taxid"], row["level"]) for row in HitSummaryMergedReader(nt_hit_summary_f)}
 
         with open(self.output_files_local()[0], "w") as output_fa, \
-             open_file_db_by_extension(lineage_db) as lineage_map:  # noqa
+             open_file_db_by_extension(lineage_db, "lll") as lineage_map:  # noqa
             for read in fasta.iterator(input_fa_name):
                 # Example read_id: "NR::NT:CP010376.2:NB501961:14:HM7TLBGX2:1:23109
                 # :12720:8743/2"
