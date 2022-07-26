@@ -87,13 +87,8 @@ if __name__ == '__main__':
     parser.add_argument('--accession2taxid_db')
     args = parser.parse_args()
 
-    accession_mapping_files = args.accession_mapping_files
-    num_partitions = args.parallelism
-    nt_file = args.nt_file
-    nr_file = args.nr_file
-
     # Build accession trie
-    accessions = marisa_trie.Trie(get_accessions(nt_file, nr_file))
+    accessions = marisa_trie.Trie(get_accessions(args.nt_file, args.nr_file))
     print("Building trie", file=sys.stderr)
     marisa_trie.RecordTrie(
         "L",
