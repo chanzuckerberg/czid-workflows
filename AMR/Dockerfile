@@ -4,7 +4,9 @@ LABEL maintainer="CZ ID Team <idseq-tech@chanzuckerberg.com>"
 
 SHELL ["/bin/bash", "-c"]
 
-RUN apt-get update && apt-get -y install curl git
+RUN apt-get update && apt-get -y install curl git python3 python3-pip
+
+RUN pip3 install pandas
 
 RUN curl -sO https://repo.anaconda.com/miniconda/Miniconda2-latest-Linux-x86_64.sh && \
     bash Miniconda2-latest-Linux-x86_64.sh -b -p /usr/local/miniconda && \
