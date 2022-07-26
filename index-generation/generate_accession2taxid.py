@@ -44,59 +44,43 @@ __note:__ columns 3 and 10 of the hitsummary2.xxx.tab files should always be ide
 3. Subsetting accessions to the ones appearing in NT/NR
 """
 import argparse
-import os
 import sys
-from multiprocessing.pool import ThreadPool
-from typing import List
 
 import marisa_trie
 
 
-def output_dicts_to_db(mapping_files: List[List[str]], accession2taxid_db: str):
-    # generate the accession2taxid db and file
-    def accession_id_to_taxid():
-        for partition_list in mapping_files:
-            for partition in partition_list:
-                with open(partition, 'r', encoding="utf-8") as pf:
-                    for line in pf:
-                        if len(line) <= 1:
-                            break
-                        fields = line.rstrip().split("\t")
-                        yield (fields[0], (int(fields[2]),))
-    marisa_trie.RecordTrie("L", accession_id_to_taxid()).save(accession2taxid_db)
+def accession_mapping(accessions: marisa_trie.Trie, *accession_mapping_files: str):
+    for accession_mapping_file in accession_mapping_files:
+        with open(accession_mapping_file) as mapf:
+            for i, _line in enumerate(mapf):
+                line = _line
 
-
-def grab_accession_names(source_file: str, dest_file: str):
-    with open(source_file) as source:
-        with open(dest_file, 'w') as dest:
-            for line in source:
-                if line[0] == '>':
-                    dest.write(line.split(' ')[0] + "\n")
-
-
-def grab_accession_mapping_list(source: str, num_partitions: int, partition_id: int,
-                                accessions, output_file: str):
-    num_lines = 0
-    with open(output_file, 'w') as out, open(source, 'r') as mapf:
-        for line in mapf:
-            if num_lines % num_partitions == partition_id:
                 accession_line = line.split("\t")
                 accession = accession_line[0]
                 # If using the prot.accession2taxid.FULL file, should add a column with no version
                 if len(accession_line) < 3 and accession.split(".")[0] in accessions:
                     accession_no_version = accession.split(".")[0]
-                    out.write(f"{accession_no_version}\t{line}")
-                elif accession in accessions:
-                    out.write(line)
-            num_lines += 1
-            if num_lines % 1000000 == 0:
-                print(f"{source} partition {partition_id} line {num_lines/1000000}M", file=sys.stderr)
+                    line = f"{accession_no_version}\t{line}"
+
+                fields = line.rstrip().split("\t")
+                yield (fields[0], (int(fields[2]),))
+
+                if i % 1000000 == 0:
+                    print(f"{accession_mapping_file} line {i/1000000}M", file=sys.stderr)
+
+
+def get_accessions(*source_files: str):
+    for source_file in source_files:
+        with open(source_file) as source:
+            for line in source:
+                if line[0] == '>':
+                    accession = line[1:].split(' ')[0].split(".")[0]
+                yield accession
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Generate accession2taxid.')
     parser.add_argument('accession_mapping_files', nargs=4)
-    parser.add_argument('--parallelism', type=int)
     parser.add_argument('--nt_file')
     parser.add_argument('--nr_file')
     parser.add_argument('--output_gz')
@@ -107,40 +91,11 @@ if __name__ == '__main__':
     num_partitions = args.parallelism
     nt_file = args.nt_file
     nr_file = args.nr_file
-    accession2taxid_db = args.accession2taxid_db
 
-    # Get accession_list
-    source_files = [nt_file, nr_file]
-    accessions_files = [f"{source_file}.accessions" for source_file in source_files]
-    pool = ThreadPool()
-    pool.starmap(grab_accession_names, zip(source_files, accessions_files))
-
-    accessions = set()
-    for accession_file in accessions_files:
-        with open(accession_file, 'r') as acf:
-            for line in acf:
-                accession = line[1:].split(".")[0]
-                accessions.add(accession)
-
-    grab_accession_mapping_list_args = []
-    mapping_files = []
-    for accession_mapping_file in accession_mapping_files:
-        partition_list = []
-        for p in range(num_partitions):
-            part_file = f"{os.path.basename(accession_mapping_file)}-{p}"
-            partition_list.append(part_file)
-            grab_accession_mapping_list_args.append([
-                accession_mapping_file,
-                num_partitions,
-                p,
-                accessions,
-                part_file
-            ])
-        mapping_files.append(partition_list)
-
-    pool.starmap(grab_accession_mapping_list, grab_accession_mapping_list_args)
-    accessions = set()  # reset accessions to release memory
-
-    print("starting writing output dictionaries to db", file=sys.stderr)
-
-    output_dicts_to_db(mapping_files, accession2taxid_db)
+    # Build accession trie
+    accessions = marisa_trie.Trie(get_accessions(nt_file, nr_file))
+    print("Building trie", file=sys.stderr)
+    marisa_trie.RecordTrie(
+        "L",
+        accession_mapping(accessions, *args.accession_mapping_files),
+    ).save(args.accession2taxid_db)
