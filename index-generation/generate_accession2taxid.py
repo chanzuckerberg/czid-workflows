@@ -53,6 +53,9 @@ def accession_mapping(accessions: marisa_trie.Trie, *accession_mapping_files: st
     for accession_mapping_file in accession_mapping_files:
         with open(accession_mapping_file) as mapf:
             for i, _line in enumerate(mapf):
+                if i == 0:
+                    continue
+
                 line = _line
 
                 accession_line = line.split("\t")
