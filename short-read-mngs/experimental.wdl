@@ -226,8 +226,9 @@ task RunGlueJob {
   }
   command<<<
   # This command is specific to the CZ ID system
-  
   set -euxo pipefail 
+
+
   BUCKET=$(echo "~{s3_wd_uri}" | cut -d/ -f 3)
   PIPELINE_RUN_ID=$(echo "~{s3_wd_uri}" | cut -d/ -f 7)
   if [[ $BUCKET == "idseq-samples-sandbox" ]]; then
@@ -297,6 +298,7 @@ workflow czid_experimental {
     File resist_genome_db = "s3://czid-public-references/amr/ARGannot_r2.fasta"
     File resist_genome_bed = "s3://czid-public-references/amr/argannot_genome.bed"
     Boolean use_taxon_whitelist = false
+    Boolean web_app = false
   }
 
   call GenerateTaxidFasta {
@@ -371,10 +373,12 @@ workflow czid_experimental {
       duplicate_clusters_csv = duplicate_clusters_csv,
       use_taxon_whitelist = use_taxon_whitelist
   }
-  call RunGlueJob {
-    input:
-      docker_image_id = docker_image_id,
-      s3_wd_uri = s3_wd_uri,
+  if (web_app) {
+    call RunGlueJob {
+      input:
+        docker_image_id = docker_image_id,
+        s3_wd_uri = s3_wd_uri,
+    }
   }
 
   output {
