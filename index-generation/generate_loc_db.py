@@ -29,7 +29,7 @@ def generate_loc_db(db_file, loc_db_file, info_db_file):
                 if seq_len > 0 and len(accession_id) > 0:
                     loc_pairs.append((accession_id, (seq_offset, header_len, seq_len)))
                 if seq_bp_len > 0 and len(accession_name) > 0:
-                    info_pairs.append((accession_id, (seq_bp_len, accession_name.encode())))
+                    info_pairs.append((accession_id, (accession_name.encode(), seq_bp_len)))
 
                 seq_offset = seq_offset + header_len + seq_len
                 header_len = len(line)
