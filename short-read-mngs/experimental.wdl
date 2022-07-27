@@ -239,7 +239,6 @@ workflow czid_experimental {
     File nonhost_fasta_refined_taxid_annot_fasta
     File duplicate_clusters_csv
     String file_ext = "fastq"
-    String index_version = "2021-01-22" # FIXME: vestigial input
     File nt_db = "s3://czid-public-references/ncbi-sources/2021-01-22/nt"
     File nt_loc_db = "s3://czid-public-references/alignment_data/2021-01-22/nt_loc.db"
     File nt_info_db = "s3://czid-public-references/alignment_data/2021-01-22/nt_info.db"

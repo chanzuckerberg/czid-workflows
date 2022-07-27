@@ -1,65 +1,74 @@
-FROM ubuntu:22.04
-ARG DEBIAN_FRONTEND=noninteractive
 ARG ARIA2_VERSION=1.36.0
+ARG DEBIAN_FRONTEND=noninteractive
 
+FROM ubuntu:22.04 AS builder
+ARG ARIA2_VERSION
+ARG DEBIAN_FRONTEND
+# Install  build dependencies
+RUN apt-get update && \
+    apt-get install -y \
+    curl \
+    git \
+    ## aria2
+    libssl-dev \
+    liblz4-tool \
+    software-properties-common \
+    pkg-config \
+    ## diamond
+    g++ \
+    gdb \
+    libclang-common-12-dev \
+    cmake\
+    g++\
+    zlib1g-dev \
+    ## minimap2
+    build-essential \
+    libz-dev \
+    zip
+
+# install aria2
+RUN curl -L https://github.com/aria2/aria2/releases/download/release-${ARIA2_VERSION}/aria2-${ARIA2_VERSION}.tar.gz -o aria2-${ARIA2_VERSION}.tar.gz && \
+    tar xzvf aria2-${ARIA2_VERSION}.tar.gz
+RUN cd /aria2-${ARIA2_VERSION} && ./configure --without-gnutls --with-openssl && make
+
+# install minimap2
+RUN git clone --single-branch --branch distributed-mapping https://github.com/mlin/minimap2.git \
+    && cd minimap2 && make
+
+# install seqkit
+RUN curl -L https://github.com/shenwei356/seqkit/releases/download/v2.0.0/seqkit_linux_amd64.tar.gz | tar xz
+
+# install diamond 
+RUN git clone --single-branch --branch scatter-gather https://github.com/morsecodist/diamond \
+    && mkdir diamond/build && cd diamond/build && cmake -DCMAKE_BUILD_TYPE=Release .. && make -j6
+
+# install aws cli
+RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" \
+    && unzip awscliv2.zip && ./aws/install -i /usr/local/aws-cli -b /usr/local/bin
+
+FROM ubuntu:22.04
+ARG ARIA2_VERSION
+ARG DEBIAN_FRONTEND
 # Install dependencies
 RUN apt-get update && \
     apt-get install -y \
-        # Build only dependencies
-        ## diamond
-        g++ \
-        gdb \
-        libclang-common-12-dev \
-        cmake\
-        g++\
-        zlib1g-dev \
-        ## minimap2
-        build-essential \
-        libz-dev \
-        # Runtime dependencies
-        make \
-        curl \
-        git \
         wget \
-        liblz4-tool \
-        libssl-dev \
-        pkg-config \
         pigz \
-        python3-pandas \
         python3-pip \
-        software-properties-common \
         mysql-client \
         jq
 
-# install aria2
-WORKDIR /tmp
-RUN curl -L https://github.com/aria2/aria2/releases/download/release-${ARIA2_VERSION}/aria2-${ARIA2_VERSION}.tar.gz -o aria2-${ARIA2_VERSION}.tar.gz && \
-    tar xzvf aria2-${ARIA2_VERSION}.tar.gz
-RUN cd /tmp/aria2-${ARIA2_VERSION} && ./configure --without-gnutls --with-openssl && make && mv ./src/aria2c /usr/local/bin/
+COPY --from=builder /diamond/build/diamond /usr/local/bin
+COPY --from=builder /minimap2/minimap2 /usr/local/bin/
+COPY --from=builder /aria2-${ARIA2_VERSION}/src/aria2c /usr/local/bin/
+COPY --from=builder /seqkit /usr/local/bin/
+COPY --from=builder /usr/local/aws-cli /usr/local/aws-cli
+COPY --from=builder /usr/local/bin/aws /usr/local/bin
 
-# install minimap2 and seqkit
-RUN git clone --single-branch --branch distributed-mapping  https://github.com/mlin/minimap2.git \
-&& cd minimap2 && make && mv ./minimap2 /usr/local/bin/
-RUN curl -L https://github.com/shenwei356/seqkit/releases/download/v2.0.0/seqkit_linux_amd64.tar.gz | tar xz && mv seqkit /usr/local/bin/
-
-# install diamond 
-WORKDIR /tmp
-RUN git clone https://github.com/morsecodist/diamond
-WORKDIR /tmp/diamond
-RUN git checkout scatter-gather
-WORKDIR /tmp/diamond/build
-RUN cmake -DCMAKE_BUILD_TYPE=Release ..
-RUN make -j6
-RUN mv diamond /usr/local/bin
-WORKDIR /workspace
-
-# install boto 3 and awscli
-RUN python3 -m pip install boto3==1.12.27 botocore==1.15.39
-RUN python3 -m pip install awscli==1.18.39 --upgrade
-ENV PATH="${PATH}:/usr/local/bin"
+COPY requirements.txt requirements.txt
+RUN pip3 install -r requirements.txt
 
 COPY *.py /usr/local/bin/
-
 COPY ncbi_download /usr/local/bin/
 
 WORKDIR /workspace
