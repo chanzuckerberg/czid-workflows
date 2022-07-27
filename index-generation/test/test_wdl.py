@@ -24,7 +24,7 @@ class TestIndexGeneration(WDLTestCase):
         self.assertTrue(outputs["index_generation.nt_loc_db"].endswith(
             "marisa"), os.path.basename(outputs["index_generation.nt_loc_db"]))
 
-        trie = marisa_trie.RecordTrie("<I256p")
+        trie = marisa_trie.RecordTrie("256pI")
         trie.load(outputs["index_generation.nt_info_db"])
         self.assertEqual(list(trie.items()), [
             ("kraken:taxid|1434323|NC_027349.1", (b'Escherichia phage HY01, complete genome', 11200)),
