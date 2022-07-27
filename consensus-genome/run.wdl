@@ -68,6 +68,11 @@ workflow consensus_genome {
         # (this is an overestimate to increase sensitivity)
         Float bcftoolsCallTheta = 0.0006
 
+        String nt_s3_path
+        File nt_loc_db
+        String nr_s3_path
+        File nr_loc_db
+
         # Dummy values - required by SFN interface
         String s3_wd_uri = ""
     }
@@ -83,8 +88,13 @@ workflow consensus_genome {
 
     if (ref_accession_id != None) {
         call FetchSequenceByAccessionId {
-            input: accession_id = select_first([ref_accession_id]),
-            docker_image_id = docker_image_id
+            input:
+                accession_id = select_first([ref_accession_id]),
+                nt_s3_path = nt_s3_path,
+                nt_loc_db = nt_loc_db,
+                nr_s3_path = nr_s3_path,
+                nr_loc_db = nr_loc_db,
+                docker_image_id = docker_image_id
         }
     }
 
@@ -362,21 +372,52 @@ task ValidateInput{
 task FetchSequenceByAccessionId {
     input {
         String accession_id
+        String nt_s3_path
+        File nt_loc_db
+        String nr_s3_path
+        File nr_loc_db
         String docker_image_id
     }
 
     command <<<
-        function incrementAccession { 
-            ( [[ $1 =~ ([A-Z0-9_]*)\.([0-9]+) ]] && echo "${BASH_REMATCH[1]}.$(( ${BASH_REMATCH[2]} + 1 ))");
-        }
-        # Try fetching accession id. If not found, try incrementing the version. 
-        ({ taxoniq get-from-s3 --accession-id "~{accession_id}"; } || \
-        { taxoniq get-from-s3 --accession-id $(incrementAccession "~{accession_id}"); } \
-        || exit 4; ) > sequence.fa;
-        if [[ $? == 4 ]]; then
-	    raise_error AccessionIdNotFound "The Accession ID was not found in the CZ ID database, so a generalized consensus genome could not be run" 
-        fi
-        exit $?
+        python3 <<CODE
+        import json
+        import sys
+        from urllib.parse import urlparse
+
+        import boto3
+        import botocore.exceptions
+        import marisa_trie
+        from botocore import UNSIGNED
+        from botocore.client import Config
+
+
+        error = lambda err, cause: sys.exit(json.dumps(dict(wdl_error_message=True, error=err, cause=cause)))
+
+        t = marisa_trie.RecordTrie("QII").mmap('~{nt_loc_db}')
+        if '~{accession_id}' in t:
+            (seq_offset, header_len, seq_len), = t['~{accession_id}']
+            s3_path = '~{nt_s3_path}'
+        else:
+            t = marisa_trie.RecordTrie("QII").mmap('~{nr_loc_db}')
+            if '~{accession_id}' in t:
+                (seq_offset, header_len, seq_len), = t['~{accession_id}']
+                s3_path = '~{nr_s3_path}'
+            else:
+                error("AccessionIdNotFound", "The Accession ID was not found in the CZ ID database, so a generalized consensus genome could not be run")
+
+        to = seq_offset + header_len + seq_len - 1
+        parsed = urlparse(s3_path)
+        bucket, key = parsed.netloc, parsed.path[1:]
+
+        try:
+            data = boto3.resource('s3').Object(bucket, key).get(Range=f'bytes={seq_offset}-{to}')['Body'].read()
+        except botocore.exceptions.NoCredentialsError:
+            data = boto3.resource('s3', config=Config(signature_version=UNSIGNED)).Object(bucket, key).get(Range=f'bytes={seq_offset}-{to}')['Body'].read()
+
+        with open('sequence.fa', 'wb') as f:
+            f.write(data)
+        CODE
     >>>
 
     output {
