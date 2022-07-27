@@ -4,12 +4,5 @@ numpy==1.21.0
 pandas==1.2.4
 requests==2.25.1
 seaborn==0.11.1
-taxoniq==0.6.0
-
-https://czid-public-references.s3.us-west-2.amazonaws.com/test/taxoniq/ncbi_genbank_accession_db-2022.6.25-py3-none-any.whl 
-https://czid-public-references.s3.us-west-2.amazonaws.com/test/taxoniq/ncbi_genbank_accession_lengths-2022.6.25-py3-none-any.whl 
-https://czid-public-references.s3.us-west-2.amazonaws.com/test/taxoniq/ncbi_genbank_accession_offsets-2022.6.25-py3-none-any.whl 
-https://czid-public-references.s3.us-west-2.amazonaws.com/test/taxoniq/ncbi_refseq_accession_db-2022.6.25-py3-none-any.whl 
-https://czid-public-references.s3.us-west-2.amazonaws.com/test/taxoniq/ncbi_refseq_accession_lengths-2022.6.25-py3-none-any.whl
-https://czid-public-references.s3.us-west-2.amazonaws.com/test/taxoniq/ncbi_refseq_accession_offsets-2022.6.25-py3-none-any.whl
-https://czid-public-references.s3.us-west-2.amazonaws.com/test/taxoniq/ncbi_taxon_db-2022.6.25-py3-none-any.whl
+marisa_trie==0.7.7
+boto3==1.24.34
