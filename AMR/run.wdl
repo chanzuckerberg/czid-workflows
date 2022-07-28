@@ -152,10 +152,12 @@ task RunRgiKmerMain {
         String docker_image_id
     }
     command <<< 
+        set -exuo pipefail
         source /usr/local/miniconda/etc/profile.d/conda.sh
         conda activate rgi
         mkdir -p wildcard
         tar -xjf "~{wildcard_data}" -C wildcard
+        gunzip wildcard/*.gz
         rgi card_annotation -i "~{card_json}" > card_annotation.log
         rgi load -i "~{card_json}" --card_annotation card_database_*.fasta
         rgi wildcard_annotation -i wildcard/ --card_json "~{card_json}" -v 3.1.0 
@@ -183,9 +185,12 @@ task RunRgiKmerBwt {
         String docker_image_id
     }
     command <<<
+        set -exuo pipefail
         source /usr/local/miniconda/etc/profile.d/conda.sh
         conda activate rgi
+        mkdir -p wildcard
         tar -xjf "~{wildcard_data}" -C wildcard
+        gunzip wildcard/*.gz
         rgi card_annotation -i "~{card_json}" > card_annotation.log
         rgi load -i "~{card_json}" --card_annotation card_database_*.fasta
         rgi wildcard_annotation -i wildcard/ --card_json "~{card_json}" -v 3.1.0 
@@ -209,6 +214,7 @@ task RunRgiMain {
         String docker_image_id
     }
     command <<<
+        set -exuo pipefail
         source /usr/local/miniconda/etc/profile.d/conda.sh
         conda activate rgi
         rgi card_annotation -i "~{card_json}" > card_annotation.log
@@ -234,6 +240,7 @@ task RunRgiBwtKma {
     }
 
     command <<<
+        set -exuo pipefail
 	source /usr/local/miniconda/etc/profile.d/conda.sh
         conda activate rgi
         rgi card_annotation -i "~{card_json}" > card_annotation.log 
