@@ -298,7 +298,7 @@ workflow czid_experimental {
     File resist_genome_db = "s3://czid-public-references/amr/ARGannot_r2.fasta"
     File resist_genome_bed = "s3://czid-public-references/amr/argannot_genome.bed"
     Boolean use_taxon_whitelist = false
-    Boolean web_app = false
+    Boolean enable_glue = false
   }
 
   call GenerateTaxidFasta {
@@ -373,7 +373,7 @@ workflow czid_experimental {
       duplicate_clusters_csv = duplicate_clusters_csv,
       use_taxon_whitelist = use_taxon_whitelist
   }
-  if (web_app) {
+  if (enable_glue) {
     call RunGlueJob {
       input:
         docker_image_id = docker_image_id,
