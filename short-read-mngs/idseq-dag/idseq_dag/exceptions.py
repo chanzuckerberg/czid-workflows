@@ -1,7 +1,8 @@
 class IDseqDagError(Exception):
-    def __init__(self, json):
+    def __init__(self, json, rec=""):
         super().__init__()
         self.json = json
+        self.rec = rec
 
     def __str__(self):
         return str(self.json)

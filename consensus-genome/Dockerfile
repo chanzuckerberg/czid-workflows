@@ -9,8 +9,8 @@ RUN sed -i s/archive.ubuntu.com/us-west-2.ec2.archive.ubuntu.com/ /etc/apt/sourc
   echo 'APT::Install-Suggests "false";' > /etc/apt/apt.conf.d/99czid
 
 # script to raise error as json
-RUN echo  'set +x \nexport error=$1 cause=$2 \njq -nc ".wdl_error_message=true | .error=env.error | .cause=env.cause" > /dev/stderr \nexit 1' >> /usr/local/bin/raise_error; \
-  chmod +x /usr/local/bin/raise_error
+RUN echo  'set +x \nexport error=$1 cause=$2 rec=$3 \njq -nc ".wdl_error_message=true | .error=env.error | .cause=env.cause | .rec=env.rec" > /dev/stderr \nexit 1' >> /usr/local/bin/raise_error; \
+    chmod +x /usr/local/bin/raise_error
 
 RUN apt-get -qq update && apt-get -qq -y install \
   jq \
@@ -55,9 +55,12 @@ RUN apt-get -qq update && apt-get -qq -y install \
 
 # These newer versions of infernal and ncbi-blast+ are required by VADR
 RUN curl -O -L https://ftp.osuosl.org/pub/ubuntu/pool/universe/i/infernal/infernal_1.1.4-1_amd64.deb && \
-  dpkg -i infernal_1.1.4-1_amd64.deb && \
-  curl -O -L https://ftp.osuosl.org/pub/ubuntu/pool/universe/n/ncbi-blast+/ncbi-blast+_2.10.1+ds-1_amd64.deb && \
-  dpkg -i ncbi-blast+_2.10.1+ds-1_amd64.deb
+  dpkg -i infernal_1.1.4-1_amd64.deb
+
+RUN curl -L https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/2.10.1/ncbi-blast-2.10.1+-x64-linux.tar.gz | tar xz 
+
+RUN mv ncbi-blast-2.10.1+/* /usr/local/bin/
+
 
 # See https://github.com/ablab/quast/issues/157
 RUN pip3 install multiqc==1.8 quast==5.0.2 && \

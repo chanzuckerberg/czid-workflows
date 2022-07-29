@@ -71,8 +71,8 @@ class PipelineStepRunValidateInput(PipelineStep):
                             merge_stderr=True
                         )
                     except Exception as e:
-                        error_str = self.get_bash_error_output(e.output.decode("utf-8").strip(), filename=os.path.basename(input_file))
-                        raise InvalidFileFormatError(error_str)
+                        error_str, rec = self.get_bash_error_output(e.output.decode("utf-8").strip(), filename=os.path.basename(input_file))
+                        raise InvalidFileFormatError(error_str, rec)
                 else:
                     # Validate and truncate the input file to keep behavior consistent with gz input files
                     try:
@@ -93,8 +93,8 @@ class PipelineStepRunValidateInput(PipelineStep):
                         )
                         input_files[i] = tmp_file
                     except Exception as e:
-                        error_str = self.get_bash_error_output(e.output.decode("utf-8").strip(), filename=os.path.basename(input_file))
-                        raise InvalidFileFormatError(error_str)
+                        error_str, rec = self.get_bash_error_output(e.output.decode("utf-8").strip(), filename=os.path.basename(input_file))
+                        raise InvalidFileFormatError(error_str, rec)
 
             # keep a dictionary of the distribution of read lengths in the files
             self.summary_dict = {vc.BUCKET_TOO_SHORT: 0,
@@ -118,7 +118,7 @@ class PipelineStepRunValidateInput(PipelineStep):
                 all_fragments.append(num_fragments)
 
             if len(all_fragments) == 2 and abs(all_fragments[1] - all_fragments[0]) > 1000:
-                raise InvalidFileFormatError(f"Paired input files {', '.join(input_files)} were detected to be of different lengths. Paired input files must contain the same number of reads")
+                raise InvalidFileFormatError(f"Paired input files {', '.join(input_files)} were detected to be of different lengths.", "Paired input files must contain the same number of reads.")
 
             with open(summary_file, 'w') as summary_f:
                 json.dump(self.summary_dict, summary_f)
@@ -158,16 +158,16 @@ class PipelineStepRunValidateInput(PipelineStep):
 
                 read_l = input_f.readline()
                 if len(read_l) == 0:  # unexpected EOF
-                    raise InvalidFileFormatError(f"The input file {infile} is invalid.")
+                    raise InvalidFileFormatError(f"The input file {infile} is invalid.", "Please check that your file is valid and try again.")
 
                 if is_fastq:
                     identifier2_l = input_f.readline()
                     if len(identifier2_l) == 0:
-                        raise InvalidFileFormatError(f"The input file {infile} is invalid.")
+                        raise InvalidFileFormatError(f"The input file {infile} is invalid.", "Please check that your file is valid and try again.")
 
                     quality_l = input_f.readline()
                     if len(quality_l) == 0:
-                        raise InvalidFileFormatError(f"The input file {infile} is invalid.")
+                        raise InvalidFileFormatError(f"The input file {infile} is invalid.", "Please check that your file is valid and try again.")
 
                 if is_fastq:
                     if identifier_l[0] != '@' or identifier2_l[0] != '+':
@@ -238,7 +238,7 @@ class PipelineStepRunValidateInput(PipelineStep):
 
                 read_l = input_f.readline()
                 if len(read_l) == 0:
-                    raise InvalidFileFormatError(f"The input file {infile} is invalid.")
+                    raise InvalidFileFormatError(f"The input file {infile} is invalid.", "Please check that your file is valid and try again.")
 
                 read_l = read_l.rstrip()
                 next_line = input_f.readline()
@@ -249,11 +249,11 @@ class PipelineStepRunValidateInput(PipelineStep):
                 if is_fastq:
                     identifier2_l = next_line
                     if len(identifier2_l) == 0:
-                        raise InvalidFileFormatError(f"The file format of {infile} was not recognized.")
+                        raise InvalidFileFormatError(f"The file format of {infile} was not recognized.", "Please check that your file is valid and try again.")
 
                     quality_l = input_f.readline()
                     if len(quality_l) == 0:
-                        raise InvalidFileFormatError(f"The file format of {infile} was not recognized.")
+                        raise InvalidFileFormatError(f"The file format of {infile} was not recognized.", "Please check that your file is valid and try again.")
 
                     quality_l = quality_l.rstrip()
                     next_line = input_f.readline()
@@ -263,12 +263,12 @@ class PipelineStepRunValidateInput(PipelineStep):
 
                 if is_fastq:
                     if identifier_l[0] != '@':
-                        raise InvalidFileFormatError(f"The input .fastq file {infile} did not begin with an '@'")
+                        raise InvalidFileFormatError(f"The input .fastq file {infile} did not begin with an '@'", "Please check the .fastq file and try again.")
                     if identifier2_l[0] != '+':
-                        raise InvalidFileFormatError(f"The file format of {infile} was not recognized.")
+                        raise InvalidFileFormatError(f"The file format of {infile} was not recognized.", "Please check that your file is valid and try again.")
                 else:
                     if identifier_l[0] != '>':
-                        raise InvalidFileFormatError(f"The input .fasta file {infile} read ID did not begin with a '>'")
+                        raise InvalidFileFormatError(f"The input .fasta file {infile} read ID did not begin with a '>'", "Please check the .fasta file and try again.")
 
                 # At this point, identifier_l and identifier2_l end in a newline and
                 # read_l and quality_l do not end in a newline
@@ -308,10 +308,10 @@ class PipelineStepRunValidateInput(PipelineStep):
     @staticmethod
     def get_bash_error_output(output: str, filename: str = "") -> str:
         if re.match("gzip.+not in gzip format", output):
-            return f"There was an error unzipping the input file {filename}.  Please verify that this file is a proper .gz file"
+            return f"There was an error unzipping the input file {filename}.", "Please verify that this file is a proper .gz file"
         elif re.match("PARSE ERROR: invalid line length.+max line length of 10000.", output):
-            return f"The maximum line length was exceeded for the input file {filename}."
+            return f"The maximum line length was exceeded for the input file {filename}.", "Please verify that .fastq headers or sequences are less than 10,000 characters long"
         elif re.match("PARSE ERROR: not an ascii file.+", output):
-            return output
+            return output, ""
         else:
-            return f"The input file {filename} is invalid."
+            return f"The input file {filename} is invalid.", "Please check that your .fastq file is valid and try again."
