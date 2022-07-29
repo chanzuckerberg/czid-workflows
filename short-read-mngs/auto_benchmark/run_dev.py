@@ -47,6 +47,13 @@ def main():
         help="short-read-mngs version tag",
     )
     parser.add_argument(
+        "--index-version",
+        metavar="YYYY-MM-DD",
+        type=str,
+        default=None,
+        help="version of ncbi index"
+    )
+    parser.add_argument(
         "--settings",
         metavar="ID",
         type=str,
@@ -70,7 +77,7 @@ def main():
     run_samples(**vars(args))
 
 
-def run_samples(czid, samples, workflow_version, settings):
+def run_samples(czid, samples, workflow_version, index_version, settings):
     samples = set(samples)
     for sample_i in samples:
         assert sample_i in BENCHMARKS["samples"], f"unknown sample {sample_i}"
@@ -90,6 +97,7 @@ def run_samples(czid, samples, workflow_version, settings):
                 run_sample,
                 czid,
                 workflow_version,
+                index_version,
                 settings,
                 key_prefix,
                 sample_i,
@@ -118,7 +126,7 @@ def run_samples(czid, samples, workflow_version, settings):
 _timestamp_lock = threading.Lock()
 
 
-def run_sample(czid_repo, workflow_version, settings, key_prefix, sample):
+def run_sample(czid_repo, workflow_version, index_version, settings, key_prefix, sample):
     local_input = {
         **BENCHMARKS["settings"][settings],
         **BENCHMARKS["databases"]["full"],
@@ -148,6 +156,7 @@ def run_sample(czid_repo, workflow_version, settings, key_prefix, sample):
         f" --max-subsample-fragments {local_input['host_filter.max_subsample_fragments']}"
         f" --adapter-fasta {local_input['host_filter.adapter_fasta']}"
         f" --workflow-version {workflow_version}"
+        f" --index-version {index_version}"
         f" --sfn-input '{json.dumps(local_input)}'"
     ]
     print(cmd, file=sys.stderr)

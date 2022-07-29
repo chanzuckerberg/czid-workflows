@@ -8,6 +8,12 @@ from Bio.Phylo import NewickIO
 from test_util import WDLTestCase
 
 
+nt_s3_path = "s3://czid-public-references/ncbi-indexes-prod/2021-01-22/index-generation-2/nt"
+nt_loc_db = "s3://czid-public-references/ncbi-indexes-prod/2021-01-22/index-generation-2/nt_loc.marisa"
+nr_s3_path = "s3://czid-public-references/ncbi-indexes-prod/2021-01-22/index-generation-2/nr"
+nr_loc_db = "s3://czid-public-references/ncbi-indexes-prod/2021-01-22/index-generation-2/nr_loc.marisa"
+
+
 class TestPhylotree(WDLTestCase):
     wdl = os.path.join(os.path.dirname(__file__), "..", "run.wdl")
     samples_dir = os.path.join(os.path.dirname(__file__), "full_zika_test_data")
@@ -32,7 +38,11 @@ class TestPhylotree(WDLTestCase):
         "samples": list(samples.values()),
         "reference_taxon_id": 64320,
         "additional_reference_accession_ids": accession_ids,
-        "superkingdom_name": "viruses"
+        "superkingdom_name": "viruses",
+        "nt_s3_path": nt_s3_path,
+        "nt_loc_db": nt_loc_db,
+        "nr_s3_path": nr_s3_path,
+        "nr_loc_db": nr_loc_db,
     }
 
     def test_phylotree(self):

@@ -65,7 +65,7 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
                 auto_unzip=True,   # this is default for reference uploads, just being explicit
                 allow_s3mi=True)   # s3mi probably okay here because we tend to download only NT and little else in this stage
 
-        with open_file_db_by_extension(nt_loc_db) as nt_loc_dict:
+        with open_file_db_by_extension(nt_loc_db, "QII") as nt_loc_dict:
             log.write("Getting sequences by accession list from file...")
             PipelineStepGenerateAlignmentViz.get_sequences_by_accession_list_from_file(
                 groups, nt_loc_dict, nt_db)
