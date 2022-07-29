@@ -37,7 +37,5 @@ RUN curl -L https://github.com/simonrharris/SKA/archive/refs/tags/v1.0.tar.gz | 
 COPY requirements.txt requirements.txt
 
 RUN pip3 install -r requirements.txt
-RUN sed -i 's/ncbi-blast-databases.s3.amazonaws.com/czid-public-references.s3.amazonaws.com\/test\/taxoniq/g' \
-    /usr/local/lib/python3.8/dist-packages/taxoniq/__init__.py
 
 COPY python_steps/* /bin/

@@ -11,6 +11,12 @@ from test_util import WDLTestCase
 from Bio import SeqIO
 
 
+nt_s3_path = "s3://czid-public-references/ncbi-indexes-prod/2021-01-22/index-generation-2/nt"
+nt_loc_db = "s3://czid-public-references/ncbi-indexes-prod/2021-01-22/index-generation-2/nt_loc.marisa"
+nr_s3_path = "s3://czid-public-references/ncbi-indexes-prod/2021-01-22/index-generation-2/nr"
+nr_loc_db = "s3://czid-public-references/ncbi-indexes-prod/2021-01-22/index-generation-2/nr_loc.marisa"
+
+
 class TestConsensusGenomes(WDLTestCase):
     wdl = os.path.join(os.path.dirname(__file__), "..", "run.wdl")
     with open(os.path.join(os.path.dirname(__file__), "local_test.yml")) as fh:
@@ -132,7 +138,12 @@ class TestConsensusGenomes(WDLTestCase):
         fastqs = os.path.join(os.path.dirname(__file__), "Ct20K.fq.gz")
         res = self.run_miniwdl(
             task="ValidateInput",
-            args=["prefix=test", f"fastqs={fastqs}", "technology=ONT", "max_reads=75000000"],
+            args=[
+                "prefix=test",
+                f"fastqs={fastqs}",
+                "technology=ONT",
+                "max_reads=75000000",
+            ],
         )
         for output_name, output in res["outputs"].items():
             for filename in output:
@@ -142,31 +153,33 @@ class TestConsensusGenomes(WDLTestCase):
                 self.assertGreater(os.path.getsize(filename), 0)
 
     def test_zip_outputs(self):
-        res = self.run_miniwdl(task="ZipOutputs", args=["prefix=test", f"outputFiles={self.wdl}"])
+        res = self.run_miniwdl(task="ZipOutputs", args=[
+            "prefix=test",
+            f"outputFiles={self.wdl}",
+        ])
         with zipfile.ZipFile(res["outputs"]["ZipOutputs.output_zip"]) as fh:
             self.assertEqual(fh.namelist(), ["run.wdl"])
 
     def test_fetch_sequence_by_accession_id(self):
-        res = self.run_miniwdl(task="FetchSequenceByAccessionId", args=["accession_id=NC_000913.3"])
+        res = self.run_miniwdl(task="FetchSequenceByAccessionId", args=[
+            "accession_id=HIN71308.1",
+            f"nt_s3_path={nt_s3_path}",
+            f"nt_loc_db={nt_loc_db}",
+            f"nr_s3_path={nr_s3_path}",
+            f"nr_loc_db={nr_loc_db}",
+        ])
         with open(res["outputs"]["FetchSequenceByAccessionId.sequence_fa"]) as fh:
-            self.assertEqual(fh.readline().strip(), ">NC_000913.3")
-            self.assertTrue(fh.readline().startswith("AGCTTTTCATTCTGACTGCAACGGGCAATATGTCTCTG"))
+            self.assertEqual(fh.readline().strip(), ">HIN71308.1 hypothetical protein [Dehalococcoidia bacterium]")
+            self.assertTrue(fh.readline().startswith("MSMIIQSGKLTQTRVEAQHMDFEPRYTEEQQTFRTEVRDWLKDNVPDDLANPADSAD"))
 
         with self.assertRaises(CalledProcessError) as ecm:
-            self.run_miniwdl(task="FetchSequenceByAccessionId", args=["accession_id=NO_ACCESSION_ID"])
-        self.assertRunFailed(ecm, task="FetchSequenceByAccessionId",
-                             error="AccessionIdNotFound",
-                             cause=("The Accession ID was not found in the CZ ID database, "
-                                    "so a generalized consensus genome could not be run"))
-
-    def test_fetch_sequence_by_expired_accession_id(self):
-        res = self.run_miniwdl(task="FetchSequenceByAccessionId", args=["accession_id=NC_000913.2"])
-        with open(res["outputs"]["FetchSequenceByAccessionId.sequence_fa"]) as fh:
-            self.assertEqual(fh.readline().strip(), ">NC_000913.3")
-            self.assertTrue(fh.readline().startswith("AGCTTTTCATTCTGACTGCAACGGGCAATATGTCTCTG"))
-
-        with self.assertRaises(CalledProcessError) as ecm:
-            self.run_miniwdl(task="FetchSequenceByAccessionId", args=["accession_id=NO_ACCESSION_ID"])
+            self.run_miniwdl(task="FetchSequenceByAccessionId", args=[
+                "accession_id=NO_ACCESSION_ID",
+                f"nt_s3_path={nt_s3_path}",
+                f"nt_loc_db={nt_loc_db}",
+                f"nr_s3_path={nr_s3_path}",
+                f"nr_loc_db={nr_loc_db}",
+            ])
         self.assertRunFailed(ecm, task="FetchSequenceByAccessionId",
                              error="AccessionIdNotFound",
                              cause=("The Accession ID was not found in the CZ ID database, "

@@ -10,7 +10,7 @@ RUN sed -i s/archive.ubuntu.com/us-west-2.ec2.archive.ubuntu.com/ /etc/apt/sourc
 
 # script to raise error as json
 RUN echo  'set +x \nexport error=$1 cause=$2 rec=$3 \njq -nc ".wdl_error_message=true | .error=env.error | .cause=env.cause | .rec=env.rec" > /dev/stderr \nexit 1' >> /usr/local/bin/raise_error; \
-  chmod +x /usr/local/bin/raise_error
+    chmod +x /usr/local/bin/raise_error
 
 RUN apt-get -qq update && apt-get -qq -y install \
   jq \
@@ -114,22 +114,9 @@ RUN wget https://drive5.com/muscle/muscle_src_3.8.1551.tar.gz \
 RUN apt-get install -y python3-cffi python3-h5py python3-intervaltree python3-edlib git
 RUN pip3 install ont-fast5-api parasail mappy pyspoa protobuf==3.19.* tensorflow==2.7.1 https://github.com/artic-network/fieldbioinformatics/archive/1.2.1.tar.gz
 RUN pip3 install medaka==1.6.0 --no-deps
+RUN pip3 install marisa-trie
+RUN pip3 install boto3
 RUN pip3 install git+https://github.com/rzlim08/PyVCF.git
-
-
-
-# General CG dependencies
-RUN pip3 install taxoniq==0.6.0 && \
-    pip3 install --upgrade \
-    https://czid-public-references.s3.us-west-2.amazonaws.com/test/taxoniq/ncbi_genbank_accession_db-2022.6.25-py3-none-any.whl \
-    https://czid-public-references.s3.us-west-2.amazonaws.com/test/taxoniq/ncbi_genbank_accession_lengths-2022.6.25-py3-none-any.whl \
-    https://czid-public-references.s3.us-west-2.amazonaws.com/test/taxoniq/ncbi_genbank_accession_offsets-2022.6.25-py3-none-any.whl \
-    https://czid-public-references.s3.us-west-2.amazonaws.com/test/taxoniq/ncbi_refseq_accession_db-2022.6.25-py3-none-any.whl \
-    https://czid-public-references.s3.us-west-2.amazonaws.com/test/taxoniq/ncbi_refseq_accession_lengths-2022.6.25-py3-none-any.whl \
-    https://czid-public-references.s3.us-west-2.amazonaws.com/test/taxoniq/ncbi_refseq_accession_offsets-2022.6.25-py3-none-any.whl \
-    https://czid-public-references.s3.us-west-2.amazonaws.com/test/taxoniq/ncbi_taxon_db-2022.6.25-py3-none-any.whl
-RUN sed -i 's/ncbi-blast-databases.s3.amazonaws.com/czid-public-references.s3.amazonaws.com\/test\/taxoniq/g' \
-    /usr/local/lib/python3.8/dist-packages/taxoniq/__init__.py
 
 RUN wget https://github.com/shenwei356/seqkit/releases/download/v2.0.0/seqkit_linux_amd64.tar.gz && tar zxvf seqkit_linux_amd64.tar.gz \
 && mv seqkit /usr/local/bin/ && rm seqkit_linux_amd64.tar.gz

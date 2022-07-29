@@ -31,12 +31,20 @@ def main(argv):
         "--version", metavar="vX.Y.Z", type=str, help="idseq-workflows release version"
     )
 
+    parser.add_argument(
+        "--index-version",
+        metavar="YYYY-MM-DD",
+        type=str,
+        default=None,
+        help="version of ncbi index"
+    )
+
     args = parser.parse_args(argv[1:])
     harvest(**vars(args))
 
 
-def harvest(harvest_json, wall, version):
-    print(",".join(["version", "sample", "timestamp", "wall_seconds", "NT_aupr", "NR_aupr"]))
+def harvest(harvest_json, wall, version, index_version):
+    print(",".join(["version", "index_version", "sample", "timestamp", "wall_seconds", "NT_aupr", "NR_aupr"]))
 
     timestamp = datetime.utcnow().isoformat()
 
@@ -48,6 +56,7 @@ def harvest(harvest_json, wall, version):
                         str(v)
                         for v in [
                             version,
+                            index_version,
                             sample,
                             timestamp,
                             wall,
