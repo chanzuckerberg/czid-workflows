@@ -35,7 +35,7 @@ def main(argv):
         "--index-version",
         metavar="YYYY-MM-DD",
         type=str,
-        defaut=None,
+        default=None,
         help="version of ncbi index"
     )
 
