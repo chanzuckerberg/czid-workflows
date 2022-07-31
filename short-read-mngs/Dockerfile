@@ -42,7 +42,9 @@ RUN apt-get -q install -y \
         samtools \
         fastx-toolkit \
         seqtk \
-        bedtools
+        bedtools \
+        dh-autoreconf \
+        nasm
 
 # The following packages pull in python2.7
 RUN apt-get -q install -y \
@@ -155,8 +157,17 @@ RUN mv diamond /usr/local/bin
 RUN curl -Ls https://github.com/chanzuckerberg/s3parcp/releases/download/v0.2.0-alpha/s3parcp_0.2.0-alpha_Linux_x86_64.tar.gz | tar -C /usr/bin -xz s3parcp
 
 # Host filtering (2022 version) dependencies
-RUN wget -O /usr/local/bin/fastp http://opengene.org/fastp/fastp.0.23.2
-RUN chmod +x /usr/local/bin/fastp
+# fastp (libdeflate libisal (dh-autoreconf nasm))
+# hisat2
+# bowtie2 [already installed]
+WORKDIR /tmp
+RUN wget -nv -O - https://github.com/intel/isa-l/archive/refs/tags/v2.30.0.tar.gz | tar zx
+RUN cd isa-l-* && ./autogen.sh && ./configure && make -j8 && make install
+RUN wget -nv -O - https://github.com/ebiggers/libdeflate/archive/refs/tags/v1.12.tar.gz | tar zx
+RUN cd libdeflate-* && make -j8 && make install
+RUN ldconfig
+RUN git clone -b mlin/sdust https://github.com/mlin/fastp.git
+RUN cd fastp && make -j8 && ./fastp test && cp fastp /usr/local/bin
 WORKDIR /hisat2
 RUN wget -nv -O /tmp/HISAT2.zip https://cloud.biohpc.swmed.edu/index.php/s/oTtGWbWjaxsQ2Ho/download \
         && unzip /tmp/HISAT2.zip && mv hisat2-*/* . && rm /tmp/HISAT2.zip
