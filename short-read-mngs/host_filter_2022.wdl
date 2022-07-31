@@ -225,7 +225,7 @@ task fastp_qc {
     # These default QC thresholds are loosely based on the pre-2022 pipeline using PriceSeq & LZW
     String fastp_options = "--dont_eval_duplication --length_required 35" +
                            " --qualified_quality_phred 17 --unqualified_percent_limit 15 --n_base_limit 15" +
-                           " --low_complexity_filter --complexity_threshold 50"
+                           " --sdust_complexity_filter --complexity_threshold 50"
 
     String docker_image_id
     Int cpu = 16
