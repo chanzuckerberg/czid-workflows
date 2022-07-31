@@ -213,7 +213,7 @@ class PipelineStepRunStar(PipelineStep):
 
                     # If this file wasn't generated but self.collect_insert_size_metrics_for has a value
                     #   something unexpected has gone wrong
-                    assert(os.path.isfile(bam_path)), \
+                    assert os.path.isfile(bam_path), \
                         "Expected STAR to generate Aligned.out.bam but it was not found"
                     try:
                         self.collect_insert_size_metrics(tmp, bam_path, self.output_metrics_file, self.output_histogram_file)
