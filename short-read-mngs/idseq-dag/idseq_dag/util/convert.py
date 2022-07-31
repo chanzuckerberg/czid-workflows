@@ -45,7 +45,7 @@ def generate_unmapped_pairs_from_sam(sam_file, out_fas):
     - part[9] = segment sequence
     """
 
-    assert(len(out_fas) == 2 or len(out_fas) == 3)
+    assert len(out_fas) == 2 or len(out_fas) == 3
     out_fa_1 = open(out_fas[0], 'w')
     out_fa_2 = open(out_fas[1], 'w')
     out_fa_merged = open(out_fas[2], 'w') if len(out_fas) == 3 else None
