@@ -77,6 +77,9 @@ def main(paf_file):
         (nmatch / a) * 100 for a, nmatch in zip(df["alen"], df["nmatch"])
     ]
     df = df.round({"bitscore": 3, "percent_ident": 3})
+    m = df["strand"] == "-"
+    df.loc[m, ["tstart", "tend"]] = (df.loc[m, ["tend", "tstart"]].values)
+
     blast = df.loc[
         :,
         [
@@ -95,7 +98,10 @@ def main(paf_file):
         ],
     ]
     blast["qstart"] = blast["qstart"] + 1
-    blast["tstart"] = blast["tstart"] + 1
+    blast.loc[~m, "tstart"] = blast.loc[~m, "tstart"] + 1
+    blast.loc[m, "tend"] = blast.loc[m, "tend"] + 1
+    blast.loc[:, "tstart"] = blast.loc[:, "tstart"].astype(int)
+    blast.loc[:, "tend"] = blast.loc[:, "tend"].astype(int)
 
     blast.to_csv(f"{name}_frompaf.m8", sep="\t", index=None, header=False)
 

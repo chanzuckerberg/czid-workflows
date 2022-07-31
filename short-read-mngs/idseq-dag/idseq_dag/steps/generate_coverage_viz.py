@@ -40,7 +40,7 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
             self.additional_files["info_db"],
             self.ref_dir_local,
             allow_s3mi=True)
-        with open_file_db_by_extension(info_db) as info_dict:
+        with open_file_db_by_extension(info_db, "256pI") as info_dict:
             # Extract data from input files.
             (taxon_data, accession_data, contig_data, read_data) = self.prepare_data(
                 self.input_files_local, info_dict, min_contig_size, num_accessions_per_taxon

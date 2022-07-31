@@ -68,6 +68,11 @@ workflow consensus_genome {
         # (this is an overestimate to increase sensitivity)
         Float bcftoolsCallTheta = 0.0006
 
+        String nt_s3_path
+        File nt_loc_db
+        String nr_s3_path
+        File nr_loc_db
+
         # Dummy values - required by SFN interface
         String s3_wd_uri = ""
     }
@@ -83,8 +88,13 @@ workflow consensus_genome {
 
     if (ref_accession_id != None) {
         call FetchSequenceByAccessionId {
-            input: accession_id = select_first([ref_accession_id]),
-            docker_image_id = docker_image_id
+            input:
+                accession_id = select_first([ref_accession_id]),
+                nt_s3_path = nt_s3_path,
+                nt_loc_db = nt_loc_db,
+                nr_s3_path = nr_s3_path,
+                nr_loc_db = nr_loc_db,
+                docker_image_id = docker_image_id
         }
     }
 
@@ -305,12 +315,6 @@ task ValidateInput{
 
     command <<<
         set -uxo pipefail 
-        function raise_error {
-            set +x
-            export error=$1 cause=$2
-            jq -nc ".wdl_error_message=true | .error=env.error | .cause=env.cause" > /dev/stderr
-            exit 1 
-        }
         if [[ "~{technology}" == "ONT" ]] && [[ "~{length(fastqs)}" -gt 1 ]]; then
             # ONT pipeline should only have one input
             raise_error InvalidInputFileError "An Oxford Nanopore pipeline run can only have one input file. Please upload a single file"
@@ -351,11 +355,13 @@ task ValidateInput{
             mv $fastq "~{prefix}validated_$counter.fastq.gz"
             ((counter++))
         done < file_list.txt
+	seqkit version > seqkit_version.txt
     >>>
 
     output {
         Array[File]+ validated_fastqs = glob("~{prefix}validated*.fastq.gz")
         File? input_stats = "input_stats.tsv"
+	File? seqkit_version = "seqkit_version.txt"
     }
 
     runtime {
@@ -366,23 +372,52 @@ task ValidateInput{
 task FetchSequenceByAccessionId {
     input {
         String accession_id
+        String nt_s3_path
+        File nt_loc_db
+        String nr_s3_path
+        File nr_loc_db
         String docker_image_id
     }
 
     command <<<
-        function incrementAccession { 
-            ( [[ $1 =~ ([A-Z0-9_]*)\.([0-9]+) ]] && echo "${BASH_REMATCH[1]}.$(( ${BASH_REMATCH[2]} + 1 ))");
-        }
-        # Try fetching accession id. If not found, try incrementing the version. 
-        ({ taxoniq get-from-s3 --accession-id "~{accession_id}"; } || \
-        { taxoniq get-from-s3 --accession-id $(incrementAccession "~{accession_id}"); } \
-        || exit 4; ) > sequence.fa;
-        if [[ $? == 4 ]]; then
-            export error=AccessionIdNotFound cause="The Accession ID was not found in the CZ ID database, so a generalized consensus genome could not be run"
-            jq -nc ".wdl_error_message=true | .error=env.error | .cause=env.cause" > /dev/stderr
-            exit 4
-        fi
-        exit $?
+        python3 <<CODE
+        import json
+        import sys
+        from urllib.parse import urlparse
+
+        import boto3
+        import botocore.exceptions
+        import marisa_trie
+        from botocore import UNSIGNED
+        from botocore.client import Config
+
+
+        error = lambda err, cause: sys.exit(json.dumps(dict(wdl_error_message=True, error=err, cause=cause)))
+
+        t = marisa_trie.RecordTrie("QII").mmap('~{nt_loc_db}')
+        if '~{accession_id}' in t:
+            (seq_offset, header_len, seq_len), = t['~{accession_id}']
+            s3_path = '~{nt_s3_path}'
+        else:
+            t = marisa_trie.RecordTrie("QII").mmap('~{nr_loc_db}')
+            if '~{accession_id}' in t:
+                (seq_offset, header_len, seq_len), = t['~{accession_id}']
+                s3_path = '~{nr_s3_path}'
+            else:
+                error("AccessionIdNotFound", "The Accession ID was not found in the CZ ID database, so a generalized consensus genome could not be run")
+
+        to = seq_offset + header_len + seq_len - 1
+        parsed = urlparse(s3_path)
+        bucket, key = parsed.netloc, parsed.path[1:]
+
+        try:
+            data = boto3.resource('s3').Object(bucket, key).get(Range=f'bytes={seq_offset}-{to}')['Body'].read()
+        except botocore.exceptions.NoCredentialsError:
+            data = boto3.resource('s3', config=Config(signature_version=UNSIGNED)).Object(bucket, key).get(Range=f'bytes={seq_offset}-{to}')['Body'].read()
+
+        with open('sequence.fa', 'wb') as f:
+            f.write(data)
+        CODE
     >>>
 
     output {
@@ -405,10 +440,12 @@ task ApplyLengthFilter {
 
     command <<<
         artic guppyplex --min-length ~{min_length} --max-length ~{max_length} --directory $(dirname "~{fastqs[0]}") --output filtered.fastq
+	artic -v > artic_version.txt
     >>>
 
     output {
         Array[File]+ filtered_fastqs = ["filtered.fastq"]
+	File? artic_version = "artic_version.txt"
     }
 
     runtime {
@@ -446,15 +483,17 @@ task RemoveHost {
         fi
 
         if [[ -z $(gzip -cd "~{prefix}no_host_1.fq.gz" | head -c1) ]]; then
-            set +x
-            export error=InsufficientReadsError cause="There were no reads left after the RemoveHost step of the pipeline."
-            jq -nc ".wdl_error_message=true | .error=env.error | .cause=env.cause" > /dev/stderr
-            exit 1
+            raise_error InsufficientReadsError "There were no reads left after the RemoveHost step of the pipeline."
         fi
+	minimap2 --version > minimap2_version.txt
+	samtools --version > samtools_version.txt
     >>>
 
     output {
         Array[File] host_removed_fastqs = glob("~{prefix}no_host_*.fq.gz")
+	File? minimap2_version = "minimap2_version.txt"
+	File? samtools_version = "samtools_version.txt"
+	
     }
 
     runtime {
@@ -501,13 +540,6 @@ task FilterReads {
     }
 
     command <<<
-        _no_reads_error() {
-            set +x
-            export error=InsufficientReadsError cause="There were no reads left after the FilterReads step of the pipeline."
-            jq -nc ".wdl_error_message=true | .error=env.error | .cause=env.cause" > /dev/stderr
-            exit 1
-        }
-
         set -euxo pipefail
 
         export TMPDIR=${TMPDIR:-/tmp}
@@ -557,12 +589,14 @@ task FilterReads {
         fi
 
         if [[ -z $(gzip -cd "~{prefix}filtered_1.fq.gz" | head -c1) ]]; then
-            _no_reads_error
+	    raise_error InsufficientReadsError "There were no reads left after the FilterReads step of the pipeline."
         fi
+	kraken2 -v > kraken2_version.txt
     >>>
 
     output {
         Array[File]+ filtered_fastqs = glob("~{prefix}filtered_*.fq.gz")
+	File? kraken2_version = "kraken2_version.txt"
     }
 
     runtime {
@@ -589,15 +623,14 @@ task TrimReads {
         fi
 
         if [[ -z $(gzip -cd "${BASENAME}_val_1.fq.gz" | head -c1) ]]; then
-            set +x
-            export error=InsufficientReadsError cause="There were no reads left after the TrimReads step of the pipeline. This step removes adapter sequences and filters out short, low-quality reads."
-            jq -nc ".wdl_error_message=true | .error=env.error | .cause=env.cause" > /dev/stderr
-            exit 1
+            raise_error InsufficientReadsError "There were no reads left after the TrimReads step of the pipeline. This step removes adapter sequences and filters out short, low-quality reads."
         fi
+	trim_galore --version > trim_galore_version.txt
     >>>
 
     output {
         Array[File]+ trimmed_fastqs = glob("*_val_[12].fq.gz")
+	File? trim_galore_version = "trim_galore_version.txt"
     }
 
     runtime {
@@ -663,11 +696,13 @@ task TrimPrimers {
         ivar trim -x $primerOffset -e -i ivar.bam -b "~{primer_bed}" -p ivar.out
         samtools sort -O bam -o "~{prefix}primertrimmed.bam" ivar.out.bam
         samtools index "~{prefix}primertrimmed.bam"
+	ivar version > ivar_version.txt
     >>>
 
     output {
         File trimmed_bam_ch = "~{prefix}primertrimmed.bam"
         File trimmed_bam_bai = "~{prefix}primertrimmed.bam.bai"
+	File? ivar_version = "ivar_version.txt"
     }
 
     runtime {
@@ -699,15 +734,14 @@ task MakeConsensus {
 
         # One-line file means just the fasta header with no reads
         if [[ $(wc -l "~{prefix}consensus.fa" | cut -d' ' -f1) == 1 ]]; then
-            set +x
-            export error=InsufficientReadsError cause="A consensus genome was not created because there were too few reads to compute the consensus sequence"
-            jq -nc ".wdl_error_message=true | .error=env.error | .cause=env.cause" > /dev/stderr
-            exit 1
+            raise_error InsufficientReadsError "A consensus genome was not created because there were too few reads to compute the consensus sequence"
         fi
+	seqtk 2> seqtk_version.txt || true
     >>>
 
     output {
         File consensus_fa = "~{prefix}consensus.fa"
+	File? seqtk_version = "seqtk_version.txt"
     }
 
     runtime {
@@ -735,11 +769,13 @@ task CallVariants {
         bgzip "~{prefix}variants.vcf"
         tabix "~{prefix}variants.vcf.gz"
         bcftools stats "~{prefix}variants.vcf.gz" > "~{prefix}bcftools_stats.txt"
+	bcftools --version > bcftools_version.txt
     >>>
 
     output {
         File variants_ch = "~{prefix}variants.vcf.gz"
         File bcftools_stats_ch = "~{prefix}bcftools_stats.txt"
+	File? bcftools_version = "bcftools_version.txt"
     }
 
     runtime {
@@ -762,11 +798,12 @@ task RealignConsensus {
         # Some documentation here: https://www.drive5.com/muscle/manual/basic_alignment.html
         cat "~{consensus}" "~{ref_fasta}" > "~{sample}.muscle.in.fasta" 
         muscle -in "~{sample}.muscle.in.fasta" -out "~{sample}.muscle.out.fasta"
-
+	muscle -version > muscle_version.txt
     >>>
 
     output{
         File muscle_output = "~{sample}.muscle.out.fasta"
+	File? muscle_version = "muscle_version.txt"
     }
 
     runtime {
@@ -866,12 +903,14 @@ task Quast {
             mkdir quast
             echo "quast folder is empty" > "quast/report.txt"
         fi
+	quast.py -v > quast_version.txt
     >>>
 
     output {
         Array[File] quast_dir = glob("quast/*")
         File quast_txt = "quast/report.txt"
         File? quast_tsv = "quast/report.tsv"
+	File? quast_version = "quast_version.txt"
     }
 
     runtime {

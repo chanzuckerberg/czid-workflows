@@ -60,7 +60,13 @@ def _bucket_and_key(s3_path: str):
     return parsed_url.netloc, parsed_url.path.lstrip("/")
 
 
-def _get_job_status(job_id):
+def _get_job_status(job_id, use_batch_api=False):
+    if use_batch_api:
+        jobs = _batch_client.describe_jobs(jobs=[job_id])["jobs"]
+        if not jobs:
+            log.debug(f"missing_job_description_from_api: {job_id}")
+            return "SUBMITTED"
+        return jobs[0]["status"]
     batch_job_desc_bucket = boto3.resource("s3").Bucket(
         f"aegea-batch-jobs-{account_id}"
     )
@@ -124,9 +130,10 @@ def _run_batch_job(
     )  # Add some noise to de-synchronize chunks
     status = "SUBMITTED"
     # the job this is monitoring has an timeout and the job this runs in has a timeout
+    i = 0
     while True:
         try:
-            status = _get_job_status(job_id)
+            status = _get_job_status(job_id, use_batch_api=(i > 0 and i % 30 == 0))
         except ClientError as e:
             # If we get throttled, randomly wait to de-synchronize the requests
             if e.response["Error"]["Code"] == "TooManyRequestsException":
@@ -145,6 +152,7 @@ def _run_batch_job(
             _log_status(status)
             raise BatchJobFailed("chunk alignment failed")
         time.sleep(delay)
+        i += 1
 
 
 def _run_chunk(

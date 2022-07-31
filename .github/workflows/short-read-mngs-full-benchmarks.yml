@@ -7,6 +7,8 @@ on:
     inputs:
       czid_workflows_release:
         description: release (vX.Y.Z) of czid-workflows short-read-mngs
+      index_version:
+        description: version (YYYY-MM-DD) of the ncbi index to use
       czid_ref:
         description: desired git ref in czid monorepo
         default: main
@@ -39,6 +41,6 @@ jobs:
       # WORKFLOW code specified in the user inputs.
       - name: Trigger benchmarks
         run: |
-          export DEPLOY_REF='${{github.event.inputs.czid_ref}}' GITHUB_TOKEN=${GH_DEPLOY_TOKEN:-GITHUB_TOKEN} IDSEQ_WORKFLOWS_RELEASE='${{github.event.inputs.czid_workflows_release}}'
-          workflow_args=$(jq -n ".ref=env.DEPLOY_REF | .inputs={idseq_workflows_release: env.IDSEQ_WORKFLOWS_RELEASE, idseq_workflows_ref: env.GITHUB_SHA}")
+          export DEPLOY_REF='${{github.event.inputs.czid_ref}}' GITHUB_TOKEN=${GH_DEPLOY_TOKEN:-GITHUB_TOKEN} IDSEQ_WORKFLOWS_RELEASE='${{github.event.inputs.czid_workflows_release}}' INDEX_VERSION='${{github.event.inputs.index_version}}'
+          workflow_args=$(jq -n ".ref=env.DEPLOY_REF | .inputs={idseq_workflows_release: env.IDSEQ_WORKFLOWS_RELEASE, index_version: env.INDEX_VERSION, idseq_workflows_ref: env.GITHUB_SHA}")
           gh api repos/:owner/idseq/actions/workflows/short-read-mngs-benchmarks.yml/dispatches --input - <<< "$workflow_args"

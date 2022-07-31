@@ -19,6 +19,7 @@ task RunAssembly {
     --output-dir-s3 '~{s3_wd_uri}' \
     --additional-files '{}' \
     --additional-attributes '{"memory": 200, "min_contig_length": ~{min_contig_length}}'
+  spades.py -v > assembly_version.txt
   >>>
   output {
     String step_description_md = read_string("assembly_out.description.md")
@@ -28,6 +29,7 @@ task RunAssembly {
     File assembly_read_contig_sam = "assembly/read-contig.sam"
     File assembly_contig_stats_json = "assembly/contig_stats.json"
     File? output_read_count = "assembly_out.count"
+    File? version = "assembly_version.txt"
   }
   runtime {
     docker: docker_image_id
@@ -74,7 +76,7 @@ task DownloadAccessions_gsnap_accessions_out {
     File gsnap_out_gsnap_deduped_m8
     File gsnap_out_gsnap_hitsummary_tab
     File gsnap_out_gsnap_counts_with_dcr_json
-    File nt_db
+    String nt_db
     File nt_loc_db
     File lineage_db
   }
@@ -110,7 +112,7 @@ task DownloadAccessions_rapsearch2_accessions_out {
     File rapsearch2_out_rapsearch2_counts_with_dcr_json
     File lineage_db
     File nr_loc_db
-    File nr_db
+    String nr_db
   }
   command<<<
   set -euxo pipefail
@@ -472,9 +474,9 @@ workflow czid_postprocess {
     File duplicate_cluster_sizes_tsv
     File czid_dedup_out_duplicate_clusters_csv
     String index_version = "2021-01-22" # FIXME: vestigial input
-    File nt_db = "s3://czid-public-references/ncbi-sources/2021-01-22/nt"
+    String nt_db = "s3://czid-public-references/ncbi-sources/2021-01-22/nt"
     File nt_loc_db = "s3://czid-public-references/alignment_data/2021-01-22/nt_loc.db"
-    File nr_db = "s3://czid-public-references/ncbi-sources/2021-01-22/nr"
+    String nr_db = "s3://czid-public-references/ncbi-sources/2021-01-22/nr"
     File nr_loc_db = "s3://czid-public-references/alignment_data/2021-01-22/nr_loc.db"
     File lineage_db = "s3://czid-public-references/taxonomy/2021-01-22/taxid-lineages.db"
     File taxon_blacklist = "s3://czid-public-references/taxonomy/2021-01-22/taxon_blacklist.txt"
@@ -667,6 +669,7 @@ workflow czid_postprocess {
     File assembly_out_assembly_scaffolds_fasta = RunAssembly.assembly_scaffolds_fasta
     File assembly_out_assembly_read_contig_sam = RunAssembly.assembly_read_contig_sam
     File assembly_out_assembly_contig_stats_json = RunAssembly.assembly_contig_stats_json
+    File? spades_version = RunAssembly.version
     File? assembly_out_count = RunAssembly.output_read_count
     File coverage_out_assembly_contig_coverage_json = GenerateCoverageStats.assembly_contig_coverage_json
     File coverage_out_assembly_contig_coverage_summary_csv = GenerateCoverageStats.assembly_contig_coverage_summary_csv

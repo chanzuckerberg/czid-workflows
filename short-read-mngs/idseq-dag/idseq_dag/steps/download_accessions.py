@@ -1,9 +1,16 @@
 import re
+from urllib.parse import urlparse
 from idseq_dag.engine.pipeline_step import PipelineStep
 import idseq_dag.util.s3 as s3
 import idseq_dag.util.m8 as m8
 
 from idseq_dag.util.dict import open_file_db_by_extension
+
+import boto3
+import botocore.exceptions
+from botocore import UNSIGNED
+from botocore.client import Config
+
 
 MAX_ACCESSION_SEQUENCE_LEN = 100000000
 ALLOW_S3MI = False  # Allow s3mi only if running on an instance with enough RAM to fit NT and NR together...
@@ -23,13 +30,8 @@ class PipelineStepDownloadAccessions(PipelineStep):
         db_s3_path = self.additional_attributes["db"]
         # db_type = self.additional_attributes["db_type"]
         (_read_dict, accession_dict, _selected_genera) = m8.summarize_hits(hit_summary)
-        with open_file_db_by_extension(loc_db) as loc_dict:
-            db_path = s3.fetch_reference(
-                db_s3_path,
-                self.ref_dir_local,
-                auto_unzip=True,   # This is default for references, but let's be explicit
-                allow_s3mi=ALLOW_S3MI)
-            self.download_ref_sequences_from_file(accession_dict, loc_dict, db_path, output_reference_fasta)
+        with open_file_db_by_extension(loc_db, "QII", stringify=False) as loc_dict:
+            self.download_ref_sequences_from_file(accession_dict, loc_dict, db_s3_path, output_reference_fasta)
 
     FIX_COMMA_REGEXP = re.compile(r'^(?P<accession_id>[^ ]+) (?P<wrong_pattern>, *)?(?P<description>.*)$')
 
@@ -82,24 +84,29 @@ class PipelineStepDownloadAccessions(PipelineStep):
         lines = (_fix_headers(line) for line in lines)
         return "\n".join(lines)
 
-    def download_ref_sequences_from_file(self, accession_dict, loc_dict, db_path,
+    def download_ref_sequences_from_file(self, accession_dict, loc_dict, db_s3_path,
                                          output_reference_fasta):
-        db_file = open(db_path, 'r')
         with open(output_reference_fasta, 'w') as orf:
             for accession, _taxinfo in accession_dict.items():
-                accession_data = self.get_sequence_by_accession_from_file(accession, loc_dict, db_file)
+                accession_data = self.get_sequence_by_accession_from_file(accession, loc_dict, db_s3_path)
                 if accession_data:
                     accession_data = self._fix_ncbi_record(accession_data)
                     orf.write(accession_data)
-        db_file.close()
 
     @staticmethod
-    def get_sequence_by_accession_from_file(accession_id, loc_dict, db_file):
-        entry = loc_dict.get(accession_id)
-        if entry:
-            range_start = int(entry[0])
-            seq_len = int(entry[1]) + int(entry[2])
-            if seq_len <= MAX_ACCESSION_SEQUENCE_LEN:
-                db_file.seek(range_start, 0)
-                return db_file.read(seq_len)
-        return None
+    def get_sequence_by_accession_from_file(accession_id, loc_dict, db_s3_path):
+        if accession_id not in loc_dict:
+            return None
+
+        seq_offset, header_len, seq_len = loc_dict[accession_id]
+        to = seq_offset + header_len + seq_len - 1
+        parsed = urlparse(db_s3_path)
+        bucket, key = parsed.netloc, parsed.path[1:]
+        r_str = f'bytes={seq_offset}-{to}'
+        try:
+            return boto3.resource('s3').Object(bucket, key).get(Range=r_str)['Body'].read().decode()
+        except botocore.exceptions.NoCredentialsError:
+            return boto3.resource(
+                's3',
+                config=Config(signature_version=UNSIGNED),
+            ).Object(bucket, key).get(Range=r_str)['Body'].read().decode()

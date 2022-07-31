@@ -326,7 +326,7 @@ class PipelineStepGeneratePhyloTree(PipelineStep):
 
         # Make map of accession to sequence file
         accession2info = dict((acc, {}) for acc in accessions)
-        with open_file_db_by_extension(nt_loc_db) as nt_loc_dict:
+        with open_file_db_by_extension(nt_loc_db, "QII") as nt_loc_dict:
             PipelineStepGenerateAlignmentViz.get_sequences_by_accession_list_from_s3(
                 accession2info, nt_loc_dict, nt_db)
 
