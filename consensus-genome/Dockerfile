@@ -10,7 +10,7 @@ RUN sed -i s/archive.ubuntu.com/us-west-2.ec2.archive.ubuntu.com/ /etc/apt/sourc
 
 # script to raise error as json
 RUN echo  'set +x \nexport error=$1 cause=$2 rec=$3 \njq -nc ".wdl_error_message=true | .error=env.error | .cause=env.cause | .rec=env.rec" > /dev/stderr \nexit 1' >> /usr/local/bin/raise_error; \
-  chmod +x /usr/local/bin/raise_error
+    chmod +x /usr/local/bin/raise_error
 
 RUN apt-get -qq update && apt-get -qq -y install \
   jq \
