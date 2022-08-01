@@ -59,7 +59,7 @@ RUN curl -O -L https://ftp.osuosl.org/pub/ubuntu/pool/universe/i/infernal/infern
 
 RUN curl -L https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/2.10.1/ncbi-blast-2.10.1+-x64-linux.tar.gz | tar xz 
 
-RUN mv ncbi-blast-2.10.1+/* /usr/local/bin/
+RUN mv ncbi-blast-2.10.1+/bin/* /usr/bin/
 
 
 # See https://github.com/ablab/quast/issues/157
