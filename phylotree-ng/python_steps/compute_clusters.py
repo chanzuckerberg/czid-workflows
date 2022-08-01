@@ -58,7 +58,7 @@ def main(ska_distances: str, trim_height: float, samples: Iterable[Sample], outp
     # write cluster contents to files for future processing
     n_clusters_out = 0
     for c, s in cluster_sets.items():
-        if(len(s)) > 2:  # only output files where there are > 2 samples
+        if len(s) > 2:  # only output files where there are > 2 samples
             n_clusters_out += 1
             filenames = '\n'.join(cluster_sets[c])
             with open(f"{output_clusters_dir}/cluster_{str(c)}", "w") as text_file:
