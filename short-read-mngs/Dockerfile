@@ -166,7 +166,7 @@ RUN cd isa-l-* && ./autogen.sh && ./configure && make -j8 && make install
 RUN wget -nv -O - https://github.com/ebiggers/libdeflate/archive/refs/tags/v1.12.tar.gz | tar zx
 RUN cd libdeflate-* && make -j8 && make install
 RUN ldconfig
-RUN git clone -b mlin/sdust https://github.com/mlin/fastp.git
+RUN git clone -b mlin/sdust  https://github.com/mlin/fastp.git
 RUN cd fastp && make -j8 && ./fastp test && cp fastp /usr/local/bin
 WORKDIR /hisat2
 RUN wget -nv -O /tmp/HISAT2.zip https://cloud.biohpc.swmed.edu/index.php/s/oTtGWbWjaxsQ2Ho/download \
