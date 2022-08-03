@@ -225,7 +225,7 @@ task fastp_qc {
     # These default QC thresholds are loosely based on the pre-2022 pipeline using PriceSeq & LZW
     String fastp_options = "--dont_eval_duplication --length_required 35" +
                            " --qualified_quality_phred 17 --unqualified_percent_limit 15 --n_base_limit 15" +
-                           " --sdust_complexity_filter --complexity_threshold 67"
+                           " --sdust_complexity_filter --complexity_threshold 60"
 
     String docker_image_id
     Int cpu = 16
@@ -244,16 +244,24 @@ task fastp_qc {
     fi
     jq --null-input --arg count "$count" '{"fastp_out":$count}' > fastp_out.count
     # TODO: extract insert size metrics from JSON, also render histogram?
+
+    python3 - <<EOF
+    import textwrap
+    with open("fastp.description.md", "w") as outfile:
+      print(textwrap.dedent("""
+      # fastp read trimming & filtering
+
+      *PLACEHOLDER TEXT*
+      """).strip(), file=outfile)
+    EOF
   >>>
   output {
+    String step_description_md = read_string("fastp.description.md")
     File fastp1_fastq = "fastp1.fastq"
     File? fastp2_fastq = "fastp2.fastq"
     File fastp_html = "fastp.html"
     File fastp_json = "fastp.json"
     File reads_out_count = "fastp_out.count"
-
-    # TODO:
-    #String step_description_md = read_string("fastp_out.description.md")
   }
   runtime {
     docker: docker_image_id
@@ -286,13 +294,21 @@ task kallisto {
     /kallisto/kallisto quant -i '~{kallisto_idx}' -o "$(pwd)" --plaintext $single ~{kallisto_options} -t ~{cpu} \
       ~{sep=' ' select_all([reads1_fastq, reads2_fastq])}
     >&2 jq . run_info.json
+
+    python3 - <<EOF
+    import textwrap
+    with open("kallisto.description.md", "w") as outfile:
+      print(textwrap.dedent("""
+      # kallisto RNA quantification
+
+      *PLACEHOLDER TEXT*
+      """).strip(), file=outfile)
+    EOF
   >>>
 
   output {
+    String step_description_md = read_string("kallisto.description.md")
     File abundance_tsv = "abundance.tsv"
-
-    # TODO:
-    #String step_description_md = read_string("kallisto.description.md")
   }
 
   runtime {
@@ -349,15 +365,23 @@ task bowtie2_filter {
     count="$(cat bowtie2_~{filter_type}_filtered{1,2}.fastq | wc -l)"
     count=$((count / 4))
     jq --null-input --arg count "$count" '{"bowtie2_~{filter_type}_filtered_out":$count}' > 'bowtie2_~{filter_type}_filtered_out.count'
+
+    python3 - <<EOF
+    import textwrap
+    with open("bowtie2.description.md", "w") as outfile:
+      print(textwrap.dedent("""
+      # bowtie2 ~{filter_type} filtering
+
+      *PLACEHOLDER TEXT*
+      """).strip(), file=outfile)
+    EOF
   >>>
 
   output {
+    String step_description_md = read_string("bowtie2.description.md")
     File filtered1_fastq = glob("bowtie2_*_filtered1.fastq")[0]
     File? filtered2_fastq = if paired then glob("bowtie2_*_filtered2.fastq")[0] else reads2_fastq
     File reads_out_count = "bowtie2_~{filter_type}_filtered_out.count"
-
-    # TODO:
-    #String step_description_md = read_string("bowtie2.description.md")
   }
   runtime {
     docker: docker_image_id
@@ -413,15 +437,23 @@ task hisat2_filter {
     count="$(cat hisat2_~{filter_type}_filtered{1,2}.fastq | wc -l)"
     count=$((count / 4))
     jq --null-input --arg count "$count" '{"hisat2_~{filter_type}_filtered_out":$count}' > 'hisat2_~{filter_type}_filtered_out.count'
+
+    python3 - <<EOF
+    import textwrap
+    with open("hisat2.description.md", "w") as outfile:
+      print(textwrap.dedent("""
+      # HISAT2 ~{filter_type} filtering
+
+      *PLACEHOLDER TEXT*
+      """).strip(), file=outfile)
+    EOF
   >>>
 
   output {
+    String step_description_md = read_string("hisat2.description.md")
     File filtered1_fastq = glob("hisat2_*_filtered1.fastq")[0]
     File? filtered2_fastq = if paired then glob("hisat2_*_filtered2.fastq")[0] else reads2_fastq
     File reads_out_count = "hisat2_~{filter_type}_filtered_out.count"
-
-    # TODO:
-    #String step_description_md = read_string("hisat2.description.md")
   }
   runtime {
     docker: docker_image_id
