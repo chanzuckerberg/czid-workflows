@@ -12,7 +12,7 @@ RUN apt-get -q update
 RUN apt-get -q install -y curl python3-pip git build-essential libz-dev
 
 # Match versions from Ubuntu 20.04 LTS (please do not upgrade except to fix bugs)
-RUN pip3 install boto3==1.9.253 marisa-trie==0.7.7
+RUN pip3 install boto3==1.9.253 marisa-trie==0.7.7 requests biopython
 
 ADD https://raw.githubusercontent.com/chanzuckerberg/miniwdl/v${MINIWDL_VERSION}/examples/clean_download_cache.sh /usr/local/bin
 RUN chmod +x /usr/local/bin/clean_download_cache.sh
