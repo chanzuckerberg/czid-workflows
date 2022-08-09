@@ -1,5 +1,28 @@
 version 1.0
 
+task DownloadFastas {
+    input {
+        Array[File]+ fastas
+        String docker_image_id
+    }
+
+    command <<<
+        set -euxo pipefail
+
+        for fasta in ~{sep=' ' fastas}
+        do
+          cp "$fasta" "$(basename $fasta)"
+        done
+    >>>
+    output {
+        Array[File]+ loaded_fastas = glob("*.fasta")
+    }
+
+    runtime {
+        docker: docker_image_id
+    }
+}
+
 task RunAlignment_minimap2_out {
     input {
         String s3_wd_uri
@@ -113,16 +136,25 @@ workflow czid_non_host_alignment {
     Int min_read_length = 36
     File deuterostome_db = "s3://czid-public-references/taxonomy/2021-01-22/deuterostome_taxids.txt"
     File? minimap2_local_db_path
-    String minimap2_db = "s3://czid-public-references/minimap2-test/2021-01-22/nt_k14_w8_20_long/"
+    String minimap2_db = "s3://czid-public-references/ncbi-indexes-prod/2021-01-22/index-generation-2/nt_20_long/"
     String minimap2_args = "--ax asm20 --secondary=yes"
     String minimap2_prefix = "gsnap"
+  }
+
+  # HACK: RunAlignment_minimap2_out depends on the fastas being in s3_wd_uri with their basename
+  #   this step outputs the input fastas so swipe will upload them to s3_wd_uri so RunAlignment_minimap2_out
+  #   can run
+  call DownloadFastas {
+    input:
+      docker_image_id = docker_image_id,
+      fastas = [select_first([host_filter_out_gsnap_filter_merged_fa, host_filter_out_gsnap_filter_1_fa])], #select_all([host_filter_out_gsnap_filter_1_fa, host_filter_out_gsnap_filter_2_fa]),
   }
 
   call RunAlignment_minimap2_out { 
     input:         
       docker_image_id = docker_image_id,
       s3_wd_uri = s3_wd_uri,
-      fastas = [select_first([host_filter_out_gsnap_filter_merged_fa, host_filter_out_gsnap_filter_1_fa])], #select_all([host_filter_out_gsnap_filter_1_fa, host_filter_out_gsnap_filter_2_fa]),
+      fastas = DownloadFastas.loaded_fastas,
       db_path = minimap2_db,
       minimap2_args = minimap2_args,
       run_locally = defined(minimap2_local_db_path),
