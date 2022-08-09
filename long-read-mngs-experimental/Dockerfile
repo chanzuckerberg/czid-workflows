@@ -9,7 +9,7 @@ RUN sed -i s/archive.ubuntu.com/us-west-2.ec2.archive.ubuntu.com/ /etc/apt/sourc
     echo 'APT::Install-Suggests "false";' > /etc/apt/apt.conf.d/99czid
 
 RUN apt-get -q update
-RUN apt-get -q install -y  python3-pip
+RUN apt-get -q install -y curl python3-pip git build-essential libz-dev
 
 # Match versions from Ubuntu 20.04 LTS (please do not upgrade except to fix bugs)
 RUN pip3 install boto3==1.9.253 marisa-trie==0.7.7
