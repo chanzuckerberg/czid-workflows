@@ -55,7 +55,6 @@ task RunCallHitsMinimap2 {
         File taxon_blacklist
         File deuterostome_db
         File accession2taxid
-        File duplicate_cluster_size
         Int min_read_length = 36
         String docker_image_id
         String count_type = "NT"
@@ -85,7 +84,6 @@ task RunCallHitsMinimap2 {
             deuterostome_path="~{deuterostome_db}",
             taxon_whitelist_path=None,
             taxon_blacklist_path="~{taxon_blacklist}",
-            duplicate_cluster_sizes_path="~{duplicate_cluster_size}",
             output_json_file="gsnap_counts_with_dcr.json",
         )
         CODE
@@ -109,17 +107,14 @@ workflow czid_non_host_alignment {
     String s3_wd_uri
     File host_filter_out_gsnap_filter_1_fa
     File? host_filter_out_gsnap_filter_merged_fa
-    File duplicate_cluster_sizes_tsv
     File lineage_db = "s3://czid-public-references/taxonomy/2021-01-22/taxid-lineages.db"
     File accession2taxid_db = "s3://czid-public-references/alignment_data/2021-01-22/accession2taxid.db"
     File taxon_blacklist = "s3://czid-public-references/taxonomy/2021-01-22/taxon_blacklist.txt"
     Int min_read_length = 36
     File deuterostome_db = "s3://czid-public-references/taxonomy/2021-01-22/deuterostome_taxids.txt"
-    File? local_gsnap_index
     File? minimap2_local_db_path
-    File? local_rapsearch2_index
-    String minimap2_db = "s3://czid-public-references/minimap2-test/2021-01-22/nt_k14_w8_20/"
-    String minimap2_args = "-cx sr --secondary=yes"
+    String minimap2_db = "s3://czid-public-references/minimap2-test/2021-01-22/nt_k14_w8_20_long/"
+    String minimap2_args = "--ax asm20 --secondary=yes"
     String minimap2_prefix = "gsnap"
   }
 
@@ -139,7 +134,6 @@ workflow czid_non_host_alignment {
     input:
       m8_file = RunAlignment_minimap2_out.out_m8,
       lineage_db = lineage_db,
-      duplicate_cluster_size = duplicate_cluster_sizes_tsv,
       taxon_blacklist = taxon_blacklist,
       deuterostome_db = deuterostome_db,
       accession2taxid = accession2taxid_db,

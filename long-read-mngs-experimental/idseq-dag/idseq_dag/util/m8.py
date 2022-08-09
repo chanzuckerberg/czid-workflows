@@ -11,7 +11,6 @@ import idseq_dag.util.command as command
 import idseq_dag.util.lineage as lineage
 import idseq_dag.util.log as log
 
-from idseq_dag.util.count import READ_COUNTING_MODE, ReadCountingMode, get_read_cluster_size, load_duplicate_cluster_sizes
 from idseq_dag.util.dict import open_file_db_by_extension
 from idseq_dag.util.parsing import BlastnOutput6NTRerankedReader, BlastnOutput6Reader, BlastnOutput6Writer, HitSummaryMergedReader, HitSummaryReader, HitSummaryWriter
 
@@ -292,12 +291,9 @@ def _call_hits_m8_work(input_blastn_6_path, lineage_map, accession2taxid_dict,
 @command.run_in_subprocess
 def generate_taxon_count_json_from_m8(
         blastn_6_path, hit_level_path, count_type, lineage_map_path,
-        deuterostome_path, taxon_whitelist_path, taxon_blacklist_path,
-        duplicate_cluster_sizes_path, output_json_file):
+        deuterostome_path, taxon_whitelist_path, taxon_blacklist_path, output_json_file):
     # Parse through hit file and m8 input file and format a JSON file with
     # our desired attributes, including aggregated statistics.
-
-    duplicate_cluster_sizes = load_duplicate_cluster_sizes(duplicate_cluster_sizes_path)
 
     should_keep = build_should_keep_filter(
         deuterostome_path, taxon_whitelist_path, taxon_blacklist_path)
@@ -364,15 +360,12 @@ def generate_taxon_count_json_from_m8(
                         agg_bucket = aggregation.get(agg_key)
                         if not agg_bucket:
                             agg_bucket = {
-                                'nonunique_count': 0,
                                 'unique_count': 0,
                                 'sum_percent_identity': 0.0,
                                 'sum_alignment_length': 0.0,
                                 'sum_e_value': 0.0
                             }
                             aggregation[agg_key] = agg_bucket
-                        agg_bucket['nonunique_count'] += get_read_cluster_size(
-                            duplicate_cluster_sizes, read_id)
                         agg_bucket['unique_count'] += 1
                         agg_bucket['sum_percent_identity'] += percent_identity
                         agg_bucket['sum_alignment_length'] += alignment_length
@@ -387,7 +380,6 @@ def generate_taxon_count_json_from_m8(
     with log.log_context("generate_taxon_count_json_from_m8", {"substep": "loop_2"}):
         for agg_key, agg_bucket in aggregation.items():
             unique_count = agg_bucket['unique_count']
-            nonunique_count = agg_bucket['nonunique_count']
             tax_level = num_ranks - len(agg_key) + 1
             # TODO: Extend taxonomic ranks as indicated on the commented out lines.
             taxon_counts_row = {
@@ -406,13 +398,13 @@ def generate_taxon_count_json_from_m8(
                 # 'kingdom_taxid' : agg_key[7 - tax_level] if tax_level <= 7 else "-700",
                 # 'domain_taxid' : agg_key[8 - tax_level] if tax_level <= 8 else "-800",
                 "count":  # this field will be consumed by the webapp
-                nonunique_count if READ_COUNTING_MODE == ReadCountingMode.COUNT_ALL else unique_count,
+                unique_count,
                 "nonunique_count":
-                nonunique_count,
+                unique_count,
                 "unique_count":
                 unique_count,
                 "dcr":
-                nonunique_count / unique_count,
+                unique_count,
                 "percent_identity":
                 agg_bucket['sum_percent_identity'] / unique_count,
                 "alignment_length":
