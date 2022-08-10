@@ -11,6 +11,7 @@ workflow czid_host_filter {
     File? reads2_fastq
     # TODO: do we still need to to input either FASTQ or FASTA?
     String file_ext = "fastq"
+    String nucleotide_type = "DNA"
 
     File adapter_fasta
 
@@ -55,13 +56,15 @@ workflow czid_host_filter {
 
   # Quantify host transcripts and ERCC. This is only meaningful for RNAseq, but kallisto is so fast
   # that it doesn't cost much to run unconditionally.
-  call kallisto {
-    input:
-    reads1_fastq = fastp_qc.fastp1_fastq,
-    reads2_fastq = fastp_qc.fastp2_fastq,
-    kallisto_idx = kallisto_idx,
-    docker_image_id = docker_image_id,
-    cpu = cpu
+  if (nucleotide_type == "RNA") {
+    call kallisto {
+      input:
+      reads1_fastq = fastp_qc.fastp1_fastq,
+      reads2_fastq = fastp_qc.fastp2_fastq,
+      kallisto_idx = kallisto_idx,
+      docker_image_id = docker_image_id,
+      cpu = cpu
+    }
   }
 
   # Filter out host reads.
@@ -144,7 +147,7 @@ workflow czid_host_filter {
     File fastp_html = fastp_qc.fastp_html
     File fastp_json = fastp_qc.fastp_json
 
-    File kallisto_abundance_tsv = kallisto.abundance_tsv
+    File? kallisto_abundance_tsv = kallisto.abundance_tsv
 
     File bowtie2_filtered1_fastq = bowtie2_filter.filtered1_fastq
     File? bowtie2_filtered2_fastq = bowtie2_filter.filtered2_fastq
