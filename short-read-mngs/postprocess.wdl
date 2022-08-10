@@ -76,7 +76,7 @@ task DownloadAccessions_gsnap_accessions_out {
     File gsnap_out_gsnap_deduped_m8
     File gsnap_out_gsnap_hitsummary_tab
     File gsnap_out_gsnap_counts_with_dcr_json
-    String nt_db
+    File nt_db
     File nt_loc_db
     File lineage_db
   }
@@ -112,7 +112,7 @@ task DownloadAccessions_rapsearch2_accessions_out {
     File rapsearch2_out_rapsearch2_counts_with_dcr_json
     File lineage_db
     File nr_loc_db
-    String nr_db
+    File nr_db
   }
   command<<<
   set -euxo pipefail
@@ -474,9 +474,9 @@ workflow czid_postprocess {
     File duplicate_cluster_sizes_tsv
     File czid_dedup_out_duplicate_clusters_csv
     String index_version = "2021-01-22" # FIXME: vestigial input
-    String nt_db = "s3://czid-public-references/ncbi-sources/2021-01-22/nt"
+    File nt_db = "s3://czid-public-references/ncbi-sources/2021-01-22/nt"
     File nt_loc_db = "s3://czid-public-references/alignment_data/2021-01-22/nt_loc.db"
-    String nr_db = "s3://czid-public-references/ncbi-sources/2021-01-22/nr"
+    File nr_db = "s3://czid-public-references/ncbi-sources/2021-01-22/nr"
     File nr_loc_db = "s3://czid-public-references/alignment_data/2021-01-22/nr_loc.db"
     File lineage_db = "s3://czid-public-references/taxonomy/2021-01-22/taxid-lineages.db"
     File taxon_blacklist = "s3://czid-public-references/taxonomy/2021-01-22/taxon_blacklist.txt"
