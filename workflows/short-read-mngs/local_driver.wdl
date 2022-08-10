@@ -3,7 +3,7 @@ version 1.0
 # postprocess, experimental) in sequence. The IDseq back-end invokes those four WDLs separately
 # for various reasons, which is effectively the same as running this locally.
 
-import "host_filter.wdl" as stage1
+import "host_filter_2022.wdl" as stage1
 import "non_host_alignment.wdl" as stage2
 import "postprocess.wdl" as stage3
 import "experimental.wdl" as stage4
@@ -22,16 +22,16 @@ workflow czid_short_read_mngs {
     }
     call stage1.czid_host_filter as host_filter {
         input:
-        fastqs_0 = fastqs_0,
-        fastqs_1 = fastqs_1,
+        reads1_fastq = fastqs_0,
+        reads2_fastq = fastqs_1,
         docker_image_id = docker_image_id,
         s3_wd_uri = s3_wd_uri
     }
     call stage2.czid_non_host_alignment as non_host_alignment {
         input:
-        host_filter_out_gsnap_filter_1_fa = host_filter.gsnap_filter_out_gsnap_filter_1_fa,
-        host_filter_out_gsnap_filter_2_fa = host_filter.gsnap_filter_out_gsnap_filter_2_fa,
-        host_filter_out_gsnap_filter_merged_fa = host_filter.gsnap_filter_out_gsnap_filter_merged_fa,
+        host_filter_out_gsnap_filter_1_fa = host_filter.subsampled_out_subsampled_1_fa,
+        host_filter_out_gsnap_filter_2_fa = host_filter.subsampled_out_subsampled_2_fa,
+        host_filter_out_gsnap_filter_merged_fa = host_filter.subsampled_out_subsampled_merged_fa,
         duplicate_cluster_sizes_tsv = host_filter.czid_dedup_out_duplicate_cluster_sizes_tsv,
         czid_dedup_out_duplicate_clusters_csv = host_filter.czid_dedup_out_duplicate_clusters_csv,
         minimap2_local_db_path = minimap2_local_db_path,
@@ -43,9 +43,9 @@ workflow czid_short_read_mngs {
     }
     call stage3.czid_postprocess as postprocess {
         input:
-        host_filter_out_gsnap_filter_1_fa = host_filter.gsnap_filter_out_gsnap_filter_1_fa,
-        host_filter_out_gsnap_filter_2_fa = host_filter.gsnap_filter_out_gsnap_filter_2_fa,
-        host_filter_out_gsnap_filter_merged_fa = host_filter.gsnap_filter_out_gsnap_filter_merged_fa,
+        host_filter_out_gsnap_filter_1_fa = host_filter.subsampled_out_subsampled_1_fa,
+        host_filter_out_gsnap_filter_2_fa = host_filter.subsampled_out_subsampled_2_fa,
+        host_filter_out_gsnap_filter_merged_fa = host_filter.subsampled_out_subsampled_merged_fa,
         duplicate_cluster_sizes_tsv = host_filter.czid_dedup_out_duplicate_cluster_sizes_tsv,
         czid_dedup_out_duplicate_clusters_csv = host_filter.czid_dedup_out_duplicate_clusters_csv,
         gsnap_out_gsnap_m8 = non_host_alignment.gsnap_out_gsnap_m8,
