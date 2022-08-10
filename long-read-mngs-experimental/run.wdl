@@ -137,7 +137,7 @@ workflow czid_non_host_alignment {
     File deuterostome_db = "s3://czid-public-references/taxonomy/2021-01-22/deuterostome_taxids.txt"
     File? minimap2_local_db_path
     String minimap2_db = "s3://czid-public-references/ncbi-indexes-prod/2021-01-22/index-generation-2/nt_20_long/"
-    String minimap2_args = "-x asm20 --secondary=yes"
+    String minimap2_args = "-cx asm20 --secondary=yes"
     String minimap2_prefix = "gsnap"
   }
 
