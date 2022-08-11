@@ -98,14 +98,11 @@ def harvest_sample(sample, outputs_json, taxadb):
     ]
     for step in [
         "validate_input",
-        "star",
-        "trimmomatic",
-        "priceseq",
+        "fastp",
+        "bowtie2_filtered",
+        "hisat2_filtered",
         "czid_dedup",
-        "lzw",
-        "bowtie2",
         "subsampled",
-        "gsnap_filter",
     ]:
         ans[step + "_reads"] = read_output_jsonfile(
             outputs_json, "host_filter." + step + "_out_count"
