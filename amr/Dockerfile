@@ -17,7 +17,7 @@ ENV PATH=/usr/local/miniconda/bin:$PATH
 
 RUN conda init bash 
 
-RUN git clone -b rlim/parse-kma https://github.com/rzlim08/rgi.git && conda env create -f rgi/conda_env.yml
+RUN git clone -b rlim/fix-header-parse-space https://github.com/rzlim08/rgi.git && conda env create -f rgi/conda_env.yml
 
 RUN mkdir -p rgi/inputs/heatmap_inputs
 RUN . /usr/local/miniconda/etc/profile.d/conda.sh && conda activate rgi && cd rgi/ && python setup.py build && python setup.py test && python setup.py install
