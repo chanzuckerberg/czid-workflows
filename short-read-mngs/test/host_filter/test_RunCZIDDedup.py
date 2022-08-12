@@ -28,7 +28,7 @@ def test_RunCZIDDedup_safe_csv(util, short_read_mngs_bench3_viral_outputs):
         input_file.seek(0)
         assert special_char_rows == quote_count
 
-        inputs["reads1_fastq"] = [input_file.name]
+        inputs["reads1_fastq"] = input_file.name
 
         outp = util.miniwdl_run(
             util.repo_dir() / "short-read-mngs/host_filter_2022.wdl",
