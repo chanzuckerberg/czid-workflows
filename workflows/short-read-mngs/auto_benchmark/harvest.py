@@ -93,7 +93,7 @@ def harvest_sample(sample, outputs_json, taxadb):
         outputs_json["czid_short_read_mngs.host_filter.fastp_out_fastp2_fastq"]
         is not None
     )
-    ans["input_reads"] = read_output_jsonfile(outputs_json, "host_filter.input_read_count")[
+    ans["input_reads"] = read_output_jsonfile(outputs_json, "host_filter.reads_in_count")[
         "fastqs"
     ]
     for step in [
