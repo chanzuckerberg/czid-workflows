@@ -19,7 +19,7 @@ class TestAMR(WDLTestCase):
         self.assertEqual(main[2], "3")
         self.assertEqual(main[3], "281")
 
-    def testRgiMain(self):
+    def testRgiBwtKma(self):
         inputs = {
             "non_host_reads": [
                 os.path.join(os.path.dirname(__file__), "gsnap_filter_1.fa"),
