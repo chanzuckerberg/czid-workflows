@@ -99,8 +99,8 @@ def harvest_sample(sample, outputs_json, taxadb):
     for step in [
         "validate_input",
         "fastp",
-        "bowtie2_filtered",
-        "hisat2_filtered",
+        "bowtie2_host_filtered",
+        "hisat2_host_filtered",
         "czid_dedup",
         "subsampled",
     ]:
