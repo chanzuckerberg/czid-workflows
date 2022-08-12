@@ -149,12 +149,12 @@ workflow czid_host_filter {
 
     File? kallisto_abundance_tsv = kallisto.abundance_tsv
 
-    File bowtie2_filtered1_fastq = bowtie2_filter.filtered1_fastq
-    File? bowtie2_filtered2_fastq = bowtie2_filter.filtered2_fastq
-    File bowtie2_filtered_out_count = bowtie2_filter.reads_out_count
-    File hisat2_filtered1_fastq = hisat2_filter.filtered1_fastq
-    File? hisat2_filtered2_fastq = hisat2_filter.filtered2_fastq
-    File hisat2_filtered_out_count = hisat2_filter.reads_out_count
+    File bowtie2_host_filtered1_fastq = bowtie2_filter.filtered1_fastq
+    File? bowtie2_host_filtered2_fastq = bowtie2_filter.filtered2_fastq
+    File bowtie2_host_filtered_out_count = bowtie2_filter.reads_out_count
+    File hisat2_host_filtered1_fastq = hisat2_filter.filtered1_fastq
+    File? hisat2_host_filtered2_fastq = hisat2_filter.filtered2_fastq
+    File hisat2_host_filtered_out_count = hisat2_filter.reads_out_count
 
     File? bowtie2_human_filtered1_fastq = bowtie2_human_filter.filtered1_fastq
     File? bowtie2_human_filtered2_fastq = bowtie2_human_filter.filtered2_fastq
