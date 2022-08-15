@@ -577,10 +577,10 @@ task FilterReads {
 
             grep --no-group-separator -A3 "kraken:taxid|~{taxid}" \
                 "${TMPDIR}/~{prefix}classified_1.fq" \
-                > "${TMPDIR}/~{prefix}filtered_1.fq" || _no_reads_error
+                > "${TMPDIR}/~{prefix}filtered_1.fq" || raise_error InsufficientReadsError "There were no reads left after the FilterReads step of the pipeline."
             [[ "~{length(fastqs)}" == 1 ]] || grep --no-group-separator -A3 "kraken:taxid|~{taxid}" \
                 "${TMPDIR}/~{prefix}classified_2.fq" \
-                > "${TMPDIR}/~{prefix}filtered_2.fq" || _no_reads_error
+                > "${TMPDIR}/~{prefix}filtered_2.fq" || raise_error InsufficientReadsError "There were no reads left after the FilterReads step of the pipeline."
             bgzip -@ $CORES -c "${TMPDIR}/~{prefix}filtered_1.fq" > "~{prefix}filtered_1.fq.gz"
             [[ "~{length(fastqs)}" == 1 ]] || bgzip -@ $CORES -c "${TMPDIR}/~{prefix}filtered_2.fq" > "~{prefix}filtered_2.fq.gz"
         else
