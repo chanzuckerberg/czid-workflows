@@ -240,18 +240,7 @@ task RunRgiKmerMain {
     }
     command <<< 
         set -exuo pipefail
-        source /usr/local/miniconda/etc/profile.d/conda.sh
-        conda activate rgi
-        mkdir -p wildcard
-        tar -xjf "~{wildcard_data}" -C wildcard
-        gunzip wildcard/*.gz
-        rgi card_annotation -i "~{card_json}" > card_annotation.log
-        rgi load -i "~{card_json}" --card_annotation card_database_*.fasta
-        rgi wildcard_annotation -i wildcard/ --card_json "~{card_json}" -v 3.1.0 
-        rgi load --wildcard_annotation wildcard_database_v3.1.0.fasta --wildcard_version 3.1.0 --wildcard_index wildcard/index-for-model-sequences.txt --card_annotation card_database_v3.2.3.fasta
-        rgi load --kmer_database "~{kmer_db}" --amr_kmers "~{amr_kmer_db}" --kmer_size 61 --debug
         rgi kmer_query --rgi -k 61 -i "~{main_output_json}" --output output.rgi.main.kmerspecies 
-        rm -r wildcard/
     >>>
     output { 
         Array[File] output_kmer_main = glob("output.rgi.main.kmerspecies*")
@@ -274,18 +263,7 @@ task RunRgiKmerBwt {
     }
     command <<<
         set -exuo pipefail
-        source /usr/local/miniconda/etc/profile.d/conda.sh
-        conda activate rgi
-        mkdir -p wildcard
-        tar -xjf "~{wildcard_data}" -C wildcard
-        gunzip wildcard/*.gz
-        rgi card_annotation -i "~{card_json}" > card_annotation.log
-        rgi load -i "~{card_json}" --card_annotation card_database_*.fasta
-        rgi wildcard_annotation -i wildcard/ --card_json "~{card_json}" -v 3.1.0 
-        rgi load --wildcard_annotation wildcard_database_v3.1.0.fasta --wildcard_version 3.1.0 --wildcard_index wildcard/index-for-model-sequences.txt --card_annotation card_database_v3.2.3.fasta
-        rgi load --kmer_database "~{kmer_db}" --amr_kmers "~{amr_kmer_db}" --kmer_size 61 --debug
         rgi kmer_query --bwt -k 61 -i "~{output_sorted_length_100}" --output output.rgi.kma.kmerspecies
-        rm -r wildcard/
     >>>
     output {
         Array[File] output_kmer_bwt = glob("output.rgi.kma.kmerspecies*")
@@ -304,10 +282,6 @@ task RunRgiMain {
     }
     command <<<
         set -exuo pipefail
-        source /usr/local/miniconda/etc/profile.d/conda.sh
-        conda activate rgi
-        rgi card_annotation -i "~{card_json}" > card_annotation.log
-        rgi load -i "~{card_json}" --card_annotation card_database_*.fasta
         rgi main -i "~{contigs}" -o output.rgi.main -t contig -a BLAST --clean --include_nudge
 
     >>>
@@ -330,10 +304,6 @@ task RunRgiBwtKma {
 
     command <<<
         set -exuo pipefail
-        source /usr/local/miniconda/etc/profile.d/conda.sh
-        conda activate rgi
-        rgi card_annotation -i "~{card_json}" > card_annotation.log 
-        rgi load -i "~{card_json}" --card_annotation card_database_*.fasta  
         rgi bwt -1 "~{non_host_reads[0]}" -2 "~{non_host_reads[1]}" -a kma -o output_kma.rgi.kma --clean
     >>>
 
