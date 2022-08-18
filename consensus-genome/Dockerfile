@@ -110,7 +110,8 @@ RUN wget https://drive5.com/muscle/muscle_src_3.8.1551.tar.gz \
 
 
 # ARTIC, Medaka and dependencies
-RUN apt-get install -y python3-cffi python3-h5py python3-intervaltree python3-edlib git
+RUN apt-get install -y python3-cffi python3-h5py python3-intervaltree python3-edlib git libboost-system-dev libboost-thread-dev cmake libboost-program-options-dev libboost-test-dev libboost-filesystem-dev libcurl4-openssl-dev libbz2-dev
+RUN git clone -b 'v0.2.6' https://github.com/will-rowe/artic-tools.git --recursive && mkdir -p artic-tools/build && cd artic-tools/build && cmake .. && make -j4 && cp ../bin/artic-tools /usr/local/bin/
 RUN pip3 install ont-fast5-api parasail mappy pyspoa protobuf==3.19.* tensorflow==2.7.1 https://github.com/artic-network/fieldbioinformatics/archive/1.2.1.tar.gz
 RUN pip3 install medaka==1.6.0 --no-deps
 RUN pip3 install marisa-trie
