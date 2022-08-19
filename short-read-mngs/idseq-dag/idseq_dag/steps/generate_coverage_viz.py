@@ -613,6 +613,8 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
             _format_number(avg_field("num_gaps")),
             # Bin index of midpoint.
             hit_group_bin_index,
+            # Contig name if single contig, else None
+            contig_name,
             # Byteranges in the contigs.fasta file for each contig.
             contig_byteranges
         ]
