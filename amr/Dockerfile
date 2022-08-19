@@ -2,7 +2,7 @@ FROM ubuntu:20.04
 
 LABEL maintainer="CZ ID Team <idseq-tech@chanzuckerberg.com>"
 
-RUN apt-get update && apt-get -y install curl git python3 python3-pip gcc make libz-dev libncurses-dev libbz2-dev liblzma-dev g++ 
+RUN apt-get update && apt-get -y install curl git python3 python3-pip gcc make libz-dev libncurses-dev libbz2-dev liblzma-dev g++ zip
 
 RUN ln -s /usr/bin/python3 /usr/bin/python
 
@@ -27,3 +27,4 @@ RUN cd rgi/ && python setup.py build && python setup.py test && python setup.py 
 RUN mkdir -p wildcard/
 
 RUN curl -LO https://czid-public-references.s3.us-west-2.amazonaws.com/test/AMRv2/card.json && rgi card_annotation -i card.json && curl -LO https://czid-public-references.s3.us-west-2.amazonaws.com/test/AMRv2/wildcard_database_v3.1.0.fasta && curl -L https://czid-public-references.s3.us-west-2.amazonaws.com/test/AMRv2/61_kmer_db.json -o wildcard/61_kmer_db.json && curl -L https://czid-public-references.s3.us-west-2.amazonaws.com/test/AMRv2/all_amr_61mers.txt -o wildcard/all_amr_61mers.txt && curl -L https://czid-public-references.s3.us-west-2.amazonaws.com/test/AMRv2/index-for-model-sequences.txt -o wildcard/index-for-model-sequences.txt && rgi load --wildcard_annotation wildcard_database_v3.1.0.fasta --wildcard_version 3.1.0 --wildcard_index wildcard/index-for-model-sequences.txt --card_annotation card_database_v3.2.3.fasta -i card.json --kmer_database wildcard/61_kmer_db.json --amr_kmers wildcard/all_amr_61mers.txt --kmer_size 61 && rm -r wildcard/ wildcard_database_v3.1.0.fasta
+

@@ -51,6 +51,24 @@ workflow AMR {
         kma_species_output = RunRgiKmerBwt.kma_species_calling,
         docker_image_id = docker_image_id
     }
+    call ZipOutputs {
+        input:
+        outputFiles = select_all(
+            flatten([
+                RunRgiBwtKma.output_kma,
+                RunRgiMain.output_main,
+                RunRgiKmerBwt.output_kmer_bwt,
+                RunRgiKmerMain.output_kmer_main,
+                [
+                    RunResultsPerSample.merge_a,
+                    RunResultsPerSample.merge_b,
+                    RunResultsPerSample.final_summary,
+                    RunResultsPerSample.bigtable,
+                ]
+            ])
+        ),
+        docker_image_id = docker_image_id
+    }
 
 }
 
@@ -338,6 +356,31 @@ task RunRgiBwtKma {
         Array[File] output_kma = glob("output_kma.rgi.kma*")
         File output_sorted_length_100 = "output_kma.rgi.kma.sorted.length_100.bam"
         File kma_amr_results = "output_kma.rgi.kma.allele_mapping_data.txt"
+    }
+
+    runtime {
+        docker: docker_image_id
+    }
+}
+
+task ZipOutputs {
+    input {
+        Array[File] outputFiles
+        String docker_image_id
+    }
+
+    command <<<
+        set -euxo pipefail
+
+        export TMPDIR=${TMPDIR:-/tmp}
+
+        mkdir ${TMPDIR}/outputs
+        cp ~{sep=' ' outputFiles} ${TMPDIR}/outputs/
+        zip -r -j outputs.zip ${TMPDIR}/outputs/
+    >>>
+
+    output {
+        File output_zip = "outputs.zip"
     }
 
     runtime {
