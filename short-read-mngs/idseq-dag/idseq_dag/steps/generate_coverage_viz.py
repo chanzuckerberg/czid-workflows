@@ -343,6 +343,7 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
         for contig_id, contig_obj in contigs.items():
             name_parts = contig_id.split("_")
             for contig_hsp in contig_obj:
+                contig_hsp["name"] = contig_id
                 # Total length of the contig. We extract this from the contig name.
                 contig_hsp["total_length"] = int(name_parts[3])
                 # The contig read count.
@@ -563,6 +564,10 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
                 contig_r += contig_obj["num_reads"]
                 contig_byteranges.append(contig_obj["byterange"])
             seen.add(tuple(contig_obj["byterange"]))
+
+        contig_name = None
+        if len(contig_objs) == 1 and len(read_objs) == 0:
+            contig_name = contig_obj["name"]
 
         # Treat read_objs and contig_objs the same from here onwards. They share many of the same fields.
         hit_objs = contig_objs + read_objs
