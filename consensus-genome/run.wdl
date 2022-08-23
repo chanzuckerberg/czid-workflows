@@ -830,7 +830,7 @@ task RunMinion {
         tar -xzf "~{primer_schemes}"
 
         # TODO: upgrade to artic 1.3.0 when released (https://github.com/artic-network/fieldbioinformatics/pull/70)
-        artic minion --medaka --no-longshot --normalise "~{normalise}" --threads 4 --scheme-directory primer_schemes --read-file ~{sep=' ' fastqs} --medaka-model "~{medaka_model}" "~{primer_set}" "~{sample}"
+        artic minion --medaka --no-longshot --normalise "~{normalise}" --threads 4 --strict --scheme-directory primer_schemes --read-file ~{sep=' ' fastqs} --medaka-model "~{medaka_model}" "~{primer_set}" "~{sample}"
         # the .bam file doesn't seem to be sorted when it comes out, so explicitly sorting it here because a
         # ...sorted .bam is necessary for ComputeStats step downstream
         samtools sort "~{sample}.primertrimmed.rg.sorted.bam" > "~{sample}.primertrimmed.rg.resorted.bam"
