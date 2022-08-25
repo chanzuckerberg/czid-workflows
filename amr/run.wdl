@@ -51,6 +51,24 @@ workflow AMR {
         kma_species_output = RunRgiKmerBwt.kma_species_calling,
         docker_image_id = docker_image_id
     }
+    call ZipOutputs {
+        input:
+        outputFiles = select_all(
+            flatten([
+                RunRgiBwtKma.output_kma,
+                RunRgiMain.output_main,
+                RunRgiKmerBwt.output_kmer_bwt,
+                RunRgiKmerMain.output_kmer_main,
+                [
+                    RunResultsPerSample.merge_a,
+                    RunResultsPerSample.merge_b,
+                    RunResultsPerSample.final_summary,
+                    RunResultsPerSample.bigtable,
+                ]
+            ])
+        ),
+        docker_image_id = docker_image_id
+    }
 
 }
 
@@ -109,14 +127,11 @@ task RunResultsPerSample {
         main_output["Contig_contig_amr"] = main_output["Contig_contig_amr"].map(
             lambda x: x.strip()
         )
-
         # merge the data where Best_Hit_ARO and Contig name must match
         merge_a = main_output.merge(main_species_output, left_on = ['Best_Hit_ARO_contig_amr', 'Contig_contig_amr'],
                                                                     right_on = ['Best_Hit_ARO_contig_sp', 'Contig_contig_sp'], 
                                                                     how='outer',
                                                                     suffixes = [None, None])
-
-
         merge_a["ARO_contig"] = this_or_that(
             merge_a, "Best_Hit_ARO_contig_amr", "Best_Hit_ARO_contig_sp"
         )
@@ -136,8 +151,6 @@ task RunResultsPerSample {
             merge_b, "ARO Term_kma_amr", "ARO term_kma_sp"
         )
         merge_b['ARO_kma'] = [merge_b.iloc[i]['ARO Term_kma_amr'] if str(merge_b.iloc[i]['ARO Term_kma_amr']) != 'nan' else merge_b.iloc[i]['ARO term_kma_sp'] for i in range(len(merge_b.index))]
-
-
         merge_b.to_csv("merge_b.tsv", index=None, sep="\t")
 
         # final merge of MAIN and KMA combined results
@@ -340,6 +353,30 @@ task RunRgiBwtKma {
         Array[File] output_kma = glob("output_kma.rgi.kma*")
         File output_sorted_length_100 = "output_kma.rgi.kma.sorted.length_100.bam"
         File kma_amr_results = "output_kma.rgi.kma.allele_mapping_data.txt"
+    }
+
+    runtime {
+        docker: docker_image_id
+    }
+}
+task ZipOutputs {
+    input {
+        Array[File] outputFiles
+        String docker_image_id
+    }
+
+    command <<<
+        set -euxo pipefail
+
+        export TMPDIR=${TMPDIR:-/tmp}
+
+        mkdir ${TMPDIR}/outputs
+        cp ~{sep=' ' outputFiles} ${TMPDIR}/outputs/
+        zip -r -j outputs.zip ${TMPDIR}/outputs/
+    >>>
+
+    output {
+        File output_zip = "outputs.zip"
     }
 
     runtime {
