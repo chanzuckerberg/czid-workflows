@@ -127,14 +127,11 @@ task RunResultsPerSample {
         main_output["Contig_contig_amr"] = main_output["Contig_contig_amr"].map(
             lambda x: x.strip()
         )
-
-
         # merge the data where Best_Hit_ARO and Contig name must match
         merge_a = main_output.merge(main_species_output, left_on = ['Best_Hit_ARO_contig_amr', 'Contig_contig_amr'],
                                                                     right_on = ['Best_Hit_ARO_contig_sp', 'Contig_contig_sp'], 
                                                                     how='outer',
                                                                     suffixes = [None, None])
-
         merge_a["ARO_contig"] = this_or_that(
             merge_a, "Best_Hit_ARO_contig_amr", "Best_Hit_ARO_contig_sp"
         )
@@ -153,7 +150,7 @@ task RunResultsPerSample {
         merge_b["ARO_kma"] = this_or_that(
             merge_b, "ARO Term_kma_amr", "ARO term_kma_sp"
         )
-
+        merge_b['ARO_kma'] = [merge_b.iloc[i]['ARO Term_kma_amr'] if str(merge_b.iloc[i]['ARO Term_kma_amr']) != 'nan' else merge_b.iloc[i]['ARO term_kma_sp'] for i in range(len(merge_b.index))]
         merge_b.to_csv("merge_b.tsv", index=None, sep="\t")
 
         # final merge of MAIN and KMA combined results
@@ -362,7 +359,6 @@ task RunRgiBwtKma {
         docker: docker_image_id
     }
 }
-
 task ZipOutputs {
     input {
         Array[File] outputFiles

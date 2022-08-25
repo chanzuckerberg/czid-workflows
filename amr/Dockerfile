@@ -6,6 +6,7 @@ RUN apt-get update && apt-get -y install curl git python3 python3-pip gcc make l
 
 RUN ln -s /usr/bin/python3 /usr/bin/python
 
+# Install rgi dependencies
 RUN curl -L https://github.com/bbuchfink/diamond/releases/download/v0.8.36/diamond-linux64.tar.gz | tar xz && mv diamond /usr/local/bin
 RUN curl -L http://www.unafold.org/download/oligoarrayaux-3.8.tar.gz | tar xz && cd oligoarrayaux-3.8/ && ./configure && make install 
 RUN curl -L https://github.com/samtools/samtools/releases/download/1.9/samtools-1.9.tar.bz2 | tar xj && cd samtools-1.9/ && make && mv samtools /usr/local/bin/
@@ -26,5 +27,21 @@ RUN cd rgi/ && python setup.py build && python setup.py test && python setup.py 
 
 RUN mkdir -p wildcard/
 
-RUN curl -LO https://czid-public-references.s3.us-west-2.amazonaws.com/test/AMRv2/card.json && rgi card_annotation -i card.json && curl -LO https://czid-public-references.s3.us-west-2.amazonaws.com/test/AMRv2/wildcard_database_v3.1.0.fasta && curl -L https://czid-public-references.s3.us-west-2.amazonaws.com/test/AMRv2/61_kmer_db.json -o wildcard/61_kmer_db.json && curl -L https://czid-public-references.s3.us-west-2.amazonaws.com/test/AMRv2/all_amr_61mers.txt -o wildcard/all_amr_61mers.txt && curl -L https://czid-public-references.s3.us-west-2.amazonaws.com/test/AMRv2/index-for-model-sequences.txt -o wildcard/index-for-model-sequences.txt && rgi load --wildcard_annotation wildcard_database_v3.1.0.fasta --wildcard_version 3.1.0 --wildcard_index wildcard/index-for-model-sequences.txt --card_annotation card_database_v3.2.3.fasta -i card.json --kmer_database wildcard/61_kmer_db.json --amr_kmers wildcard/all_amr_61mers.txt --kmer_size 61 && rm -r wildcard/ wildcard_database_v3.1.0.fasta
+
+# load databases
+RUN curl -LO https://czid-public-references.s3.us-west-2.amazonaws.com/test/AMRv2/card.json && \
+    rgi card_annotation -i card.json && \
+    curl -LO https://czid-public-references.s3.us-west-2.amazonaws.com/test/AMRv2/wildcard_database_v3.1.0.fasta && \
+    curl -L https://czid-public-references.s3.us-west-2.amazonaws.com/test/AMRv2/61_kmer_db.json -o wildcard/61_kmer_db.json && \
+    curl -L https://czid-public-references.s3.us-west-2.amazonaws.com/test/AMRv2/all_amr_61mers.txt -o wildcard/all_amr_61mers.txt && \
+    curl -L https://czid-public-references.s3.us-west-2.amazonaws.com/test/AMRv2/index-for-model-sequences.txt -o wildcard/index-for-model-sequences.txt && \
+    rgi load \
+        --wildcard_annotation wildcard_database_v3.1.0.fasta \
+        --wildcard_version 3.1.0 --wildcard_index wildcard/index-for-model-sequences.txt \
+        --card_annotation card_database_v3.2.3.fasta \
+        -i card.json \
+        --kmer_database wildcard/61_kmer_db.json \
+        --amr_kmers wildcard/all_amr_61mers.txt \
+        --kmer_size 61 && \
+    rm -r wildcard/ wildcard_database_v3.1.0.fasta
 
