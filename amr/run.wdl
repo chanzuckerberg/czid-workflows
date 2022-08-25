@@ -67,44 +67,64 @@ task RunResultsPerSample {
 
         python3 <<CODE
         import pandas as pd
+        def clean_aro(df, column_name):
+            """modifies dataframe inplace to clean the ARO string"""
+            df[column_name] = df[column_name].map(lambda x: x.lower().strip())
+
+
+        def append_suffix_to_colname(df, suffix):
+            """append suffix to column name in place"""
+            df.rename(lambda x: x + suffix, axis="columns", inplace=True)
+
+
+        def this_or_that(df, this_colname, that_colname):
+            """returns this if not nan, else returns that"""
+            return df.apply(
+                lambda x: x[this_colname] if not pd.isna(x[this_colname]) else x[that_colname],
+                axis=1,
+            )
+
 
         main_output = pd.read_csv("~{main_output}", sep="\t")
-        main_output['Best_Hit_ARO'] = [i.lower().strip() for i in main_output['Best_Hit_ARO']] 
+        clean_aro(main_output, "Best_Hit_ARO")
         main_output.sort_values(by='Best_Hit_ARO', inplace=True)
-        main_output.reset_index()
 
         main_species_output = pd.read_csv("~{main_species_output}", sep="\t")
-        main_species_output['Best_Hit_ARO'] = [i.lower().strip() for i in main_species_output['Best_Hit_ARO']] 
+        clean_aro(main_species_output, "Best_Hit_ARO")
         main_species_output.sort_values(by = 'Best_Hit_ARO', inplace=True)
-        main_species_output.reset_index()
 
         kma_output = pd.read_csv("~{kma_output}", sep="\t")
-        kma_output['ARO Term'] = [i.lower().strip() for i in kma_output['ARO Term']] 
+        clean_aro(kma_output, "ARO Term")
         kma_output.sort_values(by = 'ARO Term', inplace=True)
-        kma_output.reset_index()
 
         kma_species_output = pd.read_csv("~{kma_species_output}", sep="\t")
-        kma_species_output['ARO term'] = [i.lower().strip() for i in kma_species_output['ARO term']] 
+        clean_aro(kma_species_output, "ARO term")
         kma_species_output.sort_values(by='ARO term', inplace=True)
-        kma_species_output.reset_index()
 
         # rename main-amr and main-species columns to account for duplciate column names
-        main_output.columns = [i+'_contig_amr' for i in main_output.columns]
-        main_species_output.columns = [i+'_contig_sp' for i in main_species_output.columns]
+        append_suffix_to_colname(main_output, "_contig_amr")
+        append_suffix_to_colname(main_species_output, "_contig_sp")
 
         # vv get rid of weird additional space in some of the contig amr fields to make matching work downstream
-        main_output['Contig_contig_amr'] = [i.strip() for i in main_output['Contig_contig_amr']] 
+        main_output["Contig_contig_amr"] = main_output["Contig_contig_amr"].map(
+            lambda x: x.strip()
+        )
 
         # merge the data where Best_Hit_ARO and Contig name must match
         merge_a = main_output.merge(main_species_output, left_on = ['Best_Hit_ARO_contig_amr', 'Contig_contig_amr'],
                                                                     right_on = ['Best_Hit_ARO_contig_sp', 'Contig_contig_sp'], 
                                                                     how='outer',
                                                                     suffixes = [None, None])
-        merge_a['ARO_contig'] = [merge_a.iloc[i]['Best_Hit_ARO_contig_amr'] if str(merge_a.iloc[i]['Best_Hit_ARO_contig_amr']) != 'nan' else merge_a.iloc[i]['Best_Hit_ARO_contig_sp'] for i in range(len(merge_a.index))]
-        merge_a.to_csv("merge_a.tsv", index=None, sep="\t")
 
-        kma_output.columns = [i+'_kma_amr' for i in kma_output.columns]  # ARO Term
-        kma_species_output.columns = [i+'_kma_sp' for i in kma_species_output.columns]  #ARO term
+
+        merge_a["ARO_contig"] = this_or_that(
+            merge_a, "Best_Hit_ARO_contig_amr", "Best_Hit_ARO_contig_sp"
+        )
+        merge_a.to_csv("merge_a.tsv", index=None, sep="\t")
+        
+        append_suffix_to_colname(kma_output, "_kma_amr")  # ARO Term
+        append_suffix_to_colname(kma_species_output, "_kma_sp")  # ARO term
+
         merge_b = kma_output.merge(kma_species_output, left_on = 'ARO Term_kma_amr', right_on = 'ARO term_kma_sp',
                                    how = 'outer', suffixes = [None, None])
 
@@ -112,7 +132,11 @@ task RunResultsPerSample {
         # remove kma results from variant models (because these results are inaccurate)
         merge_b = merge_b[merge_b['Reference Model Type_kma_amr'] != "protein variant model"] # remove protein variant model
         merge_b = merge_b[merge_b['Reference Model Type_kma_amr'] != "rRNA gene variant model"] # remove rRNA variant model
+        merge_b["ARO_kma"] = this_or_that(
+            merge_b, "ARO Term_kma_amr", "ARO term_kma_sp"
+        )
         merge_b['ARO_kma'] = [merge_b.iloc[i]['ARO Term_kma_amr'] if str(merge_b.iloc[i]['ARO Term_kma_amr']) != 'nan' else merge_b.iloc[i]['ARO term_kma_sp'] for i in range(len(merge_b.index))]
+
 
         merge_b.to_csv("merge_b.tsv", index=None, sep="\t")
 
@@ -121,12 +145,19 @@ task RunResultsPerSample {
                                 right_on = 'ARO_kma', how='outer',
                                 suffixes = [None, None])
 
-        merge_x['ARO_overall'] = [merge_x.iloc[i]['ARO_contig'] if str(merge_x.iloc[i]['ARO_contig']) != 'nan' else merge_x.iloc[i]['ARO_kma'] for i in range(len(merge_x.index))]
-        merge_x['Gene_Family_overall'] = [merge_x.iloc[i]['AMR Gene Family_contig_amr'] if not pd.isna(merge_x.iloc[i]['AMR Gene Family_contig_amr']) else merge_x.iloc[i]['AMR Gene Family_kma_amr'] for i in range(len(merge_x.index))]
-        merge_x['Drug_Class_overall'] = [merge_x.iloc[i]['Drug Class_contig_amr'] if not pd.isna(merge_x.iloc[i]['Drug Class_contig_amr']) else merge_x.iloc[i]['Drug Class_kma_amr'] for i in range(len(merge_x.index))]
-        merge_x['model_overall'] = [merge_x.iloc[i]['Model_type_contig_amr'] if not pd.isna(merge_x.iloc[i]['Model_type_contig_amr']) else merge_x.iloc[i]['Reference Model Type_kma_amr'] for i in range(len(merge_x.index))]
-        merge_x['Resistance_Mechanism_overall'] = [merge_x.iloc[i]['Resistance Mechanism_contig_amr'] if not pd.isna(merge_x.iloc[i]['Resistance Mechanism_contig_amr']) else merge_x.iloc[i]['Resistance Mechanism_kma_amr'] for i in range(len(merge_x.index))]
-
+        merge_x["ARO_overall"] = this_or_that(merge_x, "ARO_contig", "ARO_kma")
+        merge_x["Gene_Family_overall"] = this_or_that(
+            merge_x, "AMR Gene Family_contig_amr", "AMR Gene Family_kma_amr"
+        )
+        merge_x["Drug_Class_overall"] = this_or_that(
+            merge_x, "Drug Class_contig_amr", "Drug Class_kma_amr"
+        )
+        merge_x["model_overall"] = this_or_that(
+            merge_x, "Model_type_contig_amr", "Reference Model Type_kma_amr"
+        )
+        merge_x["Resistance_Mechanism_overall"] = this_or_that(
+            merge_x, "Resistance Mechanism_contig_amr", "Resistance Mechanism_kma_amr"
+        )
         merge_x.to_csv("final_summary.tsv", index=None, sep='\t')
 
         df = pd.read_csv("final_summary.tsv", sep='\t')
@@ -145,8 +176,6 @@ task RunResultsPerSample {
             print(index)
             sub_df = df[df['ARO_overall'] == index]
             result = {}
-        
-            'AMR Gene Family_kma_amr'
             gf = remove_na(set(sub_df['AMR Gene Family_contig_amr']).union(set(sub_df['AMR Gene Family_kma_amr'])))
             result['gene_family'] = ';'.join(gf) if len(gf) > 0 else None
         
@@ -222,7 +251,7 @@ task RunResultsPerSample {
         File merge_a = "merge_a.tsv"
         File merge_b = "merge_b.tsv"
         File final_summary = "final_summary.tsv"
-
+        File bigtable = "bigtable_report.tsv"
     }
     runtime {
         docker: docker_image_id
@@ -240,18 +269,7 @@ task RunRgiKmerMain {
     }
     command <<< 
         set -exuo pipefail
-        source /usr/local/miniconda/etc/profile.d/conda.sh
-        conda activate rgi
-        mkdir -p wildcard
-        tar -xjf "~{wildcard_data}" -C wildcard
-        gunzip wildcard/*.gz
-        rgi card_annotation -i "~{card_json}" > card_annotation.log
-        rgi load -i "~{card_json}" --card_annotation card_database_*.fasta
-        rgi wildcard_annotation -i wildcard/ --card_json "~{card_json}" -v 3.1.0 
-        rgi load --wildcard_annotation wildcard_database_v3.1.0.fasta --wildcard_version 3.1.0 --wildcard_index wildcard/index-for-model-sequences.txt --card_annotation card_database_v3.2.3.fasta
-        rgi load --kmer_database "~{kmer_db}" --amr_kmers "~{amr_kmer_db}" --kmer_size 61 --debug
         rgi kmer_query --rgi -k 61 -i "~{main_output_json}" --output output.rgi.main.kmerspecies 
-        rm -r wildcard/
     >>>
     output { 
         Array[File] output_kmer_main = glob("output.rgi.main.kmerspecies*")
@@ -274,18 +292,7 @@ task RunRgiKmerBwt {
     }
     command <<<
         set -exuo pipefail
-        source /usr/local/miniconda/etc/profile.d/conda.sh
-        conda activate rgi
-        mkdir -p wildcard
-        tar -xjf "~{wildcard_data}" -C wildcard
-        gunzip wildcard/*.gz
-        rgi card_annotation -i "~{card_json}" > card_annotation.log
-        rgi load -i "~{card_json}" --card_annotation card_database_*.fasta
-        rgi wildcard_annotation -i wildcard/ --card_json "~{card_json}" -v 3.1.0 
-        rgi load --wildcard_annotation wildcard_database_v3.1.0.fasta --wildcard_version 3.1.0 --wildcard_index wildcard/index-for-model-sequences.txt --card_annotation card_database_v3.2.3.fasta
-        rgi load --kmer_database "~{kmer_db}" --amr_kmers "~{amr_kmer_db}" --kmer_size 61 --debug
         rgi kmer_query --bwt -k 61 -i "~{output_sorted_length_100}" --output output.rgi.kma.kmerspecies
-        rm -r wildcard/
     >>>
     output {
         Array[File] output_kmer_bwt = glob("output.rgi.kma.kmerspecies*")
@@ -304,10 +311,6 @@ task RunRgiMain {
     }
     command <<<
         set -exuo pipefail
-        source /usr/local/miniconda/etc/profile.d/conda.sh
-        conda activate rgi
-        rgi card_annotation -i "~{card_json}" > card_annotation.log
-        rgi load -i "~{card_json}" --card_annotation card_database_*.fasta
         rgi main -i "~{contigs}" -o output.rgi.main -t contig -a BLAST --clean --include_nudge
 
     >>>
@@ -330,10 +333,6 @@ task RunRgiBwtKma {
 
     command <<<
         set -exuo pipefail
-        source /usr/local/miniconda/etc/profile.d/conda.sh
-        conda activate rgi
-        rgi card_annotation -i "~{card_json}" > card_annotation.log 
-        rgi load -i "~{card_json}" --card_annotation card_database_*.fasta  
         rgi bwt -1 "~{non_host_reads[0]}" -2 "~{non_host_reads[1]}" -a kma -o output_kma.rgi.kma --clean
     >>>
 
