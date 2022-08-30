@@ -99,7 +99,7 @@ def _run_batch_job(
             "environment": [{"name": k, "value": v} for k, v in environment.items()],
             # (524288 - 1024) / 4, 524288 = r5d.24xlarge memory
             #   4 = jobs per instance, 1024 = leftover for other processes
-            "memory": 130816, 
+            "memory": 130816,
             "vcpus": 24,  # 96 / 4, 96 = r5d.24xlarge vcpus , 4 = jobs per instance
         },
         retryStrategy={"attempts": retries},
