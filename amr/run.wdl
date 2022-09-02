@@ -9,6 +9,7 @@ workflow AMR {
         File? raw_reads_1
         File contigs
         String docker_image_id
+        String host_filtering_docker_image_id = "czid-short-read-mngs" # default local value
         File card_json = "s3://czid-public-references/test/AMRv2/card.json"
         File kmer_db = "s3://czid-public-references/test/AMRv2/61_kmer_db.json"
         File amr_kmer_db = "s3://czid-public-references/test/AMRv2/all_amr_61mers.txt"
@@ -21,7 +22,7 @@ workflow AMR {
             input:
             fastqs_0 = select_first([raw_reads_0]),
             fastqs_1 = if defined(raw_reads_1) then select_first([raw_reads_1]) else None,
-            docker_image_id = "czid-short-read-mngs",
+            docker_image_id = host_filtering_docker_image_id,
             s3_wd_uri = s3_wd_uri
         }
     }
