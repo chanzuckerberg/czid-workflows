@@ -1,8 +1,12 @@
 version 1.1
 
+import "../short-read-mngs/host_filter.wdl" as host_filter
+
 workflow AMR {
     input {
-        Array[File] non_host_reads
+        Array[File]? non_host_reads
+        File? raw_reads_0
+        File? raw_reads_1
         File contigs
         String docker_image_id
         File card_json = "s3://czid-public-references/test/AMRv2/card.json"
@@ -12,10 +16,24 @@ workflow AMR {
         # Dummy values - required by SFN interface
         String s3_wd_uri = ""
     }
-
+    if (defined(raw_reads_0)) { 
+        call host_filter.czid_host_filter as host_filter_stage { 
+            input:
+            fastqs_0 = select_first([raw_reads_0]),
+            fastqs_1 = if defined(raw_reads_1) then select_first([raw_reads_1]) else None,
+            docker_image_id = "czid-short-read-mngs",
+            s3_wd_uri = s3_wd_uri
+        }
+    }
     call RunRgiBwtKma {
         input:
-        non_host_reads = non_host_reads,
+        non_host_reads = select_first([non_host_reads, 
+            select_all(
+                [
+                    host_filter_stage.gsnap_filter_out_gsnap_filter_1_fa,
+                    host_filter_stage.gsnap_filter_out_gsnap_filter_2_fa
+                ]
+            )]),
         card_json = card_json, 
         docker_image_id = docker_image_id
     }
@@ -346,7 +364,7 @@ task RunRgiBwtKma {
 
     command <<<
         set -exuo pipefail
-        rgi bwt -1 "~{non_host_reads[0]}" -2 "~{non_host_reads[1]}" -a kma -o output_kma.rgi.kma --clean
+        rgi bwt -1 ~{sep=' -2 ' non_host_reads} -a kma -o output_kma.rgi.kma --clean
     >>>
 
     output {
