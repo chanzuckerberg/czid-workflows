@@ -87,7 +87,16 @@ workflow czid_host_filter {
     cpu = cpu
   }
 
-  # Also filter out human reads, if the host is non-human.
+  # If paired-end, collect insert size metrics from unfiltered, host-aligned bowtie2 BAM
+  if (defined(reads2_fastq)) {
+    call collect_insert_size_metrics {
+      input:
+      bam = bowtie2_filter.bam,
+      docker_image_id = docker_image_id
+    }
+  }
+
+  # Additionally filter out human reads, if the host is non-human.
   if (host_genome != "human") {
     call bowtie2_filter as bowtie2_human_filter {
       input:
@@ -114,7 +123,7 @@ workflow czid_host_filter {
   File? filtered2_fastq = if defined(hisat2_human_filter.filtered2_fastq) then hisat2_human_filter.filtered2_fastq
                                                                           else hisat2_filter.filtered2_fastq
 
-  # Deduplicate reads using custom czid-dedup tool.
+  # Deduplicate filtered reads using custom czid-dedup tool.
   # It retains one exemplar [pair] from each duplicate cluster, and produces mapping from exemplar
   # read name to cluster size.
   call RunCZIDDedup {
@@ -155,6 +164,9 @@ workflow czid_host_filter {
     File hisat2_host_filtered1_fastq = hisat2_filter.filtered1_fastq
     File? hisat2_host_filtered2_fastq = hisat2_filter.filtered2_fastq
     File hisat2_host_filtered_out_count = hisat2_filter.reads_out_count
+
+    File? insert_size_metrics = collect_insert_size_metrics.insert_size_metrics
+    File? insert_size_histogram = collect_insert_size_metrics.insert_size_histogram
 
     File? bowtie2_human_filtered1_fastq = bowtie2_human_filter.filtered1_fastq
     File? bowtie2_human_filtered2_fastq = bowtie2_human_filter.filtered2_fastq
@@ -353,6 +365,9 @@ task bowtie2_filter {
             -S "$TMPDIR/bowtie2.sam"
     fi
 
+    # generate sort & compressed BAM file for archival
+    samtools sort -o "bowtie2_~{filter_type}.bam" -@ 4 -T "$TMPDIR" "$TMPDIR/bowtie2.sam" & samtools_pid=$!
+
     # Extract reads [pairs] that did NOT map to the index
     if [[ '~{paired}' == 'true' ]]; then
         #    1 (read paired)
@@ -378,6 +393,8 @@ task bowtie2_filter {
       *PLACEHOLDER TEXT*
       """).strip(), file=outfile)
     EOF
+
+    wait $samtools_pid
   >>>
 
   output {
@@ -385,6 +402,7 @@ task bowtie2_filter {
     File filtered1_fastq = glob("bowtie2_*_filtered1.fastq")[0]
     File? filtered2_fastq = if paired then glob("bowtie2_*_filtered2.fastq")[0] else reads2_fastq
     File reads_out_count = "bowtie2_~{filter_type}_filtered_out.count"
+    File bam = "bowtie2_~{filter_type}.bam"
   }
   runtime {
     docker: docker_image_id
@@ -462,6 +480,29 @@ task hisat2_filter {
     docker: docker_image_id
     cpu: cpu
     memory: "~{cpu*2}G"
+  }
+}
+
+task collect_insert_size_metrics {
+  input {
+    File bam
+    String docker_image_id
+  }
+
+  command <<<
+    picard CollectInsertSizeMetrics 'I=~{bam}' O=insert_size_metrics.txt H=insert_size_histogram.pdf
+  >>>
+
+  output {
+    # If no reads mapped to the host, then picard exits "successfully" without creating these files.
+    File? insert_size_metrics = "insert_size_metrics.txt"
+    File? insert_size_histogram = "insert_size_histogram.pdf"
+  }
+
+  runtime {
+    docker: docker_image_id
+    cpu: 1
+    memory: "4G"
   }
 }
 
