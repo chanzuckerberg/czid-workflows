@@ -2,7 +2,7 @@ version 1.1
 
 import "../short-read-mngs/host_filter.wdl" as host_filter
 
-workflow AMR {
+workflow amr {
     input {
         Array[File]? non_host_reads
         File? raw_reads_0
@@ -375,6 +375,29 @@ task RunRgiBwtKma {
     }
 
     runtime {
+        docker: docker_image_id
+    }
+}
+task RunSpades { 
+    input { 
+        Array[File] non_host_reads
+        String docker_image_id
+    }
+    command <<< 
+        set -euxo pipefail
+        # TODO: filter contigs output by min_contig_length
+
+        if [[ "~{length(non_host_reads)}" -gt 1 ]]; then 
+            spades.py -1 ~{sep=' -2 ' non_host_reads} -o "spades/" -m 100 -t $(nproc --all) --only-assembler
+        else
+            spades.py -s non_host_reads[0] -o "spades/" -m 100 -t $(nproc --all) --only-assembler
+        fi
+    >>>
+    output { 
+        File contigs = "spades/contigs.fasta"
+        File scaffolds = "spades/scaffolds.fasta"
+    }
+    runtime { 
         docker: docker_image_id
     }
 }
