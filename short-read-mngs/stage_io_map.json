@@ -1,15 +1,15 @@
 {
    "NonHostAlignment":{
-      "host_filter_out_gsnap_filter_1_fa":"gsnap_filter_out_gsnap_filter_1_fa",
-      "host_filter_out_gsnap_filter_2_fa":"gsnap_filter_out_gsnap_filter_2_fa",
-      "host_filter_out_gsnap_filter_merged_fa":"gsnap_filter_out_gsnap_filter_merged_fa",
+      "host_filter_out_gsnap_filter_1_fa":"subsampled_out_subsampled_1_fa",
+      "host_filter_out_gsnap_filter_2_fa":"subsampled_out_subsampled_2_fa",
+      "host_filter_out_gsnap_filter_merged_fa":"subsampled_out_subsampled_merged_fa",
       "duplicate_cluster_sizes_tsv":"czid_dedup_out_duplicate_cluster_sizes_tsv",
       "czid_dedup_out_duplicate_clusters_csv":"czid_dedup_out_duplicate_clusters_csv"
    },
    "Postprocess":{
-      "host_filter_out_gsnap_filter_1_fa":"gsnap_filter_out_gsnap_filter_1_fa",
-      "host_filter_out_gsnap_filter_2_fa":"gsnap_filter_out_gsnap_filter_2_fa",
-      "host_filter_out_gsnap_filter_merged_fa":"gsnap_filter_out_gsnap_filter_merged_fa",
+      "host_filter_out_gsnap_filter_1_fa":"subsampled_out_subsampled_1_fa",
+      "host_filter_out_gsnap_filter_2_fa":"subsampled_out_subsampled_2_fa",
+      "host_filter_out_gsnap_filter_merged_fa":"subsampled_out_subsampled_merged_fa",
       "gsnap_out_gsnap_m8":"gsnap_out_gsnap_m8",
       "gsnap_out_gsnap_deduped_m8":"gsnap_out_gsnap_deduped_m8",
       "gsnap_out_gsnap_hitsummary_tab":"gsnap_out_gsnap_hitsummary_tab",

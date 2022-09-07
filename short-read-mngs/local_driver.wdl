@@ -3,7 +3,7 @@ version 1.0
 # postprocess, experimental) in sequence. The IDseq back-end invokes those four WDLs separately
 # for various reasons, which is effectively the same as running this locally.
 
-import "host_filter_2022.wdl" as stage1
+import "host_filter.wdl" as stage1
 import "non_host_alignment.wdl" as stage2
 import "postprocess.wdl" as stage3
 import "experimental.wdl" as stage4
