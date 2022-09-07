@@ -491,9 +491,19 @@ task collect_insert_size_metrics {
 
   command <<<
     picard CollectInsertSizeMetrics 'I=~{bam}' O=insert_size_metrics.txt H=insert_size_histogram.pdf
+    python3 - <<EOF
+    import textwrap
+    with open("collect_insert_size_metrics.description.md", "w") as outfile:
+      print(textwrap.dedent("""
+      # Picard CollectInsertSizeMetrics
+
+      *PLACEHOLDER TEXT*
+      """).strip(), file=outfile)
+    EOF
   >>>
 
   output {
+    String step_description_md = read_string("collect_insert_size_metrics.description.md")
     # If no reads mapped to the host, then picard exits "successfully" without creating these files.
     File? insert_size_metrics = "insert_size_metrics.txt"
     File? insert_size_histogram = "insert_size_histogram.pdf"
