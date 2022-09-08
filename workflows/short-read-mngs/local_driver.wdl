@@ -22,8 +22,8 @@ workflow czid_short_read_mngs {
     }
     call stage1.czid_host_filter as host_filter {
         input:
-        reads1_fastq = fastqs_0,
-        reads2_fastq = fastqs_1,
+        fastqs_0 = fastqs_0,
+        fastqs_1 = fastqs_1,
         docker_image_id = docker_image_id,
         s3_wd_uri = s3_wd_uri
     }
