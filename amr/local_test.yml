@@ -1,0 +1,17 @@
+# local_test_viral.yml
+# Boilerplate local_driver.wdl input YAML for use with `miniwdl run` so that this file,
+# docker_image_id, fastqs_0, and fastqs_1 are the only inputs required on the command line.
+# Note: this YAML file doesn't show all possible optional inputs to the workflow, only ones that
+# must be set or overridden for the above-mentioned purposes. See the help message printed by
+# `miniwdl run local_driver.wdl` to see them all.
+host_filter_stage.file_ext: fastq
+host_filter_stage.nucleotide_type: DNA
+host_filter_stage.host_genome: human
+host_filter_stage.star_genome: s3://czid-public-references/host_filter/ercc/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/STAR_genome.tar
+host_filter_stage.bowtie2_genome: s3://czid-public-references/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/human_bowtie2_genome.tar
+host_filter_stage.gsnap_genome: s3://czid-public-references/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/hg38_pantro5_k16.tar
+host_filter_stage.human_star_genome: s3://czid-public-references/host_filter/ercc/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/STAR_genome.tar
+host_filter_stage.human_bowtie2_genome: s3://czid-public-references/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/human_bowtie2_genome.tar
+host_filter_stage.adapter_fasta: https://raw.githubusercontent.com/broadinstitute/viral-pipelines/master/test/input/clipDb.fasta
+host_filter_stage.max_input_fragments: 150000000
+host_filter_stage.max_subsample_fragments: 2000000

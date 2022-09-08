@@ -1,10 +1,15 @@
 version 1.1
 
-workflow AMR {
+import "../short-read-mngs/host_filter.wdl" as host_filter
+
+workflow amr {
     input {
-        Array[File] non_host_reads
-        File contigs
+        Array[File]? non_host_reads
+        File? raw_reads_0
+        File? raw_reads_1
+        File? contigs
         String docker_image_id
+        String host_filtering_docker_image_id = "czid-short-read-mngs" # default local value
         File card_json = "s3://czid-public-references/test/AMRv2/card.json"
         File kmer_db = "s3://czid-public-references/test/AMRv2/61_kmer_db.json"
         File amr_kmer_db = "s3://czid-public-references/test/AMRv2/all_amr_61mers.txt"
@@ -12,16 +17,40 @@ workflow AMR {
         # Dummy values - required by SFN interface
         String s3_wd_uri = ""
     }
-
+    if (defined(raw_reads_0)) { 
+        call host_filter.czid_host_filter as host_filter_stage { 
+            input:
+            fastqs_0 = select_first([raw_reads_0]),
+            fastqs_1 = if defined(raw_reads_1) then select_first([raw_reads_1]) else None,
+            docker_image_id = host_filtering_docker_image_id,
+            s3_wd_uri = s3_wd_uri
+        }
+        call RunSpades {
+            input:
+            non_host_reads = select_all(
+                [
+                    host_filter_stage.gsnap_filter_out_gsnap_filter_1_fa,
+                    host_filter_stage.gsnap_filter_out_gsnap_filter_2_fa
+                ]
+            ),
+            docker_image_id = host_filtering_docker_image_id,
+        }
+    }
     call RunRgiBwtKma {
         input:
-        non_host_reads = non_host_reads,
+        non_host_reads = select_first([non_host_reads, 
+            select_all(
+                [
+                    host_filter_stage.gsnap_filter_out_gsnap_filter_1_fa,
+                    host_filter_stage.gsnap_filter_out_gsnap_filter_2_fa
+                ]
+            )]),
         card_json = card_json, 
         docker_image_id = docker_image_id
     }
     call RunRgiMain {
         input:
-        contigs = contigs,
+        contigs = select_first([contigs, RunSpades.contigs]),
         card_json = card_json, 
         docker_image_id = docker_image_id
     }
@@ -346,7 +375,7 @@ task RunRgiBwtKma {
 
     command <<<
         set -exuo pipefail
-        rgi bwt -1 "~{non_host_reads[0]}" -2 "~{non_host_reads[1]}" -a kma -o output_kma.rgi.kma --clean
+        rgi bwt -1 ~{sep=' -2 ' non_host_reads} -a kma -o output_kma.rgi.kma --clean
     >>>
 
     output {
@@ -356,6 +385,29 @@ task RunRgiBwtKma {
     }
 
     runtime {
+        docker: docker_image_id
+    }
+}
+task RunSpades { 
+    input { 
+        Array[File] non_host_reads
+        String docker_image_id
+    }
+    command <<< 
+        set -euxo pipefail
+        # TODO: filter contigs output by min_contig_length
+
+        if [[ "~{length(non_host_reads)}" -gt 1 ]]; then 
+            spades.py -1 ~{sep=' -2 ' non_host_reads} -o "spades/" -m 100 -t $(nproc --all) --only-assembler
+        else
+            spades.py -s non_host_reads[0] -o "spades/" -m 100 -t $(nproc --all) --only-assembler
+        fi
+    >>>
+    output { 
+        File contigs = "spades/contigs.fasta"
+        File scaffolds = "spades/scaffolds.fasta"
+    }
+    runtime { 
         docker: docker_image_id
     }
 }
