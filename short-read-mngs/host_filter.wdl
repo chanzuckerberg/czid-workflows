@@ -9,8 +9,6 @@ workflow czid_host_filter {
   input {
     File reads1_fastq
     File? reads2_fastq
-    # TODO: do we still need to to input either FASTQ or FASTA?
-    String file_ext = "fastq"
     String nucleotide_type = "DNA"
 
     File adapter_fasta
@@ -29,7 +27,8 @@ workflow czid_host_filter {
     Int cpu = 16
     String docker_image_id
 
-    # legacy idseq-dag input:
+    # legacy idseq-dag inputs:
+    String file_ext = "fastq"
     String s3_wd_uri
   }
 
@@ -54,8 +53,7 @@ workflow czid_host_filter {
     cpu = cpu
   }
 
-  # Quantify host transcripts and ERCC. This is only meaningful for RNAseq, but kallisto is so fast
-  # that it doesn't cost much to run unconditionally.
+  # If RNAseq, quantify host transcripts and ERCC
   if (nucleotide_type == "RNA") {
     call kallisto {
       input:
@@ -87,7 +85,7 @@ workflow czid_host_filter {
     cpu = cpu
   }
 
-  # If paired-end, collect insert size metrics from unfiltered, host-aligned bowtie2 BAM
+  # If paired-end, collect insert size metrics from unfiltered, host-aligned bowtie2 BAM.
   if (defined(reads2_fastq)) {
     call collect_insert_size_metrics {
       input:
