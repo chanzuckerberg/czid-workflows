@@ -7,7 +7,7 @@ workflow amr {
         Array[File]? non_host_reads
         File? raw_reads_0
         File? raw_reads_1
-        File contigs
+        File? contigs
         String docker_image_id
         String host_filtering_docker_image_id = "czid-short-read-mngs" # default local value
         File card_json = "s3://czid-public-references/test/AMRv2/card.json"
@@ -25,6 +25,16 @@ workflow amr {
             docker_image_id = host_filtering_docker_image_id,
             s3_wd_uri = s3_wd_uri
         }
+        call RunSpades {
+            input:
+            non_host_reads = select_all(
+                [
+                    host_filter_stage.gsnap_filter_out_gsnap_filter_1_fa,
+                    host_filter_stage.gsnap_filter_out_gsnap_filter_2_fa
+                ]
+            ),
+            docker_image_id = host_filtering_docker_image_id,
+        }
     }
     call RunRgiBwtKma {
         input:
@@ -40,7 +50,7 @@ workflow amr {
     }
     call RunRgiMain {
         input:
-        contigs = contigs,
+        contigs = select_first([contigs, RunSpades.contigs]),
         card_json = card_json, 
         docker_image_id = docker_image_id
     }
