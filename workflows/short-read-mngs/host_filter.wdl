@@ -7,8 +7,8 @@ version 1.0
 # - subsampling
 workflow czid_host_filter {
   input {
-    File reads1_fastq
-    File? reads2_fastq
+    File fastqs_0
+    File? fastqs_1
     String nucleotide_type = "DNA"
 
     File adapter_fasta
@@ -35,8 +35,8 @@ workflow czid_host_filter {
   # Validate input reads (and truncate if very large)
   call RunValidateInput {
     input:
-    reads1_fastq = reads1_fastq,
-    reads2_fastq = reads2_fastq,
+    reads1_fastq = fastqs_0,
+    reads2_fastq = fastqs_1,
     file_ext = file_ext,
     max_input_fragments = max_input_fragments,
     docker_image_id = docker_image_id,
@@ -86,7 +86,7 @@ workflow czid_host_filter {
   }
 
   # If paired-end, collect insert size metrics from unfiltered, host-aligned bowtie2 BAM.
-  if (defined(reads2_fastq)) {
+  if (defined(fastqs_1)) {
     call collect_insert_size_metrics {
       input:
       bam = bowtie2_filter.bam,
