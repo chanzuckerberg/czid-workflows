@@ -54,6 +54,12 @@ workflow amr {
         card_json = card_json, 
         docker_image_id = docker_image_id
     }
+    call MakeGeneCoverage {
+        input:
+        main_amr_results = RunRgiMain.main_amr_results,
+        main_output_json = RunRgiMain.output_json,
+        docker_image_id = docker_image_id
+    }
     call RunRgiKmerBwt { 
         input:
         output_sorted_length_100 = RunRgiBwtKma.output_sorted_length_100,
@@ -434,4 +440,56 @@ task ZipOutputs {
     runtime {
         docker: docker_image_id
     }
+}
+
+task MakeGeneCoverage {
+    input { 
+        File main_amr_results 
+        File main_output_json
+        String docker_image_id
+    }
+    command <<<
+    set -euxo pipefail
+    python3 <<CODE
+    import pandas as pd
+    import numpy as np
+    import json
+    df = pd.read_csv("~{main_amr_results}", delimiter="\t").loc[:, ["ORF_ID", "ID", "Model_ID", "Hit_Start", "Hit_End", "Percentage Length of Reference Sequence"]]
+
+    # create seq length reference map
+    with open("~{main_output_json}") as json_file:
+        rgi_main_json = json.load(json_file)
+    db_seq_length = {}
+    for ind, row in df.iterrows():
+        db_seq_length[row["Model_ID"]] = len(rgi_main_json[row["ORF_ID"]][row["ID"]]["dna_sequence_from_broadstreet"])
+
+    agg_res = df.groupby(["ID", "Model_ID"]).agg(lambda x: list(x))
+
+    gene_coverage = []
+    for ind, row, in agg_res.iterrows():
+      max_end = -1
+      gene_coverage_bps = 0
+      for start, end, in sorted(zip(row["Hit_Start"], row["Hit_End"]), key=lambda x: x[0]):
+        gene_coverage_bps += max(0, # if end-max(max_end, start) is negative
+                      # segment is contained in a previous segment, so don't add
+                     end - max(max_end, start) # if max_end > start, don't double count the already added portion of the gene
+                    )
+        max_end = max(max_end, end)
+      gene_coverage.append({
+        "ID": ind[0],
+        "gene_coverage_bps": gene_coverage_bps,
+        "db_seq_length": db_seq_length[ind[1]],
+        "gene_coveraage_perc": np.round((gene_coverage_bps/db_seq_length[ind[1]])*100, 4)
+      })
+    gene_coverage_df = pd.DataFrame(gene_coverage)
+    gene_coverage_df.to_csv("gene_coverage.tsv", index=None, sep="\t")
+    CODE
+    >>>
+    output {
+        File output_gene_coverage = "gene_coverage.tsv"
+    }
+
+    runtime {
+        docker: docker_image_id
+    } 
 }
