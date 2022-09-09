@@ -275,6 +275,56 @@ task RunCZIDDedup {
   }
 }
 
+task RunCZIDRedup { 
+  input { 
+    String docker_image_id 
+    String s3_wd_uri 
+    Array[File] priceseq_fa
+    File clusters 
+    File cluster_sizes
+  }
+  command <<<
+  set -euxo pipefail
+  grep -v "^1" "~{cluster_sizes}" | cut -f2 > duplicated-reads.txt
+
+  python3 << CODE 
+  """ write read headers excluded from deduplicated file """
+  with open("duplicated-pairs.txt", "w+") as f:
+    with open("duplicated-reads.txt", "r") as dr:
+        duplicate = set(dr.read().splitlines())
+    with open("~{clusters}", "r") as clusters:
+        for line in clusters:
+            key, value = line.strip().split(",")
+            if key in duplicate and key != value:
+                f.write(value)
+                f.write("\n")
+  CODE
+  if [ ! -s "duplicated-pairs.txt" ]; then 
+    # if no duplicated files, create an empty output then exit
+    touch "redups_1.fa"
+    exit 0
+  fi
+    
+  counter=1
+  for fasta in ~{sep=' ' priceseq_fa}; do
+    seqtk subseq $fasta duplicated-pairs.txt > redups_$counter.fa
+    ((counter++))
+  done
+  >>>
+
+  output { 
+    File redups1_fa = "redups_1.fa"
+    File? redups2_fa = "redups_2.fa"
+  }
+  
+  runtime { 
+    docker: docker_image_id
+
+  }
+
+
+}
+
 task RunLZW {
   input {
     String docker_image_id
@@ -545,6 +595,15 @@ workflow czid_host_filter {
       s3_wd_uri = s3_wd_uri,
       priceseq_fa = select_all([RunPriceSeq.priceseq1_fa, RunPriceSeq.priceseq2_fa])
   }
+  call RunCZIDRedup { 
+    input: 
+      docker_image_id = docker_image_id,
+      s3_wd_uri = s3_wd_uri,
+      priceseq_fa = select_all([RunPriceSeq.priceseq1_fa, RunPriceSeq.priceseq2_fa]),
+      clusters = RunCZIDDedup.duplicate_clusters_csv,
+      cluster_sizes = RunCZIDDedup.duplicate_cluster_sizes_tsv
+  }
+  
 
   call RunLZW {
     input:
@@ -640,6 +699,8 @@ workflow czid_host_filter {
     File czid_dedup_out_duplicate_cluster_sizes_tsv = RunCZIDDedup.duplicate_cluster_sizes_tsv
     File? czid_dedup_out_count = RunCZIDDedup.output_read_count
     File? czid_dedup_version = RunCZIDDedup.version
+    File czid_redups_out_redups1_fa = RunCZIDRedup.redups1_fa
+    File? czid_redups_out_redups2_fa = RunCZIDRedup.redups2_fa
     File lzw_out_lzw1_fa = RunLZW.lzw1_fa
     File? lzw_out_lzw2_fa = RunLZW.lzw2_fa
     File? lzw_out_count = RunLZW.output_read_count
