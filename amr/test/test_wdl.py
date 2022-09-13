@@ -26,7 +26,7 @@ class TestAMR(WDLTestCase):
         }
         res = self.run_miniwdl(task="RunRgiMain", task_input=inputs)
         with open(res["outputs"]["RunRgiMain.main_amr_results"]) as main_results:
-            self.assertEqual(len(main_results.read().splitlines()), 0)
+            self.assertEqual(len(main_results.read().splitlines()), 1)
 
     def testRgiBwtKma(self):
         inputs = {
