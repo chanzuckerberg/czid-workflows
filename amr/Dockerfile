@@ -2,7 +2,7 @@ FROM ubuntu:20.04
 
 LABEL maintainer="CZ ID Team <idseq-tech@chanzuckerberg.com>"
 
-RUN apt-get update && apt-get -y install curl git python3 python3-pip gcc make libz-dev libncurses-dev libbz2-dev liblzma-dev g++ 
+RUN apt-get update && apt-get -y install curl git python3 python3-pip gcc make libz-dev libncurses-dev libbz2-dev liblzma-dev g++ zip
 
 RUN ln -s /usr/bin/python3 /usr/bin/python
 
@@ -21,11 +21,12 @@ COPY requirements.txt requirements.txt
 RUN pip3 install -r requirements.txt
 
 
-RUN git clone -b rlim/fix-header-parse-space https://github.com/rzlim08/rgi.git
+RUN git clone -b rlim/add-gene-hit-coordinates https://github.com/rzlim08/rgi.git
 RUN mkdir -p rgi/inputs/heatmap_inputs
 RUN cd rgi/ && python setup.py build && python setup.py test && python setup.py install
 
 RUN mkdir -p wildcard/
+
 
 # load databases
 RUN curl -LO https://czid-public-references.s3.us-west-2.amazonaws.com/test/AMRv2/card.json && \
@@ -45,3 +46,4 @@ RUN curl -LO https://czid-public-references.s3.us-west-2.amazonaws.com/test/AMRv
     rm -r wildcard/ wildcard_database_v3.1.0.fasta
 
 COPY empty-main-header.txt /tmp/empty-main-header.txt 
+

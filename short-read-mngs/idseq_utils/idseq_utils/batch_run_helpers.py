@@ -21,7 +21,7 @@ from botocore.config import Config
 
 log = logging.getLogger(__name__)
 
-MAX_CHUNKS_IN_FLIGHT = 10
+MAX_CHUNKS_IN_FLIGHT = 30  # TODO: remove this constant, currently does nothing since we have at most 30 index chunks
 ALIGNMENT_WDL_VERSIONS: Dict[str, str] = {
     "diamond": "v1.0.0",
     "minimap2": "v1.0.0",
@@ -97,10 +97,8 @@ def _run_batch_job(
         jobDefinition=job_definition,
         containerOverrides={
             "environment": [{"name": k, "value": v} for k, v in environment.items()],
-            # (524288 - 1024) / 2, 524288 = r5d.24xlarge memory
-            #   2 = jobs per instance, 1024 = leftover for other processes
-            "memory": 261632,
-            "vcpus": 48,  # 96 / 2, 96 = r5d.24xlarge vcpus , 2 = jobs per instance
+            "memory": 130816,
+            "vcpus": 24,
         },
         retryStrategy={"attempts": retries},
     )
