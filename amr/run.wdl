@@ -73,10 +73,6 @@ workflow amr {
     call RunRgiKmerMain { 
         input:
         main_output_json = RunRgiMain.output_json,
-        card_json = card_json, 
-        kmer_db = kmer_db,
-        amr_kmer_db = amr_kmer_db,
-        wildcard_data = wildcard_data,
         docker_image_id = docker_image_id
     }
     call RunResultsPerSample { 
@@ -135,10 +131,14 @@ task RunResultsPerSample {
 
         def this_or_that(df, this_colname, that_colname):
             """returns this if not nan, else returns that"""
-            return df.apply(
+            thisorthat = df.apply(
                 lambda x: x[this_colname] if not pd.isna(x[this_colname]) else x[that_colname],
                 axis=1,
             )
+            if thisorthat.empty:
+                return ""
+            
+            return thisorthat
 
 
         main_output = pd.read_csv("~{main_output}", sep="\t")
@@ -313,10 +313,6 @@ task RunResultsPerSample {
 task RunRgiKmerMain {
     input {
         File main_output_json
-        File card_json
-        File kmer_db
-        File amr_kmer_db
-        File wildcard_data 
         String docker_image_id
     }
     command <<< 
@@ -363,7 +359,13 @@ task RunRgiMain {
     }
     command <<<
         set -exuo pipefail
-        rgi main -i "~{contigs}" -o output.rgi.main -t contig -a BLAST --clean --include_nudge
+        if [[ $(head -n 1 "~{contigs}") == ";ASSEMBLY FAILED" ]]; then
+            # simulate empty outputs
+            echo "{}" > output.rgi.main.json
+            cp /tmp/empty-main-header.txt output.rgi.main.txt
+        else
+            rgi main -i "~{contigs}" -o output.rgi.main -t contig -a BLAST --clean --include_nudge
+        fi
 
     >>>
     output {
