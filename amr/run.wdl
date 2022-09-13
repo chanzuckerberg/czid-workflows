@@ -1,10 +1,15 @@
 version 1.1
 
-workflow AMR {
+import "../short-read-mngs/host_filter.wdl" as host_filter
+
+workflow amr {
     input {
-        Array[File] non_host_reads
-        File contigs
+        Array[File]? non_host_reads
+        File? raw_reads_0
+        File? raw_reads_1
+        File? contigs
         String docker_image_id
+        String host_filtering_docker_image_id = "czid-short-read-mngs" # default local value
         File card_json = "s3://czid-public-references/test/AMRv2/card.json"
         File kmer_db = "s3://czid-public-references/test/AMRv2/61_kmer_db.json"
         File amr_kmer_db = "s3://czid-public-references/test/AMRv2/all_amr_61mers.txt"
@@ -12,17 +17,47 @@ workflow AMR {
         # Dummy values - required by SFN interface
         String s3_wd_uri = ""
     }
-
+    if (defined(raw_reads_0)) { 
+        call host_filter.czid_host_filter as host_filter_stage { 
+            input:
+            fastqs_0 = select_first([raw_reads_0]),
+            fastqs_1 = if defined(raw_reads_1) then select_first([raw_reads_1]) else None,
+            docker_image_id = host_filtering_docker_image_id,
+            s3_wd_uri = s3_wd_uri
+        }
+        call RunSpades {
+            input:
+            non_host_reads = select_all(
+                [
+                    host_filter_stage.gsnap_filter_out_gsnap_filter_1_fa,
+                    host_filter_stage.gsnap_filter_out_gsnap_filter_2_fa
+                ]
+            ),
+            docker_image_id = host_filtering_docker_image_id,
+        }
+    }
     call RunRgiBwtKma {
         input:
-        non_host_reads = non_host_reads,
+        non_host_reads = select_first([non_host_reads, 
+            select_all(
+                [
+                    host_filter_stage.gsnap_filter_out_gsnap_filter_1_fa,
+                    host_filter_stage.gsnap_filter_out_gsnap_filter_2_fa
+                ]
+            )]),
         card_json = card_json, 
         docker_image_id = docker_image_id
     }
     call RunRgiMain {
         input:
-        contigs = contigs,
+        contigs = select_first([contigs, RunSpades.contigs]),
         card_json = card_json, 
+        docker_image_id = docker_image_id
+    }
+    call MakeGeneCoverage {
+        input:
+        main_amr_results = RunRgiMain.main_amr_results,
+        main_output_json = RunRgiMain.output_json,
         docker_image_id = docker_image_id
     }
     call RunRgiKmerBwt { 
@@ -45,6 +80,24 @@ workflow AMR {
         main_species_output = RunRgiKmerMain.species_calling,
         kma_output = RunRgiBwtKma.kma_amr_results,
         kma_species_output = RunRgiKmerBwt.kma_species_calling,
+        docker_image_id = docker_image_id
+    }
+    call ZipOutputs {
+        input:
+        outputFiles = select_all(
+            flatten([
+                RunRgiBwtKma.output_kma,
+                RunRgiMain.output_main,
+                RunRgiKmerBwt.output_kmer_bwt,
+                RunRgiKmerMain.output_kmer_main,
+                [
+                    RunResultsPerSample.merge_a,
+                    RunResultsPerSample.merge_b,
+                    RunResultsPerSample.final_summary,
+                    RunResultsPerSample.bigtable,
+                ]
+            ])
+        ),
         docker_image_id = docker_image_id
     }
 
@@ -109,14 +162,11 @@ task RunResultsPerSample {
         main_output["Contig_contig_amr"] = main_output["Contig_contig_amr"].map(
             lambda x: x.strip()
         )
-
         # merge the data where Best_Hit_ARO and Contig name must match
         merge_a = main_output.merge(main_species_output, left_on = ['Best_Hit_ARO_contig_amr', 'Contig_contig_amr'],
                                                                     right_on = ['Best_Hit_ARO_contig_sp', 'Contig_contig_sp'], 
                                                                     how='outer',
                                                                     suffixes = [None, None])
-
-
         merge_a["ARO_contig"] = this_or_that(
             merge_a, "Best_Hit_ARO_contig_amr", "Best_Hit_ARO_contig_sp"
         )
@@ -136,8 +186,6 @@ task RunResultsPerSample {
             merge_b, "ARO Term_kma_amr", "ARO term_kma_sp"
         )
         merge_b['ARO_kma'] = [merge_b.iloc[i]['ARO Term_kma_amr'] if str(merge_b.iloc[i]['ARO Term_kma_amr']) != 'nan' else merge_b.iloc[i]['ARO term_kma_sp'] for i in range(len(merge_b.index))]
-
-
         merge_b.to_csv("merge_b.tsv", index=None, sep="\t")
 
         # final merge of MAIN and KMA combined results
@@ -335,7 +383,7 @@ task RunRgiBwtKma {
 
     command <<<
         set -exuo pipefail
-        rgi bwt -1 "~{non_host_reads[0]}" -2 "~{non_host_reads[1]}" -a kma -o output_kma.rgi.kma --clean
+        rgi bwt -1 ~{sep=' -2 ' non_host_reads} -a kma -o output_kma.rgi.kma --clean
     >>>
 
     output {
@@ -347,4 +395,103 @@ task RunRgiBwtKma {
     runtime {
         docker: docker_image_id
     }
+}
+task RunSpades { 
+    input { 
+        Array[File] non_host_reads
+        String docker_image_id
+    }
+    command <<< 
+        set -euxo pipefail
+        # TODO: filter contigs output by min_contig_length
+
+        if [[ "~{length(non_host_reads)}" -gt 1 ]]; then 
+            spades.py -1 ~{sep=' -2 ' non_host_reads} -o "spades/" -m 100 -t $(nproc --all) --only-assembler
+        else
+            spades.py -s non_host_reads[0] -o "spades/" -m 100 -t $(nproc --all) --only-assembler
+        fi
+    >>>
+    output { 
+        File contigs = "spades/contigs.fasta"
+        File scaffolds = "spades/scaffolds.fasta"
+    }
+    runtime { 
+        docker: docker_image_id
+    }
+}
+task ZipOutputs {
+    input {
+        Array[File] outputFiles
+        String docker_image_id
+    }
+
+    command <<<
+        set -euxo pipefail
+
+        export TMPDIR=${TMPDIR:-/tmp}
+
+        mkdir ${TMPDIR}/outputs
+        cp ~{sep=' ' outputFiles} ${TMPDIR}/outputs/
+        zip -r -j outputs.zip ${TMPDIR}/outputs/
+    >>>
+
+    output {
+        File output_zip = "outputs.zip"
+    }
+
+    runtime {
+        docker: docker_image_id
+    }
+}
+
+task MakeGeneCoverage {
+    input { 
+        File main_amr_results 
+        File main_output_json
+        String docker_image_id
+    }
+    command <<<
+    set -euxo pipefail
+    python3 <<CODE
+    import pandas as pd
+    import numpy as np
+    import json
+    df = pd.read_csv("~{main_amr_results}", delimiter="\t").loc[:, ["ORF_ID", "ID", "Model_ID", "Hit_Start", "Hit_End", "Percentage Length of Reference Sequence"]]
+
+    # create seq length reference map
+    with open("~{main_output_json}") as json_file:
+        rgi_main_json = json.load(json_file)
+    db_seq_length = {}
+    for ind, row in df.iterrows():
+        db_seq_length[row["Model_ID"]] = len(rgi_main_json[row["ORF_ID"]][row["ID"]]["dna_sequence_from_broadstreet"])
+
+    agg_res = df.groupby(["ID", "Model_ID"]).agg(lambda x: list(x))
+
+    gene_coverage = []
+    for ind, row, in agg_res.iterrows():
+      max_end = -1
+      gene_coverage_bps = 0
+      for start, end, in sorted(zip(row["Hit_Start"], row["Hit_End"]), key=lambda x: x[0]):
+        gene_coverage_bps += max(0, # if end-max(max_end, start) is negative
+                      # segment is contained in a previous segment, so don't add
+                     end - max(max_end, start) # if max_end > start, don't double count the already added portion of the gene
+                    )
+        max_end = max(max_end, end)
+      gene_coverage.append({
+        "ID": ind[0],
+        "gene_coverage_bps": gene_coverage_bps,
+        "db_seq_length": db_seq_length[ind[1]],
+        "gene_coveraage_perc": np.round((gene_coverage_bps/db_seq_length[ind[1]])*100, 4)
+      })
+    gene_coverage_df = pd.DataFrame(gene_coverage)
+    gene_coverage_df.to_csv("gene_coverage.tsv", index=None, sep="\t")
+    CODE
+    >>>
+    output {
+        File output_gene_coverage = "gene_coverage.tsv"
+    }
+
+    runtime {
+        docker: docker_image_id
+    } 
 }
