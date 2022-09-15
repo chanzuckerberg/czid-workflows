@@ -251,39 +251,21 @@ task PrepareNTAlignmentInputs {
 
 task RunNTAlignment {
     input {
-        File assembled_reads_fa
-        File? all_sequences_to_align
-        String alignment_test_mode
-
-        String s3_wd_uri
+        File all_sequences_to_align
         String? db_path
         String minimap2_args 
-        String docker_image_id
         Boolean run_locally = false
         File? local_minimap2_index 
         String prefix
+        String s3_wd_uri
+        String docker_image_id
     }
 
     command <<<
         set -euxo pipefail
 
-        alignment_mode="~{alignment_test_mode}"
-        # IF running option #1, map contigs and non-contig reads to NT with minimap
-        if [[ $alignment_mode == "all_mm" ]]
-        then
-            export INPUT="~{all_sequences_to_align}"
-        # IF running option #2...
-        # map assembled_reads_fa to NT with minimap and map non_contig_reads_fa to NT with centrifuge
-        elif [[ $alignment_mode == "split_mm_cent" ]]
-        then
-            export INPUT="~{assembled_reads_fa}"
-        else
-            # TODO: proper error
-            echo "ERROR: UNKNOWN VALUE FOR alignment_test_mode"
-        fi
-
         if [[ "~{run_locally}" == true ]]; then
-          minimap2 ~{minimap2_args} "~{local_minimap2_index}" $INPUT > "~{prefix}.paf"
+          minimap2 ~{minimap2_args} "~{local_minimap2_index}" "~{all_sequences_to_align}" > "~{prefix}.paf"
         else
           python3 <<CODE
         import os
@@ -295,7 +277,7 @@ task RunNTAlignment {
             result_path="gsnap.paf",
             aligner="minimap2",
             aligner_args="~{minimap2_args}",
-            queries=[os.environ["INPUT"]],
+            queries=["~{all_sequences_to_align}"],
         )
         CODE
         fi
@@ -424,8 +406,6 @@ workflow czid_long_read_mngs {
         File minimap_host_db
         File minimap_human_db
 
-        String alignment_test_mode = "all_mm" # all_mm, split_mm_cent 
-
         Int polishing_iterations = 1
 
         File? minimap2_local_db_path
@@ -496,20 +476,16 @@ workflow czid_long_read_mngs {
     }
 
 
-    if (alignment_test_mode == "all_mm") {
-        call PrepareNTAlignmentInputs {
-            input:
-                non_contig_reads_fa = RunReadsToContigs.non_contigs_fasta,
-                assembled_reads_fa = RunAssembly.assembled_fasta,
-                docker_image_id = docker_image_id
-        }
+    call PrepareNTAlignmentInputs {
+        input:
+            non_contig_reads_fa = RunReadsToContigs.non_contigs_fasta,
+            assembled_reads_fa = RunAssembly.assembled_fasta,
+            docker_image_id = docker_image_id
     }
 
     call RunNTAlignment {
         input:
-            assembled_reads_fa = RunAssembly.assembled_fasta,
-            all_sequences_to_align = select_first([PrepareNTAlignmentInputs.all_sequences_to_align]),
-            alignment_test_mode = alignment_test_mode,
+            all_sequences_to_align = PrepareNTAlignmentInputs.all_sequences_to_align,
             s3_wd_uri = s3_wd_uri,
 
             db_path = minimap2_db,
