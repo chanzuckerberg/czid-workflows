@@ -29,11 +29,11 @@ task RunQualityFilter{
     }
 
     command <<<
-        set -euxo pipefail
-        fastp -i "~{input_fastq}" --qualified_quality_phred 9 --length_required 100 --low_complexity_filter --complexity_threshold 30 --dont_eval_duplication -o sample.fastp
+        fastp -i "~{input_fastq}" --qualified_quality_phred 9 --length_required 100 --low_complexity_filter --complexity_threshold 30 --dont_eval_duplication -o sample.fastp 2> stdout_test.txt
     >>>
 
     output {
+        File stdout_test = "stdout_test.txt"
         File fastp_output = "sample.fastp"
     }
 
