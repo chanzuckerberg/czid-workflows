@@ -61,10 +61,6 @@ RUN wget https://github.com/fenderglass/Flye/archive/${FLYE_VER}.tar.gz && \
     python3 setup.py build && \
     python3 setup.py install
 
-RUN wget ftp://ftp.ccb.jhu.edu/pub/infphilo/centrifuge/downloads/centrifuge-1.0.3-beta-Linux_x86_64.zip && \
-    unzip centrifuge-1.0.3-beta-Linux_x86_64.zip
-ENV PATH="/centrifuge-1.0.3-beta:$PATH"
-
 COPY idseq-dag /tmp/idseq-dag
 RUN pip3 install /tmp/idseq-dag && rm -rf /tmp/idseq-dag
 
