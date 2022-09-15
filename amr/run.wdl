@@ -404,9 +404,9 @@ task RunSpades {
         # TODO: filter contigs output by min_contig_length
 
         if [[ "~{length(non_host_reads)}" -gt 1 ]]; then 
-            spades.py -1 ~{sep=' -2 ' non_host_reads} -o "spades/" -m 100 -t $(nproc --all) --only-assembler
+            spades.py -1 ~{sep=" -2 " non_host_reads} -o "spades/" -m 100 -t 36 --only-assembler 1>&2
         else
-            spades.py -s non_host_reads[0] -o "spades/" -m 100 -t $(nproc --all) --only-assembler
+            spades.py -s non_host_reads[0] -o "spades/" -m 100 -t 36 --only-assembler 1>&2
         fi
     >>>
     output { 
