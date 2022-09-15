@@ -10,11 +10,11 @@ task RunValidateInput{
         set -euxo pipefail
 
         # TODO: add some validation, in the meantime just copy to output
-        cp "~{input_fastq}" sample.validated
+        cp "~{input_fastq}" sample_validated.fastq.gz
     >>>
 
     output {
-        File validated_output = "sample.validated"
+        File validated_output = "sample_validated.fastq.gz"
     }
 
     runtime {
@@ -29,12 +29,13 @@ task RunQualityFilter{
     }
 
     command <<<
-        fastp -i "~{input_fastq}" --qualified_quality_phred 9 --length_required 100 --low_complexity_filter --complexity_threshold 30 --dont_eval_duplication -o sample.fastp 2> stdout_test.txt
+        set -euxo pipefail
+        fastp -i "~{input_fastq}" --qualified_quality_phred 9 --length_required 100 --low_complexity_filter --complexity_threshold 30 --dont_eval_duplication -o sample_quality_filtered.fastq
     >>>
 
     output {
         File stdout_test = "stdout_test.txt"
-        File fastp_output = "sample.fastp"
+        File fastp_output = "sample_quality_filtered.fastq"
     }
 
     runtime {
