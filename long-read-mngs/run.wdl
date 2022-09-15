@@ -34,7 +34,6 @@ task RunQualityFilter{
     >>>
 
     output {
-        File stdout_test = "stdout_test.txt"
         File fastp_output = "sample_quality_filtered.fastq"
     }
 
