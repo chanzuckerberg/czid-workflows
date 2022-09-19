@@ -300,6 +300,7 @@ task RunResultsPerSample {
         File merge_b = "merge_b.tsv"
         File final_summary = "final_summary.tsv"
         File bigtable = "bigtable_report.tsv"
+        File? synthesized_report = "synthesized_report.tsv"
     }
     runtime {
         docker: docker_image_id
