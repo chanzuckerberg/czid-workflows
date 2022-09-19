@@ -14,6 +14,7 @@ workflow amr {
         File kmer_db = "s3://czid-public-references/test/AMRv2/61_kmer_db.json"
         File amr_kmer_db = "s3://czid-public-references/test/AMRv2/all_amr_61mers.txt"
         File wildcard_data = "s3://czid-public-references/test/AMRv2/wildcard_data.tar.bz2"
+        Int min_contig_length = 100
         # Dummy values - required by SFN interface
         String s3_wd_uri = ""
     }
@@ -33,6 +34,7 @@ workflow amr {
                     host_filter_stage.gsnap_filter_out_gsnap_filter_2_fa
                 ]
             ),
+            min_contig_length = min_contig_length,
             docker_image_id = host_filtering_docker_image_id,
         }
     }
@@ -397,17 +399,26 @@ task RunRgiBwtKma {
 task RunSpades { 
     input { 
         Array[File] non_host_reads
+        Int min_contig_length
         String docker_image_id
     }
     command <<< 
         set -euxo pipefail
-        # TODO: filter contigs output by min_contig_length
+        function handle_failure() 
+        {
+            echo ";ASSEMBLY FAILED" > spades/contigs.fasta
+            echo ";ASSEMBLY FAILED" > spades/scaffolds.fasta
+            exit 0
 
+        }
+        trap handle_failure ERR
         if [[ "~{length(non_host_reads)}" -gt 1 ]]; then 
             spades.py -1 ~{sep=" -2 " non_host_reads} -o "spades/" -m 100 -t 36 --only-assembler 1>&2
         else
-            spades.py -s non_host_reads[0] -o "spades/" -m 100 -t 36 --only-assembler 1>&2
+            spades.py -s ~{non_host_reads[0]} -o "spades/" -m 100 -t 36 --only-assembler 1>&2
         fi
+        seqtk seq -L ~{min_contig_length} spades/contigs.fasta > spades/contigs_filtered.fasta
+        mv spades/contigs_filtered.fasta spades/contigs.fasta
     >>>
     output { 
         File contigs = "spades/contigs.fasta"
