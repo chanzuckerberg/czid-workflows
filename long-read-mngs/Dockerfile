@@ -9,31 +9,35 @@ RUN sed -i s/archive.ubuntu.com/us-west-2.ec2.archive.ubuntu.com/ /etc/apt/sourc
     echo 'APT::Install-Suggests "false";' > /etc/apt/apt.conf.d/99czid
 
 RUN apt-get -qq update && apt-get -qq -y install \
-    git \
-    wget \
-    libz-dev \
+    apt-utils \
     build-essential \
-    make \
-    jq \
-    moreutils \
+    cmake \
     curl \
-    locales \
-    zip \
-    unzip \
+    g++ \
+    gdb \
+    git \
     httpie \
-    zlib1g-dev \
+    jq \
+    libclang-common-6.0-dev \
     libfreetype6-dev \
     libhts-dev \
-    pkg-config \
-    apt-utils \
+    libz-dev \
+    locales \
+    make \
     minimap2 \
-    samtools \
-    seqtk \
-    seqkit \
+    moreutils \
+    pkg-config \
     python3-dev \
     python3-pip \
     python3-setuptools \
     python3-wheel \
+    samtools \
+    seqkit \
+    seqtk \
+    unzip \
+    wget \
+    zip \
+    zlib1g-dev \
     && locale-gen en_US.UTF-8
 
 RUN pip3 install boto3 marisa-trie==0.7.7 requests biopython pandas
