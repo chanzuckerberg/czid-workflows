@@ -65,3 +65,16 @@ RUN pip3 install /tmp/idseq-dag && rm -rf /tmp/idseq-dag
 
 COPY idseq_utils /tmp/idseq_utils
 RUN pip3 install /tmp/idseq_utils && rm -rf /tmp/idseq_utils
+
+WORKDIR /tmp/minimap2-scatter
+RUN make minimap2
+RUN mv /tmp/minimap2-scatter/minimap2/minimap2 /usr/local/bin/minimap2-scatter
+
+WORKDIR /tmp
+RUN git clone https://github.com/morsecodist/diamond
+WORKDIR /tmp/diamond
+RUN git checkout minimal-mods
+WORKDIR /tmp/diamond/build
+RUN cmake -DCMAKE_BUILD_TYPE=Release ..
+RUN make -j6
+RUN mv diamond /usr/local/bin
