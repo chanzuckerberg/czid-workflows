@@ -66,6 +66,8 @@ RUN pip3 install /tmp/idseq-dag && rm -rf /tmp/idseq-dag
 COPY idseq_utils /tmp/idseq_utils
 RUN pip3 install /tmp/idseq_utils && rm -rf /tmp/idseq_utils
 
+WORKDIR /tmp
+RUN git clone --recursive https://github.com/mlin/minimap2-scatter.git
 WORKDIR /tmp/minimap2-scatter
 RUN make minimap2
 RUN mv /tmp/minimap2-scatter/minimap2/minimap2 /usr/local/bin/minimap2-scatter
