@@ -21,9 +21,9 @@ COPY requirements.txt requirements.txt
 RUN pip3 install -r requirements.txt
 
 
-RUN git clone -b rlim/add-gene-hit-coordinates https://github.com/rzlim08/rgi.git
+RUN git clone https://github.com/rzlim08/rgi.git
 RUN mkdir -p rgi/inputs/heatmap_inputs
-RUN cd rgi/ && python setup.py build && python setup.py test && python setup.py install
+RUN cd rgi/ && git checkout 646191872345e4fc70f32db1993a99c9ab331318 && python setup.py build && python setup.py test && python setup.py install
 
 RUN mkdir -p wildcard/
 
