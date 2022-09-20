@@ -18,7 +18,6 @@ RUN apt-get -qq update && apt-get -qq -y install \
     git \
     httpie \
     jq \
-    libclang-common-6.0-dev \
     libfreetype6-dev \
     libhts-dev \
     libz-dev \
