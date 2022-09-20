@@ -9,6 +9,7 @@ RUN sed -i s/archive.ubuntu.com/us-west-2.ec2.archive.ubuntu.com/ /etc/apt/sourc
     echo 'APT::Install-Suggests "false";' > /etc/apt/apt.conf.d/99czid
 
 RUN apt-get -qq update && apt-get -qq -y install \
+    git \
     wget \
     libz-dev \
     build-essential \
