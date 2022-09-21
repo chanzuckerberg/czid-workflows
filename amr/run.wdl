@@ -217,6 +217,7 @@ task RunResultsPerSample {
         big_table.to_csv("bigtable_report.tsv", sep='\t', index=None)
 
         if big_table.empty: # if no outputs, simply return
+            open("synthesized_report.tsv", "a").close()
             exit(0)
 
         def remove_na(input_set):
