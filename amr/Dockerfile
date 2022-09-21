@@ -45,3 +45,4 @@ RUN curl -LO https://czid-public-references.s3.us-west-2.amazonaws.com/test/AMRv
         --kmer_size 61 && \
     rm -r wildcard/ wildcard_database_v3.1.0.fasta
 
+COPY empty-main-header.txt /tmp/empty-main-header.txt 

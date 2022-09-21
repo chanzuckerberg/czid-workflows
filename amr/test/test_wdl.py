@@ -19,6 +19,15 @@ class TestAMR(WDLTestCase):
         self.assertEqual(main[2], "3")
         self.assertEqual(main[3], "281")
 
+    def testRgiEmptyMain(self):
+        inputs = {
+            "contigs": os.path.join(os.path.dirname(__file__), "contigs_failed.fasta"),
+            "card_json": "s3://czid-public-references/test/AMRv2/card.json",
+        }
+        res = self.run_miniwdl(task="RunRgiMain", task_input=inputs)
+        with open(res["outputs"]["RunRgiMain.main_amr_results"]) as main_results:
+            self.assertEqual(len(main_results.read().splitlines()), 1)
+
     def testRgiBwtKma(self):
         inputs = {
             "non_host_reads": [
