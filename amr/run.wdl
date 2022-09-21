@@ -99,6 +99,7 @@ workflow amr {
                     RunResultsPerSample.merge_b,
                     RunResultsPerSample.final_summary,
                     RunResultsPerSample.bigtable,
+                    RunResultsPerSample.synthesized_report,
                 ]
             ])
         ),
