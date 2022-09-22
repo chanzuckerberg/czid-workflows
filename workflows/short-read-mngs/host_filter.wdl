@@ -488,7 +488,7 @@ task collect_insert_size_metrics {
   }
 
   command <<<
-    picard CollectInsertSizeMetrics 'I=~{bam}' O=insert_size_metrics.txt H=insert_size_histogram.pdf
+    picard CollectInsertSizeMetrics 'I=~{bam}' O=picard_insert_metrics.txt H=insert_size_histogram.pdf
     python3 - <<EOF
     import textwrap
     with open("collect_insert_size_metrics.description.md", "w") as outfile:
@@ -503,14 +503,14 @@ task collect_insert_size_metrics {
   output {
     String step_description_md = read_string("collect_insert_size_metrics.description.md")
     # If no reads mapped to the host, then picard exits "successfully" without creating these files.
-    File? insert_size_metrics = "insert_size_metrics.txt"
+    File? insert_size_metrics = "picard_insert_metrics.txt"
     File? insert_size_histogram = "insert_size_histogram.pdf"
   }
 
   runtime {
     docker: docker_image_id
     cpu: 1
-    memory: "4G"
+    memory: "8G"
   }
 }
 
