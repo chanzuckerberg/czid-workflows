@@ -4,6 +4,7 @@ version 1.1
 # - Bowtie2 (genome)
 # - HISAT2 (genome + splice junctions)
 # - kallisto (transcriptome)
+# - minimap2 (used not in short-read-mngs host filtering, but rather the ONT equivalent)
 # ERCC sequences are spiked-in to all three indexes. Lastly takes an array of other spike-ins for
 # the Bowtie2 and HISAT2 indexes.
 # Warning: HISAT2 requires huge RAM to build the spliced index (>200G for human).
@@ -44,12 +45,19 @@ workflow host_filter_indexing {
   call kallisto_index {
     input: genome_name, transcripts_fasta_gz, ERCC_fasta_gz, docker
   }
+
+  call minimap2_index {
+    input:
+    fasta_gz = flatten([[genome_fasta_gz, ERCC_fasta_gz], other_fasta_gz]),
+    genome_name, docker
+  }
   
   output {
     File bowtie2_index_tar = bowtie2_build.index_tar
     File hisat2_index_tar = hisat2_build.index_tar
     File kallisto_idx = kallisto_index.idx
-    
+    File minimap2_mmi = minimap2_index.index_mmi
+
     # also output the input files, to facilitate archival/provenance
     File input_genome_fasta_gz = genome_fasta_gz
     File input_transcripts_gtf_gz = transcripts_gtf_gz
@@ -157,5 +165,35 @@ task kallisto_index {
   runtime {
     docker: docker
     memory: "8GiB"
+  }
+}
+
+task minimap2_index {
+  input {
+    Array[File] fasta_gz
+    String genome_name
+    String opts = ""
+
+    String docker
+  }
+
+  command <<<
+    set -euxo pipefail
+    TMPDIR=${TMPDIR:-/tmp}
+
+    all_fasta="$TMPDIR/all.fasta"
+    pigz -dc ~{sep(' ',fasta_gz)} > "$all_fasta"
+
+    >&2 minimap2 ~{opts} -d '~{genome_name}.mmi' "$all_fasta"
+    >&2 ls -l
+  >>>
+
+  output {
+      File index_mmi = "~{genome_name}.mmi"
+  }
+
+  runtime {
+      docker: docker
+      memory: "8GiB"
   }
 }
