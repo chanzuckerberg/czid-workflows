@@ -72,10 +72,6 @@ workflow amr {
     call RunRgiKmerMain { 
         input:
         main_output_json = RunRgiMain.output_json,
-        card_json = card_json, 
-        kmer_db = kmer_db,
-        amr_kmer_db = amr_kmer_db,
-        wildcard_data = wildcard_data,
         docker_image_id = docker_image_id
     }
     call RunResultsPerSample { 
@@ -105,6 +101,7 @@ workflow amr {
         mainReports = select_all(
             [
                 RunResultsPerSample.final_summary,
+                RunResultsPerSample.synthesized_report,
             ]
         ),
         rawReports = select_all(
@@ -156,10 +153,14 @@ task RunResultsPerSample {
 
         def this_or_that(df, this_colname, that_colname):
             """returns this if not nan, else returns that"""
-            return df.apply(
+            thisorthat = df.apply(
                 lambda x: x[this_colname] if not pd.isna(x[this_colname]) else x[that_colname],
                 axis=1,
             )
+            if thisorthat.empty:
+                return ""
+            
+            return thisorthat
 
 
         main_output = pd.read_csv("~{main_output}", sep="\t")
@@ -209,7 +210,6 @@ task RunResultsPerSample {
         merge_b["ARO_kma"] = this_or_that(
             merge_b, "ARO Term_kma_amr", "ARO term_kma_sp"
         )
-        merge_b['ARO_kma'] = [merge_b.iloc[i]['ARO Term_kma_amr'] if str(merge_b.iloc[i]['ARO Term_kma_amr']) != 'nan' else merge_b.iloc[i]['ARO term_kma_sp'] for i in range(len(merge_b.index))]
         merge_b.to_csv("merge_b.tsv", index=None, sep="\t")
 
         # final merge of MAIN and KMA combined results
@@ -237,6 +237,10 @@ task RunResultsPerSample {
         big_table.sort_values(by='Gene_Family_overall', inplace=True)
 
         big_table.to_csv("bigtable_report.tsv", sep='\t', index=None)
+
+        if big_table.empty: # if no outputs, simply return
+            open("synthesized_report.tsv", "a").close()
+            exit(0)
 
         def remove_na(input_set):
             set_list = list(input_set)
@@ -323,7 +327,8 @@ task RunResultsPerSample {
         File merge_a = "merge_a.tsv"
         File merge_b = "merge_b.tsv"
         File final_summary = "comprehensive_AMR_metrics.tsv"
-        File bigtable_report = "bigtable_report.tsv"
+        File bigtable = "bigtable_report.tsv"
+        File? synthesized_report = "primary_AMR_report.tsv"
     }
     runtime {
         docker: docker_image_id
@@ -333,10 +338,6 @@ task RunResultsPerSample {
 task RunRgiKmerMain {
     input {
         File main_output_json
-        File card_json
-        File kmer_db
-        File amr_kmer_db
-        File wildcard_data 
         String docker_image_id
     }
     command <<< 
@@ -384,8 +385,13 @@ task RunRgiMain {
     }
     command <<<
         set -exuo pipefail
-        rgi main -i "~{contigs}" -o contig_amr_report -t contig -a BLAST --clean --include_nudge
-
+        if [[ $(head -n 1 "~{contigs}") == ";ASSEMBLY FAILED" ]]; then
+            # simulate empty outputs
+            echo "{}" > contig_amr_report.json
+            cp /tmp/empty-main-header.txt contig_amr_report.txt
+        else
+            rgi main -i "~{contigs}" -o contig_amr_report -t contig -a BLAST --clean --include_nudge
+        fi
     >>>
     output {
         Array[File] output_main = glob("contig_amr_report*")
