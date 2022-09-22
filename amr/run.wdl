@@ -29,8 +29,8 @@ workflow amr {
             input:
             non_host_reads = select_all(
                 [
-                    host_filter_stage.gsnap_filter_out_gsnap_filter_1_fa,
-                    host_filter_stage.gsnap_filter_out_gsnap_filter_2_fa
+                    host_filter_stage.subsampled_out_subsampled_1_fa,
+                    host_filter_stage.subsampled_out_subsampled_2_fa
                 ]
             ),
             docker_image_id = host_filtering_docker_image_id,
@@ -41,8 +41,8 @@ workflow amr {
         non_host_reads = select_first([non_host_reads, 
             select_all(
                 [
-                    host_filter_stage.gsnap_filter_out_gsnap_filter_1_fa,
-                    host_filter_stage.gsnap_filter_out_gsnap_filter_2_fa
+                    host_filter_stage.subsampled_out_subsampled_1_fa,
+                    host_filter_stage.subsampled_out_subsampled_2_fa
                 ]
             )]),
         card_json = card_json, 
