@@ -138,6 +138,9 @@ task GetReferenceAccessionFastas {
         nt = marisa_trie.RecordTrie("QII").mmap('~{nt_loc_db}')
         nr = marisa_trie.RecordTrie("QII").mmap('~{nr_loc_db}')
         for accession_id in ["~{sep='", "' accession_ids}"]:
+            if not accession_id:
+                continue
+
             if accession_id in nt:
                 (seq_offset, header_len, seq_len), = nt[accession_id]
                 s3_path = '~{nt_s3_path}'
