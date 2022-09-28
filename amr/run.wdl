@@ -84,20 +84,44 @@ workflow amr {
     }
     call ZipOutputs {
         input:
+        nonHostReads = select_first([
+                           non_host_reads,
+                           select_all(
+                               [
+                                   host_filter_stage.gsnap_filter_out_gsnap_filter_1_fa,
+                                   host_filter_stage.gsnap_filter_out_gsnap_filter_2_fa
+                               ]
+                           )
+                       ]),
         outputFiles = select_all(
-            flatten([
-                RunRgiBwtKma.output_kma,
-                RunRgiMain.output_main,
-                RunRgiKmerBwt.output_kmer_bwt,
-                RunRgiKmerMain.output_kmer_main,
-                [
-                    RunResultsPerSample.merge_a,
-                    RunResultsPerSample.merge_b,
-                    RunResultsPerSample.final_summary,
-                    RunResultsPerSample.bigtable,
-                    RunResultsPerSample.synthesized_report,
-                ]
-            ])
+            [
+                select_first([contigs, RunSpades.contigs]),
+            ]
+        ),
+        mainReports = select_all(
+            [
+                RunResultsPerSample.final_summary,
+                RunResultsPerSample.synthesized_report,
+            ]
+        ),
+        rawReports = select_all(
+            [
+                RunRgiKmerBwt.kma_species_calling,
+                RunRgiKmerBwt.sr_species_allele,
+                RunRgiKmerMain.species_calling,
+                RunRgiMain.main_amr_results,
+                RunRgiBwtKma.kma_amr_results,
+                RunRgiBwtKma.gene_mapping_data,
+            ]
+        ),
+        intermediateFiles = select_all(
+            [
+                RunRgiBwtKma.artifacts_mapping_stats,
+                RunRgiBwtKma.overall_mapping_stats,
+                RunRgiBwtKma.reference_mapping_stats,
+                RunRgiBwtKma.output_sorted_length_100,
+                RunRgiBwtKma.output_sorted_length_100_bai,
+            ]
         ),
         docker_image_id = docker_image_id
     }
@@ -206,9 +230,9 @@ task RunResultsPerSample {
         merge_x["Resistance_Mechanism_overall"] = this_or_that(
             merge_x, "Resistance Mechanism_contig_amr", "Resistance Mechanism_kma_amr"
         )
-        merge_x.to_csv("final_summary.tsv", index=None, sep='\t')
+        merge_x.to_csv("comprehensive_AMR_metrics.tsv", index=None, sep='\t')
 
-        df = pd.read_csv("final_summary.tsv", sep='\t')
+        df = pd.read_csv("comprehensive_AMR_metrics.tsv", sep='\t')
         big_table = df[['ARO_overall', 'Gene_Family_overall', 'Drug_Class_overall', 'Resistance_Mechanism_overall', 'model_overall', 'All Mapped Reads_kma_amr', 'Percent Coverage_kma_amr','Depth_kma_amr', 'CARD*kmer Prediction_kma_sp', 'Cut_Off_contig_sp', 'Percentage Length of Reference Sequence_contig_amr', 'Best_Identities_contig_amr', 'CARD*kmer Prediction_contig_sp']]
         big_table.sort_values(by='Gene_Family_overall', inplace=True)
 
@@ -302,9 +326,9 @@ task RunResultsPerSample {
     output {
         File merge_a = "merge_a.tsv"
         File merge_b = "merge_b.tsv"
-        File final_summary = "final_summary.tsv"
+        File final_summary = "comprehensive_AMR_metrics.tsv"
         File bigtable = "bigtable_report.tsv"
-        File? synthesized_report = "synthesized_report.tsv"
+        File? synthesized_report = "primary_AMR_report.tsv"
     }
     runtime {
         docker: docker_image_id
@@ -318,11 +342,11 @@ task RunRgiKmerMain {
     }
     command <<< 
         set -exuo pipefail
-        rgi kmer_query --rgi -k 61 -i "~{main_output_json}" --output output.rgi.main.kmerspecies 
+        rgi kmer_query --rgi -k 61 -i "~{main_output_json}" --output contig_species_report 
     >>>
     output { 
-        Array[File] output_kmer_main = glob("output.rgi.main.kmerspecies*")
-        File species_calling = "output.rgi.main.kmerspecies_61mer_analysis_rgi_summary.txt"
+        Array[File] output_kmer_main = glob("contig_species_report*")
+        File species_calling = "contig_species_report_61mer_analysis_rgi_summary.txt"
     }
     runtime {
         docker: docker_image_id
@@ -341,11 +365,12 @@ task RunRgiKmerBwt {
     }
     command <<<
         set -exuo pipefail
-        rgi kmer_query --bwt -k 61 -i "~{output_sorted_length_100}" --output output.rgi.kma.kmerspecies
+        rgi kmer_query --bwt -k 61 -i "~{output_sorted_length_100}" --output sr_species_report
     >>>
     output {
-        Array[File] output_kmer_bwt = glob("output.rgi.kma.kmerspecies*")
-        File kma_species_calling = "output.rgi.kma.kmerspecies_61mer_analysis.gene.txt"
+        Array[File] output_kmer_bwt = glob("sr_species_report*")
+        File sr_species_allele = "sr_species_report_61mer_analysis.allele.txt"
+        File kma_species_calling = "sr_species_report_61mer_analysis.gene.txt"
     }
     runtime {
         docker: docker_image_id
@@ -362,17 +387,16 @@ task RunRgiMain {
         set -exuo pipefail
         if [[ $(head -n 1 "~{contigs}") == ";ASSEMBLY FAILED" ]]; then
             # simulate empty outputs
-            echo "{}" > output.rgi.main.json
-            cp /tmp/empty-main-header.txt output.rgi.main.txt
+            echo "{}" > contig_amr_report.json
+            cp /tmp/empty-main-header.txt contig_amr_report.txt
         else
-            rgi main -i "~{contigs}" -o output.rgi.main -t contig -a BLAST --clean --include_nudge
+            rgi main -i "~{contigs}" -o contig_amr_report -t contig -a BLAST --clean --include_nudge
         fi
-
     >>>
     output {
-        Array[File] output_main = glob("output.rgi.main*")
-        File output_json = "output.rgi.main.json"
-        File main_amr_results = "output.rgi.main.txt"
+        Array[File] output_main = glob("contig_amr_report*")
+        File output_json = "contig_amr_report.json"
+        File main_amr_results = "contig_amr_report.txt"
     }
 
     runtime {
@@ -388,13 +412,18 @@ task RunRgiBwtKma {
 
     command <<<
         set -exuo pipefail
-        rgi bwt -1 ~{sep=' -2 ' non_host_reads} -a kma -o output_kma.rgi.kma --clean
+        rgi bwt -1 ~{sep=' -2 ' non_host_reads} -a kma -o sr_amr_report --clean
     >>>
 
     output {
-        Array[File] output_kma = glob("output_kma.rgi.kma*")
-        File output_sorted_length_100 = "output_kma.rgi.kma.sorted.length_100.bam"
-        File kma_amr_results = "output_kma.rgi.kma.allele_mapping_data.txt"
+        Array[File] output_kma = glob("sr_amr_report*")
+        File kma_amr_results = "sr_amr_report.allele_mapping_data.txt"
+        File artifacts_mapping_stats = "sr_amr_report.artifacts_mapping_stats.txt"
+        File gene_mapping_data = "sr_amr_report.gene_mapping_data.txt"
+        File overall_mapping_stats = "sr_amr_report.overall_mapping_stats.txt"
+        File reference_mapping_stats = "sr_amr_report.reference_mapping_stats.txt"
+        File output_sorted_length_100 = "sr_amr_report.sorted.length_100.bam"
+        File output_sorted_length_100_bai = "sr_amr_report.sorted.length_100.bam.bai"
     }
 
     runtime {
@@ -426,7 +455,11 @@ task RunSpades {
 }
 task ZipOutputs {
     input {
+        Array[File] nonHostReads
         Array[File] outputFiles
+        Array[File] mainReports
+        Array[File] rawReports
+        Array[File] intermediateFiles
         String docker_image_id
     }
 
@@ -436,8 +469,21 @@ task ZipOutputs {
         export TMPDIR=${TMPDIR:-/tmp}
 
         mkdir ${TMPDIR}/outputs
+        mkdir ${TMPDIR}/outputs/final_reports
+        mkdir ${TMPDIR}/outputs/raw_reports
+        mkdir ${TMPDIR}/outputs/intermediate_files
+
+        counter=1
+        for fastx in ~{sep= ' ' nonHostReads}; do 
+            cp $fastx ${TMPDIR}/outputs/non_host_reads_R$counter."${fastx#*.}"
+            ((counter++))
+        done
         cp ~{sep=' ' outputFiles} ${TMPDIR}/outputs/
-        zip -r -j outputs.zip ${TMPDIR}/outputs/
+        cp ~{sep=' ' mainReports} ${TMPDIR}/outputs/final_reports
+        cp ~{sep=' ' rawReports} ${TMPDIR}/outputs/raw_reports
+        cp ~{sep=' ' intermediateFiles} ${TMPDIR}/outputs/intermediate_files
+        export WORK=$(pwd)
+        cd ${TMPDIR}/outputs; zip -r ${WORK}/outputs.zip .
     >>>
 
     output {
