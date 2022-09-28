@@ -242,7 +242,7 @@ task RunResultsPerSample {
         big_table.to_csv("bigtable_report.tsv", sep='\t', index=None)
 
         if big_table.empty: # if no outputs, simply return
-            open("synthesized_report.tsv", "a").close()
+            open("primary_AMR_report.tsv", "a").close()
             exit(0)
 
         def remove_na(input_set):
@@ -322,7 +322,7 @@ task RunResultsPerSample {
         #print(final_df.columns)
         final_df.dropna(subset=['drug_class'], inplace=True)
         final_df[['sample_name', 'gene_family', 'drug_class', 'resistance_mechanism', 'model_type', 'num_reads', 'num_contigs', 'coverage_breadth', 'coverage_depth', 'percent_id', 'cutoff', 'species', 'sp_contig', 'sp_kma']]
-        final_df.to_csv("synthesized_report.tsv", sep='\t', index=None)
+        final_df.to_csv("primary_AMR_report.tsv", sep='\t', index=None)
 
 
         CODE
@@ -332,7 +332,7 @@ task RunResultsPerSample {
         File merge_b = "merge_b.tsv"
         File final_summary = "comprehensive_AMR_metrics.tsv"
         File bigtable = "bigtable_report.tsv"
-        File? synthesized_report = "primary_AMR_report.tsv"
+        File synthesized_report = "primary_AMR_report.tsv"
     }
     runtime {
         docker: docker_image_id
