@@ -228,7 +228,7 @@ task RunResultsPerSample {
             sub_df = df[df['ARO_overall'] == index]
             result = {}
             gf = remove_na(set(sub_df['AMR Gene Family_contig_amr']).union(set(sub_df['AMR Gene Family_kma_amr'])))
-            result['sample_name'] = sample_name
+            result['sample_name'] = "~{sample_name}"
             result['gene_family'] = ';'.join(gf) if len(gf) > 0 else None
         
             dc = remove_na(set(sub_df['Drug Class_contig_amr']).union(set(sub_df['Drug Class_kma_amr'])))
