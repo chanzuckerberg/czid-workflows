@@ -393,18 +393,35 @@ task FetchSequenceByAccessionId {
 
 
         error = lambda err, cause: sys.exit(json.dumps(dict(wdl_error_message=True, error=err, cause=cause)))
+        max_retries = 1
 
-        t = marisa_trie.RecordTrie("QII").mmap('~{nt_loc_db}')
-        if '~{accession_id}' in t:
-            (seq_offset, header_len, seq_len), = t['~{accession_id}']
-            s3_path = '~{nt_s3_path}'
-        else:
-            t = marisa_trie.RecordTrie("QII").mmap('~{nr_loc_db}')
-            if '~{accession_id}' in t:
-                (seq_offset, header_len, seq_len), = t['~{accession_id}']
-                s3_path = '~{nr_s3_path}'
+        def find_accession(accession, retry=0):
+            t = marisa_trie.RecordTrie("QII").mmap('~{nt_loc_db}')
+            if accession in t:
+                (seq_offset, header_len, seq_len), = t[accession]
+                s3_path = '~{nt_s3_path}'
             else:
-                error("AccessionIdNotFound", "The Accession ID was not found in the CZ ID database, so a generalized consensus genome could not be run")
+                t = marisa_trie.RecordTrie("QII").mmap('~{nr_loc_db}')
+                if accession in t:
+                    (seq_offset, header_len, seq_len), = t[accession]
+                    s3_path = '~{nr_s3_path}'
+                else:
+                    if retry == max_retries:
+                        error("AccessionIdNotFound", "The Accession ID '~{accession_id}' was not found in the CZ ID database, so a generalized consensus genome could not be run")
+                    else:
+                        seq_offset, header_len, seq_len, s3_path = find_accession(increment_version(accession), retry+1)
+            return seq_offset, header_len, seq_len, s3_path
+                    
+        def increment_version(accession):
+            if "." in accession:
+                acc_split = accession.split(".")
+                return ".".join([acc_split[0], str(int(acc_split[1])+1)])
+            else:
+                return accession
+
+        accession = '~{accession_id}'
+
+        seq_offset, header_len, seq_len, s3_path = find_accession(accession)
 
         to = seq_offset + header_len + seq_len - 1
         parsed = urlparse(s3_path)
