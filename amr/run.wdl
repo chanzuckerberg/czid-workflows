@@ -9,6 +9,7 @@ workflow amr {
         File? raw_reads_1
         File? contigs
         String docker_image_id
+        String sample_name
         String host_filtering_docker_image_id = "czid-short-read-mngs" # default local value
         File card_json = "s3://czid-public-references/test/AMRv2/card.json"
         File kmer_db = "s3://czid-public-references/test/AMRv2/61_kmer_db.json"
@@ -84,7 +85,8 @@ workflow amr {
         main_species_output = RunRgiKmerMain.species_calling,
         kma_output = RunRgiBwtKma.kma_amr_results,
         kma_species_output = RunRgiKmerBwt.kma_species_calling,
-        docker_image_id = docker_image_id
+        docker_image_id = docker_image_id,
+        sample_name = sample_name
     }
     call ZipOutputs {
         input:
@@ -114,6 +116,7 @@ task RunResultsPerSample {
         File kma_output
         File kma_species_output
         String docker_image_id
+        String sample_name
     }
     command <<< 
         set -euxo pipefail
@@ -225,6 +228,7 @@ task RunResultsPerSample {
             sub_df = df[df['ARO_overall'] == index]
             result = {}
             gf = remove_na(set(sub_df['AMR Gene Family_contig_amr']).union(set(sub_df['AMR Gene Family_kma_amr'])))
+            result['sample_name'] = sample_name
             result['gene_family'] = ';'.join(gf) if len(gf) > 0 else None
         
             dc = remove_na(set(sub_df['Drug Class_contig_amr']).union(set(sub_df['Drug Class_kma_amr'])))
@@ -289,7 +293,7 @@ task RunResultsPerSample {
         final_df.sort_values(by='gene_family', inplace=True)
         #print(final_df.columns)
         final_df.dropna(subset=['drug_class'], inplace=True)
-        final_df[['gene_family', 'drug_class', 'resistance_mechanism', 'model_type', 'num_reads', 'num_contigs', 'coverage_breadth', 'coverage_depth', 'percent_id', 'cutoff', 'species', 'sp_contig', 'sp_kma']]
+        final_df[['sample_name', 'gene_family', 'drug_class', 'resistance_mechanism', 'model_type', 'num_reads', 'num_contigs', 'coverage_breadth', 'coverage_depth', 'percent_id', 'cutoff', 'species', 'sp_contig', 'sp_kma']]
         final_df.to_csv("synthesized_report.tsv", sep='\t', index=None)
 
 
