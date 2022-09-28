@@ -1147,7 +1147,7 @@ task ZipOutputs {
 
         mkdir ${TMPDIR}/outputs
         cp ~{sep=' ' outputFiles} ${TMPDIR}/outputs/
-        zip -r -j ~{prefix}outputs.zip ${TMPDIR}/outputs/
+        zip -r -j "~{prefix}"outputs.zip ${TMPDIR}/outputs/
     >>>
 
     output {
