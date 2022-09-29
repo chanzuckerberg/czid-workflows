@@ -8,13 +8,15 @@ task RunValidateInput{
 
     command <<<
         set -euxo pipefail
+        fastp -i "~{input_fastq}" -o sample_validated.fastq
 
-        # TODO: add some validation, in the meantime just copy to output
-        cp "~{input_fastq}" sample_validated.fastq.gz
+        filter_count sample_validated.fastq validated "No reads remaining after input validation"
     >>>
 
     output {
-        File validated_output = "sample_validated.fastq.gz"
+        File validated_output = "sample_validated.fastq"
+        File validated_reads = "validated_reads.count"
+        File validated_bases = "validated_bases.count"
     }
 
     runtime {
@@ -22,7 +24,7 @@ task RunValidateInput{
     }
 }
 
-task RunQualityFilter{
+task RunQualityFilter {
     input {
         File input_fastq
         String docker_image_id
@@ -31,10 +33,14 @@ task RunQualityFilter{
     command <<<
         set -euxo pipefail
         fastp -i "~{input_fastq}" --qualified_quality_phred 9 --length_required 100 --low_complexity_filter --complexity_threshold 30 --dont_eval_duplication -o sample_quality_filtered.fastq
+
+        filter_count sample_quality_filtered.fastq quality_filtered "No reads remaining after quality filtering"
     >>>
 
     output {
         File fastp_output = "sample_quality_filtered.fastq"
+        File quality_filtered_reads = "quality_filtered_reads.count"
+        File quality_filtered_bases = "quality_filtered_bases.count"
     }
 
     runtime {
@@ -58,21 +64,19 @@ task RunHostFilter {
         then
             minimap2 -ax splice "~{minimap_host_db}" "~{input_fastq}" -o sample.hostfiltered.sam --split-prefix temp_name
         else # assuming DNA
-            minimap2 -ax map-ont "~{minimap_host_db}" "~{input_fastq}" -o sample.hostfiltered.sam3 --split-prefix temp_name
+            minimap2 -ax map-ont "~{minimap_host_db}" "~{input_fastq}" -o sample.hostfiltered.sam --split-prefix temp_name
         fi
-        # extract the unmapped reads for downstream processing
-        echo "DEBUG: outside of loop" >> output.txt
         samtools fastq -n -f 4 sample.hostfiltered.sam > sample.hostfiltered.fastq
-        echo "DEBUG: finished samtools fastq" >> output.txt
-        #gzip sample.hostfiltered.fastq
-        #echo "DEBUG: finished gzipping fastq" >> output.txt
         samtools view -S -b sample.hostfiltered.sam > sample.hostfiltered.bam
-        echo "DEBUG: finished samtools view" >> output.txt
+
+        filter_count sample.hostfiltered.fastq host_filtered "No reads remaining after host filtering"
     >>>
 
     output {
         File host_filter_sam = "sample.hostfiltered.bam"
         File host_filter_fastq = "sample.hostfiltered.fastq"
+        File host_filtered_reads = "host_filtered_reads.count"
+        File host_filtered_bases = "host_filtered_bases.count"
     }
 
     runtime {
@@ -103,13 +107,16 @@ task RunHumanFilter {
         # extract the unmapped reads for downstream processing
         echo "about to run samtools fastq" >> output.txt
         samtools fastq -n -f 4 sample.humanfiltered.sam > sample.humanfiltered.fastq
-        #gzip sample.humanfiltered.fastq
         samtools view -S -b sample.humanfiltered.sam > sample.humanfiltered.bam
+
+        filter_count sample.humanfiltered.fastq human_filtered "No reads remaining after human read filtering"
     >>>
 
     output {
         File human_filter_sam = "sample.humanfiltered.bam"
         File human_filter_fastq = "sample.humanfiltered.fastq"
+        File human_filtered_reads = "human_filtered_reads.count"
+        File human_filtered_bases = "human_filtered_bases.count"
     }
 
     runtime {
@@ -118,7 +125,7 @@ task RunHumanFilter {
 }
 
 
-task RunSubsampling{
+task RunSubsampling {
     input {
         File input_fastq
         Int subsample_depth
@@ -128,10 +135,15 @@ task RunSubsampling{
     command <<<
         set -euxo pipefail
         head -"~{subsample_depth}" "~{input_fastq}" > sample.subsampled.fastq
+
+        # We should always have reads after subsampling, but adding for consistency with other steps
+        filter_count sample.subsampled.fastq subsampled "No reads remaining after subsampling"
     >>>
 
     output {
         File subsampled_fastq = "sample.subsampled.fastq"
+        File subsampled_reads = "subsampled_reads.count"
+        File subsampled_bases = "subsampled_bases.count"
     }
 
     runtime {
@@ -150,15 +162,11 @@ task RunAssembly {
     command <<<
         set -euxo pipefail
 
-        echo "inside RunAssembly step" >> output.txt
         flye_setting="--nano-raw"
         if [[ "~{guppy_basecaller_setting}" == "super" ]]
         then
-            echo "DEBUG: inside loop for flye_setting is set to --nano-hq" >> output.txt
             flye_setting="--nano-hq"
         fi
-
-        echo "DEBUG: flye_setting = $flye_setting" >> output.txt
 
         # run flye to assembly contigs
         flye --meta $flye_setting "~{input_fastq}" --out-dir temp_flye_out --iterations "~{polishing_iterations}"
@@ -167,10 +175,8 @@ task RunAssembly {
         #                  ... the temp_flye_out/assembly.fasta file
         if [ -f temp_flye_out/assembly.fasta ]
         then
-            echo "DEBUG: assembly.fasta file is found" >> output.txt
             cat temp_flye_out/assembly.fasta > sample.assembled_reads.fasta
         else
-            echo "DEBUG: assembly.fasta file is not found, copying input to output" >> output.txt
             #just copy original .fastq to .fasta
             seqtk seq -a "~{input_fastq}" > sample.assembled_reads.fasta 
         fi
@@ -179,7 +185,6 @@ task RunAssembly {
     >>>
 
     output {
-        File dummy_output = "output.txt"
         File assembled_fasta = "sample.assembled_reads.fasta"
         File temp_assembly_dir = "temp_flye_out.zip"
     }
@@ -363,7 +368,7 @@ task RunNRAlignment {
         set -euxo pipefail  
         if [[ "~{run_locally}" == true ]]; then 
           diamond makedb --in "~{local_diamond_index}" -d reference
-          diamond blastx -d reference -q "~{assembled_reads_fa}" -o "rapsearch2.m8" "--~{diamond_args}"
+          diamond blastx -d reference -q "~{assembled_reads_fa}" -o "diamond.m8" "--~{diamond_args}"
         else
           python3 <<CODE
         import os 
@@ -422,7 +427,7 @@ workflow czid_long_read_mngs {
         String minimap2_prefix = "gsnap"
 
         String? diamond_db
-        String diamond_args = "mid-sensitive --long-reads"
+        String diamond_args = "long-reads"
     }
 
     call RunValidateInput {
