@@ -128,29 +128,33 @@ def _run_batch_job(
     )  # Add some noise to de-synchronize chunks
     status = "SUBMITTED"
     # the job this is monitoring has an timeout and the job this runs in has a timeout
-    i = 0
-    while True:
-        try:
-            status = _get_job_status(job_id, use_batch_api=(i > 0 and i % 30 == 0))
-        except ClientError as e:
-            # If we get throttled, randomly wait to de-synchronize the requests
-            if e.response["Error"]["Code"] == "TooManyRequestsException":
-                log.warn(f"describe_jobs_rate_limit_error for job_id: {job_id}")
-                # Possibly implement a backoff here if throttling becomes an issue
-            else:
-                log.error(
-                    f"unexpected_client_error_while_polling_job_status for job_id: {job_id}",
-                )
-                raise e
+    try: 
+        i = 0
+        while True:
+            try:
+                status = _get_job_status(job_id, use_batch_api=(i > 0 and i % 30 == 0))
+            except ClientError as e:
+                # If we get throttled, randomly wait to de-synchronize the requests
+                if e.response["Error"]["Code"] == "TooManyRequestsException":
+                    log.warn(f"describe_jobs_rate_limit_error for job_id: {job_id}")
+                    # Possibly implement a backoff here if throttling becomes an issue
+                else:
+                    log.error(
+                        f"unexpected_client_error_while_polling_job_status for job_id: {job_id}",
+                    )
+                    raise e
 
-        if status == "SUCCEEDED":
-            _log_status(status)
-            return job_id
-        if status == "FAILED":
-            _log_status(status)
-            raise BatchJobFailed("chunk alignment failed")
-        time.sleep(delay)
-        i += 1
+            if status == "SUCCEEDED":
+                _log_status(status)
+                return job_id
+            if status == "FAILED":
+                _log_status(status)
+                raise BatchJobFailed("chunk alignment failed")
+            time.sleep(delay)
+            i += 1
+    finally: 
+        if status != "SUCCEEDED" and status != "FAILED":
+            _batch_client.cancel_job(jobId=job_id, reason="The parent instance has been killed") 
 
 
 def _run_chunk(
