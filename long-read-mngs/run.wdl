@@ -62,9 +62,9 @@ task RunHostFilter {
         # run minimap2 against host genome
         if [[ "~{library_type}" == "RNA" ]]
         then
-            minimap2 -ax splice "~{minimap_host_db}" "~{input_fastq}" -o sample.hostfiltered.sam --split-prefix temp_name
+            minimap2 -t $(nproc) -ax splice "~{minimap_host_db}" "~{input_fastq}" -o sample.hostfiltered.sam --split-prefix temp_name
         else # assuming DNA
-            minimap2 -ax map-ont "~{minimap_host_db}" "~{input_fastq}" -o sample.hostfiltered.sam --split-prefix temp_name
+            minimap2 -t $(nproc) -ax map-ont "~{minimap_host_db}" "~{input_fastq}" -o sample.hostfiltered.sam --split-prefix temp_name
         fi
         samtools fastq -n -f 4 sample.hostfiltered.sam > sample.hostfiltered.fastq
         samtools view -S -b sample.hostfiltered.sam > sample.hostfiltered.bam
@@ -99,10 +99,10 @@ task RunHumanFilter {
         if [[ "~{library_type}" == "RNA" ]]
         then
             echo "DEBUG: inside library_type == RNA, running minimap2 -ax splice" >> output.txt
-            minimap2 -ax splice "~{minimap_human_db}" "~{input_fastq}" -o sample.humanfiltered.sam -t 63 --split-prefix temp_name
+            minimap2 -t $(nproc) -ax splice "~{minimap_human_db}" "~{input_fastq}" -o sample.humanfiltered.sam -t 63 --split-prefix temp_name
         else # assuming DNA
             echo "DEBUG: inside library_type == DNA, running minimap2 -ax map-ont" >> output.txt
-            minimap2 -ax map-ont "~{minimap_human_db}" "~{input_fastq}" -o sample.humanfiltered.sam -t 63 --split-prefix temp_name
+            minimap2 -t $(nproc) -ax map-ont "~{minimap_human_db}" "~{input_fastq}" -o sample.humanfiltered.sam -t 63 --split-prefix temp_name
         fi
         # extract the unmapped reads for downstream processing
         echo "about to run samtools fastq" >> output.txt
@@ -169,7 +169,7 @@ task RunAssembly {
         fi
 
         # run flye to assembly contigs
-        flye --meta $flye_setting "~{input_fastq}" --out-dir temp_flye_out --iterations "~{polishing_iterations}"
+        flye --threads $(nproc) --meta $flye_setting "~{input_fastq}" --out-dir temp_flye_out --iterations "~{polishing_iterations}"
 
         # ERROR HANDLING - assembly somethings fails (due to low coverage) and is then missing...
         #                  ... the temp_flye_out/assembly.fasta file

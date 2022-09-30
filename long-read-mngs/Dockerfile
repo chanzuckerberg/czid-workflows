@@ -66,10 +66,10 @@ RUN wget https://github.com/fenderglass/Flye/archive/${FLYE_VER}.tar.gz && \
     python3 setup.py build && \
     python3 setup.py install
 
-COPY long-read-mngs/idseq-dag /tmp/idseq-dag
+COPY idseq-dag /tmp/idseq-dag
 RUN pip3 install /tmp/idseq-dag && rm -rf /tmp/idseq-dag
 
-COPY long-read-mngs/idseq_utils /tmp/idseq_utils
+COPY idseq_utils /tmp/idseq_utils
 RUN pip3 install /tmp/idseq_utils && rm -rf /tmp/idseq_utils
 
 WORKDIR /tmp
