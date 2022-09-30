@@ -1,6 +1,6 @@
 biopython==1.78
 matplotlib==3.4.2
-numpy==1.21.0
+numpy==1.22.0
 pandas==1.2.4
 requests==2.25.1
 seaborn==0.11.1
