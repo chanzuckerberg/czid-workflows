@@ -97,8 +97,8 @@ def _run_batch_job(
         jobDefinition=job_definition,
         containerOverrides={
             "environment": [{"name": k, "value": v} for k, v in environment.items()],
-            "memory": 130816,
-            "vcpus": 24,
+            "memory": 65408,
+            "vcpus": 12,
         },
         retryStrategy={"attempts": retries},
     )
