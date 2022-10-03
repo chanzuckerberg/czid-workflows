@@ -83,6 +83,7 @@ workflow amr {
         main_species_output = RunRgiKmerMain.species_calling,
         kma_output = RunRgiBwtKma.kma_amr_results,
         kma_species_output = RunRgiKmerBwt.kma_species_calling,
+        gene_coverage = MakeGeneCoverage.output_gene_coverage,
         docker_image_id = docker_image_id,
         sample_name = sample_name
     }
@@ -138,6 +139,7 @@ task RunResultsPerSample {
         File main_species_output
         File kma_output
         File kma_species_output
+        File gene_coverage
         String docker_image_id
         String sample_name
     }
@@ -238,7 +240,7 @@ task RunResultsPerSample {
         merge_x.to_csv("comprehensive_AMR_metrics.tsv", index=None, sep='\t')
 
         df = pd.read_csv("comprehensive_AMR_metrics.tsv", sep='\t')
-        big_table = df[['ARO_overall', 'Gene_Family_overall', 'Drug_Class_overall', 'Resistance_Mechanism_overall', 'model_overall', 'All Mapped Reads_kma_amr', 'Percent Coverage_kma_amr','Depth_kma_amr', 'CARD*kmer Prediction_kma_sp', 'Cut_Off_contig_sp', 'Percentage Length of Reference Sequence_contig_amr', 'Best_Identities_contig_amr', 'CARD*kmer Prediction_contig_sp']]
+        big_table = df[['ARO_overall', 'Gene_Family_overall', 'Drug_Class_overall', 'Resistance_Mechanism_overall', 'model_overall', 'All Mapped Reads_kma_amr', 'Percent Coverage_kma_amr','Depth_kma_amr', 'CARD*kmer Prediction_kma_sp', 'Cut_Off_contig_amr', 'Percentage Length of Reference Sequence_contig_amr', 'Best_Identities_contig_amr', 'CARD*kmer Prediction_contig_sp']]
         big_table.sort_values(by='Gene_Family_overall', inplace=True)
 
         big_table.to_csv("bigtable_report.tsv", sep='\t', index=None)
@@ -247,6 +249,7 @@ task RunResultsPerSample {
             open("primary_AMR_report.tsv", "a").close()
             exit(0)
 
+        gene_coverage = pd.read_csv("~{gene_coverage}", sep='\t')
         def remove_na(input_set):
             set_list = list(input_set)
             return([i for i in set_list if i == i])
@@ -254,7 +257,6 @@ task RunResultsPerSample {
         this_list = list(set(df['ARO_overall']))
         result_df = {}
         for index in this_list:#[0:1]:
-            print(index)
             sub_df = df[df['ARO_overall'] == index]
             result = {}
             gf = remove_na(set(sub_df['AMR Gene Family_contig_amr']).union(set(sub_df['AMR Gene Family_kma_amr'])))
@@ -272,9 +274,15 @@ task RunResultsPerSample {
             mt = remove_na(set(sub_df['Model_type_contig_amr']).union(set(sub_df['Reference Model Type_kma_amr'])))
             result['model_type'] = ';'.join([' '.join(i.split(' ')[0:-1]) for i in mt]) if len(mt) > 0 else None
             
-            cb = remove_na(set(sub_df['Percentage Length of Reference Sequence_contig_amr']).union(
-            set(sub_df['Percent Coverage_kma_amr'])))
-            result['coverage_breadth'] = max(cb) if len(cb) > 0 else None
+            rcb = remove_na(set(sub_df['Percent Coverage_kma_amr']))
+            result['read_coverage_breadth'] = max(rcb) if len(rcb) > 0 else None
+
+            gene_id = ";".join(remove_na(set(sub_df["ID_contig_amr"].unique())))
+            if gene_id:
+                contig_coverage = gene_coverage[gene_coverage["ID"] == gene_id]["gene_coveraage_perc"].iloc[0]
+            else:
+                contig_coverage = None
+            result["contig_coverage_breadth"] = contig_coverage
             
             cd = remove_na(set(sub_df['Depth_kma_amr']))
             result['coverage_depth'] = max(cd) if len(cd) > 0 else None
@@ -292,6 +300,7 @@ task RunResultsPerSample {
             
             sp_kma = ' '.join(remove_na(set(sub_df['CARD*kmer Prediction_kma_sp'])))
             result['sp_kma'] = sp_kma
+            
             
             sp = remove_na(set(sub_df['CARD*kmer Prediction_contig_sp']).union(set(sub_df['CARD*kmer Prediction_kma_sp'])))
             final_species = {} 
@@ -311,20 +320,13 @@ task RunResultsPerSample {
                             species_count = int(t.split(':')[1].strip())
                             final_species[species_name] = species_count
 
-            if(len(final_species)) > 0:
-                result['species'] = max(final_species, key = final_species.get)
-            else:
-                result['species'] = None
-
             result_df[index] = result
         final_df = pd.DataFrame.from_dict(result_df)
         final_df = final_df.transpose()
         final_df.sort_index(inplace=True)
         final_df.sort_values(by='gene_family', inplace=True)
-        #print(final_df.columns)
         final_df.dropna(subset=['drug_class'], inplace=True)
-        final_df[['sample_name', 'gene_family', 'drug_class', 'resistance_mechanism', 'model_type', 'num_reads', 'num_contigs', 'coverage_breadth', 'coverage_depth', 'percent_id', 'cutoff', 'species', 'sp_contig', 'sp_kma']]
-        final_df.to_csv("primary_AMR_report.tsv", sep='\t', index=None)
+        final_df.to_csv("primary_AMR_report.tsv", sep='\t', index_label="gene_name")
 
 
         CODE
