@@ -310,6 +310,7 @@ task RunResultsPerSample {
             result['read_species'] = read_species
             
             
+            
             sp = remove_na(set(sub_df['CARD*kmer Prediction_contig_sp']).union(set(sub_df['CARD*kmer Prediction_kma_sp'])))
             final_species = {} 
             for s in sp:
