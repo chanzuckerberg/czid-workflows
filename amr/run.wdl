@@ -279,7 +279,7 @@ task RunResultsPerSample {
 
             gene_id = ";".join(remove_na(set(sub_df["ID_contig_amr"].unique())))
             if gene_id:
-                contig_coverage = gene_coverage[gene_coverage["ID"] == gene_id]["gene_coveraage_perc"].iloc[0]
+                contig_coverage = gene_coverage[gene_coverage["ID"] == gene_id]["gene_coverage_perc"].iloc[0]
             else:
                 contig_coverage = None
             result["contig_coverage_breadth"] = contig_coverage
@@ -549,7 +549,7 @@ task MakeGeneCoverage {
         "ID": ind[0],
         "gene_coverage_bps": gene_coverage_bps,
         "db_seq_length": db_seq_length[ind[1]],
-        "gene_coveraage_perc": np.round((gene_coverage_bps/db_seq_length[ind[1]])*100, 4)
+        "gene_coverage_perc": np.round((gene_coverage_bps/db_seq_length[ind[1]])*100, 4)
       })
     gene_coverage_df = pd.DataFrame(gene_coverage)
     gene_coverage_df.to_csv("gene_coverage.tsv", index=None, sep="\t")
