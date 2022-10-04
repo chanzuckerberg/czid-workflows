@@ -170,7 +170,7 @@ def run_sample(czid_repo, workflow_version, index_version, settings, key_prefix,
 
     # now the lock is released
     # this is a simplified version of some of the functionality of subprocess.run
-    
+
     # wait for the process to complete and get stdout and stderr
     stdout, stderr = process.communicate()
     # get the return code of the process
