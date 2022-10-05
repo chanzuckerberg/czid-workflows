@@ -280,22 +280,26 @@ task RunCZIDRedup {
     String docker_image_id 
     String s3_wd_uri 
     Array[File] priceseq_fa
+    Array[File] non_host_reads
     File clusters 
     File cluster_sizes
   }
   command <<<
   set -euxo pipefail
   grep -v "^1" "~{cluster_sizes}" | cut -f2 > duplicated-reads.txt
+  grep -h ">" ~{sep=' ' non_host_reads} | sed "s/^>//" > passed_filters.txt
 
   python3 << CODE 
   """ write read headers excluded from deduplicated file """
   with open("duplicated-pairs.txt", "w+") as f:
+    with open("passed_filters.txt", "r") as pf: 
+        passed_filters = set(pf.read().splitlines())
     with open("duplicated-reads.txt", "r") as dr:
         duplicate = set(dr.read().splitlines())
     with open("~{clusters}", "r") as clusters:
         for line in clusters:
             key, value = line.strip().split(",")
-            if key in duplicate and key != value:
+            if key in duplicate and key in passed_filters and key != value:
                 f.write(value)
                 f.write("\n")
   CODE
@@ -321,8 +325,6 @@ task RunCZIDRedup {
     docker: docker_image_id
 
   }
-
-
 }
 
 task RunLZW {
@@ -595,14 +597,6 @@ workflow czid_host_filter {
       s3_wd_uri = s3_wd_uri,
       priceseq_fa = select_all([RunPriceSeq.priceseq1_fa, RunPriceSeq.priceseq2_fa])
   }
-  call RunCZIDRedup { 
-    input: 
-      docker_image_id = docker_image_id,
-      s3_wd_uri = s3_wd_uri,
-      priceseq_fa = select_all([RunPriceSeq.priceseq1_fa, RunPriceSeq.priceseq2_fa]),
-      clusters = RunCZIDDedup.duplicate_clusters_csv,
-      cluster_sizes = RunCZIDDedup.duplicate_cluster_sizes_tsv
-  }
   
 
   call RunLZW {
@@ -675,6 +669,15 @@ workflow czid_host_filter {
       duplicate_clusters_csv = RunCZIDDedup.duplicate_clusters_csv,
       duplicate_cluster_sizes_tsv = RunCZIDDedup.duplicate_cluster_sizes_tsv,
       gsnap_genome = gsnap_genome
+  }
+  call RunCZIDRedup { 
+    input: 
+      docker_image_id = docker_image_id,
+      s3_wd_uri = s3_wd_uri,
+      priceseq_fa = select_all([RunPriceSeq.priceseq1_fa, RunPriceSeq.priceseq2_fa]),
+      non_host_reads = select_all([RunGsnapFilter.gsnap_filter_1_fa, RunGsnapFilter.gsnap_filter_2_fa]),
+      clusters = RunCZIDDedup.duplicate_clusters_csv,
+      cluster_sizes = RunCZIDDedup.duplicate_cluster_sizes_tsv
   }
 
   output {
