@@ -293,7 +293,7 @@ task RunResultsPerSample {
             result['num_reads'] = max(nr) if len(nr) > 0 else None
             
             pid = remove_na(set(sub_df['Best_Identities_contig_amr']))
-            result['contig_percent_id'] = max(pid) if len(pid) > 0 else None
+            result['contig_percent_id'] = sum(pid) / len(pid) if len(pid) > 0 else None
             
             contig_species = ' '.join(remove_na(set(sub_df['CARD*kmer Prediction_contig_sp'])))
             result['contig_species'] = contig_species
