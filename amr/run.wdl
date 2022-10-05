@@ -285,7 +285,7 @@ task RunResultsPerSample {
             result["contig_coverage_breadth"] = contig_coverage
             
             cd = remove_na(set(sub_df['Depth_kma_amr']))
-            result['coverage_depth'] = max(cd) if len(cd) > 0 else None
+            result['read_coverage_depth'] = max(cd) if len(cd) > 0 else None
             
             result['num_contigs'] = len(remove_na(set(sub_df['Contig_contig_amr'])))
             
@@ -293,13 +293,13 @@ task RunResultsPerSample {
             result['num_reads'] = max(nr) if len(nr) > 0 else None
             
             pid = remove_na(set(sub_df['Best_Identities_contig_amr']))
-            result['percent_id'] = max(pid) if len(pid) > 0 else None
+            result['contig_percent_id'] = max(pid) if len(pid) > 0 else None
             
-            sp_contig = ' '.join(remove_na(set(sub_df['CARD*kmer Prediction_contig_sp'])))
-            result['sp_contig'] = sp_contig
+            contig_species = ' '.join(remove_na(set(sub_df['CARD*kmer Prediction_contig_sp'])))
+            result['contig_species'] = contig_species
             
-            sp_kma = ' '.join(remove_na(set(sub_df['CARD*kmer Prediction_kma_sp'])))
-            result['sp_kma'] = sp_kma
+            read_species = ' '.join(remove_na(set(sub_df['CARD*kmer Prediction_kma_sp'])))
+            result['read_species'] = read_species
             
             
             sp = remove_na(set(sub_df['CARD*kmer Prediction_contig_sp']).union(set(sub_df['CARD*kmer Prediction_kma_sp'])))
@@ -323,8 +323,9 @@ task RunResultsPerSample {
             result_df[index] = result
         final_df = pd.DataFrame.from_dict(result_df)
         final_df = final_df.transpose()
+        final_df = final_df[["sample_name", "gene_family", "drug_class", "resistance_mechanism", "model_type", "num_contigs", 
+                             "cutoff", "contig_coverage_breadth", "contig_percent_id", "contig_species", "num_reads", "read_coverage_breadth", "read_coverage_depth", "read_species"]]
         final_df.sort_index(inplace=True)
-        final_df.sort_values(by='gene_family', inplace=True)
         final_df.dropna(subset=['drug_class'], inplace=True)
         final_df.to_csv("primary_AMR_report.tsv", sep='\t', index_label="gene_name")
 
