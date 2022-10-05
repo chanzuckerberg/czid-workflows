@@ -398,6 +398,7 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
                     curr["sstart"] = min(curr["sstart"], row["sstart"])
                     curr["send"] = max(curr["send"], row["send"])
                 else:
+                    # else add the contig
                     contig2accession[contig_id] = (accession_id, row)
                 contig2lineage[contig_id] = accession_dict[accession_id]
 
