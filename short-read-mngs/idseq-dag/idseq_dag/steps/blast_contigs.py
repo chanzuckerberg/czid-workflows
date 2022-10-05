@@ -378,7 +378,27 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
             for row in blastn_6_reader:
                 contig_id = row["qseqid"]
                 accession_id = row["sseqid"]
-                contig2accession[contig_id] = (accession_id, row)
+                if contig2accession.get(contig_id, None):
+                    # if contig already exists, synthesize subcontigs
+                    curr = contig2accession[contig_id][1]
+
+                    # take the weighted mean
+                    curr["pident"] = (curr["pident"]*curr["length"] + row["pident"]*row["length"])/(curr["length"] + row["length"])
+                    curr["evalue"] = (curr["evalue"]*curr["length"] + row["evalue"]*row["length"])/(curr["length"] + row["length"])
+                    curr["bitscore"] = (curr["bitscore"]*curr["length"] + row["bitscore"]*row["length"])/(curr["length"] + row["length"])
+
+                    # take the sum for these values
+                    curr["mismatch"] += row["mismatch"]
+                    curr["gapopen"] += row["gapopen"]
+                    curr["length"] += row["length"]
+
+                    # take the min/max for these values
+                    curr["qstart"] = min(curr["qstart"], row["qstart"])
+                    curr["qend"] = max(curr["qend"], row["qend"])
+                    curr["sstart"] = min(curr["sstart"], row["sstart"])
+                    curr["send"] = max(curr["send"], row["send"])
+                else:
+                    contig2accession[contig_id] = (accession_id, row)
                 contig2lineage[contig_id] = accession_dict[accession_id]
 
             for read_id, contig_id in read2contig.items():
