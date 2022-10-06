@@ -396,7 +396,7 @@ task RunRgiMain {
             echo "{}" > contig_amr_report.json
             cp /tmp/empty-main-header.txt contig_amr_report.txt
         else
-            rgi main -i "~{contigs}" -o contig_amr_report -t contig -a BLAST --clean --include_nudge
+            rgi main -i "~{contigs}" -o contig_amr_report -t contig -a BLAST --clean 
         fi
     >>>
     output {
