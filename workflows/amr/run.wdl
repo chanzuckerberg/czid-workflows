@@ -582,8 +582,12 @@ task MakeGeneCoverage {
         "db_seq_length": db_seq_length[ind[1]],
         "gene_coverage_perc": np.round((gene_coverage_bps/db_seq_length[ind[1]])*100, 4)
       })
-    gene_coverage_df = pd.DataFrame(gene_coverage)
-    gene_coverage_df.to_csv("gene_coverage.tsv", index=None, sep="\t")
+    if gene_coverage:
+        gene_coverage_df = pd.DataFrame(gene_coverage)
+        gene_coverage_df.to_csv("gene_coverage.tsv", index=None, sep="\t")
+    else:
+        gene_coverage_df = pd.DataFrame(columns=["ID", "gene_coverage_bps", "db_seq_length", "gene_coverage_perc"])
+        gene_coverage_df.to_csv("gene_coverage.tsv", index=None, sep="\t")
     CODE
     >>>
     output {
