@@ -2,6 +2,7 @@ import argparse
 
 import pandas as pd
 
+
 def main(
     m8_filepath: str,
     hitsummary_filepath: str,
@@ -37,11 +38,11 @@ def main(
 
     assert hitsummary_df.shape[0] == hitsummary_aln_df.shape[0], "missing read_ids in m8 file"
 
-    sp_data_collection = hitsummary_aln_df[["final_taxid","aln_len"]]
-    sp_counts = sp_data_collection.groupby(["final_taxid"]).sum()
+    sp_data_collection = hitsummary_aln_df[["final_taxid", "aln_len"]]
+    # sp_counts = sp_data_collection.groupby(["final_taxid"]).sum()
 
-    gen_data_collection = hitsummary_aln_df[["genus_taxid","aln_len"]]
-    gen_counts = gen_data_collection.groupby(["genus_taxid"]).sum()
+    gen_data_collection = hitsummary_aln_df[["genus_taxid", "aln_len"]]
+    # gen_counts = gen_data_collection.groupby(["genus_taxid"]).sum()
 
     r2c_df = pd.read_csv(reads_to_contigs_filepath, sep='\t', names=['seqid', 'contig', 'sequence'])
     r2c_df['seq_len'] = [len(i) for i in r2c_df['sequence']]
@@ -56,6 +57,7 @@ def main(
     # these should contain the sorted species / genus counts by length (bp)
     sp_df.groupby(["final_taxid"]).sum().to_csv(species_output_filepath)
     gen_df.groupby(["genus_taxid"]).sum().to_csv(genus_output_filepath)
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument("m8-filepath")
