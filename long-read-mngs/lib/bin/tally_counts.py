@@ -38,10 +38,12 @@ def main(
 
     assert hitsummary_df.shape[0] == hitsummary_aln_df.shape[0], "missing read_ids in m8 file"
 
-    sp_data_collection = hitsummary_aln_df[["final_taxid", "aln_len"]]
+    # TODO: (tmorse) confirm if these are not needed
+
+    # sp_data_collection = hitsummary_aln_df[["final_taxid", "aln_len"]]
     # sp_counts = sp_data_collection.groupby(["final_taxid"]).sum()
 
-    gen_data_collection = hitsummary_aln_df[["genus_taxid", "aln_len"]]
+    # gen_data_collection = hitsummary_aln_df[["genus_taxid", "aln_len"]]
     # gen_counts = gen_data_collection.groupby(["genus_taxid"]).sum()
 
     r2c_df = pd.read_csv(reads_to_contigs_filepath, sep='\t', names=['seqid', 'contig', 'sequence'])
