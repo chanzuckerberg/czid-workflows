@@ -70,4 +70,10 @@ parser.add_argument("--genus-output-filepath")
 
 if __name__ == "__main__":
     args = parser.parse_args()
-    main(**args)
+    main(
+        m8_filepath=args.m8_filepath,
+        hitsummary_filepath=args.hitsummary_filepath,
+        reads_to_contigs_filepath=args.reads_to_contigs_filepath,
+        species_output_filepath=args.species_output_filepath,
+        genus_output_filepath=args.genus_output_filepath,
+    )
