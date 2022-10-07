@@ -54,7 +54,7 @@ def main(
     genus_alignment_lengths.index.name = "total_alignment_length"
 
     reads_lengths = pd.DataFrame(
-        { "read_id": read.id, "read_length": len(read.seq) } for read in SeqIO.parse(reads_fastq_filepath, "fastq")
+        {"read_id": read.id, "read_length": len(read.seq)} for read in SeqIO.parse(reads_fastq_filepath, "fastq")
     )
 
     reads_to_contigs = pd.read_csv(reads_to_contigs_filepath, sep="\t", names=[
@@ -110,7 +110,7 @@ parser.add_argument("--output-filepath")
 if __name__ == "__main__":
     args = parser.parse_args()
     main(
-        reads_fastq_filepath=args.reads_fastq_filepath, 
+        reads_fastq_filepath=args.reads_fastq_filepath,
         m8_filepath=args.m8_filepath,
         hitsummary_filepath=args.hitsummary_filepath,
         reads_to_contigs_filepath=args.reads_to_contigs_filepath,
