@@ -435,6 +435,7 @@ task RunNRAlignment {
 
 task TallyHits {
     input {
+        File reads_fastq
         File m8
         File hitsummary
         File reads_to_contigs_sam
@@ -448,6 +449,7 @@ task TallyHits {
         # --step-name tally_hits 
         cat "~{reads_to_contigs_sam}" | grep -v "^@" | cut -f1,3,10 > reads_to_contigs.txt
         python3 /usr/local/bin/tally_counts.py \
+            --reads-fastq-filepath "~{reads_fastq}" \
             --m8-filepath "~{m8}" \
             --hitsummary-filepath "~{hitsummary}" \
             --reads-to-contigs-filepath reads_to_contigs.txt \
@@ -455,7 +457,7 @@ task TallyHits {
     >>>
 
     output{
-        File tallied_hits = "_tallied_hits.csv"
+        File tallied_hits = "tallied_hits.csv"
     }
 
     runtime {
@@ -605,6 +607,7 @@ workflow czid_long_read_mngs {
 
     call TallyHits {
       input:
+        reads_fastq = RunSubsampling.subsampled_fastq,
         m8 = RunCallHitsNT.deduped_out_m8,
         hitsummary = RunCallHitsNT.hitsummary,
         reads_to_contigs_sam = RunReadsToContigs.reads_to_contigs_sam,
