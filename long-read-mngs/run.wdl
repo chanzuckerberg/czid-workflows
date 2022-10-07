@@ -452,8 +452,6 @@ task TallyHits {
             --m8-filepath "~{m8}" \
             --hitsummary-filepath "~{hitsummary}" \
             --reads-to-contigs-filepath reads_to_contigs.txt \
-            --species-output-filepath "species_tallied_hits.csv" \
-            --genus-output-filepath "genus_tallied_hits.csv" \
             --output-filepath "tallied_hits.csv" 
     >>>
 
