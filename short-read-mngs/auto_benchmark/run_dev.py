@@ -160,9 +160,33 @@ def run_sample(czid_repo, workflow_version, index_version, settings, key_prefix,
         f" --sfn-input '{json.dumps(local_input)}'"
     ]
     print(cmd, file=sys.stderr)
+
+    # we don't want to have multiple invocations of run_sfn happen in the same second because
+    #   second-precision timestamps are used as unique identifiers by run_sfn, this locking
+    #   and waiting mechanism avoids this problem.
+
+    # First, aquire the lock
     with _timestamp_lock:
+        # wait more than 1 second to ensure we don't start in the same second as the previous invocation
         time.sleep(1.1)
-        subprocess.run(cmd, cwd=czid_repo, check=True, stdout=sys.stderr.buffer)
+        # open the subprocess
+        process = subprocess.Popen(cmd, cwd=czid_repo, stdout=sys.stderr.buffer)
+
+    # release the lock
+
+    # below is a simplified version of some of the functionality of subprocess.run
+    #   we could not use subprocess.run because it starts the process and blocks until it
+    #   it completes and we need to start the process, then release the lock, then block
+    #   until the process completes
+
+    # wait for the process to complete and get stdout and stderr
+    stdout, stderr = process.communicate()
+    # get the return code of the process
+    retcode = process.poll()
+    # if the return code is non zero then the process failed
+    if retcode:
+        # raise a CalledProcessError with the process' return code and outputs
+        raise subprocess.CalledProcessError(retcode, process.args, output=stdout, stderr=stderr)
 
     workflow_major_version = workflow_version.split(".")[0]
     return (
