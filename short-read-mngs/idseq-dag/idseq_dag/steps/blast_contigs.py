@@ -385,11 +385,11 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
                     # take the weighted mean
                     curr["pident"] = (curr["pident"] * curr["length"] + row["pident"] * row["length"]) / (curr["length"] + row["length"])
                     curr["evalue"] = (curr["evalue"] * curr["length"] + row["evalue"] * row["length"]) / (curr["length"] + row["length"])
-                    curr["bitscore"] = (curr["bitscore"] * curr["length"] + row["bitscore"] * row["length"]) / (curr["length"] + row["length"])
 
                     # take the sum for these values
                     curr["mismatch"] += row["mismatch"]
                     curr["gapopen"] += row["gapopen"]
+                    curr["bitscore"] += row["bitscore"]
                     curr["length"] += row["length"]
 
                     # take the min/max for these values
