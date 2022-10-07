@@ -68,7 +68,7 @@ def main(
     reads_to_contigs.sort_values("alignment_length", ascending=False).drop_duplicates(["read_id"])
     reads_to_contigs = reads_to_contigs[["read_id", "contig_id"]]
 
-    reads_to_contigs = reads_to_contigs.join(reads_lengths, how="inner")
+    reads_to_contigs = reads_to_contigs.join(reads_lengths, how="inner", on="read_id")
     contig_sequence_lengths = reads_to_contigs[[
         "contig_id",
         "read_length",
