@@ -324,8 +324,7 @@ task RunNTAlignment {
     output {
         File out_paf = "gsnap.paf"
         File out_m8 = "gsnap.m8"
-    }
-
+    } 
     runtime {
         docker: docker_image_id
     }
@@ -435,7 +434,6 @@ task RunNRAlignment {
 
 task TallyHits {
     input {
-        File reads_fastq
         File m8
         File hitsummary
         File reads_to_contigs_sam
@@ -449,20 +447,62 @@ task TallyHits {
         # --step-name tally_hits 
         cat "~{reads_to_contigs_sam}" | grep -v "^@" | cut -f1,3,10 > reads_to_contigs.txt
         python3 /usr/local/bin/tally_counts.py \
-            --reads-fastq-filepath "~{reads_fastq}" \
             --m8-filepath "~{m8}" \
             --hitsummary-filepath "~{hitsummary}" \
             --reads-to-contigs-filepath reads_to_contigs.txt \
-            --output-filepath "tallied_hits.csv" \
+            --species-output-filepath "species_tallied_hits.csv" \
+            --genus-output-filepath "genus_tallied_hits.csv"
     >>>
 
     output{
-        File tallied_hits = "tallied_hits.csv"
+        File species_tallied_hits = "species_tallied_hits.csv"
+        File genus_tallied_hits = "genus_tallied_hits.csv"
+        File reads_to_contigs = "reads_to_contigs.txt"
     }
 
     runtime {
         docker: docker_image_id
     }
+}
+
+task UnmappedReads {
+    input {
+        File input_file
+        File hitsummary_nt
+        File hitsummary_nr
+        File reads_to_contigs_txt
+        String docker_image_id
+    }
+    command <<<
+        set -euxo pipefail
+        cut -f1 "~{hitsummary_nt}" "~{hitsummary_nr}" | sort | uniq > mapped.txt
+        cut -f1,2 "~{reads_to_contigs_txt}" > all_reads.txt
+        python3 << CODE
+        with open("mapped.txt", "r") as m:
+            mapped_hits = set(m.read().splitlines())
+
+        unmapped_reads = set()
+        with open("all_reads.txt", "r") as ar:
+            for line in ar:
+                read, contig = line.strip().split("\t")
+                if read not in mapped_hits and contig not in mapped_hits:
+                    unmapped_reads.add(read)
+
+        with open("unmapped_reads.txt", "w") as ur:
+            for read in unmapped_reads:
+                ur.write(read)
+                ur.write("\n")
+        CODE
+        seqkit grep -f "unmapped_reads.txt" "~{input_file}" > unmapped_reads.fastq
+    >>>
+
+    output {
+        File unmapped_reads = "unmapped_reads.fastq"
+    }
+    runtime {
+        docker: docker_image_id
+    }
+
 }
 
 workflow czid_long_read_mngs {
@@ -607,13 +647,19 @@ workflow czid_long_read_mngs {
 
     call TallyHits {
       input:
-        reads_fastq = RunSubsampling.subsampled_fastq,
         m8 = RunCallHitsNT.deduped_out_m8,
         hitsummary = RunCallHitsNT.hitsummary,
         reads_to_contigs_sam = RunReadsToContigs.reads_to_contigs_sam,
         docker_image_id = docker_image_id,
     }
-
+    call UnmappedReads {
+      input:
+        input_file = RunSubsampling.subsampled_fastq,
+        hitsummary_nt = RunCallHitsNT.hitsummary,
+        hitsummary_nr = RunCallHitsNR.hitsummary,
+        reads_to_contigs_txt = TallyHits.reads_to_contigs,
+        docker_image_id = docker_image_id
+    }
     output {
         File nt_deduped_out_m8 = RunCallHitsNT.deduped_out_m8
         File nt_hitsummary = RunCallHitsNT.hitsummary
@@ -623,6 +669,7 @@ workflow czid_long_read_mngs {
         File nr_hitsummary = RunCallHitsNR.hitsummary
         File nr_counts_json = RunCallHitsNR.counts_json
         File? nr_output_read_count = RunCallHitsNR.output_read_count
-        File tallied_hits = TallyHits.tallied_hits
+        File species_tallied_hits = TallyHits.species_tallied_hits
+        File genus_tallied_hits = TallyHits.genus_tallied_hits
     }
 }
