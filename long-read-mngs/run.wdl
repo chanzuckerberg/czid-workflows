@@ -434,6 +434,7 @@ task RunNRAlignment {
 
 task TallyHits {
     input {
+        File reads_fastq
         File m8
         File hitsummary
         File reads_to_contigs_sam
@@ -447,16 +448,17 @@ task TallyHits {
         # --step-name tally_hits 
         cat "~{reads_to_contigs_sam}" | grep -v "^@" | cut -f1,3,10 > reads_to_contigs.txt
         python3 /usr/local/bin/tally_counts.py \
+            --reads-fastq-filepath "~{reads_fastq}" \
             --m8-filepath "~{m8}" \
             --hitsummary-filepath "~{hitsummary}" \
             --reads-to-contigs-filepath reads_to_contigs.txt \
             --species-output-filepath "species_tallied_hits.csv" \
-            --genus-output-filepath "genus_tallied_hits.csv"
+            --genus-output-filepath "genus_tallied_hits.csv" \
+            --output-filepath "tallied_hits.csv" 
     >>>
 
     output{
-        File species_tallied_hits = "species_tallied_hits.csv"
-        File genus_tallied_hits = "genus_tallied_hits.csv"
+        File tallied_hits = "tallied_hits.csv"
         File reads_to_contigs = "reads_to_contigs.txt"
     }
 
@@ -669,7 +671,6 @@ workflow czid_long_read_mngs {
         File nr_hitsummary = RunCallHitsNR.hitsummary
         File nr_counts_json = RunCallHitsNR.counts_json
         File? nr_output_read_count = RunCallHitsNR.output_read_count
-        File species_tallied_hits = TallyHits.species_tallied_hits
-        File genus_tallied_hits = TallyHits.genus_tallied_hits
+        File tallied_hits = TallyHits.tallied_hits
     }
 }
