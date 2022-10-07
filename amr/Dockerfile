@@ -2,7 +2,7 @@ FROM ubuntu:20.04
 
 LABEL maintainer="CZ ID Team <idseq-tech@chanzuckerberg.com>"
 
-RUN apt-get update && apt-get -y install curl git python3 python3-pip gcc make libz-dev libncurses-dev libbz2-dev liblzma-dev g++ zip
+RUN apt-get update && apt-get -y install curl git python3 python3-pip gcc make libz-dev libncurses-dev libbz2-dev liblzma-dev g++ zip bedtools
 
 RUN ln -s /usr/bin/python3 /usr/bin/python
 
@@ -10,7 +10,7 @@ RUN ln -s /usr/bin/python3 /usr/bin/python
 RUN curl -L https://github.com/bbuchfink/diamond/releases/download/v0.8.36/diamond-linux64.tar.gz | tar xz && mv diamond /usr/local/bin
 RUN curl -L http://www.unafold.org/download/oligoarrayaux-3.8.tar.gz | tar xz && cd oligoarrayaux-3.8/ && ./configure && make install 
 RUN curl -L https://github.com/samtools/samtools/releases/download/1.9/samtools-1.9.tar.bz2 | tar xj && cd samtools-1.9/ && make && mv samtools /usr/local/bin/
-RUN curl -L https://github.com/arq5x/bedtools2/releases/download/v2.29.1/bedtools-2.29.1.tar.gz | tar xz && cd bedtools2 && make && mv bin/* /usr/local/bin/
+#RUN curl -L https://github.com/arq5x/bedtools2/releases/download/v2.29.1/bedtools-2.29.1.tar.gz | tar xz && cd bedtools2 && make && mv bin/* /usr/local/bin/
 RUN  curl -L https://github.com/lh3/bwa/releases/download/v0.7.17/bwa-0.7.17.tar.bz2 | tar xj && cd bwa-0.7.17/ && make &&  mv bwa /usr/local/bin/
 RUN curl -L  https://bitbucket.org/genomicepidemiology/kma/get/1.4.3.tar.gz | tar xz && cd genomicepidemiology-kma-47505a7dd4eb/ && make && mv kma kma_index kma_shm kma_update /usr/local/bin/
 

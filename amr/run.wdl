@@ -71,11 +71,16 @@ workflow amr {
         kmer_db = kmer_db,
         amr_kmer_db = amr_kmer_db,
         wildcard_data = wildcard_data,
+        wildcard_index = wildcard_index,
         docker_image_id = docker_image_id
     }
     call RunRgiKmerMain { 
         input:
         main_output_json = RunRgiMain.output_json,
+        kmer_db = kmer_db,
+        amr_kmer_db = amr_kmer_db,
+        wildcard_data = wildcard_data,
+        wildcard_index = wildcard_index,
         docker_image_id = docker_image_id
     }
     call RunResultsPerSample { 
@@ -345,10 +350,21 @@ task RunResultsPerSample {
 task RunRgiKmerMain {
     input {
         File main_output_json
+        File kmer_db
+        File amr_kmer_db
+        File wildcard_data 
+        File wildcard_index
         String docker_image_id
     }
     command <<< 
         set -exuo pipefail
+        time rgi load \
+            --wildcard_annotation "~{wildcard_data}" \
+            --wildcard_version 3.1.0 \
+            --wildcard_index "~{wildcard_index}" \
+            --kmer_database "~{kmer_db}" \
+            --amr_kmers "~{amr_kmer_db}" \
+            --kmer_size 61
         rgi kmer_query --rgi -k 61 -i "~{main_output_json}" --output contig_species_report 
     >>>
     output { 
