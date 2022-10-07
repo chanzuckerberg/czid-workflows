@@ -15,7 +15,7 @@ workflow amr {
         File kmer_db = "s3://czid-public-references/test/AMRv2/61_kmer_db.json"
         File amr_kmer_db = "s3://czid-public-references/test/AMRv2/all_amr_61mers.txt"
         File wildcard_data = "s3://czid-public-references/test/AMRv2/wildcard_database_v3.1.0.fasta"
-        File wildcard_data = "s3://czid-public-references/test/AMRv2/index-for-model-sequences.txt"
+        File wildcard_index = "s3://czid-public-references/test/AMRv2/index-for-model-sequences.txt"
         Int min_contig_length = 100
         # Dummy values - required by SFN interface
         String s3_wd_uri = ""
