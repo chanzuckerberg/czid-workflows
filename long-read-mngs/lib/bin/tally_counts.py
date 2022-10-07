@@ -62,11 +62,11 @@ def main(
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("m8-filepath")
-parser.add_argument("hitsummary-filepath")
-parser.add_argument("reads-to-contigs-filepath")
-parser.add_argument("species-output-filepath")
-parser.add_argument("genus-output-filepath")
+parser.add_argument("--m8-filepath")
+parser.add_argument("--hitsummary-filepath")
+parser.add_argument("--reads-to-contigs-filepath")
+parser.add_argument("--species-output-filepath")
+parser.add_argument("--genus-output-filepath")
 
 if __name__ == "__main__":
     args = parser.parse_args()
