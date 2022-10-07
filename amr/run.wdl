@@ -14,7 +14,8 @@ workflow amr {
         File card_json = "s3://czid-public-references/test/AMRv2/card.json"
         File kmer_db = "s3://czid-public-references/test/AMRv2/61_kmer_db.json"
         File amr_kmer_db = "s3://czid-public-references/test/AMRv2/all_amr_61mers.txt"
-        File wildcard_data = "s3://czid-public-references/test/AMRv2/wildcard_data.tar.bz2"
+        File wildcard_data = "s3://czid-public-references/test/AMRv2/wildcard_database_v3.1.0.fasta"
+        File wildcard_data = "s3://czid-public-references/test/AMRv2/index-for-model-sequences.txt"
         Int min_contig_length = 100
         # Dummy values - required by SFN interface
         String s3_wd_uri = ""
@@ -367,10 +368,19 @@ task RunRgiKmerBwt {
         File kmer_db
         File amr_kmer_db
         File wildcard_data 
+        File wildcard_index
         String docker_image_id
     }
     command <<<
         set -exuo pipefail
+        
+        time rgi load \
+            --wildcard_annotation "~{wildcard_data}" \
+            --wildcard_version 3.1.0 \
+            --wildcard_index "~{wildcard_index}" \
+            --kmer_database "~{kmer_db}" \
+            --amr_kmers "~{amr_kmer_db}" \
+            --kmer_size 61
         rgi kmer_query --bwt -k 61 -i "~{output_sorted_length_100}" --output sr_species_report
     >>>
     output {
