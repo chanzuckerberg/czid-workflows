@@ -1,4 +1,5 @@
 import argparse
+import sys
 
 import pandas as pd
 from Bio import SeqIO
@@ -67,6 +68,9 @@ def main(
     # we want to only keep the longest alignment for each read so reads are not double counted
     reads_to_contigs.sort_values("alignment_length", ascending=False).drop_duplicates(["read_id"])
     reads_to_contigs = reads_to_contigs[["read_id", "contig_id"]]
+
+    print(reads_to_contigs.head(), file=sys.stderr)
+    print(reads_lengths.head(), file=sys.stderr)
 
     reads_to_contigs = reads_to_contigs.join(reads_lengths, how="inner", on="read_id")
     contig_sequence_lengths = reads_to_contigs[[
