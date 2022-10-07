@@ -62,14 +62,14 @@ def main(
         "contig_id",
         "alignment",
     ])
-    reads_to_contigs = reads_to_contigs[reads_to_contigs.contig != "*"]
+    reads_to_contigs = reads_to_contigs[reads_to_contigs.contig_id != "*"]
     reads_to_contigs["alignment_length"] = reads_to_contigs["alignment"].str.len()
     # we want to only keep the longest alignment for each read so reads are not double counted
     reads_to_contigs.sort_values("alignment_length", ascending=False).drop_duplicates(["read_id"])
     reads_to_contigs = reads_to_contigs[["read_id", "contig_id"]]
 
     reads_to_contigs = reads_to_contigs.join(reads_lengths, how="inner")
-    contig_sequence_lengths = reads_to_contigs[["contig", "read_length"]].groupby(["contig_id"]).sum()
+    contig_sequence_lengths = reads_to_contigs[["contig_id", "read_length"]].groupby(["contig_id"]).sum()
     contig_sequence_lengths.columns = ["total_sequence_length"]
 
     taxid_sequence_lengths = pd.merge(
