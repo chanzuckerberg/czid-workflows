@@ -1,6 +1,6 @@
 version 1.0
 
-task RunValidateInput{
+task RunValidateInput {
     input {
         File input_fastq
         String docker_image_id
@@ -8,6 +8,10 @@ task RunValidateInput{
 
     command <<<
         set -euxo pipefail
+        # TODO: (tmorse) remove when status upload is not dependent on idseq-dag see: https://app.shortcut.com/idseq/story/163323
+        # this comment is for the miniwdl plugin uploader to parse:
+        # --step-name validate_input 
+
         fastp -i "~{input_fastq}" -o sample_validated.fastq
 
         filter_count sample_validated.fastq validated "No reads remaining after input validation"
@@ -32,6 +36,10 @@ task RunQualityFilter {
 
     command <<<
         set -euxo pipefail
+        # TODO: (tmorse) remove when status upload is not dependent on idseq-dag see: https://app.shortcut.com/idseq/story/163323
+        # this comment is for the miniwdl plugin uploader to parse:
+        # --step-name quality_filtering 
+
         fastp -i "~{input_fastq}" --qualified_quality_phred 9 --length_required 100 --low_complexity_filter --complexity_threshold 30 --dont_eval_duplication -o sample_quality_filtered.fastq
 
         filter_count sample_quality_filtered.fastq quality_filtered "No reads remaining after quality filtering"
@@ -58,6 +66,9 @@ task RunHostFilter {
 
     command <<<
         set -euxo pipefail
+        # TODO: (tmorse) remove when status upload is not dependent on idseq-dag see: https://app.shortcut.com/idseq/story/163323
+        # this comment is for the miniwdl plugin uploader to parse:
+        # --step-name host_filtering 
 
         # run minimap2 against host genome
         if [[ "~{library_type}" == "RNA" ]]
@@ -94,6 +105,9 @@ task RunHumanFilter {
 
     command <<<
         set -euxo pipefail
+        # TODO: (tmorse) remove when status upload is not dependent on idseq-dag see: https://app.shortcut.com/idseq/story/163323
+        # this comment is for the miniwdl plugin uploader to parse:
+        # --step-name human_filtering 
 
         # run minimap2 against human genome
         if [[ "~{library_type}" == "RNA" ]]
@@ -134,6 +148,10 @@ task RunSubsampling {
 
     command <<<
         set -euxo pipefail
+        # TODO: (tmorse) remove when status upload is not dependent on idseq-dag see: https://app.shortcut.com/idseq/story/163323
+        # this comment is for the miniwdl plugin uploader to parse:
+        # --step-name subsampling 
+
         head -"~{subsample_depth}" "~{input_fastq}" > sample.subsampled.fastq
 
         # We should always have reads after subsampling, but adding for consistency with other steps
@@ -161,6 +179,9 @@ task RunAssembly {
 
     command <<<
         set -euxo pipefail
+        # TODO: (tmorse) remove when status upload is not dependent on idseq-dag see: https://app.shortcut.com/idseq/story/163323
+        # this comment is for the miniwdl plugin uploader to parse:
+        # --step-name assembly 
 
         flye_setting="--nano-raw"
         if [[ "~{guppy_basecaller_setting}" == "super" ]]
@@ -203,6 +224,9 @@ task RunReadsToContigs {
 
     command <<<
         set -euxo pipefail
+        # TODO: (tmorse) remove when status upload is not dependent on idseq-dag see: https://app.shortcut.com/idseq/story/163323
+        # this comment is for the miniwdl plugin uploader to parse:
+        # --step-name reads_to_contigs 
 
         # use minimap2 to align reads back to contigs
         minimap2 -ax map-ont "~{assembled_reads}" "~{input_fastq}" -o sample.reads_to_contigs.sam -t 15
@@ -217,6 +241,7 @@ task RunReadsToContigs {
     >>>
 
     output {
+        File reads_to_contigs_sam = "sample.reads_to_contigs.sam"
         File reads_to_contigs_bam = "sample.reads_to_contigs.bam"
         File reads_to_contigs_bai = "sample.reads_to_contigs.bam.bai"
         File non_contigs_fastq = "sample.non_contigs.fastq"
@@ -237,6 +262,9 @@ task PrepareNTAlignmentInputs {
 
     command <<<
         set -euxo pipefail
+        # TODO: (tmorse) remove when status upload is not dependent on idseq-dag see: https://app.shortcut.com/idseq/story/163323
+        # this comment is for the miniwdl plugin uploader to parse:
+        # --step-name prepare_nt_alignment_inputs 
 
         # combine contigs and non-contig reads into a single file
         cat "~{assembled_reads_fa}" "~{non_contig_reads_fa}" > sample.all_sequences_to_align_full.fasta
@@ -268,6 +296,9 @@ task RunNTAlignment {
 
     command <<<
         set -euxo pipefail
+        # TODO: (tmorse) remove when status upload is not dependent on idseq-dag see: https://app.shortcut.com/idseq/story/163323
+        # this comment is for the miniwdl plugin uploader to parse:
+        # --step-name run_nt_alignment 
 
         if [[ "~{run_locally}" == true ]]; then
           minimap2 ~{minimap2_args} "~{local_minimap2_index}" "~{all_sequences_to_align}" > "~{prefix}.paf"
@@ -314,6 +345,9 @@ task RunCallHits {
 
     command <<<
         set -euxo pipefail
+        # TODO: (tmorse) remove when status upload is not dependent on idseq-dag see: https://app.shortcut.com/idseq/story/163323
+        # this comment is for the miniwdl plugin uploader to parse:
+        # --step-name run_call_hits 
     
         python3 <<CODE
         from idseq_dag.util.m8 import call_hits_m8, generate_taxon_count_json_from_m8
@@ -366,6 +400,9 @@ task RunNRAlignment {
 
     command <<<
         set -euxo pipefail  
+        # TODO: (tmorse) remove when status upload is not dependent on idseq-dag see: https://app.shortcut.com/idseq/story/163323
+        # this comment is for the miniwdl plugin uploader to parse:
+        # --step-name run_nr_alignment 
         if [[ "~{run_locally}" == true ]]; then 
           diamond makedb --in "~{local_diamond_index}" -d reference
           diamond blastx -d reference -q "~{assembled_reads_fa}" -o "diamond.m8" "--~{diamond_args}"
@@ -389,6 +426,38 @@ task RunNRAlignment {
 
     output{
         File out_m8 = "diamond.m8"
+    }
+
+    runtime {
+        docker: docker_image_id
+    }
+}
+
+task TallyHits {
+    input {
+        File m8
+        File hitsummary
+        File reads_to_contigs_sam
+        String docker_image_id
+    }
+
+    command <<<
+        set -euxo pipefail  
+        # TODO: (tmorse) remove when status upload is not dependent on idseq-dag see: https://app.shortcut.com/idseq/story/163323
+        # this comment is for the miniwdl plugin uploader to parse:
+        # --step-name tally_hits 
+        cat "~{reads_to_contigs_sam}" | grep -v "^@" | cut -f1,3,10 > reads_to_contigs.txt
+        python3 /usr/local/bin/tally_counts.py \
+            --m8-filepath "~{m8}" \
+            --hitsummary-filepath "~{hitsummary}" \
+            --reads-to-contigs-filepath reads_to_contigs.txt \
+            --species-output-filepath "species_tallied_hits.csv" \
+            --genus-output-filepath "genus_tallied_hits.csv"
+    >>>
+
+    output{
+        File species_tallied_hits = "species_tallied_hits.csv"
+        File genus_tallied_hits = "genus_tallied_hits.csv"
     }
 
     runtime {
@@ -536,6 +605,14 @@ workflow czid_long_read_mngs {
         docker_image_id = docker_image_id,
     }
 
+    call TallyHits {
+      input:
+        m8 = RunCallHitsNT.deduped_out_m8,
+        hitsummary = RunCallHitsNT.hitsummary,
+        reads_to_contigs_sam = RunReadsToContigs.reads_to_contigs_sam,
+        docker_image_id = docker_image_id,
+    }
+
     output {
         File nt_deduped_out_m8 = RunCallHitsNT.deduped_out_m8
         File nt_hitsummary = RunCallHitsNT.hitsummary
@@ -545,5 +622,7 @@ workflow czid_long_read_mngs {
         File nr_hitsummary = RunCallHitsNR.hitsummary
         File nr_counts_json = RunCallHitsNR.counts_json
         File? nr_output_read_count = RunCallHitsNR.output_read_count
+        File species_tallied_hits = TallyHits.species_tallied_hits
+        File genus_tallied_hits = TallyHits.genus_tallied_hits
     }
 }
