@@ -39,8 +39,6 @@ RUN apt-get -qq update && apt-get -qq -y install \
     zlib1g-dev \
     && locale-gen en_US.UTF-8
 
-COPY lib/bin /usr/local/bin
-
 RUN pip3 install boto3 marisa-trie==0.7.7 requests biopython pandas
 
 ADD https://raw.githubusercontent.com/chanzuckerberg/miniwdl/v1.1.5/examples/clean_download_cache.sh /usr/local/bin
@@ -86,3 +84,5 @@ WORKDIR /tmp/diamond/build
 RUN cmake -DCMAKE_BUILD_TYPE=Release ..
 RUN make -j6
 RUN mv diamond /usr/local/bin
+
+COPY lib/bin /usr/local/bin

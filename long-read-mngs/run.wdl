@@ -451,13 +451,11 @@ task TallyHits {
             --m8-filepath "~{m8}" \
             --hitsummary-filepath "~{hitsummary}" \
             --reads-to-contigs-filepath reads_to_contigs.txt \
-            --species-output-filepath "species_tallied_hits.csv" \
-            --genus-output-filepath "genus_tallied_hits.csv"
+            --output-filepath "tallied_hits.csv" \
     >>>
 
     output{
-        File species_tallied_hits = "species_tallied_hits.csv"
-        File genus_tallied_hits = "genus_tallied_hits.csv"
+        File tallied_hits = "_tallied_hits.csv"
     }
 
     runtime {
@@ -622,7 +620,6 @@ workflow czid_long_read_mngs {
         File nr_hitsummary = RunCallHitsNR.hitsummary
         File nr_counts_json = RunCallHitsNR.counts_json
         File? nr_output_read_count = RunCallHitsNR.output_read_count
-        File species_tallied_hits = TallyHits.species_tallied_hits
-        File genus_tallied_hits = TallyHits.genus_tallied_hits
+        File tallied_hits = TallyHits.tallied_hits
     }
 }

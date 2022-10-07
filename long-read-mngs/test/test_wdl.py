@@ -27,7 +27,7 @@ class TestLongReadMNGS(WDLTestCase):
         res = self.run_miniwdl([])
         outputs = res["outputs"]
         self.assertIn("czid_long_read_mngs.nt_deduped_out_m8", outputs)
-        with open(outputs["czid_long_read_mngs.species_tallied_hits"]) as f:
+        with open(outputs["czid_long_read_mngs.tallied_hits"]) as f:
             rows = list(csv.reader(f))
             self.assertEqual(rows[0], ["final_taxid", "aln_len", "seq_len"])
             self.assertGreater(len(rows), 1)
