@@ -53,7 +53,7 @@ def main(
     species_alignment_lengths.columns = ["total_alignment_length"]
     genus_alignment_lengths = hitsummary[["genus_taxid", "alignment_length"]].groupby(["genus_taxid"]).sum()
     genus_alignment_lengths.index.name = "taxid"
-    genus_alignment_lengths.columns =  ["total_alignment_length"]
+    genus_alignment_lengths.columns = ["total_alignment_length"]
 
     reads_lengths = pd.DataFrame(
         {"read_id": read.id, "read_length": len(read.seq)} for read in SeqIO.parse(reads_fastq_filepath, "fastq")
