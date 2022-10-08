@@ -24,7 +24,6 @@ class TestLongReadMNGS(WDLTestCase):
         "deuterostome_db": os.path.join(ref_bucket, "taxonomy/2021-01-22/deuterostome_taxids.txt"),
     }
 
-
     def _tallied_hits_assertions(self, outputs: Dict[str, str], name: str):
         with open(outputs[f"czid_long_read_mngs.{name}"]) as f:
             rows = list(csv.reader(f))
@@ -39,7 +38,6 @@ class TestLongReadMNGS(WDLTestCase):
                 if prev:
                     self.assertLessEqual(prev, int(row[3]))
                 prev = int(row[3])
-
 
     def testLongReadMNGS(self):
         res = self.run_miniwdl([])
