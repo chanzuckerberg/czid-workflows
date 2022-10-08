@@ -1,5 +1,6 @@
 import csv
 import os
+from typing import Dict
 from test_util import WDLTestCase
 
 
@@ -23,11 +24,29 @@ class TestLongReadMNGS(WDLTestCase):
         "deuterostome_db": os.path.join(ref_bucket, "taxonomy/2021-01-22/deuterostome_taxids.txt"),
     }
 
+
+    def _tallied_hits_assertions(self, outputs: Dict[str, str], name: str):
+        with open(outputs[f"czid_long_read_mngs.{name}"]) as f:
+            rows = list(csv.reader(f))
+            self.assertEqual(rows[0], ["taxid", "level", "total_sequence_length", "total_alignment_length"])
+            self.assertGreater(len(rows), 1)
+            prev = None
+            for row in rows:
+                self.assertRegexpMatches(r"\d+", row[1])
+                self.assertIn(row[1], ["genus", "species"])
+                self.assertRegexpMatches(r"\d+", row[2])
+                self.assertRegexpMatches(r"\d+", row[3])
+                if prev:
+                    self.assertLessEqual(prev, int(row[3]))
+                prev = int(row[3])
+
+
     def testLongReadMNGS(self):
         res = self.run_miniwdl([])
         outputs = res["outputs"]
         self.assertIn("czid_long_read_mngs.nt_deduped_out_m8", outputs)
-        with open(outputs["czid_long_read_mngs.tallied_hits"]) as f:
-            rows = list(csv.reader(f))
-            self.assertEqual(rows[0], ["taxid", "level", "total_alignment_length", "total_sequence_length"])
-            self.assertGreater(len(rows), 1)
+        self.assertIn("czid_long_read_mngs.nr_deduped_out_m8", outputs)
+
+        # test tally hits
+        self._tallied_hits_assertions(outputs, "nt_tallied_hits")
+        self._tallied_hits_assertions(outputs, "nr_tallied_hits")

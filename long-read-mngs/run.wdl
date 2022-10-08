@@ -605,7 +605,7 @@ workflow czid_long_read_mngs {
         docker_image_id = docker_image_id,
     }
 
-    call TallyHits {
+    call TallyHits as TallyHitsNT {
       input:
         reads_fastq = RunSubsampling.subsampled_fastq,
         m8 = RunCallHitsNT.deduped_out_m8,
@@ -613,6 +613,16 @@ workflow czid_long_read_mngs {
         reads_to_contigs_sam = RunReadsToContigs.reads_to_contigs_sam,
         docker_image_id = docker_image_id,
     }
+
+    call TallyHits as TallyHitsNR {
+      input:
+        reads_fastq = RunSubsampling.subsampled_fastq,
+        m8 = RunCallHitsNT.deduped_out_m8,
+        hitsummary = RunCallHitsNT.hitsummary,
+        reads_to_contigs_sam = RunReadsToContigs.reads_to_contigs_sam,
+        docker_image_id = docker_image_id,
+    }
+
 
     output {
         File nt_deduped_out_m8 = RunCallHitsNT.deduped_out_m8
@@ -623,6 +633,7 @@ workflow czid_long_read_mngs {
         File nr_hitsummary = RunCallHitsNR.hitsummary
         File nr_counts_json = RunCallHitsNR.counts_json
         File? nr_output_read_count = RunCallHitsNR.output_read_count
-        File tallied_hits = TallyHits.tallied_hits
+        File nt_tallied_hits = TallyHitsNT.tallied_hits
+        File nr_tallied_hits = TallyHitsNR.tallied_hits
     }
 }
