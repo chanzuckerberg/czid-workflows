@@ -49,9 +49,11 @@ def main(
     assert hitsummary.shape[0] == hitsummary_n_rows, "missing read_ids in m8 file"
 
     species_alignment_lengths = hitsummary[["species_taxid", "alignment_length"]].groupby(["species_taxid"]).sum()
-    species_alignment_lengths.index.name = "total_alignment_length"
+    species_alignment_lengths.index.name = "taxid"
+    species_alignment_lengths.columns = ["total_alignment_length"]
     genus_alignment_lengths = hitsummary[["genus_taxid", "alignment_length"]].groupby(["genus_taxid"]).sum()
-    genus_alignment_lengths.index.name = "total_alignment_length"
+    genus_alignment_lengths.index.name = "taxid"
+    genus_alignment_lengths.columns =  ["total_alignment_length"]
 
     reads_lengths = pd.DataFrame(
         {"read_id": read.id, "read_length": len(read.seq)} for read in SeqIO.parse(reads_fastq_filepath, "fastq")
@@ -100,7 +102,7 @@ def main(
     pd.concat([
         species_result_final,
         genus_result_final,
-    ], axis=0).sort_values(by="total_alignment_length").to_csv(output_filepath)
+    ], axis=0).sort_values(by="total_alignment_length", ascending=False).to_csv(output_filepath)
 
 
 parser = argparse.ArgumentParser()
