@@ -72,7 +72,7 @@ def main(
     contig_sequence_lengths = reads_to_contigs[[
         "contig_id",
         "read_length",
-    ]].groupby(["contig_id"])["total_sequence_length"].sum()
+    ]].groupby(["contig_id"])["read_length"].sum()
     contig_sequence_lengths.columns = ["total_sequence_length"]
 
     taxid_sequence_lengths = pd.merge(
