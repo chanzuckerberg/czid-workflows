@@ -15,8 +15,6 @@ import os
 import argparse
 import subprocess
 import concurrent.futures
-import threading
-import time
 import json
 import requests
 from datetime import datetime
