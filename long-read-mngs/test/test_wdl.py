@@ -31,12 +31,12 @@ class TestLongReadMNGS(WDLTestCase):
             self.assertGreater(len(rows), 1)
             prev = None
             for row in rows:
-                self.assertRegexpMatches(r"\d+", row[1])
+                self.assertRegex(row[0], r"\d+")
                 self.assertIn(row[1], ["genus", "species"])
-                self.assertRegexpMatches(r"\d+", row[2])
-                self.assertRegexpMatches(r"\d+", row[3])
+                self.assertRegex(row[2], r"\d+")
+                self.assertRegex(row[3], r"\d+")
                 if prev:
-                    self.assertLessEqual(prev, int(row[3]))
+                    self.assertGreaterEqual(prev, int(row[3]))
                 prev = int(row[3])
 
     def testLongReadMNGS(self):
