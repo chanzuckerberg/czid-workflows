@@ -30,7 +30,7 @@ class TestLongReadMNGS(WDLTestCase):
             self.assertEqual(rows[0], ["taxid", "level", "total_sequence_length", "total_alignment_length"])
             self.assertGreater(len(rows), 1)
             prev = None
-            for row in rows:
+            for row in rows[1:]:
                 self.assertRegex(row[0], r"\d+")
                 self.assertIn(row[1], ["genus", "species"])
                 self.assertRegex(row[2], r"\d+")
