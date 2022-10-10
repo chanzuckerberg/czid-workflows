@@ -44,29 +44,29 @@ __note:__ columns 3 and 10 of the hitsummary2.xxx.tab files should always be ide
 3. Subsetting accessions to the ones appearing in NT/NR
 """
 import argparse
-import dbm
 import os
-import shelve
 import sys
 from multiprocessing.pool import ThreadPool
+from typing import List
+
+import marisa_trie
 
 
-def output_dicts_to_db(mapping_files, accession2taxid_db):
+def output_dicts_to_db(mapping_files: List[List[str]], accession2taxid_db: str):
     # generate the accession2taxid db and file
-    accession_dict = shelve.Shelf(dbm.ndbm.open(accession2taxid_db.replace(".db", ""), 'c'))  # type: ignore
-    for partition_list in mapping_files:
-        for partition in partition_list:
-            with open(partition, 'r', encoding="utf-8") as pf:
-                for line in pf:
-                    if len(line) <= 1:
-                        break
-                    fields = line.rstrip().split("\t")
-                    accession_dict[fields[0]] = fields[2]
+    def accession_id_to_taxid():
+        for partition_list in mapping_files:
+            for partition in partition_list:
+                with open(partition, 'r', encoding="utf-8") as pf:
+                    for line in pf:
+                        if len(line) <= 1:
+                            break
+                        fields = line.rstrip().split("\t")
+                        yield (fields[0], (int(fields[2]),))
+    marisa_trie.RecordTrie("L", accession_id_to_taxid()).save(accession2taxid_db)
 
-    accession_dict.close()
 
-
-def grab_accession_names(source_file, dest_file):
+def grab_accession_names(source_file: str, dest_file: str):
     with open(source_file) as source:
         with open(dest_file, 'w') as dest:
             for line in source:
@@ -74,8 +74,8 @@ def grab_accession_names(source_file, dest_file):
                     dest.write(line.split(' ')[0] + "\n")
 
 
-def grab_accession_mapping_list(source, num_partitions, partition_id,
-                                accessions, output_file):
+def grab_accession_mapping_list(source: str, num_partitions: int, partition_id: int,
+                                accessions, output_file: str):
     num_lines = 0
     with open(output_file, 'w') as out, open(source, 'r') as mapf:
         for line in mapf:

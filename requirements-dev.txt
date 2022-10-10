@@ -9,3 +9,4 @@ boto3
 requests
 sklearn
 biopython
+marisa-trie

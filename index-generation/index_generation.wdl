@@ -189,7 +189,7 @@ task GenerateIndexAccessions {
     input {
         File nr
         File nt
-        Int parallelism = 16
+        Int parallelism = 1
         Directory accession2taxid
         String docker_image_id
     }
@@ -206,11 +206,11 @@ task GenerateIndexAccessions {
             --parallelism ~{parallelism} \
             --nt_file ~{nt} \
             --nr_file ~{nr} \
-            --accession2taxid_db accession2taxid.db \
+            --accession2taxid_db accession2taxid.marisa \
     >>>
 
     output {
-        File accession2taxid_db = "accession2taxid.db"
+        File accession2taxid_db = "accession2taxid.marisa"
     }
 
     runtime {
@@ -225,12 +225,12 @@ task GenerateNTDB {
     }
 
     command <<<
-        python3 /usr/local/bin/generate_loc_db.py ~{nt} nt_loc.db nt_info.db
+        python3 /usr/local/bin/generate_loc_db.py ~{nt} nt_loc.marisa nt_info.marisa
     >>>
 
     output {
-        File nt_loc_db = "nt_loc.db"
-        File nt_info_db = "nt_info.db"
+        File nt_loc_db = "nt_loc.marisa"
+        File nt_info_db = "nt_info.marisa"
     }
 
     runtime {
@@ -245,11 +245,11 @@ task GenerateNRDB {
     }
 
     command <<<
-        python3 /usr/local/bin/generate_loc_db.py ~{nr} nr_loc.db nr_info.db
+        python3 /usr/local/bin/generate_loc_db.py ~{nr} nr_loc.marisa nr_info.marisa
     >>>
 
     output {
-        File nr_loc_db = "nr_loc.db"
+        File nr_loc_db = "nr_loc.marisa"
     }
 
     runtime {
@@ -320,13 +320,13 @@ task GenerateIndexLineages {
           exit 1
         fi
 
-        cat lineages.csv | grep 'Chordata\|Echinodermata\|Hemichordata' | cut -f"$TAXID_COL_NUM" -d"," > deuterostome_taxids.txt
+        grep 'Chordata\|Echinodermata\|Hemichordata' lineages.csv | cut -f"$TAXID_COL_NUM" -d"," > deuterostome_taxids.txt
         # TODO: refine which taxa we want to ignore
-        cat lineages.csv | grep 'vector\|plasmid\|Plasposon\|replicon\|synthetic\|construct\|Artificial\|Recombinant\|insert\|cassette' | cut -f"$TAXID_COL_NUM" -d"," > taxon_ignore_list.txt
+        grep 'vector\|plasmid\|Plasposon\|replicon\|synthetic\|construct\|Artificial\|Recombinant\|insert\|cassette' lineages.csv | cut -f"$TAXID_COL_NUM" -d"," > taxon_ignore_list.txt
     >>>
 
     output {
-        File taxid_lineages_db = "taxid-lineages.db"
+        File taxid_lineages_db = "taxid-lineages.marisa"
         File versioned_taxid_lineages_csv = "versioned-taxid-lineages.csv.gz"
         File deuterostome_taxids = "deuterostome_taxids.txt"
         File taxon_ignore_list = "taxon_ignore_list.txt"
@@ -357,10 +357,12 @@ task LoadTaxonLineages {
         USER=$(get_param "/idseq-~{env}-web/DB_USERNAME")
         DATABASE="idseq_~{env}"
 
-        echo "[client]" > my.cnf
-        echo "protocol=tcp" >> my.cnf
-        echo "host=$HOST" >> my.cnf
-        echo "user=$USER" >> my.cnf
+        {
+            echo "[client]"
+            echo "protocol=tcp"
+            echo "host=$HOST"
+            echo "user=$USER"
+        } > my.cnf
 
         # Add the password without making it a part of the command so we can print commands via set -x without exposing the password
         # Add the password= for the config
@@ -396,13 +398,13 @@ task LoadTaxonLineages {
             ) VALUES(
                 '~{index_name}',
                 '~{s3_dir}/nt',
-                '~{s3_dir}/nt_loc.db',
+                '~{s3_dir}/nt_loc.marisa',
                 '~{s3_dir}/nr',
-                '~{s3_dir}/nr_loc.db',
-                '~{s3_dir}/taxid-lineages.db',
-                '~{s3_dir}/accession2taxid.db',
+                '~{s3_dir}/nr_loc.marisa',
+                '~{s3_dir}/taxid-lineages.marisa',
+                '~{s3_dir}/accession2taxid.marisa',
                 '~{s3_dir}/deuterostome_taxids.txt',
-                '~{s3_dir}/nt_info.db',
+                '~{s3_dir}/nt_info.marisa',
                 '~{s3_dir}/taxon_ignore_list.txt',
                 '~{index_name}',
                 NOW(),
@@ -443,7 +445,7 @@ task GenerateIndexMinimap2 {
         for i in nt.split/*
         do
                 path="${i##*_}"
-                minimap2 -cx sr -k ~{k} -w ~{w} -I ~{I} -t ~{t} -d $OUTDIR/"nt.part_"$path".idx" $i
+                minimap2 -cx sr -k ~{k} -w ~{w} -I ~{I} -t ~{t} -d "${OUTDIR}/nt.part_${path}.idx" "$i"
         done
     >>>
 
