@@ -290,7 +290,8 @@ task RunNTAlignment {
         Boolean run_locally = false
         File? local_minimap2_index 
         String prefix
-        String s3_wd_uri
+        # only required for remote alignment
+        String? s3_wd_uri
         String docker_image_id
     }
 
@@ -393,7 +394,8 @@ task RunNRAlignment {
         String diamond_args 
         Boolean run_locally = false
         File? local_diamond_index 
-        String s3_wd_uri
+        # only required for remote alignment
+        String? s3_wd_uri
         String docker_image_id
     }
 
@@ -508,7 +510,8 @@ task UnmappedReads {
 workflow czid_long_read_mngs {
     input {
         String docker_image_id
-        String s3_wd_uri
+        # this is required for remote alignment
+        String? s3_wd_uri
 
         File input_fastq
 
@@ -645,13 +648,14 @@ workflow czid_long_read_mngs {
         docker_image_id = docker_image_id,
     }
 
-    call TallyHits {
+    call TallyHits as TallyHitsNT {
       input:
         m8 = RunCallHitsNT.deduped_out_m8,
         hitsummary = RunCallHitsNT.hitsummary,
         reads_to_contigs_sam = RunReadsToContigs.reads_to_contigs_sam,
         docker_image_id = docker_image_id,
     }
+
     call UnmappedReads {
       input:
         input_file = RunSubsampling.subsampled_fastq,
@@ -660,6 +664,16 @@ workflow czid_long_read_mngs {
         reads_to_contigs_txt = TallyHits.reads_to_contigs,
         docker_image_id = docker_image_id
     }
+
+    call TallyHits as TallyHitsNR {
+      input:
+        reads_fastq = RunSubsampling.subsampled_fastq,
+        m8 = RunCallHitsNT.deduped_out_m8,
+        hitsummary = RunCallHitsNT.hitsummary,
+        reads_to_contigs_sam = RunReadsToContigs.reads_to_contigs_sam,
+        docker_image_id = docker_image_id,
+    }
+
     output {
         File nt_deduped_out_m8 = RunCallHitsNT.deduped_out_m8
         File nt_hitsummary = RunCallHitsNT.hitsummary
@@ -669,6 +683,7 @@ workflow czid_long_read_mngs {
         File nr_hitsummary = RunCallHitsNR.hitsummary
         File nr_counts_json = RunCallHitsNR.counts_json
         File? nr_output_read_count = RunCallHitsNR.output_read_count
-        File tallied_hits = TallyHits.tallied_hits
+        File nt_tallied_hits = TallyHitsNT.tallied_hits
+        File nr_tallied_hits = TallyHitsNR.tallied_hits
     }
 }

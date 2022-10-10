@@ -49,13 +49,15 @@ def main(
     assert hitsummary.shape[0] == hitsummary_n_rows, "missing read_ids in m8 file"
 
     species_alignment_lengths = hitsummary[["species_taxid", "alignment_length"]].groupby(["species_taxid"]).sum()
-    species_alignment_lengths.index.name = "total_alignment_length"
+    species_alignment_lengths.index.name = "taxid"
+    species_alignment_lengths.columns = ["total_alignment_length"]
     genus_alignment_lengths = hitsummary[["genus_taxid", "alignment_length"]].groupby(["genus_taxid"]).sum()
-    genus_alignment_lengths.index.name = "total_alignment_length"
+    genus_alignment_lengths.index.name = "taxid"
+    genus_alignment_lengths.columns = ["total_alignment_length"]
 
     reads_lengths = pd.DataFrame(
         {"read_id": read.id, "read_length": len(read.seq)} for read in SeqIO.parse(reads_fastq_filepath, "fastq")
-    )
+    ).set_index("read_id")
 
     reads_to_contigs = pd.read_csv(reads_to_contigs_filepath, sep="\t", names=[
         "read_id",
@@ -66,10 +68,13 @@ def main(
     reads_to_contigs["alignment_length"] = reads_to_contigs["alignment"].str.len()
     # we want to only keep the longest alignment for each read so reads are not double counted
     reads_to_contigs.sort_values("alignment_length", ascending=False).drop_duplicates(["read_id"])
-    reads_to_contigs = reads_to_contigs[["read_id", "contig_id"]]
+    reads_to_contigs = reads_to_contigs[["read_id", "contig_id"]].set_index("read_id")
 
-    reads_to_contigs = reads_to_contigs.join(reads_lengths, how="inner")
-    contig_sequence_lengths = reads_to_contigs[["contig_id", "read_length"]].groupby(["contig_id"]).sum()
+    reads_to_contigs = reads_to_contigs.join(reads_lengths, how="inner", on="read_id")
+    contig_sequence_lengths = reads_to_contigs[[
+        "contig_id",
+        "read_length",
+    ]].groupby(["contig_id"]).sum()
     contig_sequence_lengths.columns = ["total_sequence_length"]
 
     taxid_sequence_lengths = pd.merge(
@@ -97,7 +102,7 @@ def main(
     pd.concat([
         species_result_final,
         genus_result_final,
-    ], axis=0).sort_values(by="total_alignment_length").to_csv(output_filepath)
+    ], axis=0).sort_values(by="total_alignment_length", ascending=False).to_csv(output_filepath)
 
 
 parser = argparse.ArgumentParser()
