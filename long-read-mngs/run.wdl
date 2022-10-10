@@ -290,7 +290,8 @@ task RunNTAlignment {
         Boolean run_locally = false
         File? local_minimap2_index 
         String prefix
-        String s3_wd_uri
+        # only required for remote alignment
+        String? s3_wd_uri
         String docker_image_id
     }
 
@@ -394,7 +395,8 @@ task RunNRAlignment {
         String diamond_args 
         Boolean run_locally = false
         File? local_diamond_index 
-        String s3_wd_uri
+        # only required for remote alignment
+        String? s3_wd_uri
         String docker_image_id
     }
 
@@ -468,7 +470,8 @@ task TallyHits {
 workflow czid_long_read_mngs {
     input {
         String docker_image_id
-        String s3_wd_uri
+        # this is required for remote alignment
+        String? s3_wd_uri
 
         File input_fastq
 

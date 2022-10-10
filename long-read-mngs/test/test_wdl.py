@@ -12,7 +12,8 @@ class TestLongReadMNGS(WDLTestCase):
     ercc_prefix = "host_filter/ercc/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime"
     alignment_indexes_prefix = "mini-database/alignment_indexes/2020-08-20-viral"
     common_inputs = {
-        "s3_wd_uri": "",
+        # this mode cuts down on memory usage for testin
+        "guppy_basecaller_setting": "super",
         "input_fastq": os.path.join(os.path.dirname(__file__), "test_files/test.fastq"),
         "minimap_host_db": os.path.join(ref_bucket, ercc_prefix, "ERCC.fasta"),
         "minimap_human_db": os.path.join(ref_bucket, ercc_prefix, "ERCC.fasta"),
