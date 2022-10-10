@@ -1,0 +1,7 @@
+#!/bin/bash
+set +x
+
+export error=$1 cause=$2
+jq -nc ".wdl_error_message=true | .error=env.error | .cause=env.cause" > /dev/stderr
+
+exit 1
