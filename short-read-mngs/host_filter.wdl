@@ -70,7 +70,7 @@ task RunStar {
   SAMTYPE="None"
 
   # Currently we always use 'GeneCounts', 
-  QUANTMODE="~{if nucleotide_type == 'RNA' then 'TranscriptomeSAM GeneCounts' else 'GeneCounts'}"
+  QUANTMODE="~{if nucleotide_type == 'RNA' and host_genome == 'human' then 'TranscriptomeSAM GeneCounts' else 'GeneCounts'}"
   if [[ "~{length(valid_input_fastq)}" -eq "2" ]] && [[ "~{host_genome}" == "human" ]]; then
     SAMMODE="NoQS"
     SAMTYPE="BAM Unsorted"
@@ -120,13 +120,13 @@ task RunStar {
   import idseq_utils.sync_pairs as sp
   import shutil
   import glob
-  from idseq_utils.exceptions import print_exceptions
+  from idseq_utils.exceptions import print_exceptions, BrokenReadPairError
   
   def main():
     unmapped = sorted(glob.glob("Unmapped.out.mate*"))
     output_files, too_discrepant = sp.sync_pairs(unmapped)
     if too_discrepant:
-        raise ValueError("pairs are too discrepant")
+        raise BrokenReadPairError("Paired input files were detected to be out of order. Both pairs must have the same read order")
     for unmapped_file in output_files:
         sp.sort_fastx_by_entry_id(unmapped_file)
 
