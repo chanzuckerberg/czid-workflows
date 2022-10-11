@@ -70,7 +70,7 @@ task RunStar {
   SAMTYPE="None"
 
   # Currently we always use 'GeneCounts', 
-  QUANTMODE="~{if nucleotide_type == 'RNA' and host_genome == 'human' then 'TranscriptomeSAM GeneCounts' else 'GeneCounts'}"
+  QUANTMODE="~{if nucleotide_type == 'RNA' && host_genome == 'human' then 'TranscriptomeSAM GeneCounts' else 'GeneCounts'}"
   if [[ "~{length(valid_input_fastq)}" -eq "2" ]] && [[ "~{host_genome}" == "human" ]]; then
     SAMMODE="NoQS"
     SAMTYPE="BAM Unsorted"
