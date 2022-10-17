@@ -77,6 +77,7 @@ RUN make minimap2
 RUN mv /tmp/minimap2-scatter/minimap2/minimap2 /usr/local/bin/minimap2-scatter
 
 WORKDIR /tmp
+RUN echo "here" 
 RUN git clone https://github.com/morsecodist/diamond
 WORKDIR /tmp/diamond
 RUN git checkout minimal-mods

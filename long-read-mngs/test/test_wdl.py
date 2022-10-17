@@ -40,6 +40,12 @@ class TestLongReadMNGS(WDLTestCase):
                     self.assertGreaterEqual(prev, int(row[3]))
                 prev = int(row[3])
 
+    def _unmapped_reads_assertions(self, outputs: Dict[str, str]):
+        self.assertIn("czid_long_read_mngs.unmapped_reads", outputs)
+        with open(outputs["czid_long_read_mngs.unmapped_reads"]) as f:
+            unmapped = f.readlines()
+            self.assertEqual(len(unmapped), 44)
+
     def testLongReadMNGS(self):
         res = self.run_miniwdl([])
         outputs = res["outputs"]
@@ -49,3 +55,6 @@ class TestLongReadMNGS(WDLTestCase):
         # test tally hits
         self._tallied_hits_assertions(outputs, "nt_tallied_hits")
         self._tallied_hits_assertions(outputs, "nr_tallied_hits")
+
+        # test unmapped reads
+        self._unmapped_reads_assertions(outputs)

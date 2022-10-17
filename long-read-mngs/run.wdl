@@ -663,7 +663,7 @@ workflow czid_long_read_mngs {
         input_file = RunSubsampling.subsampled_fastq,
         hitsummary_nt = RunCallHitsNT.hitsummary,
         hitsummary_nr = RunCallHitsNR.hitsummary,
-        reads_to_contigs_txt = TallyHits.reads_to_contigs,
+        reads_to_contigs_txt = TallyHitsNT.reads_to_contigs,
         docker_image_id = docker_image_id
     }
 
@@ -687,5 +687,6 @@ workflow czid_long_read_mngs {
         File? nr_output_read_count = RunCallHitsNR.output_read_count
         File nt_tallied_hits = TallyHitsNT.tallied_hits
         File nr_tallied_hits = TallyHitsNR.tallied_hits
+        File unmapped_reads = UnmappedReads.unmapped_reads
     }
 }
