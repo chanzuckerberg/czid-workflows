@@ -325,7 +325,8 @@ task RunNTAlignment {
     output {
         File out_paf = "gsnap.paf"
         File out_m8 = "gsnap.m8"
-    } 
+    }
+
     runtime {
         docker: docker_image_id
     }
@@ -650,6 +651,7 @@ workflow czid_long_read_mngs {
 
     call TallyHits as TallyHitsNT {
       input:
+        reads_fastq = RunSubsampling.subsampled_fastq,
         m8 = RunCallHitsNT.deduped_out_m8,
         hitsummary = RunCallHitsNT.hitsummary,
         reads_to_contigs_sam = RunReadsToContigs.reads_to_contigs_sam,

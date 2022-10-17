@@ -15,8 +15,6 @@ import os
 import argparse
 import subprocess
 import concurrent.futures
-import threading
-import time
 import json
 import requests
 from datetime import datetime
@@ -123,9 +121,6 @@ def run_samples(czid, samples, workflow_version, index_version, settings):
         raise failures[0][1]
 
 
-_timestamp_lock = threading.Lock()
-
-
 def run_sample(czid_repo, workflow_version, index_version, settings, key_prefix, sample):
     local_input = {
         **BENCHMARKS["settings"][settings],
@@ -160,9 +155,8 @@ def run_sample(czid_repo, workflow_version, index_version, settings, key_prefix,
         f" --sfn-input '{json.dumps(local_input)}'"
     ]
     print(cmd, file=sys.stderr)
-    with _timestamp_lock:
-        time.sleep(1.1)
-        subprocess.run(cmd, cwd=czid_repo, check=True, stdout=sys.stderr.buffer)
+
+    subprocess.run(cmd, cwd=czid_repo, stdout=sys.stderr.buffer, check=True)
 
     workflow_major_version = workflow_version.split(".")[0]
     return (

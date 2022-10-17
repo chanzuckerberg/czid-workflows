@@ -393,18 +393,35 @@ task FetchSequenceByAccessionId {
 
 
         error = lambda err, cause: sys.exit(json.dumps(dict(wdl_error_message=True, error=err, cause=cause)))
+        max_retries = 1
 
-        t = marisa_trie.RecordTrie("QII").mmap('~{nt_loc_db}')
-        if '~{accession_id}' in t:
-            (seq_offset, header_len, seq_len), = t['~{accession_id}']
-            s3_path = '~{nt_s3_path}'
-        else:
-            t = marisa_trie.RecordTrie("QII").mmap('~{nr_loc_db}')
-            if '~{accession_id}' in t:
-                (seq_offset, header_len, seq_len), = t['~{accession_id}']
-                s3_path = '~{nr_s3_path}'
+        def find_accession(accession, retry=0):
+            t = marisa_trie.RecordTrie("QII").mmap('~{nt_loc_db}')
+            if accession in t:
+                (seq_offset, header_len, seq_len), = t[accession]
+                s3_path = '~{nt_s3_path}'
             else:
-                error("AccessionIdNotFound", "The Accession ID was not found in the CZ ID database, so a generalized consensus genome could not be run")
+                t = marisa_trie.RecordTrie("QII").mmap('~{nr_loc_db}')
+                if accession in t:
+                    (seq_offset, header_len, seq_len), = t[accession]
+                    s3_path = '~{nr_s3_path}'
+                else:
+                    if retry == max_retries:
+                        error("AccessionIdNotFound", "The Accession ID '~{accession_id}' was not found in the CZ ID database, so a generalized consensus genome could not be run")
+                    else:
+                        seq_offset, header_len, seq_len, s3_path = find_accession(increment_version(accession), retry+1)
+            return seq_offset, header_len, seq_len, s3_path
+                    
+        def increment_version(accession):
+            if "." in accession:
+                acc_split = accession.split(".")
+                return ".".join([acc_split[0], str(int(acc_split[1])+1)])
+            else:
+                return accession
+
+        accession = '~{accession_id}'
+
+        seq_offset, header_len, seq_len, s3_path = find_accession(accession)
 
         to = seq_offset + header_len + seq_len - 1
         parsed = urlparse(s3_path)
@@ -577,10 +594,10 @@ task FilterReads {
 
             grep --no-group-separator -A3 "kraken:taxid|~{taxid}" \
                 "${TMPDIR}/~{prefix}classified_1.fq" \
-                > "${TMPDIR}/~{prefix}filtered_1.fq" || _no_reads_error
+                > "${TMPDIR}/~{prefix}filtered_1.fq" || raise_error InsufficientReadsError "There were no reads left after the FilterReads step of the pipeline."
             [[ "~{length(fastqs)}" == 1 ]] || grep --no-group-separator -A3 "kraken:taxid|~{taxid}" \
                 "${TMPDIR}/~{prefix}classified_2.fq" \
-                > "${TMPDIR}/~{prefix}filtered_2.fq" || _no_reads_error
+                > "${TMPDIR}/~{prefix}filtered_2.fq" || raise_error InsufficientReadsError "There were no reads left after the FilterReads step of the pipeline."
             bgzip -@ $CORES -c "${TMPDIR}/~{prefix}filtered_1.fq" > "~{prefix}filtered_1.fq.gz"
             [[ "~{length(fastqs)}" == 1 ]] || bgzip -@ $CORES -c "${TMPDIR}/~{prefix}filtered_2.fq" > "~{prefix}filtered_2.fq.gz"
         else
@@ -830,7 +847,7 @@ task RunMinion {
         tar -xzf "~{primer_schemes}"
 
         # TODO: upgrade to artic 1.3.0 when released (https://github.com/artic-network/fieldbioinformatics/pull/70)
-        artic minion --medaka --no-longshot --normalise "~{normalise}" --threads 4 --scheme-directory primer_schemes --read-file ~{sep=' ' fastqs} --medaka-model "~{medaka_model}" "~{primer_set}" "~{sample}"
+        artic minion --medaka --no-longshot --normalise "~{normalise}" --threads 4 --strict --scheme-directory primer_schemes --read-file ~{sep=' ' fastqs} --medaka-model "~{medaka_model}" "~{primer_set}" "~{sample}"
         # the .bam file doesn't seem to be sorted when it comes out, so explicitly sorting it here because a
         # ...sorted .bam is necessary for ComputeStats step downstream
         samtools sort "~{sample}.primertrimmed.rg.sorted.bam" > "~{sample}.primertrimmed.rg.resorted.bam"
@@ -1130,7 +1147,7 @@ task ZipOutputs {
 
         mkdir ${TMPDIR}/outputs
         cp ~{sep=' ' outputFiles} ${TMPDIR}/outputs/
-        zip -r -j ~{prefix}outputs.zip ${TMPDIR}/outputs/
+        zip -r -j "~{prefix}"outputs.zip ${TMPDIR}/outputs/
     >>>
 
     output {
