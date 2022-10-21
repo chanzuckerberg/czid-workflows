@@ -72,11 +72,9 @@ jobs:
           IMAGE_NAME=czid-${{ matrix.workflow_dir }}-public
           IMAGE_URI="ghcr.io/${GITHUB_REPOSITORY}/${IMAGE_NAME}"
 
-          if docker pull "$IMAGE_URI"; then
-            make -C long-read-mngs
-          else
-            make -C long-read-mngs
-          fi
+          CACHE_FROM=""; docker pull "$IMAGE_URI" && CACHE_FROM="--cache-from $IMAGE_URI"
+          ./scripts/docker-build.sh "${{ matrix.workflow_dir }}" --tag "${IMAGE_URI}:${TAG}" $CACHE_FROM \
+            || ./scripts/docker-build.sh "${{ matrix.workflow_dir }}" --tag "${IMAGE_URI}:${TAG}"
           docker push "${IMAGE_URI}:${TAG}"
           if [[ ${GITHUB_REF##*/} == "main" ]]; then
             docker tag "${IMAGE_URI}:${TAG}" "${IMAGE_URI}:latest"
