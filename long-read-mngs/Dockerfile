@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.4
 FROM ubuntu:22.04
 ARG DEBIAN_FRONTEND=noninteractive
 
@@ -85,4 +86,4 @@ RUN cmake -DCMAKE_BUILD_TYPE=Release ..
 RUN make -j6
 RUN mv diamond /usr/local/bin
 
-COPY lib/bin /usr/local/bin
+COPY --from=lib bin /usr/local/bin
