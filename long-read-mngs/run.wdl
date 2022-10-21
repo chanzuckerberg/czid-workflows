@@ -352,7 +352,6 @@ task RunCallHits {
         # TODO: (tmorse) remove when status upload is not dependent on idseq-dag see: https://app.shortcut.com/idseq/story/163323
         # this comment is for the miniwdl plugin uploader to parse:
         # --step-name run_call_hits 
-
         python3 <<CODE
         from idseq_dag.util.m8 import call_hits_m8, generate_taxon_count_json_from_m8
         call_hits_m8(
