@@ -297,7 +297,9 @@ def generate_taxon_count_json_from_m8(
     # Parse through hit file and m8 input file and format a JSON file with
     # our desired attributes, including aggregated statistics.
 
-    duplicate_cluster_sizes = load_duplicate_cluster_sizes(duplicate_cluster_sizes_path)
+    duplicate_cluster_sizes = None
+    if duplicate_cluster_sizes_path:
+        duplicate_cluster_sizes = load_duplicate_cluster_sizes(duplicate_cluster_sizes_path)
 
     should_keep = build_should_keep_filter(
         deuterostome_path, taxon_whitelist_path, taxon_blacklist_path)
@@ -371,8 +373,9 @@ def generate_taxon_count_json_from_m8(
                                 'sum_e_value': 0.0
                             }
                             aggregation[agg_key] = agg_bucket
-                        agg_bucket['nonunique_count'] += get_read_cluster_size(
-                            duplicate_cluster_sizes, read_id)
+                        if duplicate_cluster_sizes:
+                            agg_bucket['nonunique_count'] += get_read_cluster_size(
+                                duplicate_cluster_sizes, read_id)
                         agg_bucket['unique_count'] += 1
                         agg_bucket['sum_percent_identity'] += percent_identity
                         agg_bucket['sum_alignment_length'] += alignment_length

@@ -374,6 +374,7 @@ task RunCallHits {
             deuterostome_path="~{deuterostome_db}",
             taxon_whitelist_path=None,
             taxon_blacklist_path="~{taxon_blacklist}",
+            duplicate_cluster_sizes_path=None,
             output_json_file="gsnap_counts_with_dcr.json",
         )
         CODE
