@@ -18,7 +18,7 @@ workflow host_filter_indexing {
     # host transcript models on the above genomic DNA (for HISAT2 spliced alignment)
     File transcripts_gtf_gz = "ftp://ftp.ensembl.org/pub/release-94/gtf/homo_sapiens/Homo_sapiens.GRCh38.94.gtf.gz"
     # host transcript sequences (for kallisto)
-    File transcripts_fasta_gz = "ftp://ftp.ensembl.org/pub/release-94/fasta/homo_sapiens/cdna/Homo_sapiens.GRCh38.cdna.all.fa.gz"
+    Array[File] transcripts_fasta_gz = ["ftp://ftp.ensembl.org/pub/release-94/fasta/homo_sapiens/cdna/Homo_sapiens.GRCh38.cdna.all.fa.gz"]
 
     # ERCC sequences to spike in to the genome and transcript indexes
     File ERCC_fasta_gz
@@ -43,7 +43,9 @@ workflow host_filter_indexing {
   }
 
   call kallisto_index {
-    input: genome_name, transcripts_fasta_gz, ERCC_fasta_gz, docker
+    input:
+    transcripts_fasta_gz = flatten([transcripts_fasta_gz, [ERCC_fasta_gz]]),
+    genome_name, docker
   }
 
   call minimap2_index {
@@ -61,7 +63,7 @@ workflow host_filter_indexing {
     # also output the input files, to facilitate archival/provenance
     File input_genome_fasta_gz = genome_fasta_gz
     File input_transcripts_gtf_gz = transcripts_gtf_gz
-    File input_transcripts_fasta_gz = transcripts_fasta_gz
+    Array[File] input_transcripts_fasta_gz = transcripts_fasta_gz
     File input_ERCC_fasta_gz = ERCC_fasta_gz
     Array[File] input_other_fasta_gz = other_fasta_gz
   }
@@ -144,8 +146,7 @@ task hisat2_build {
 
 task kallisto_index {
   input {
-    File transcripts_fasta_gz
-    File ERCC_fasta_gz
+    Array[File] transcripts_fasta_gz
     String genome_name
 
     String docker
@@ -154,7 +155,7 @@ task kallisto_index {
   String idx_fn = "~{genome_name}.kallisto.idx"
   command <<<
     set -euxo pipefail
-    /kallisto/kallisto index --index '~{idx_fn}' '~{transcripts_fasta_gz}' '~{ERCC_fasta_gz}'
+    /kallisto/kallisto index --index '~{idx_fn}' ~{sep(' ',transcripts_fasta_gz)}
     >&2 ls -l
   >>>
   

@@ -27,6 +27,7 @@ workflow amr {
             fastqs_1 = if defined(raw_reads_1) then select_first([raw_reads_1]) else None,
             docker_image_id = host_filtering_docker_image_id,
             s3_wd_uri = s3_wd_uri
+            # NOTE: more call inputs (the host indexes) will be be supplied with runtime JSON/YAML
         }
         call RunSpades {
             input:
