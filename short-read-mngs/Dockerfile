@@ -1,7 +1,7 @@
 FROM golang:1.19.2-buster AS s3quilt
 
 WORKDIR /go/src/s3quilt
-COPY s3quilt .
+COPY s3quilt/go.mod s3quilt/go.sum s3quilt/s3quilt.go ./
 
 RUN apt-get update && apt-get install -y python3-pip
 RUN pip3 install pybindgen setuptools wheel
@@ -13,6 +13,7 @@ RUN go get github.com/go-python/gopy
 RUN go install github.com/go-python/gopy
 
 RUN gopy build -vm=python3 --output s3quilt .
+COPY s3quilt/__init__.py s3quilt/
 
 FROM ubuntu:18.04
 ARG DEBIAN_FRONTEND=noninteractive
