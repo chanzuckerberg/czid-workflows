@@ -15,3 +15,5 @@ RUN pip3 install pybindgen setuptools wheel
 RUN gopy build -vm=python3 --output s3quilt .
 RUN cp -r s3quilt/ /usr/lib/python3/dist-packages/ && \
     cp __init__.py /usr/lib/python3/dist-packages/s3quilt/
+
+WORKDIR /root
