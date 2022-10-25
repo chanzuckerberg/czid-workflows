@@ -179,4 +179,4 @@ RUN pip3 install /tmp/idseq-dag && rm -rf /tmp/idseq-dag
 COPY idseq_utils /tmp/idseq_utils
 RUN pip3 install /tmp/idseq_utils && rm -rf /tmp/idseq_utils
 
-COPY /go/src/s3quilt/s3quilt /usr/lib/python3/dist-packages/
+COPY --from=s3quilt /go/src/s3quilt/s3quilt /usr/lib/python3/dist-packages/
