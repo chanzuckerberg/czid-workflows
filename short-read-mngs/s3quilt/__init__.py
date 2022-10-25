@@ -2,10 +2,10 @@ import os
 import sys
 from typing import Iterable
 
-sys.path.append(os.path.dirname(os.path.realpath(__file__)))
-
 from .go import Slice_uint64
 from .s3quilt import DownloadChunks
+
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 
 
 def download_chunks(bucket: str, key: str, output_file_path: str, starts: Iterable[int], lengths: Iterable[int]):
