@@ -1,3 +1,19 @@
+FROM golang:1.19.2-buster AS s3quilt
+
+WORKDIR /go/src/s3quilt
+COPY s3quilt .
+
+RUN apt-get update && apt-get install -y python3-pip
+RUN pip3 install pybindgen setuptools wheel
+
+# install gopy and dependencies
+RUN go get golang.org/x/tools/cmd/goimports
+RUN go install golang.org/x/tools/cmd/goimports
+RUN go get github.com/go-python/gopy
+RUN go install github.com/go-python/gopy
+
+RUN gopy build -vm=python3 --output s3quilt .
+
 FROM ubuntu:18.04
 ARG DEBIAN_FRONTEND=noninteractive
 ARG MINIWDL_VERSION=1.1.5
@@ -162,3 +178,5 @@ RUN pip3 install /tmp/idseq-dag && rm -rf /tmp/idseq-dag
 
 COPY idseq_utils /tmp/idseq_utils
 RUN pip3 install /tmp/idseq_utils && rm -rf /tmp/idseq_utils
+
+COPY /go/src/s3quilt/s3quilt /usr/lib/python3/dist-packages/
