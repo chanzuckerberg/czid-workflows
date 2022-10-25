@@ -10,7 +10,8 @@ task RunValidateInput {
         set -euxo pipefail
         # TODO: (tmorse) remove when status upload is not dependent on idseq-dag see: https://app.shortcut.com/idseq/story/163323
         # this comment is for the miniwdl plugin uploader to parse:
-        # --step-name validate_input 
+        # --step-name validate_input
+        filter_count "~{input_fastq}" original "No reads provided"
 
         fastp -i "~{input_fastq}" -o sample_validated.fastq
 
@@ -19,6 +20,8 @@ task RunValidateInput {
 
     output {
         File validated_output = "sample_validated.fastq"
+        File raw_reads = "original_reads.count"
+        File raw_bases = "original_bases.count"
         File validated_reads = "validated_reads.count"
         File validated_bases = "validated_bases.count"
     }
