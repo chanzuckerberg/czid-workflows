@@ -21,7 +21,9 @@ class QualityCalculations:
         return (score * self._lambda - math.log(self._k)) / math.log(2.0)
 
     def calc_evalue(self, alen, nonmatch):
-        score = alen - 2 * nonmatch
+        # we want to keep -self._lambda * score negative otherwise we could start
+        #   getting overflow errors. So we don't let score go below 0.
+        score = max(0, alen - 2 * nonmatch)
         return self._k * alen * self.genome_size * math.exp(-self._lambda * score)
 
     def calc_gap_openings(self, cigar):
