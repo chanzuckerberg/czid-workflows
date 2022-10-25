@@ -1,5 +1,3 @@
-import os
-import sys
 from typing import Iterable
 
 from .go import Slice_uint64
