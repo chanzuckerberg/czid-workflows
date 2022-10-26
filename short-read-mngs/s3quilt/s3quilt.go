@@ -3,10 +3,11 @@ package s3quilt
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"sync"
+	"sync/atomic"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -22,6 +23,8 @@ type download struct {
 	concurrency int
 	s3Client    *s3.Client
 	wg          *sync.WaitGroup
+	err         error
+	errored     uint32
 	outputFile  *os.File
 	bucket      *string
 	key         *string
@@ -49,18 +52,22 @@ func (d *download) downloadChunk(b chunk) error {
 
 func (d *download) downloader(byteRanges <-chan chunk) {
 	for byteRange := range byteRanges {
-		// TODO: handle error
-		err := d.downloadChunk(byteRange)
-		if err != nil {
-			log.Fatal(err.Error())
+		if d.err == nil {
+			if err := d.downloadChunk(byteRange); err != nil {
+				// only set the error if it's the first error
+				if atomic.CompareAndSwapUint32(&d.errored, 0, 1) {
+					d.err = err
+				}
+			}
 		}
 		d.wg.Done()
 	}
 }
 
-func DownloadChunks(region string, bucket string, key string, outputFilePath string, starts []uint64, lengths []uint64) error {
+func DownloadChunks(bucket string, key string, outputFilePath string, starts []uint64, lengths []uint64) error {
 	cfg, err := config.LoadDefaultConfig(context.Background(), func(lo *config.LoadOptions) error {
-		lo.Region = region
+		lo.Region = "us-west-2"
+		lo.Credentials = aws.AnonymousCredentials{}
 		return nil
 	})
 	if err != nil {
@@ -83,6 +90,8 @@ func DownloadChunks(region string, bucket string, key string, outputFilePath str
 		key:         &key,
 		outputFile:  outputFile,
 		wg:          &sync.WaitGroup{},
+		err:         nil,
+		errored:     0,
 	}
 
 	for w := 1; w <= d.concurrency; w++ {
@@ -97,5 +106,5 @@ func DownloadChunks(region string, bucket string, key string, outputFilePath str
 	}
 	close(chunks)
 	d.wg.Wait()
-	return nil
+	return d.err
 }

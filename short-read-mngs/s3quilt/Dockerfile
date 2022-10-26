@@ -9,7 +9,7 @@ ENV GOPATH /go
 ENV PATH $GOPATH/bin:$PATH
 RUN /go/bin/go version
 WORKDIR /go/src/s3quilt
-COPY go.mod go.sum s3quilt.go ./
+COPY go.mod go.sum ./
 
 RUN go get golang.org/x/tools/cmd/goimports
 RUN go install golang.org/x/tools/cmd/goimports
@@ -18,6 +18,7 @@ RUN go install github.com/go-python/gopy
 
 RUN pip3 install pybindgen setuptools wheel
 
+COPY s3quilt.go ./
 RUN gopy build -vm=python3 --output s3quilt .
 COPY __init__.py s3quilt/
 RUN cp -r s3quilt/ /usr/lib/python3/dist-packages/
