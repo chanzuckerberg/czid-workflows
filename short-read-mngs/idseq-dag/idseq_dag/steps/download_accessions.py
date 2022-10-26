@@ -95,14 +95,12 @@ class PipelineStepDownloadAccessions(PipelineStep):
 
         range_pairs = list(_range_pairs())
         parsed = urlparse(db_s3_path)
-        with tempfile.NamedTemporaryFile("r") as raw_f, open(output_reference_fasta, "w") as out_f:
-            download_chunks(
-                parsed.hostname,
-                parsed.path[1:],
-                raw_f.name,
-                (s for s, _ in range_pairs),
-                (l for _, l in range_pairs),
-            )
-            raw_f.seek(0)
-            for line in raw_f:
+        sequences = download_chunks(
+            parsed.hostname,
+            parsed.path[1:],
+            (s for s, _ in range_pairs),
+            (l for _, l in range_pairs),
+        )
+        with open(output_reference_fasta, "w") as out_f:
+            for line in sequences:
                 out_f.write(PipelineStepDownloadAccessions._fix_ncbi_record(line))

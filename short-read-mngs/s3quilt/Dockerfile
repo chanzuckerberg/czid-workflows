@@ -21,9 +21,10 @@ RUN pip3 install pybindgen setuptools wheel
 COPY s3quilt.go ./
 RUN gopy build -vm=python3 --output s3quilt .
 COPY __init__.py s3quilt/
-RUN cp -r s3quilt/ /usr/lib/python3/dist-packages/
+RUN cp -r s3quilt/ /usr/lib/python3/dist-packages/s3quilt/
 
 WORKDIR /root
 
 FROM ubuntu:18.04
+RUN apt-get update && apt-get install  -y python3-pip
 COPY --from=s3quilt /usr/lib/python3/dist-packages/s3quilt/ /usr/lib/python3/dist-packages/s3quilt/
