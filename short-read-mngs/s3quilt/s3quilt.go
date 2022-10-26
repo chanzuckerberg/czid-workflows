@@ -58,8 +58,11 @@ func (d *download) downloader(byteRanges <-chan chunk) {
 	}
 }
 
-func DownloadChunks(bucket string, key string, outputFilePath string, starts []uint64, lengths []uint64) error {
-	cfg, err := config.LoadDefaultConfig(context.Background())
+func DownloadChunks(region string, bucket string, key string, outputFilePath string, starts []uint64, lengths []uint64) error {
+	cfg, err := config.LoadDefaultConfig(context.Background(), func(lo *config.LoadOptions) error {
+		lo.Region = region
+		return nil
+	})
 	if err != nil {
 		return err
 	}
