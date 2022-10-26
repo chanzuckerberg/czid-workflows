@@ -9,7 +9,7 @@ ENV GOPATH /go
 ENV PATH $GOPATH/bin:$PATH
 RUN /go/bin/go version
 WORKDIR /go/src/s3quilt
-COPY go.mod go.sum s3quilt.go ./
+COPY s3quilt/go.mod s3quilt/go.sum s3quilt/s3quilt.go ./
 
 RUN go get golang.org/x/tools/cmd/goimports
 RUN go install golang.org/x/tools/cmd/goimports
