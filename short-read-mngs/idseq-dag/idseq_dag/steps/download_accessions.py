@@ -91,7 +91,7 @@ class PipelineStepDownloadAccessions(PipelineStep):
                 range_start, header_len, seq_len = range_data
                 total_len = header_len + seq_len
                 if total_len <= MAX_ACCESSION_SEQUENCE_LEN:
-                    yield (range_start, total_len - 1)
+                    yield (range_start, total_len)
 
         range_pairs = list(_range_pairs())
         parsed = urlparse(db_s3_path)

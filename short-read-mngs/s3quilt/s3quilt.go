@@ -3,6 +3,7 @@ package s3quilt
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"sync"
 
@@ -28,7 +29,7 @@ type download struct {
 
 func (d *download) downloadChunk(b chunk) error {
 	buffer := make([]byte, b.length)
-	rangeHeader := fmt.Sprintf("%d-%d", b.s3Start, b.s3Start+b.length)
+	rangeHeader := fmt.Sprintf("%d-%d", b.s3Start, b.s3Start+b.length-1)
 	resp, err := d.s3Client.GetObject(context.Background(), &s3.GetObjectInput{
 		Bucket: d.bucket,
 		Key:    d.key,
@@ -51,7 +52,7 @@ func (d *download) downloader(byteRanges <-chan chunk) {
 		// TODO: handle error
 		err := d.downloadChunk(byteRange)
 		if err != nil {
-			fmt.Print(err.Error())
+			log.Fatal(err.Error())
 		}
 		d.wg.Done()
 	}
