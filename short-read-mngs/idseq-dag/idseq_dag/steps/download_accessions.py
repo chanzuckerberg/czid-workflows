@@ -1,5 +1,4 @@
 import re
-import tempfile
 from urllib.parse import urlparse
 from idseq_dag.engine.pipeline_step import PipelineStep
 import idseq_dag.util.s3 as s3

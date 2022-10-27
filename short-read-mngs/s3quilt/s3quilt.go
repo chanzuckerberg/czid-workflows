@@ -31,7 +31,7 @@ type download struct {
 
 func (d *download) downloadChunk(b chunk) error {
 	buffer := make([]byte, b.length)
-	rangeHeader := fmt.Sprintf("%d-%d", b.s3Start, b.s3Start+b.length-1)
+	rangeHeader := fmt.Sprintf("%d-%d", b.s3Start, b.s3Start+b.length)
 	resp, err := d.s3Client.GetObject(context.Background(), &s3.GetObjectInput{
 		Bucket: d.bucket,
 		Key:    d.key,
