@@ -11,7 +11,11 @@
 
 set -euxo pipefail
 
-WC_OUT=$(awk 'NR % 4 == 2' $1 | wc)
+if [[ $1 == *gz ]]; then
+    WC_OUT=$(gzip -dc $1 | awk 'NR % 4 == 2' | wc)
+else
+    WC_OUT=$(cat $1 | awk 'NR % 4 == 2' | wc)
+fi
 LINES=$(echo $WC_OUT | cut -f 2 -d ' ')
 CHARS=$(echo $WC_OUT | cut -f 3 -d ' ')
 BASES=$(expr $CHARS - $LINES)

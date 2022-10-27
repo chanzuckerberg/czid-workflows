@@ -1,5 +1,7 @@
 import csv
+import gzip
 import os
+import tempfile
 from typing import Dict
 from test_util import WDLTestCase
 
@@ -12,9 +14,8 @@ class TestLongReadMNGS(WDLTestCase):
     ercc_prefix = "host_filter/ercc/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime"
     alignment_indexes_prefix = "mini-database/alignment_indexes/2020-08-20-viral"
     common_inputs = {
-        # this mode cuts down on memory usage for testin
+        # this mode cuts down on memory usage for testing
         "guppy_basecaller_setting": "super",
-        "input_fastq": os.path.join(os.path.dirname(__file__), "test_files/test.fastq"),
         "minimap_host_db": os.path.join(ref_bucket, ercc_prefix, "ERCC.fasta"),
         "minimap_human_db": os.path.join(ref_bucket, ercc_prefix, "ERCC.fasta"),
         "minimap2_local_db_path": os.path.join(ref_bucket, "test/viral-alignment-indexes/viral_nt"),
@@ -40,8 +41,14 @@ class TestLongReadMNGS(WDLTestCase):
                     self.assertGreaterEqual(prev, int(row[3]))
                 prev = int(row[3])
 
-    def testLongReadMNGS(self):
-        res = self.run_miniwdl([])
+    def _unmapped_reads_assertions(self, outputs: Dict[str, str]):
+        self.assertIn("czid_long_read_mngs.unmapped_reads", outputs)
+        with open(outputs["czid_long_read_mngs.unmapped_reads"]) as f:
+            unmapped = f.readlines()
+            self.assertGreaterEqual(len(unmapped), 40)  # TODO: figure out why this changes
+
+    def testLongReadMNGSZipped(self):
+        res = self.run_miniwdl([f"input_fastq={os.path.join(os.path.dirname(__file__), 'test_files/test.fastq.gz')}"])
         outputs = res["outputs"]
         self.assertIn("czid_long_read_mngs.nt_deduped_out_m8", outputs)
         self.assertIn("czid_long_read_mngs.nr_deduped_out_m8", outputs)
@@ -49,3 +56,25 @@ class TestLongReadMNGS(WDLTestCase):
         # test tally hits
         self._tallied_hits_assertions(outputs, "nt_tallied_hits")
         self._tallied_hits_assertions(outputs, "nr_tallied_hits")
+
+        # test unmapped reads
+        self._unmapped_reads_assertions(outputs)
+
+    def testLongReadMNGS(self):
+        input_path = os.path.join(os.path.dirname(__file__), 'test_files/test.fastq.gz')
+        with tempfile.NamedTemporaryFile(suffix=".fastq") as f, gzip.open(input_path) as zipped_f:
+            for line in zipped_f:
+                f.write(line)
+            f.seek(0)
+
+            res = self.run_miniwdl([f"input_fastq={f.name}"])
+            outputs = res["outputs"]
+            self.assertIn("czid_long_read_mngs.nt_deduped_out_m8", outputs)
+            self.assertIn("czid_long_read_mngs.nr_deduped_out_m8", outputs)
+
+            # test tally hits
+            self._tallied_hits_assertions(outputs, "nt_tallied_hits")
+            self._tallied_hits_assertions(outputs, "nr_tallied_hits")
+
+            # test unmapped reads
+            self._unmapped_reads_assertions(outputs)
