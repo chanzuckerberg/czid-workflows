@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"sync"
 	"sync/atomic"
 
@@ -14,9 +15,10 @@ import (
 )
 
 type chunk struct {
-	s3Start uint64
-	length  uint64
-	idx     int
+	s3Start    uint64
+	length     uint64
+	idx        int
+	localStart int64
 }
 
 type download struct {
@@ -28,10 +30,22 @@ type download struct {
 	bucket      *string
 	key         *string
 	result      []string
+	outputFile  *os.File
+}
+
+type offsetWriter struct {
+	offset int64
+	file   *os.File
+}
+
+func (oW *offsetWriter) Write(p []byte) (int, error) {
+	n, err := oW.file.WriteAt(p, oW.offset)
+	oW.offset += int64(n)
+	return n, err
 }
 
 func (d *download) downloadChunk(b chunk) error {
-	rangeHeader := fmt.Sprintf("%d-%d", b.s3Start, b.s3Start+b.length+1)
+	rangeHeader := fmt.Sprintf("%d-%d", b.s3Start, b.s3Start+b.length)
 	resp, err := d.s3Client.GetObject(context.Background(), &s3.GetObjectInput{
 		Bucket: d.bucket,
 		Key:    d.key,
@@ -40,6 +54,13 @@ func (d *download) downloadChunk(b chunk) error {
 	if err != nil {
 		return err
 	}
+
+	if d.outputFile != nil {
+		writer := offsetWriter{offset: b.localStart, file: d.outputFile}
+		_, err := io.Copy(&writer, resp.Body)
+		return err
+	}
+
 	bytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
@@ -96,4 +117,49 @@ func DownloadChunks(bucket string, key string, starts []uint64, lengths []uint64
 	close(chunks)
 	d.wg.Wait()
 	return d.result, d.err
+}
+
+func DownloadChunksToFile(bucket string, key string, outputFilePath string, starts []uint64, lengths []uint64) error {
+	cfg, err := config.LoadDefaultConfig(context.Background(), func(lo *config.LoadOptions) error {
+		lo.Region = "us-west-2"
+		lo.Credentials = aws.AnonymousCredentials{}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	s3Client := s3.NewFromConfig(cfg)
+
+	outputFile, err := os.Create(outputFilePath)
+	if err != nil {
+		return err
+	}
+	defer outputFile.Close()
+
+	chunks := make(chan chunk, len(starts))
+	d := download{
+		concurrency: 50,
+		s3Client:    s3Client,
+		bucket:      &bucket,
+		key:         &key,
+		wg:          &sync.WaitGroup{},
+		err:         nil,
+		errored:     0,
+		outputFile:  outputFile,
+	}
+
+	for w := 1; w <= d.concurrency; w++ {
+		go d.downloader(chunks)
+	}
+
+	var totalBytes int64 = 0
+	for idx, length := range lengths {
+		d.wg.Add(1)
+		chunks <- chunk{s3Start: starts[idx], length: length, idx: idx, localStart: totalBytes}
+		totalBytes += int64(length)
+	}
+	close(chunks)
+	d.wg.Wait()
+	return d.err
 }

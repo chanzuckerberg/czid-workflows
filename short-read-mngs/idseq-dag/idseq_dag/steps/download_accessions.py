@@ -5,7 +5,7 @@ import idseq_dag.util.s3 as s3
 import idseq_dag.util.m8 as m8
 
 from idseq_dag.util.dict import open_file_db_by_extension
-from s3quilt import download_chunks
+from s3quilt import download_chunks_to_file
 
 MAX_ACCESSION_SEQUENCE_LEN = 100000000
 ALLOW_S3MI = False  # Allow s3mi only if running on an instance with enough RAM to fit NT and NR together...
@@ -31,7 +31,7 @@ class PipelineStepDownloadAccessions(PipelineStep):
     FIX_COMMA_REGEXP = re.compile(r'^(?P<accession_id>[^ ]+) (?P<wrong_pattern>, *)?(?P<description>.*)$')
 
     @staticmethod
-    def _fix_ncbi_record(accession_data: str) -> str:
+    def _fix_headers(line: str) -> str:
         '''
             We found a ncbi record that is oddly annotated (title starts with a comma,
             as you can see here: https://www.ncbi.nlm.nih.gov/protein/XP_002289390.1)
@@ -67,17 +67,12 @@ class PipelineStepDownloadAccessions(PipelineStep):
             since this is the only case that we found so far affecting the pipeline.
             It may be extended the future to handle more exceptions if it is needed.
         '''
-        def _fix_headers(line):
-            if len(line) > 0 and line[0] == ">":
-                # support for multiheader line separted by CTRL_A (https://en.wikipedia.org/wiki/FASTA_format#Description_line)
-                header_items = line.lstrip(">").split("\x01")
-                header_items = (PipelineStepDownloadAccessions.FIX_COMMA_REGEXP.sub(r"\g<accession_id> \g<description>", header_item) for header_item in header_items)
-                return ">" + ("\x01".join(header_items))
-            return line
-
-        lines = accession_data.split("\n")
-        lines = (_fix_headers(line) for line in lines)
-        return "\n".join(lines)
+        if len(line) > 0 and line[0] == ">":
+            # support for multiheader line separted by CTRL_A (https://en.wikipedia.org/wiki/FASTA_format#Description_line)
+            header_items = line.lstrip(">").split("\x01")
+            header_items = (PipelineStepDownloadAccessions.FIX_COMMA_REGEXP.sub(r"\g<accession_id> \g<description>", header_item) for header_item in header_items)
+            return ">" + ("\x01".join(header_items))
+        return line
 
     def download_ref_sequences_from_file(self, accession_dict, loc_dict, db_s3_path,
                                          output_reference_fasta):
@@ -94,12 +89,13 @@ class PipelineStepDownloadAccessions(PipelineStep):
 
         range_pairs = list(_range_pairs())
         parsed = urlparse(db_s3_path)
-        sequences = download_chunks(
+        download_chunks_to_file(
             parsed.hostname,
             parsed.path[1:],
+            "raw.fasta",
             (s for s, _ in range_pairs),
             (l for _, l in range_pairs),
         )
-        with open(output_reference_fasta, "w") as out_f:
-            for line in sequences:
-                out_f.write(PipelineStepDownloadAccessions._fix_ncbi_record(line))
+        with open("raw.fasta") as in_f, open(output_reference_fasta, "w") as out_f:
+            for line in in_f:
+                out_f.write(PipelineStepDownloadAccessions._fix_headers(line))
