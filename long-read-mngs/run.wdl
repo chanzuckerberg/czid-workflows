@@ -444,6 +444,7 @@ task TallyHits {
         File m8
         File hitsummary
         File reads_to_contigs_sam
+        String db_type
         String docker_image_id
     }
 
@@ -458,11 +459,11 @@ task TallyHits {
             --m8-filepath "~{m8}" \
             --hitsummary-filepath "~{hitsummary}" \
             --reads-to-contigs-filepath reads_to_contigs.txt \
-            --output-filepath "tallied_hits.csv" 
+            --output-filepath "tallied_hits_~{db_type}.csv" \
     >>>
 
-    output{
-        File tallied_hits = "tallied_hits.csv"
+    output {
+        File tallied_hits = "tallied_hits_~{db_type}.csv"
         File reads_to_contigs = "reads_to_contigs.txt"
     }
 
@@ -658,6 +659,7 @@ workflow czid_long_read_mngs {
         m8 = RunCallHitsNT.deduped_out_m8,
         hitsummary = RunCallHitsNT.hitsummary,
         reads_to_contigs_sam = RunReadsToContigs.reads_to_contigs_sam,
+        db_type = "nt",
         docker_image_id = docker_image_id,
     }
 
@@ -676,6 +678,7 @@ workflow czid_long_read_mngs {
         m8 = RunCallHitsNT.deduped_out_m8,
         hitsummary = RunCallHitsNT.hitsummary,
         reads_to_contigs_sam = RunReadsToContigs.reads_to_contigs_sam,
+        db_type = "nr",
         docker_image_id = docker_image_id,
     }
 
