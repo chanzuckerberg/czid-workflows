@@ -3,6 +3,7 @@ package s3quilt
 import (
 	"context"
 	"fmt"
+	"io"
 	"sync"
 	"sync/atomic"
 
@@ -30,8 +31,7 @@ type download struct {
 }
 
 func (d *download) downloadChunk(b chunk) error {
-	buffer := make([]byte, b.length)
-	rangeHeader := fmt.Sprintf("%d-%d", b.s3Start, b.s3Start+b.length)
+	rangeHeader := fmt.Sprintf("%d-%d", b.s3Start, b.s3Start+b.length+1)
 	resp, err := d.s3Client.GetObject(context.Background(), &s3.GetObjectInput{
 		Bucket: d.bucket,
 		Key:    d.key,
@@ -40,11 +40,11 @@ func (d *download) downloadChunk(b chunk) error {
 	if err != nil {
 		return err
 	}
-	_, err = resp.Body.Read(buffer)
+	bytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
-	d.result[b.idx] = string(buffer)
+	d.result[b.idx] = string(bytes)
 	return nil
 }
 
@@ -75,7 +75,7 @@ func DownloadChunks(bucket string, key string, starts []uint64, lengths []uint64
 	s3Client := s3.NewFromConfig(cfg)
 	chunks := make(chan chunk, len(starts))
 	d := download{
-		concurrency: 100,
+		concurrency: 50,
 		s3Client:    s3Client,
 		bucket:      &bucket,
 		key:         &key,
