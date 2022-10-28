@@ -87,15 +87,15 @@ class PipelineStepDownloadAccessions(PipelineStep):
                 if total_len <= MAX_ACCESSION_SEQUENCE_LEN:
                     yield (range_start, total_len)
 
-        range_pairs = list(_range_pairs())
-        parsed = urlparse(db_s3_path)
-        download_chunks_to_file(
-            parsed.hostname,
-            parsed.path[1:],
-            "raw.fasta",
-            (s for s, _ in range_pairs),
-            (l for _, l in range_pairs),
-        )
-        with open("raw.fasta") as in_f, open(output_reference_fasta, "w") as out_f:
-            for line in in_f:
-                out_f.write(PipelineStepDownloadAccessions._fix_headers(line))
+            range_pairs = list(_range_pairs())
+            parsed = urlparse(db_s3_path)
+            download_chunks_to_file(
+                parsed.hostname,
+                parsed.path[1:],
+                "raw.fasta",
+                (s for s, _ in range_pairs),
+                (l for _, l in range_pairs),
+            )
+            with open("raw.fasta") as in_f, open(output_reference_fasta, "w") as out_f:
+                for line in in_f:
+                    out_f.write(PipelineStepDownloadAccessions._fix_headers(line))

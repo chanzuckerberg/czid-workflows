@@ -45,7 +45,7 @@ func (oW *offsetWriter) Write(p []byte) (int, error) {
 }
 
 func (d *download) downloadChunk(b chunk) error {
-	rangeHeader := fmt.Sprintf("%d-%d", b.s3Start, b.s3Start+b.length)
+	rangeHeader := fmt.Sprintf("bytes=%d-%d", b.s3Start, b.s3Start+b.length-1)
 	resp, err := d.s3Client.GetObject(context.Background(), &s3.GetObjectInput{
 		Bucket: d.bucket,
 		Key:    d.key,
