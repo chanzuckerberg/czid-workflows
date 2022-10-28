@@ -261,7 +261,7 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
             (hl + sl for _, hl, sl in accession_ranges),
         )
 
-        for accession_id, data in zip(accession_ranges, sequences):
+        for accession_id, data in zip(accession_ids, sequences):
             _, ref_seq = data.split("\n", 1)
             ref_seq = ref_seq.replace("\n", "")
             accession2seq[accession_id]['ref_seq'] = ref_seq
