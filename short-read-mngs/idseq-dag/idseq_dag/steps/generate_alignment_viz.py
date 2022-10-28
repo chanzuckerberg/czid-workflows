@@ -258,8 +258,8 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
         sequences = download_chunks(
             parsed.hostname,
             parsed.path[1:],
-            (s for s, _, _ in accession_ranges),
-            (hl + sl for _, hl, sl in accession_ranges),
+            (s for s, _, _ in accession_ranges.values()),
+            (hl + sl for _, hl, sl in accession_ranges.values()),
         )
 
         for (accession_id, _), data in zip(accession_ranges, sequences):

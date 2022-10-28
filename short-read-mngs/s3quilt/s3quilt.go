@@ -83,7 +83,7 @@ func (d *download) downloader(byteRanges <-chan chunk) {
 	}
 }
 
-func DownloadChunks(bucket string, key string, starts []uint64, lengths []uint64) ([]string, error) {
+func downloadChunks(bucket string, key string, outputFilePath string, starts []uint64, lengths []uint64) ([]string, error) {
 	cfg, err := config.LoadDefaultConfig(context.Background(), func(lo *config.LoadOptions) error {
 		lo.Region = "us-west-2"
 		lo.Credentials = aws.AnonymousCredentials{}
@@ -91,6 +91,15 @@ func DownloadChunks(bucket string, key string, starts []uint64, lengths []uint64
 	})
 	if err != nil {
 		return []string{}, err
+	}
+
+	var outputFile *os.File = nil
+	if outputFilePath == "" {
+		outputFile, err = os.Create(outputFilePath)
+		if err != nil {
+			return []string{}, err
+		}
+		defer outputFile.Close()
 	}
 
 	s3Client := s3.NewFromConfig(cfg)
@@ -104,48 +113,6 @@ func DownloadChunks(bucket string, key string, starts []uint64, lengths []uint64
 		err:         nil,
 		errored:     0,
 		result:      make([]string, len(starts)),
-	}
-
-	for w := 1; w <= d.concurrency; w++ {
-		go d.downloader(chunks)
-	}
-
-	for idx, length := range lengths {
-		d.wg.Add(1)
-		chunks <- chunk{s3Start: starts[idx], length: length, idx: idx}
-	}
-	close(chunks)
-	d.wg.Wait()
-	return d.result, d.err
-}
-
-func DownloadChunksToFile(bucket string, key string, outputFilePath string, starts []uint64, lengths []uint64) error {
-	cfg, err := config.LoadDefaultConfig(context.Background(), func(lo *config.LoadOptions) error {
-		lo.Region = "us-west-2"
-		lo.Credentials = aws.AnonymousCredentials{}
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-
-	s3Client := s3.NewFromConfig(cfg)
-
-	outputFile, err := os.Create(outputFilePath)
-	if err != nil {
-		return err
-	}
-	defer outputFile.Close()
-
-	chunks := make(chan chunk, len(starts))
-	d := download{
-		concurrency: 50,
-		s3Client:    s3Client,
-		bucket:      &bucket,
-		key:         &key,
-		wg:          &sync.WaitGroup{},
-		err:         nil,
-		errored:     0,
 		outputFile:  outputFile,
 	}
 
@@ -161,5 +128,14 @@ func DownloadChunksToFile(bucket string, key string, outputFilePath string, star
 	}
 	close(chunks)
 	d.wg.Wait()
-	return d.err
+	return d.result, d.err
+}
+
+func DownloadChunks(bucket string, key string, starts []uint64, lengths []uint64) ([]string, error) {
+	return downloadChunks(bucket, key, "", starts, lengths)
+}
+
+func DownloadChunksToFile(bucket string, key string, outputFilePath string, starts []uint64, lengths []uint64) error {
+	_, err := downloadChunks(bucket, key, outputFilePath, starts, lengths)
+	return err
 }
