@@ -252,17 +252,16 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
     def get_sequences_by_accession_list_from_file(accession2seq, nt_loc_dict,
                                                   nt_s3_path):
         parsed = urlparse(nt_s3_path)
-        accession_ranges = [
-            (a_id, nt_loc_dict[a_id]) for a_id in accession2seq.keys() if a_id in nt_loc_dict
-        ]
+        accession_ids = [a_id for a_id in accession2seq.keys() if a_id in nt_loc_dict]
+        accession_ranges = [nt_loc_dict[a_id] for a_id in accession_ids]
         sequences = download_chunks(
             parsed.hostname,
             parsed.path[1:],
-            (s for s, _, _ in accession_ranges.values()),
-            (hl + sl for _, hl, sl in accession_ranges.values()),
+            (s for s, _, _ in accession_ranges),
+            (hl + sl for _, hl, sl in accession_ranges),
         )
 
-        for (accession_id, _), data in zip(accession_ranges, sequences):
+        for accession_id, data in zip(accession_ranges, sequences):
             _, ref_seq = data.split("\n", 1)
             ref_seq = ref_seq.replace("\n", "")
             accession2seq[accession_id]['ref_seq'] = ref_seq
