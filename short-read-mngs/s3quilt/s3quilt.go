@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"sync"
 	"sync/atomic"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
@@ -83,12 +85,18 @@ func (d *download) downloader(byteRanges <-chan chunk) {
 	}
 }
 
-func downloadChunks(bucket string, key string, outputFilePath string, starts []uint64, lengths []uint64) ([]string, error) {
-	cfg, err := config.LoadDefaultConfig(context.Background(), func(lo *config.LoadOptions) error {
-		lo.Region = "us-west-2"
-		lo.Credentials = aws.AnonymousCredentials{}
-		return nil
-	})
+func downloadChunks(
+	bucket string,
+	key string,
+	outputFilePath string,
+	starts []uint64,
+	lengths []uint64,
+	concurrency int,
+) ([]string, error) {
+	cfg, err := config.LoadDefaultConfig(
+		context.Background(),
+		config.WithDefaultRegion("us-west-2"),
+	)
 	if err != nil {
 		return []string{}, err
 	}
@@ -103,6 +111,36 @@ func downloadChunks(bucket string, key string, outputFilePath string, starts []u
 	}
 
 	s3Client := s3.NewFromConfig(cfg)
+	_, err = s3Client.HeadBucket(context.Background(), &s3.HeadBucketInput{
+		Bucket: &bucket,
+	}, func(o *s3.Options) {
+		o.RetryMaxAttempts = 0
+	})
+	anonymous := false
+	if err != nil {
+		if strings.Contains(err.Error(), "failed to retrieve credentials:") {
+			anonymous = true
+		} else {
+			return []string{}, err
+		}
+	}
+
+	region, err := manager.GetBucketRegion(context.Background(), s3Client, bucket)
+	if err != nil {
+		return []string{}, err
+	}
+	cfg, err = config.LoadDefaultConfig(context.Background(), func(lo *config.LoadOptions) error {
+		lo.Region = region
+		if anonymous {
+			lo.Credentials = aws.AnonymousCredentials{}
+		}
+		return nil
+	})
+	if err != nil {
+		return []string{}, err
+	}
+	s3Client = s3.NewFromConfig(cfg)
+
 	chunks := make(chan chunk, len(starts))
 	d := download{
 		concurrency: 50,
@@ -131,11 +169,24 @@ func downloadChunks(bucket string, key string, outputFilePath string, starts []u
 	return d.result, d.err
 }
 
-func DownloadChunks(bucket string, key string, starts []uint64, lengths []uint64) ([]string, error) {
-	return downloadChunks(bucket, key, "", starts, lengths)
+func DownloadChunks(
+	bucket string,
+	key string,
+	starts []uint64,
+	lengths []uint64,
+	concurrency int,
+) ([]string, error) {
+	return downloadChunks(bucket, key, "", starts, lengths, concurrency)
 }
 
-func DownloadChunksToFile(bucket string, key string, outputFilePath string, starts []uint64, lengths []uint64) error {
-	_, err := downloadChunks(bucket, key, outputFilePath, starts, lengths)
+func DownloadChunksToFile(
+	bucket string,
+	key string,
+	outputFilePath string,
+	starts []uint64,
+	lengths []uint64,
+	concurrency int,
+) error {
+	_, err := downloadChunks(bucket, key, outputFilePath, starts, lengths, concurrency)
 	return err
 }
