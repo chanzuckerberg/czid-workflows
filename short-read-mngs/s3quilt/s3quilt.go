@@ -94,7 +94,7 @@ func downloadChunks(bucket string, key string, outputFilePath string, starts []u
 	}
 
 	var outputFile *os.File = nil
-	if outputFilePath == "" {
+	if outputFilePath != "" {
 		outputFile, err = os.Create(outputFilePath)
 		if err != nil {
 			return []string{}, err
