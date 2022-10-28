@@ -89,7 +89,7 @@ task GenerateAlignmentViz {
     File taxid_annot_sorted_family_nr_fasta
     File taxid_locations_family_nr_json
     File taxid_locations_combined_json
-    File nt_db
+    String nt_db
     File nt_loc_db
   }
   command<<<
@@ -290,7 +290,7 @@ workflow czid_experimental {
     File nonhost_fasta_refined_taxid_annot_fasta
     File duplicate_clusters_csv
     String file_ext = "fastq"
-    File nt_db = "s3://czid-public-references/ncbi-sources/2021-01-22/nt"
+    String nt_db = "s3://czid-public-references/ncbi-sources/2021-01-22/nt"
     File nt_loc_db = "s3://czid-public-references/alignment_data/2021-01-22/nt_loc.db"
     File nt_info_db = "s3://czid-public-references/alignment_data/2021-01-22/nt_info.db"
     File lineage_db = "s3://czid-public-references/taxonomy/2021-01-22/taxid-lineages.db"
