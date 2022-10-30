@@ -88,10 +88,10 @@ task ensure_gz {
   command <<<
     set -euxo pipefail
     mkdir ans
-    if ! gzip -t '~{maybe_gz}'; then
-      pigz -c -p 8 '~{maybe_gz}' > 'ans/~{name}.gz'
+    if gzip -t '~{maybe_gz}'; then
+      cp '~{maybe_gz}' ans/
     else
-      ln -s '~{maybe_gz}' 'ans/~{name}'
+      pigz -c -p 4 '~{maybe_gz}' > 'ans/~{name}.gz'
     fi
   >>>
   
@@ -101,7 +101,7 @@ task ensure_gz {
   
   runtime {
       docker: docker
-      cpu: 8
+      cpu: 4
       memory: "4GiB"
   }
 }
