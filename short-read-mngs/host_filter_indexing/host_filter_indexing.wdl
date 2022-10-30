@@ -34,7 +34,8 @@ workflow host_filter_indexing {
     # accommodate uncompressed genome_fasta_gz; this makes it more convenient to use some of our
     # existing host genome FASTAs which we archived without compression.
     input:
-    maybe_gz = genome_fasta_gz
+    maybe_gz = genome_fasta_gz,
+    docker
   }
 
   call bowtie2_build {
