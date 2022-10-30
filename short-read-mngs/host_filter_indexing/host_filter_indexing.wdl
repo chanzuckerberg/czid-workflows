@@ -235,6 +235,6 @@ task minimap2_index {
 
   runtime {
       docker: docker
-      memory: "8GiB"
+      memory: "16GiB"
   }
 }
