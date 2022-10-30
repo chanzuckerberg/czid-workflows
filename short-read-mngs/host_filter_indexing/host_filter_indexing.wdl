@@ -30,15 +30,22 @@ workflow host_filter_indexing {
     String docker = "ghcr.io/chanzuckerberg/czid-workflows/czid-short-read-mngs-public:ff7af40"
   }
 
+  call ensure_gz as genome_fasta {
+    # accommodate uncompressed genome_fasta_gz; this makes it more convenient to use some of our
+    # existing host genome FASTAs which we archived without compression.
+    input:
+    maybe_gz = genome_fasta_gz
+  }
+
   call bowtie2_build {
     input:
-    fasta_gz = flatten([[genome_fasta_gz, ERCC_fasta_gz], other_fasta_gz]),
+    fasta_gz = flatten([[genome_fasta.gz, ERCC_fasta_gz], other_fasta_gz]),
     genome_name, docker
   }
   
   call hisat2_build {
     input:
-    fasta_gz = flatten([[genome_fasta_gz, ERCC_fasta_gz], other_fasta_gz]),
+    fasta_gz = flatten([[genome_fasta.gz, ERCC_fasta_gz], other_fasta_gz]),
     transcripts_gtf_gz, genome_name, docker
   }
 
@@ -50,7 +57,7 @@ workflow host_filter_indexing {
 
   call minimap2_index {
     input:
-    fasta_gz = flatten([[genome_fasta_gz, ERCC_fasta_gz], other_fasta_gz]),
+    fasta_gz = flatten([[genome_fasta.gz, ERCC_fasta_gz], other_fasta_gz]),
     genome_name, docker
   }
   
@@ -61,11 +68,40 @@ workflow host_filter_indexing {
     File minimap2_mmi = minimap2_index.index_mmi
 
     # also output the input files, to facilitate archival/provenance
-    File input_genome_fasta_gz = genome_fasta_gz
-    File? input_transcripts_gtf_gz = transcripts_gtf_gz
-    Array[File] input_transcripts_fasta_gz = transcripts_fasta_gz
-    File input_ERCC_fasta_gz = ERCC_fasta_gz
-    Array[File] input_other_fasta_gz = other_fasta_gz
+    File original_genome_fasta_gz = genome_fasta.gz
+    File? original_transcripts_gtf_gz = transcripts_gtf_gz
+    Array[File] original_transcripts_fasta_gz = transcripts_fasta_gz
+    File original_ERCC_fasta_gz = ERCC_fasta_gz
+    Array[File] original_other_fasta_gz = other_fasta_gz
+  }
+}
+
+task ensure_gz {
+  input {
+    File maybe_gz
+    String docker
+  }
+
+  String name = basename(maybe_gz)
+  
+  command <<<
+    set -euxo pipefail
+    mkdir ans
+    if ! gzip -t '~{maybe_gz}'; then
+      pigz -c -p 8 '~{maybe_gz}' > 'ans/~{name}.gz'
+    else
+      ln -s '~{maybe_gz}' 'ans/~{name}'
+    fi
+  >>>
+  
+  output {
+      File gz = glob("ans/*")[0]
+  }
+  
+  runtime {
+      docker: docker
+      cpu: 8
+      memory: "4GiB"
   }
 }
 
