@@ -159,13 +159,13 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
                 for read in ad['reads']:
                     prev_start, ref_start, ref_end, post_end = read[3]
                     if ref_seq:
-                        read[3] = ['', '', '']
-                    else:
                         read[3] = [
                             ref_seq[prev_start:ref_start],
                             ref_seq[ref_start:ref_end],
                             ref_seq[ref_end:post_end]
                         ]
+                    else:
+                        read[3] = ['', '', '']
 
                 if ad['ref_seq_len'] > self.MAX_SEQ_DISPLAY_SIZE:
                     ad['ref_seq'] = '...Reference Seq Too Long ...'
