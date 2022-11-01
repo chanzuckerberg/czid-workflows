@@ -165,7 +165,7 @@ task RunAlignment_minimap2_out {
         set -euxo pipefail
 
         if [[ "~{run_locally}" == true ]]; then
-          minimap2 ~{minimap2_args} "~{local_minimap2_index}" "~{sep=' ' fastas}" > "~{prefix}.paf"
+          minimap2-scatter ~{minimap2_args} "~{local_minimap2_index}" "~{sep=' ' fastas}" > "~{prefix}.paf"
         else
           python3 <<CODE
         import os

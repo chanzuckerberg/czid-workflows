@@ -305,7 +305,7 @@ task RunNTAlignment {
         # --step-name run_nt_alignment 
 
         if [[ "~{run_locally}" == true ]]; then
-          minimap2 ~{minimap2_args} "~{local_minimap2_index}" "~{all_sequences_to_align}" > "~{prefix}.paf"
+          minimap2-scatter ~{minimap2_args} "~{local_minimap2_index}" "~{all_sequences_to_align}" > "~{prefix}.paf"
         else
           python3 <<CODE
         import os

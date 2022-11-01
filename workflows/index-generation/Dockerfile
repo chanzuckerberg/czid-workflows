@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.4
 ARG ARIA2_VERSION=1.36.0
 ARG DEBIAN_FRONTEND=noninteractive
 
