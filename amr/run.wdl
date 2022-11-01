@@ -126,6 +126,8 @@ workflow amr {
                 RunRgiBwtKma.reference_mapping_stats,
                 RunRgiBwtKma.output_sorted_length_100,
                 RunRgiBwtKma.output_sorted_length_100_bai,
+                RunRgiMain.output_json,
+                RunRgiBwtKma.kma_amr_results_json,
             ]
         ),
         docker_image_id = docker_image_id
@@ -433,6 +435,7 @@ task RunRgiBwtKma {
         File reference_mapping_stats = "sr_amr_report.reference_mapping_stats.txt"
         File output_sorted_length_100 = "sr_amr_report.sorted.length_100.bam"
         File output_sorted_length_100_bai = "sr_amr_report.sorted.length_100.bam.bai"
+        File kma_amr_results_json = "sr_amr_report.allele_mapping_data.json"
     }
 
     runtime {
