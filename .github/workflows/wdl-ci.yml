@@ -48,7 +48,7 @@ jobs:
         with:
           fetch-depth: 2
       - id: list_dirs
-        run: echo "::set-output name=matrix::$(ls workflows/|xargs git diff --name-status HEAD^|cut -f2-|xargs dirname|sed 's/\/.*$//g'|sort|uniq|jq -cnR '[inputs|select(length>0)]')"
+        run: echo "::set-output name=matrix::$(find workflows|xargs git diff --name-status HEAD^|cut -c 3-|sed 's/^workflows\///g'|xargs dirname|sed 's/\/.*$//g'|sort|uniq|jq -cnR '[inputs|select(length>0)]')"
 
   wdl-ci:
     runs-on: ubuntu-22.04
