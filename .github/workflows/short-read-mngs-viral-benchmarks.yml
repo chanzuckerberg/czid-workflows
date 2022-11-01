@@ -44,7 +44,7 @@ jobs:
             IMAGE_URI="ghcr.io/${GITHUB_REPOSITORY}/${IMAGE_NAME}"
             CACHE_FROM=""; docker pull "$IMAGE_URI" && CACHE_FROM="--cache-from $IMAGE_URI"
             ./scripts/docker-build.sh workflows/short-read-mngs --tag czid-short-read-mngs $CACHE_FROM \
-                || scripts/docker-build workflows/short-read-mngs --tag czid-short-read-mngs
+                || scripts/docker-build.sh workflows/short-read-mngs --tag czid-short-read-mngs
       - name: run sample
         run: |
           pip install -r requirements-dev.txt
