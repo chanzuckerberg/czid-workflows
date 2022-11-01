@@ -11,9 +11,8 @@ RUN /go/bin/go version
 WORKDIR /go/src/s3quilt
 COPY go.mod go.sum ./
 
-RUN go get golang.org/x/tools/cmd/goimports
+RUN go mod download
 RUN go install golang.org/x/tools/cmd/goimports
-RUN go get github.com/go-python/gopy
 RUN go install github.com/go-python/gopy
 
 RUN pip3 install pybindgen setuptools wheel
