@@ -5,8 +5,8 @@ import pytest
 @pytest.fixture(scope="session")
 def short_read_mngs_bench3_viral_outputs(util):
     """
-    Run workflows/short-read-mngs/local_driver.wdl on the synthetic bench3 outputs, using the viral reference databases (~6GB
-    total download)
+    Run workflows/short-read-mngs/local_driver.wdl on the synthetic bench3 outputs, using the
+    viral reference databases (~6GB total download)
     """
     return util.miniwdl_run(
         util.repo_dir() / "workflows/short-read-mngs/local_driver.wdl",
