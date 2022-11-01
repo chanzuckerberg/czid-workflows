@@ -168,7 +168,7 @@ WORKDIR /tmp
 RUN git clone --recursive https://github.com/mlin/minimap2-scatter.git
 WORKDIR /tmp/minimap2-scatter
 RUN make minimap2
-RUN mv /tmp/minimap2-scatter/minimap2/minimap2 /usr/local/bin/minimap2
+RUN mv /tmp/minimap2-scatter/minimap2/minimap2 /usr/local/bin/minimap2/minimap2-scatter
 
 WORKDIR /tmp
 RUN git clone https://github.com/morsecodist/diamond
