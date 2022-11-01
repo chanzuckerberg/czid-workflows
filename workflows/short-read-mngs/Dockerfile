@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.4
 FROM ubuntu:18.04 AS s3quilt
 
 RUN apt-get update && apt-get install -y curl python3-pip
