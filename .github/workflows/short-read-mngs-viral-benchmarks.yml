@@ -43,8 +43,8 @@ jobs:
             IMAGE_NAME=czid-short-read-mngs-public
             IMAGE_URI="ghcr.io/${GITHUB_REPOSITORY}/${IMAGE_NAME}"
             CACHE_FROM=""; docker pull "$IMAGE_URI" && CACHE_FROM="--cache-from $IMAGE_URI"
-            docker build short-read-mngs --tag czid-short-read-mngs $CACHE_FROM \
-                || docker build short-read-mngs --tag czid-short-read-mngs
+            ./scripts/docker-build.sh workflows/short-read-mngs --tag czid-short-read-mngs $CACHE_FROM \
+                || scripts/docker-build workflows/short-read-mngs --tag czid-short-read-mngs
       - name: run sample
         run: |
           pip install -r requirements-dev.txt
@@ -62,14 +62,14 @@ jobs:
           # https://github.com/aws/aws-cli/issues/5262
           sudo ip route add blackhole 169.254.169.254
 
-          short-read-mngs/auto_benchmark/run_local.py --dir testrun/ --docker-image-id czid-short-read-mngs \
+          workflows/short-read-mngs/auto_benchmark/run_local.py --dir testrun/ --docker-image-id czid-short-read-mngs \
             --settings ${{ matrix.settings }} ${{ matrix.sample }}
       - name: harvest output statistics
         run: |
           export PATH=$PATH:$HOME/.local/bin
           taxadb download -o taxadb --type taxa
           taxadb create -i taxadb --dbname taxadb.sqlite || true  # exits nonzero w/o accessions
-          short-read-mngs/auto_benchmark/harvest.py ${{ matrix.sample }}=testrun/${{ matrix.sample }} \
+          workflows/short-read-mngs/auto_benchmark/harvest.py ${{ matrix.sample }}=testrun/${{ matrix.sample }} \
             --taxadb taxadb.sqlite > ${{ matrix.sample }}.${{ matrix.settings }}_viral.json
       - uses: actions/upload-artifact@v2
         with:
@@ -95,31 +95,31 @@ jobs:
       - name: run notebook
         run: |
           TAG=$(git describe --long --tags --always --dirty)
-          cp *_viral.json short-read-mngs/auto_benchmark  # notebook wd
-          chmod -R 777 short-read-mngs/auto_benchmark
+          cp *_viral.json workflows/short-read-mngs/auto_benchmark  # notebook wd
+          chmod -R 777 workflows/short-read-mngs/auto_benchmark
           # execute notebook
-          docker run -v $(pwd):/home/jovyan/work --workdir /home/jovyan/work \
+          docker run -v $(pwd)/workflows:/home/jovyan/work --workdir /home/jovyan/work \
             --env "RUN_NAME=${{ matrix.settings }}_viral_$TAG" \
             --env HARVEST_DATA=$(ls -1 *_viral.json | tr '\n' ':') \
             --env REF_LIB=/home/jovyan/work/short-read-mngs/auto_benchmark/ref_libs/${{ matrix.settings }}_viral \
             --env CHOWN_HOME=yes \
                 jupyter/scipy-notebook:2022-03-14 jupyter nbconvert --to notebook --execute --inplace \
                     short-read-mngs/auto_benchmark/short-read-mngs-benchmarks.ipynb
-          cp short-read-mngs/auto_benchmark/short-read-mngs-benchmarks.ipynb short-read-mngs-benchmarks.${{ matrix.settings }}_viral.ipynb
+          cp workflows/short-read-mngs/auto_benchmark/short-read-mngs-benchmarks.ipynb short-read-mngs-benchmarks.${{ matrix.settings }}_viral.ipynb
           # make HTML with code
-          docker run -v $(pwd):/home/jovyan/work --workdir /home/jovyan/work \
+          docker run -v $(pwd)/workflows:/home/jovyan/work --workdir /home/jovyan/work \
                 jupyter/scipy-notebook:2022-03-14 jupyter nbconvert --to html \
                     short-read-mngs/auto_benchmark/short-read-mngs-benchmarks.ipynb
-          mv short-read-mngs/auto_benchmark/short-read-mngs-benchmarks.html short-read-mngs-benchmarks.${{ matrix.settings }}_viral.with_code.html
+          mv workflows/short-read-mngs/auto_benchmark/short-read-mngs-benchmarks.html short-read-mngs-benchmarks.${{ matrix.settings }}_viral.with_code.html
           # make HTML without code
-          docker run -v $(pwd):/home/jovyan/work --workdir /home/jovyan/work \
+          docker run -v $(pwd)/workflows:/home/jovyan/work --workdir /home/jovyan/work \
                 jupyter/scipy-notebook:2022-03-14 jupyter nbconvert --to html --no-input \
                     short-read-mngs/auto_benchmark/short-read-mngs-benchmarks.ipynb
-          mv short-read-mngs/auto_benchmark/short-read-mngs-benchmarks.html short-read-mngs-benchmarks.${{ matrix.settings }}_viral.html
+          mv workflows/short-read-mngs/auto_benchmark/short-read-mngs-benchmarks.html short-read-mngs-benchmarks.${{ matrix.settings }}_viral.html
           mkdir ref_libs
-          cp -r short-read-mngs/auto_benchmark/ref_libs/${{ matrix.settings }}_viral ref_libs/
+          cp -r workflows/short-read-mngs/auto_benchmark/ref_libs/${{ matrix.settings }}_viral ref_libs/
       - name: test harvest2.py
-        run: short-read-mngs/auto_benchmark/harvest2.py *_viral.json --version "$(git describe --long --tags --always --dirty)" --index-version 2021-01-22 --wall 999
+        run: workflows/short-read-mngs/auto_benchmark/harvest2.py *_viral.json --version "$(git describe --long --tags --always --dirty)" --index-version 2021-01-22 --wall 999
       - uses: actions/upload-artifact@v2
         with:
           name: short-read-mngs-benchmarks.${{ matrix.settings }}_viral.html
@@ -133,7 +133,7 @@ jobs:
               ref_libs/
       - name: annotate deviations
         run: |
-          if [[ -f short-read-mngs/auto_benchmark/.short-read-mngs-benchmarks-deviation ]]; then
+          if [[ -f workflows/short-read-mngs/auto_benchmark/.short-read-mngs-benchmarks-deviation ]]; then
             echo "::warning ::auto_benchmark detected >1% deviation from reference values; review the notebook and update reference library if needed."
           else
             echo "auto_benchmark OK (all metrics within 1% of reference values)"
