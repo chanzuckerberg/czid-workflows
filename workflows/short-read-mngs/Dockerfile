@@ -182,10 +182,10 @@ RUN mv diamond /usr/local/bin
 
 RUN curl -Ls https://github.com/chanzuckerberg/s3parcp/releases/download/v0.2.0-alpha/s3parcp_0.2.0-alpha_Linux_x86_64.tar.gz | tar -C /usr/bin -xz s3parcp
 
-COPY idseq-dag /tmp/idseq-dag
+COPY --from=lib idseq-dag /tmp/idseq-dag
 RUN pip3 install /tmp/idseq-dag && rm -rf /tmp/idseq-dag
 
-COPY idseq_utils /tmp/idseq_utils
+COPY --from=lib idseq_utils /tmp/idseq_utils
 RUN pip3 install /tmp/idseq_utils && rm -rf /tmp/idseq_utils
 
 COPY --from=s3quilt /usr/lib/python3/dist-packages/s3quilt/ /usr/lib/python3/dist-packages/s3quilt/
