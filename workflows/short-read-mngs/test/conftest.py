@@ -9,7 +9,7 @@ def short_read_mngs_bench3_viral_outputs(util):
     total download)
     """
     return util.miniwdl_run(
-        util.repo_dir() / "short-read-mngs/local_driver.wdl",
+        util.repo_dir() / "workflows/short-read-mngs/local_driver.wdl",
         "docker_image_id=" + os.environ.get("DOCKER_IMAGE_ID", "idseq-short-read-mngs"),
         "fastqs_0=",
         util.repo_dir()
