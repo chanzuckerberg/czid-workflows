@@ -143,7 +143,6 @@ RUN apt-get install -y \
         # On versions higher than 1.62 compilation errors because of an overloading ambiguity with the `advance` method
         libboost1.62-all-dev
 
-
 # install gsnap, we are using a pinned version for alignment
 #  we are also using a different version for host filtering so we append -208-10-26 to each binary.
 WORKDIR /gmap-gsnap-2018-10-26

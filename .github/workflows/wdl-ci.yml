@@ -10,7 +10,7 @@ env:
 
 jobs:
   linters:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v2
       - uses: actions/cache@v1
@@ -33,14 +33,14 @@ jobs:
         if: ${{ failure() }}
 
   cancel-previous:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: styfle/cancel-workflow-action@0.9.0
         with:
           access_token: ${{ github.token }}
 
   list-workflow-dirs:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     outputs:
       matrix: ${{steps.list_dirs.outputs.matrix}}
     steps:
@@ -51,7 +51,7 @@ jobs:
         run: echo "::set-output name=matrix::$(ls workflows/|xargs git diff --name-status HEAD^|cut -f2-|xargs dirname|sed 's/\/.*$//g'|sort|uniq|jq -cnR '[inputs|select(length>0)]')"
 
   wdl-ci:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: list-workflow-dirs
     if: ${{ needs['list-workflow-dirs'].outputs.matrix != '[]' && needs['list-workflow-dirs'].outputs.matrix != '' }}
     strategy:
