@@ -258,13 +258,25 @@ task fastp_qc {
     jq --null-input --arg count "$count" '{"fastp_out":$count}' > fastp_out.count
     # TODO: extract insert size metrics from JSON, also render histogram?
 
-    python3 - <<EOF
+    python3 - << 'EOF'
     import textwrap
     with open("fastp.description.md", "w") as outfile:
       print(textwrap.dedent("""
       # fastp read trimming & filtering
 
-      *PLACEHOLDER TEXT*
+      Processes the reads using [fastp](https://github.com/OpenGene/fastp):
+
+      1. Trim adapters
+      2. Quality score filter
+      3. Non-called base (N) filter
+      4. Length filter
+      5. Complexity filter ([custom feature](https://github.com/mlin/fastp/tree/mlin/sdust)
+         using the [SDUST algorithm](https://pubmed.ncbi.nlm.nih.gov/16796549/))
+
+      fastp flags:
+      ```
+      ~{fastp_options}
+      ```
       """).strip(), file=outfile)
     EOF
   >>>
@@ -308,13 +320,20 @@ task kallisto {
       ~{sep=' ' select_all([reads1_fastq, reads2_fastq])}
     >&2 jq . run_info.json
 
-    python3 - <<EOF
+    python3 - << 'EOF'
     import textwrap
     with open("kallisto.description.md", "w") as outfile:
       print(textwrap.dedent("""
       # kallisto RNA quantification
 
-      *PLACEHOLDER TEXT*
+      Quantifies host transcripts using [kallisto](https://pachterlab.github.io/kallisto/about)
+      (for RNA-seq samples only). The host transcript sequences are sourced from Ensembl, along
+      with [ERCC control sequences](https://www.nist.gov/programs-projects/external-rna-controls-consortium).
+      Not all CZ ID host species have transcripts indexed; for those without, kallisto is run using ERCC
+      sequences only.
+
+      Please see the [kallisto manual](https://pachterlab.github.io/kallisto/manual) for details of
+      the `abundance.tsv` output format.
       """).strip(), file=outfile)
     EOF
   >>>
@@ -382,13 +401,16 @@ task bowtie2_filter {
     count=$((count / 4))
     jq --null-input --arg count "$count" '{"bowtie2_~{filter_type}_filtered_out":$count}' > 'bowtie2_~{filter_type}_filtered_out.count'
 
-    python3 - <<EOF
+    python3 - << 'EOF'
     import textwrap
     with open("bowtie2.description.md", "w") as outfile:
       print(textwrap.dedent("""
       # bowtie2 ~{filter_type} filtering
 
-      *PLACEHOLDER TEXT*
+      Filters out reads matching the ~{filter_type} genome using
+      [Bowtie2](https://bowtie-bio.sourceforge.net/bowtie2/index.shtml). Runs
+      `bowtie2 ~{bowtie2_options}` using a precomputed index, then uses
+      [samtools](http://www.htslib.org/) to keep reads *not* mapping to the ~{filter_type} genome.
       """).strip(), file=outfile)
     EOF
 
@@ -457,13 +479,19 @@ task hisat2_filter {
     count=$((count / 4))
     jq --null-input --arg count "$count" '{"hisat2_~{filter_type}_filtered_out":$count}' > 'hisat2_~{filter_type}_filtered_out.count'
 
-    python3 - <<EOF
+    python3 - << 'EOF'
     import textwrap
     with open("hisat2.description.md", "w") as outfile:
       print(textwrap.dedent("""
       # HISAT2 ~{filter_type} filtering
 
-      *PLACEHOLDER TEXT*
+      Filters out reads matching the ~{filter_type} genome using
+      [HISAT2](http://daehwankimlab.github.io/hisat2/). Runs `hisat2` using a precomputed index,
+      then uses [samtools](http://www.htslib.org/) to keep reads *not* mapping to the
+      ~{filter_type} genome.
+
+      HISAT2 complements Bowtie2 with a different algorithm that also models potential RNA splice
+      junctions (for those host species that CZ ID indexes transcript models).
       """).strip(), file=outfile)
     EOF
   >>>
@@ -489,13 +517,16 @@ task collect_insert_size_metrics {
 
   command <<<
     picard CollectInsertSizeMetrics 'I=~{bam}' O=picard_insert_metrics.txt H=insert_size_histogram.pdf
-    python3 - <<EOF
+    python3 - << 'EOF'
     import textwrap
     with open("collect_insert_size_metrics.description.md", "w") as outfile:
       print(textwrap.dedent("""
       # Picard CollectInsertSizeMetrics
 
-      *PLACEHOLDER TEXT*
+      Uses [CollectInsertSizeMetrics from PicardTools](https://gatk.broadinstitute.org/hc/en-us/articles/360037055772-CollectInsertSizeMetrics-Picard-)
+      to render a histogram of insert sizes, which can be useful to assess sequencing library
+      quality (for paired-end samples). The metrics are collected from the complete output of
+      Bowtie2 *including host-derived reads* that are otherwise excluded from downstream steps.
       """).strip(), file=outfile)
     EOF
   >>>
