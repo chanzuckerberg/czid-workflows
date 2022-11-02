@@ -40,7 +40,7 @@ RUN apt-get -qq update && apt-get -qq -y install \
     zlib1g-dev \
     && locale-gen en_US.UTF-8
 
-RUN pip3 install marisa-trie==0.7.7 requests biopython pandas
+RUN pip3 install boto3 marisa-trie==0.7.7 requests biopython pandas
 
 ADD https://raw.githubusercontent.com/chanzuckerberg/miniwdl/v1.1.5/examples/clean_download_cache.sh /usr/local/bin
 RUN chmod +x /usr/local/bin/clean_download_cache.sh
