@@ -1,0 +1,284 @@
+{
+    "ascomycetes": {
+      "genome_fasta_gz": "ftp://ftp.ensemblgenomes.org/pub/fungi/release-55/fasta/fungi_ascomycota2_collection/coccidioides_immitis_rmscc_3703_gca_000150085/dna/Coccidioides_immitis_rmscc_3703_gca_000150085.ASM15008v1.dna_sm.toplevel.fa.gz",
+      "transcripts_gtf_gz": "ftp://ftp.ensemblgenomes.org/pub/fungi/release-55/gtf/fungi_ascomycota2_collection/coccidioides_immitis_rmscc_3703_gca_000150085/Coccidioides_immitis_rmscc_3703_gca_000150085.ASM15008v1.55.gtf.gz",
+      "transcripts_fasta_gz": [
+        "ftp://ftp.ensemblgenomes.org/pub/fungi/release-55/fasta/fungi_ascomycota2_collection/coccidioides_immitis_rmscc_3703_gca_000150085/cdna/Coccidioides_immitis_rmscc_3703_gca_000150085.ASM15008v1.cdna.all.fa.gz",
+        "ftp://ftp.ensemblgenomes.org/pub/fungi/release-55/fasta/fungi_ascomycota2_collection/coccidioides_immitis_rmscc_3703_gca_000150085/ncrna/Coccidioides_immitis_rmscc_3703_gca_000150085.ASM15008v1.ncrna.fa.gz"
+      ]
+    },
+    "bank_vole": {
+      "genome_fasta_gz": "https://czid-public-references.s3.amazonaws.com/host_filter/bank_vole/2019-07-24/GCA_004368595.1_ASM436859v1_genomic.fna",
+      "transcripts_gtf_gz": null,
+      "transcripts_fasta_gz": []
+    },
+    "barred_hamlet": {
+      "genome_fasta_gz": "https://czid-public-references.s3.amazonaws.com/host_filter/barred_hamlet/2019-12-17/GCA_900610375.1_HP_genome_unmasked_01_genomic.fna.gz",
+      "transcripts_gtf_gz": null,
+      "transcripts_fasta_gz": []
+    },
+    "bat": {
+      "genome_fasta_gz": "https://czid-public-references.s3.amazonaws.com/host_filter/bat/2019-07-02/ncbi_genome_bat.fa",
+      "transcripts_gtf_gz": null,
+      "transcripts_fasta_gz": []
+    },
+    "bee": {
+      "genome_fasta_gz": "ftp://ftp.ensemblgenomes.org/pub/metazoa/release-55/fasta/anopheles_gambiae/dna/Anopheles_gambiae.AgamP4.dna_sm.toplevel.fa.gz",
+      "transcripts_gtf_gz": "ftp://ftp.ensemblgenomes.org/pub/metazoa/release-55/gtf/anopheles_gambiae/Anopheles_gambiae.AgamP4.55.gtf.gz",
+      "transcripts_fasta_gz": [
+        "http://ftp.ensemblgenomes.org/pub/metazoa/release-55/fasta/anopheles_gambiae/cdna/Anopheles_gambiae.AgamP4.cdna.all.fa.gz",
+        "http://ftp.ensemblgenomes.org/pub/metazoa/release-55/fasta/anopheles_gambiae/ncrna/Anopheles_gambiae.AgamP4.ncrna.fa.gz"
+      ]
+    },
+    "boechera_stricta": {
+      "genome_fasta_gz": "https://czid-public-references.s3.amazonaws.com/host_filter/boechera_stricta/2022-07-29/boechera_stricta.fasta",
+      "transcripts_gtf_gz": null,
+      "transcripts_fasta_gz": []
+    },
+    "c.elegans": {
+      "genome_fasta_gz": "ftp://ftp.ensembl.org/pub/release-108/fasta/caenorhabditis_elegans/dna/Caenorhabditis_elegans.WBcel235.dna_sm.toplevel.fa.gz",
+      "transcripts_gtf_gz": "ftp://ftp.ensembl.org/pub/release-108/gtf/caenorhabditis_elegans/Caenorhabditis_elegans.WBcel235.108.gtf.gz",
+      "transcripts_fasta_gz": [
+        "ftp://ftp.ensembl.org/pub/release-108/fasta/caenorhabditis_elegans/cdna/Caenorhabditis_elegans.WBcel235.cdna.all.fa.gz",
+        "ftp://ftp.ensembl.org/pub/release-108/fasta/caenorhabditis_elegans/ncrna/Caenorhabditis_elegans.WBcel235.ncrna.fa.gz"
+      ]
+    },
+    "carp": {
+      "genome_fasta_gz": "ftp://ftp.ensembl.org/pub/release-108/fasta/cyprinus_carpio_carpio/dna/Cyprinus_carpio_carpio.Cypcar_WagV4.0.dna_sm.toplevel.fa.gz",
+      "transcripts_gtf_gz": "ftp://ftp.ensembl.org/pub/release-108/gtf/cyprinus_carpio_carpio/Cyprinus_carpio_carpio.Cypcar_WagV4.0.108.gtf.gz",
+      "transcripts_fasta_gz": [
+        "ftp://ftp.ensembl.org/pub/release-108/fasta/cyprinus_carpio_carpio/cdna/Cyprinus_carpio_carpio.Cypcar_WagV4.0.cdna.all.fa.gz",
+        "ftp://ftp.ensembl.org/pub/release-108/fasta/cyprinus_carpio_carpio/ncrna/Cyprinus_carpio_carpio.Cypcar_WagV4.0.ncrna.fa.gz"
+      ]
+    },
+    "cat": {
+      "genome_fasta_gz": "ftp://ftp.ensembl.org/pub/release-108/fasta/felis_catus/dna/Felis_catus.Felis_catus_9.0.dna_sm.toplevel.fa.gz",
+      "transcripts_gtf_gz": "ftp://ftp.ensembl.org/pub/release-108/gtf/felis_catus/Felis_catus.Felis_catus_9.0.108.gtf.gz",
+      "transcripts_fasta_gz": [
+        "ftp://ftp.ensembl.org/pub/release-108/fasta/felis_catus/cdna/Felis_catus.Felis_catus_9.0.cdna.all.fa.gz",
+        "ftp://ftp.ensembl.org/pub/release-108/fasta/felis_catus/ncrna/Felis_catus.Felis_catus_9.0.ncrna.fa.gz"
+      ]
+    },
+    "chicken": {
+      "genome_fasta_gz": "ftp://ftp.ensembl.org/pub/release-108/fasta/gallus_gallus/dna/Gallus_gallus.bGalGal1.mat.broiler.GRCg7b.dna_sm.toplevel.fa.gz",
+      "transcripts_gtf_gz": "ftp://ftp.ensembl.org/pub/release-108/gtf/gallus_gallus/Gallus_gallus.bGalGal1.mat.broiler.GRCg7b.108.gtf.gz",
+      "transcripts_fasta_gz": [
+        "ftp://ftp.ensembl.org/pub/release-108/fasta/gallus_gallus/cdna/Gallus_gallus.bGalGal1.mat.broiler.GRCg7b.cdna.all.fa.gz",
+        "ftp://ftp.ensembl.org/pub/release-108/fasta/gallus_gallus/ncrna/Gallus_gallus.bGalGal1.mat.broiler.GRCg7b.ncrna.fa.gz"
+      ]
+    },
+    "cicada": {
+      "genome_fasta_gz": "https://czid-public-references.s3.amazonaws.com/host_filter/cicada/2021-07-28/cicada_genomic.fa",
+      "transcripts_gtf_gz": null,
+      "transcripts_fasta_gz": []
+    },
+    "dog": {
+      "genome_fasta_gz": "ftp://ftp.ensembl.org/pub/release-108/fasta/canis_lupus_familiaris/dna/Canis_lupus_familiaris.ROS_Cfam_1.0.dna_sm.toplevel.fa.gz",
+      "transcripts_gtf_gz": "ftp://ftp.ensembl.org/pub/release-108/gtf/canis_lupus_familiaris/Canis_lupus_familiaris.ROS_Cfam_1.0.108.gtf.gz",
+      "transcripts_fasta_gz": [
+        "ftp://ftp.ensembl.org/pub/release-108/fasta/canis_lupus_familiaris/cdna/Canis_lupus_familiaris.ROS_Cfam_1.0.cdna.all.fa.gz",
+        "ftp://ftp.ensembl.org/pub/release-108/fasta/canis_lupus_familiaris/ncrna/Canis_lupus_familiaris.ROS_Cfam_1.0.ncrna.fa.gz"
+      ]
+    },
+    "ercc": {
+      "genome_fasta_gz": "s3://czid-public-references/test/empty_file",
+      "transcripts_gtf_gz": null,
+      "transcripts_fasta_gz": []
+    },
+    "european-woodmouse": {
+      "genome_fasta_gz": "https://czid-public-references.s3.amazonaws.com/host_filter/european-woodmouse/2021-10-26/GCA_001305905.1_ASM130590v1_genomic.fa",
+      "transcripts_gtf_gz": null,
+      "transcripts_fasta_gz": []
+    },
+    "field_vole": {
+      "genome_fasta_gz": "https://czid-public-references.s3.amazonaws.com/host_filter/field_vole/2019-07-24/GCA_001305995.1_ASM130599v1_genomic.fna",
+      "transcripts_gtf_gz": null,
+      "transcripts_fasta_gz": []
+    },
+    "horse": {
+      "genome_fasta_gz": "ftp://ftp.ensembl.org/pub/release-108/fasta/equus_caballus/dna/Equus_caballus.EquCab3.0.dna_sm.toplevel.fa.gz",
+      "transcripts_gtf_gz": "ftp://ftp.ensembl.org/pub/release-108/gtf/equus_caballus/Equus_caballus.EquCab3.0.108.gtf.gz",
+      "transcripts_fasta_gz": [
+        "ftp://ftp.ensembl.org/pub/release-108/fasta/equus_caballus/cdna/Equus_caballus.EquCab3.0.cdna.all.fa.gz",
+        "ftp://ftp.ensembl.org/pub/release-108/fasta/equus_caballus/ncrna/Equus_caballus.EquCab3.0.ncrna.fa.gz"
+      ]
+    },
+    "human": {
+      "genome_fasta_gz": "ftp://ftp.ensembl.org/pub/release-94/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz",
+      "transcripts_gtf_gz": "ftp://ftp.ensembl.org/pub/release-94/gtf/homo_sapiens/Homo_sapiens.GRCh38.94.gtf.gz",
+      "transcripts_fasta_gz": [
+        "ftp://ftp.ensembl.org/pub/release-94/fasta/homo_sapiens/cdna/Homo_sapiens.GRCh38.cdna.all.fa.gz"
+      ]
+    },
+    "koala": {
+      "genome_fasta_gz": "ftp://ftp.ensembl.org/pub/release-108/fasta/phascolarctos_cinereus/dna/Phascolarctos_cinereus.phaCin_unsw_v4.1.dna_sm.toplevel.fa.gz",
+      "transcripts_gtf_gz": "ftp://ftp.ensembl.org/pub/release-108/gtf/phascolarctos_cinereus/Phascolarctos_cinereus.phaCin_unsw_v4.1.108.gtf.gz",
+      "transcripts_fasta_gz": [
+        "ftp://ftp.ensembl.org/pub/release-108/fasta/phascolarctos_cinereus/cdna/Phascolarctos_cinereus.phaCin_unsw_v4.1.cdna.all.fa.gz",
+        "ftp://ftp.ensembl.org/pub/release-108/fasta/phascolarctos_cinereus/ncrna/Phascolarctos_cinereus.phaCin_unsw_v4.1.ncrna.fa.gz"
+      ]
+    },
+    "large-japanese-fieldmouse": {
+      "genome_fasta_gz": "https://czid-public-references.s3.amazonaws.com/host_filter/large-japanese-fieldmouse/2021-10-26/GCA_002335545.1_Aspe_assembly01_genomic.fa",
+      "transcripts_gtf_gz": null,
+      "transcripts_fasta_gz": []
+    },
+    "madagascan_flying_fox": {
+      "genome_fasta_gz": "https://czid-public-references.s3.amazonaws.com/host_filter/madagascan_flying_fox/2021-03-05/Pteropus_rufus_HiC.fasta.gz",
+      "transcripts_gtf_gz": null,
+      "transcripts_fasta_gz": []
+    },
+    "madagascan_fruit_bat": {
+      "genome_fasta_gz": "https://czid-public-references.s3.amazonaws.com/host_filter/madagascan_fruit_bat/2021-03-05/Eidolon_dupreanum_HiC.fasta.gz",
+      "transcripts_gtf_gz": null,
+      "transcripts_fasta_gz": []
+    },
+    "madagascan_rousettes": {
+      "genome_fasta_gz": "https://czid-public-references.s3.amazonaws.com/host_filter/madagascan_rousettes/2021-03-05/Rousettus_madagascariensis_HiC.fasta.gz",
+      "transcripts_gtf_gz": null,
+      "transcripts_fasta_gz": []
+    },
+    "mosquito": {
+      "genome_fasta_gz": "ftp://ftp.ensemblgenomes.org/pub/metazoa/release-55/fasta/anopheles_gambiae/dna/Anopheles_gambiae.AgamP4.dna_sm.toplevel.fa.gz",
+      "transcripts_gtf_gz": "ftp://ftp.ensemblgenomes.org/pub/metazoa/release-55/gtf/anopheles_gambiae/Anopheles_gambiae.AgamP4.55.gtf.gz",
+      "transcripts_fasta_gz": [
+        "ftp://ftp.ensemblgenomes.org/pub/metazoa/release-55/fasta/anopheles_gambiae/cdna/Anopheles_gambiae.AgamP4.cdna.all.fa.gz",
+        "ftp://ftp.ensemblgenomes.org/pub/metazoa/release-55/fasta/anopheles_gambiae/ncrna/Anopheles_gambiae.AgamP4.ncrna.fa.gz"
+      ]
+    },
+    "mouse": {
+      "genome_fasta_gz": "ftp://ftp.ensembl.org/pub/release-108/fasta/mus_musculus/dna/Mus_musculus.GRCm39.dna_sm.toplevel.fa.gz",
+      "transcripts_gtf_gz": "ftp://ftp.ensembl.org/pub/release-108/gtf/mus_musculus/Mus_musculus.GRCm39.108.gtf.gz",
+      "transcripts_fasta_gz": [
+        "ftp://ftp.ensembl.org/pub/release-108/fasta/mus_musculus/cdna/Mus_musculus.GRCm39.cdna.all.fa.gz",
+        "ftp://ftp.ensembl.org/pub/release-108/fasta/mus_musculus/ncrna/Mus_musculus.GRCm39.ncrna.fa.gz"
+      ]
+    },
+    "myotis_lucifugus": {
+      "genome_fasta_gz": "ftp://ftp.ensembl.org/pub/release-108/fasta/myotis_lucifugus/dna/Myotis_lucifugus.Myoluc2.0.dna_sm.toplevel.fa.gz",
+      "transcripts_gtf_gz": "ftp://ftp.ensembl.org/pub/release-108/gtf/myotis_lucifugus/Myotis_lucifugus.Myoluc2.0.108.gtf.gz",
+      "transcripts_fasta_gz": [
+        "ftp://ftp.ensembl.org/pub/release-108/fasta/myotis_lucifugus/cdna/Myotis_lucifugus.Myoluc2.0.cdna.all.fa.gz",
+        "ftp://ftp.ensembl.org/pub/release-108/fasta/myotis_lucifugus/ncrna/Myotis_lucifugus.Myoluc2.0.ncrna.fa.gz"
+      ]
+    },
+    "orange_clownfish": {
+      "genome_fasta_gz": "ftp://ftp.ensembl.org/pub/release-108/fasta/amphiprion_percula/dna/Amphiprion_percula.Nemo_v1.dna_sm.toplevel.fa.gz",
+      "transcripts_gtf_gz": "ftp://ftp.ensembl.org/pub/release-108/gtf/amphiprion_percula/Amphiprion_percula.Nemo_v1.108.gtf.gz",
+      "transcripts_fasta_gz": [
+        "ftp://ftp.ensembl.org/pub/release-108/fasta/amphiprion_percula/cdna/Amphiprion_percula.Nemo_v1.cdna.all.fa.gz",
+        "ftp://ftp.ensembl.org/pub/release-108/fasta/amphiprion_percula/ncrna/Amphiprion_percula.Nemo_v1.ncrna.fa.gz"
+      ]
+    },
+    "pig": {
+      "genome_fasta_gz": "ftp://ftp.ensembl.org/pub/release-108/fasta/sus_scrofa/dna/Sus_scrofa.Sscrofa11.1.dna_sm.toplevel.fa.gz",
+      "transcripts_gtf_gz": "ftp://ftp.ensembl.org/pub/release-108/gtf/sus_scrofa/Sus_scrofa.Sscrofa11.1.108.gtf.gz",
+      "transcripts_fasta_gz": [
+        "ftp://ftp.ensembl.org/pub/release-108/fasta/sus_scrofa/cdna/Sus_scrofa.Sscrofa11.1.cdna.all.fa.gz",
+        "ftp://ftp.ensembl.org/pub/release-108/fasta/sus_scrofa/ncrna/Sus_scrofa.Sscrofa11.1.ncrna.fa.gz"
+      ]
+    },
+    "rabbit": {
+      "genome_fasta_gz": "ftp://ftp.ensembl.org/pub/release-108/fasta/oryctolagus_cuniculus/dna/Oryctolagus_cuniculus.OryCun2.0.dna_sm.toplevel.fa.gz",
+      "transcripts_gtf_gz": "ftp://ftp.ensembl.org/pub/release-108/gtf/oryctolagus_cuniculus/Oryctolagus_cuniculus.OryCun2.0.108.gtf.gz",
+      "transcripts_fasta_gz": [
+        "ftp://ftp.ensembl.org/pub/release-108/fasta/oryctolagus_cuniculus/cdna/Oryctolagus_cuniculus.OryCun2.0.cdna.all.fa.gz",
+        "ftp://ftp.ensembl.org/pub/release-108/fasta/oryctolagus_cuniculus/ncrna/Oryctolagus_cuniculus.OryCun2.0.ncrna.fa.gz"
+      ]
+    },
+    "rat": {
+      "genome_fasta_gz": "ftp://ftp.ensembl.org/pub/release-108/fasta/rattus_norvegicus/dna/Rattus_norvegicus.mRatBN7.2.dna_sm.toplevel.fa.gz",
+      "transcripts_gtf_gz": "ftp://ftp.ensembl.org/pub/release-108/gtf/rattus_norvegicus/Rattus_norvegicus.mRatBN7.2.108.gtf.gz",
+      "transcripts_fasta_gz": [
+        "ftp://ftp.ensembl.org/pub/release-108/fasta/rattus_norvegicus/cdna/Rattus_norvegicus.mRatBN7.2.cdna.all.fa.gz",
+        "ftp://ftp.ensembl.org/pub/release-108/fasta/rattus_norvegicus/ncrna/Rattus_norvegicus.mRatBN7.2.ncrna.fa.gz"
+      ]
+    },
+    "salpingoeca_rosetta": {
+      "genome_fasta_gz": "ftp://ftp.ensemblgenomes.org/pub/protists/release-55/fasta/protists_choanoflagellida1_collection/salpingoeca_rosetta_gca_000188695/dna/Salpingoeca_rosetta_gca_000188695.Proterospongia_sp_ATCC50818.dna_sm.toplevel.fa.gz",
+      "transcripts_gtf_gz": "ftp://ftp.ensemblgenomes.org/pub/protists/release-55/gtf/protists_choanoflagellida1_collection/salpingoeca_rosetta_gca_000188695/Salpingoeca_rosetta_gca_000188695.Proterospongia_sp_ATCC50818.55.gtf.gz",
+      "transcripts_fasta_gz": [
+        "ftp://ftp.ensemblgenomes.org/pub/protists/release-55/fasta/protists_choanoflagellida1_collection/salpingoeca_rosetta_gca_000188695/cdna/Salpingoeca_rosetta_gca_000188695.Proterospongia_sp_ATCC50818.cdna.all.fa.gz",
+        "ftp://ftp.ensemblgenomes.org/pub/protists/release-55/fasta/protists_choanoflagellida1_collection/salpingoeca_rosetta_gca_000188695/ncrna/Salpingoeca_rosetta_gca_000188695.Proterospongia_sp_ATCC50818.ncrna.fa.gz"
+      ]
+    },
+    "songbird": {
+      "genome_fasta_gz": "https://czid-public-references.s3.amazonaws.com/host_filter/songbird/2021-08-02/songbird.fa",
+      "transcripts_gtf_gz": null,
+      "transcripts_fasta_gz": []
+    },
+    "soybean": {
+      "genome_fasta_gz": "ftp://ftp.ensemblgenomes.org/pub/plants/release-55/fasta/glycine_max/dna/Glycine_max.Glycine_max_v2.1.dna_sm.toplevel.fa.gz",
+      "transcripts_gtf_gz": "ftp://ftp.ensemblgenomes.org/pub/plants/release-55/gtf/glycine_max/Glycine_max.Glycine_max_v2.1.55.gtf.gz",
+      "transcripts_fasta_gz": [
+        "ftp://ftp.ensemblgenomes.org/pub/plants/release-55/fasta/glycine_max/cdna/Glycine_max.Glycine_max_v2.1.cdna.all.fa.gz",
+        "ftp://ftp.ensemblgenomes.org/pub/plants/release-55/fasta/glycine_max/ncrna/Glycine_max.Glycine_max_v2.1.ncrna.fa.gz"
+      ]
+    },
+    "spiny_mouse": {
+      "genome_fasta_gz": "https://czid-public-references.s3.amazonaws.com/host_filter/spiny_mouse/2019-07-24/GCA_004027535.1_AcoCah_v1_BIUU_genomic.fna",
+      "transcripts_gtf_gz": null,
+      "transcripts_fasta_gz": []
+    },
+    "taurine_cattle": {
+      "genome_fasta_gz": "ftp://ftp.ensembl.org/pub/release-108/fasta/bos_taurus/dna/Bos_taurus.ARS-UCD1.2.dna_sm.toplevel.fa.gz",
+      "transcripts_gtf_gz": "ftp://ftp.ensembl.org/pub/release-108/gtf/bos_taurus/Bos_taurus.ARS-UCD1.2.108.gtf.gz",
+      "transcripts_fasta_gz": [
+        "ftp://ftp.ensembl.org/pub/release-108/fasta/bos_taurus/cdna/Bos_taurus.ARS-UCD1.2.cdna.all.fa.gz",
+        "ftp://ftp.ensembl.org/pub/release-108/fasta/bos_taurus/ncrna/Bos_taurus.ARS-UCD1.2.ncrna.fa.gz"
+      ]
+    },
+    "ticks": {
+      "genome_fasta_gz": "https://czid-public-references.s3.amazonaws.com/host_filter/ticks/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/tick_genomes.fa",
+      "transcripts_gtf_gz": null,
+      "transcripts_fasta_gz": []
+    },
+    "tiger_tail_seahorse": {
+      "genome_fasta_gz": "ftp://ftp.ensembl.org/pub/release-108/fasta/hippocampus_comes/dna/Hippocampus_comes.H_comes_QL1_v1.dna_sm.toplevel.fa.gz",
+      "transcripts_gtf_gz": "ftp://ftp.ensembl.org/pub/release-108/gtf/hippocampus_comes/Hippocampus_comes.H_comes_QL1_v1.108.gtf.gz",
+      "transcripts_fasta_gz": [
+        "ftp://ftp.ensembl.org/pub/release-108/fasta/hippocampus_comes/cdna/Hippocampus_comes.H_comes_QL1_v1.cdna.all.fa.gz",
+        "ftp://ftp.ensembl.org/pub/release-108/fasta/hippocampus_comes/ncrna/Hippocampus_comes.H_comes_QL1_v1.ncrna.fa.gz"
+      ]
+    },
+    "torafugu": {
+      "genome_fasta_gz": "ftp://ftp.ensembl.org/pub/release-108/fasta/takifugu_rubripes/dna/Takifugu_rubripes.fTakRub1.2.dna_sm.toplevel.fa.gz",
+      "transcripts_gtf_gz": "ftp://ftp.ensembl.org/pub/release-108/gtf/takifugu_rubripes/Takifugu_rubripes.fTakRub1.2.108.gtf.gz",
+      "transcripts_fasta_gz": [
+        "ftp://ftp.ensembl.org/pub/release-108/fasta/takifugu_rubripes/cdna/Takifugu_rubripes.fTakRub1.2.cdna.all.fa.gz",
+        "ftp://ftp.ensembl.org/pub/release-108/fasta/takifugu_rubripes/ncrna/Takifugu_rubripes.fTakRub1.2.ncrna.fa.gz"
+      ]
+    },
+    "turkey": {
+      "genome_fasta_gz": "ftp://ftp.ensembl.org/pub/release-108/fasta/meleagris_gallopavo/dna/Meleagris_gallopavo.Turkey_5.1.dna_sm.toplevel.fa.gz",
+      "transcripts_gtf_gz": "ftp://ftp.ensembl.org/pub/release-108/gtf/meleagris_gallopavo/Meleagris_gallopavo.Turkey_5.1.108.gtf.gz",
+      "transcripts_fasta_gz": [
+        "ftp://ftp.ensembl.org/pub/release-108/fasta/meleagris_gallopavo/cdna/Meleagris_gallopavo.Turkey_5.1.cdna.all.fa.gz",
+        "ftp://ftp.ensembl.org/pub/release-108/fasta/meleagris_gallopavo/ncrna/Meleagris_gallopavo.Turkey_5.1.ncrna.fa.gz"
+      ]
+    },
+    "water_buffalo": {
+      "genome_fasta_gz": "https://czid-public-references.s3.amazonaws.com/host_filter/water_buffalo/2019-09-30/GCF_003121395.1_UOA_WB_1_genomic.fa",
+      "transcripts_gtf_gz": null,
+      "transcripts_fasta_gz": []
+    },
+    "white_shrimp": {
+      "genome_fasta_gz": "https://czid-public-references.s3.amazonaws.com/host_filter/white_shrimp/2020-09-22/GCF_003789085.1_ASM378908v1_genomic.fa",
+      "transcripts_gtf_gz": null,
+      "transcripts_fasta_gz": []
+    },
+    "wrasse": {
+      "genome_fasta_gz": "https://czid-public-references.s3.amazonaws.com/host_filter/wrasse/2022-06-13/wrasse-raw.fa.gz",
+      "transcripts_gtf_gz": null,
+      "transcripts_fasta_gz": []
+    },
+    "zebra_fish": {
+      "genome_fasta_gz": "ftp://ftp.ensembl.org/pub/release-108/fasta/danio_rerio/dna/Danio_rerio.GRCz11.dna_sm.toplevel.fa.gz",
+      "transcripts_gtf_gz": "ftp://ftp.ensembl.org/pub/release-108/gtf/danio_rerio/Danio_rerio.GRCz11.108.gtf.gz",
+      "transcripts_fasta_gz": [
+        "ftp://ftp.ensembl.org/pub/release-108/fasta/danio_rerio/cdna/Danio_rerio.GRCz11.cdna.all.fa.gz",
+        "ftp://ftp.ensembl.org/pub/release-108/fasta/danio_rerio/ncrna/Danio_rerio.GRCz11.ncrna.fa.gz"
+      ]
+    }
+  }
+  
