@@ -9,7 +9,7 @@ setup(name='idseq_utils',
       author_email='idseqhelp@chanzuckerberg.com',
       license='MIT',
       packages=find_packages(exclude=["tests.*", "tests"]),
-      install_requires=["pytz", "boto3", "biopython"],
+      install_requires=["boto3~=1.26.0", "biopython"],
       tests_require=["coverage", "flake8", "wheel"],
       dependency_links=[],
       entry_points={
