@@ -676,8 +676,8 @@ workflow czid_long_read_mngs {
     call TallyHits as TallyHitsNR {
       input:
         reads_fastq = RunSubsampling.subsampled_fastq,
-        m8 = RunCallHitsNT.deduped_out_m8,
-        hitsummary = RunCallHitsNT.hitsummary,
+        m8 = RunCallHitsNR.deduped_out_m8,
+        hitsummary = RunCallHitsNR.hitsummary,
         reads_to_contigs_sam = RunReadsToContigs.reads_to_contigs_sam,
         db_type = "nr",
         docker_image_id = docker_image_id,
