@@ -41,7 +41,7 @@ def test_RunAssembly_filtered(util, short_read_mngs_bench3_viral_outputs):
 
     # rerun
     outp = util.miniwdl_run(
-        util.repo_dir() / "short-read-mngs/postprocess.wdl",
+        util.repo_dir() / "workflows/short-read-mngs/postprocess.wdl",
         "--task",
         task_name,
         "-i",
