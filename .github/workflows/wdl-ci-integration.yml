@@ -26,7 +26,7 @@ jobs:
           fetch-depth: 2
       - id: list_dirs
         # only run on wdl dirs with diff
-        run: echo "::set-output name=matrix::$(ls */*.wdl|xargs dirname|xargs git diff --name-status HEAD^|cut -c 3-|xargs dirname|sed 's/\/.*$//g'|sort|uniq|jq -cnR '[inputs|select(length>0)]')"
+        run: echo "::set-output name=matrix::$(find workflows|xargs git diff --name-status HEAD^|cut -c 3-|sed 's/^workflows\///g'|xargs dirname|sed 's/\/.*$//g'|sort|uniq|jq -cnR '[inputs|select(length>0)]')"
 
   wdl-ci:
     runs-on: self-hosted
@@ -43,8 +43,8 @@ jobs:
           IMAGE_URI="ghcr.io/${GITHUB_REPOSITORY}/${IMAGE_NAME}"
 
           CACHE_FROM=""; docker pull "$IMAGE_URI" && CACHE_FROM="--cache-from $IMAGE_URI"
-          docker build "${{ matrix.workflow_dir }}" --tag "${IMAGE_URI}:${TAG}" $CACHE_FROM \
-            || docker build "${{ matrix.workflow_dir }}" --tag "${IMAGE_URI}:${TAG}"
+          ./scripts/docker-build.sh "workflows/${{ matrix.workflow_dir }}" --tag "${IMAGE_URI}:${TAG}" $CACHE_FROM \
+            || ./scripts/docker-build.sh "workflows/${{ matrix.workflow_dir }}" --tag "${IMAGE_URI}:${TAG}"
             # docker push "${IMAGE_URI}:${TAG}" don't push while testing
           if [[ ${GITHUB_REF##*/} == "main" ]]; then
             docker tag "${IMAGE_URI}:${TAG}" "${IMAGE_URI}:latest"
@@ -71,7 +71,7 @@ jobs:
 
           sudo apt-get -qq update
           sudo apt-get -qq install --yes jq moreutils make virtualenv zip unzip httpie git shellcheck
-          virtualenv --python=python3.8 .venv
+          virtualenv --python=python3.10 .venv
           source .venv/bin/activate
           pip install -r requirements-dev.txt
 
