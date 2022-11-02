@@ -31,7 +31,7 @@ def test_RunCZIDDedup_safe_csv(util, short_read_mngs_bench3_viral_outputs):
         inputs["priceseq_fa"] = [input_file.name]
 
         outp = util.miniwdl_run(
-            util.repo_dir() / "short-read-mngs/host_filter.wdl",
+            util.repo_dir() / "workflows/short-read-mngs/host_filter.wdl",
             "--task",
             "RunCZIDDedup",
             "-i",

@@ -16,7 +16,7 @@ def test_RunValidateInput_invalid(util, short_read_mngs_bench3_viral_outputs):
 
     # run the task with the manipulated inputs, expecting an error exit status
     outp = util.miniwdl_run(
-        util.repo_dir() / "short-read-mngs/host_filter.wdl",
+        util.repo_dir() / "workflows/short-read-mngs/host_filter.wdl",
         "--task",
         "RunValidateInput",
         "-i",

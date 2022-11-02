@@ -16,7 +16,7 @@ def test_RunAlignmentBlacklist(util, short_read_mngs_bench3_viral_outputs):
     )
 
     outp = util.miniwdl_run(
-        util.repo_dir() / "short-read-mngs/non_host_alignment.wdl",
+        util.repo_dir() / "workflows/short-read-mngs/non_host_alignment.wdl",
         "--task",
         task_name,
         "-i",
@@ -36,7 +36,7 @@ def test_RunAlignmentBlacklist(util, short_read_mngs_bench3_viral_outputs):
         inputs["taxon_blacklist"] = blacklist_file.name
 
         outp = util.miniwdl_run(
-            util.repo_dir() / "short-read-mngs/non_host_alignment.wdl",
+            util.repo_dir() / "workflows/short-read-mngs/non_host_alignment.wdl",
             "--task",
             task_name,
             "-i",
@@ -71,7 +71,7 @@ def test_RunAlignmentDeuterostomeFilter(util, short_read_mngs_bench3_viral_outpu
     )
 
     outp = util.miniwdl_run(
-        util.repo_dir() / "short-read-mngs/non_host_alignment.wdl",
+        util.repo_dir() / "workflows/short-read-mngs/non_host_alignment.wdl",
         "--task",
         task_name,
         "-i",
@@ -92,7 +92,7 @@ def test_RunAlignmentDeuterostomeFilter(util, short_read_mngs_bench3_viral_outpu
         inputs["deuterostome_db"] = deuterostome_file.name
 
         outp = util.miniwdl_run(
-            util.repo_dir() / "short-read-mngs/non_host_alignment.wdl",
+            util.repo_dir() / "workflows/short-read-mngs/non_host_alignment.wdl",
             "--task",
             task_name,
             "-i",
