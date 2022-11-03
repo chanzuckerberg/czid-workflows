@@ -335,7 +335,8 @@ task RunNTAlignment {
     }
 }
 
-task RunCallHits {
+# TODO: (tmorse) fuse me
+task RunCallHitsNT {
     input {
         File m8_file
         File lineage_db
@@ -384,7 +385,6 @@ task RunCallHits {
         File deduped_out_m8 = "gsnap.deduped.m8"
         File hitsummary = "gsnap.hitsummary.tab"
         File counts_json = "gsnap_counts_with_dcr.json"
-        File? output_read_count = "minimap2_output.count"
     }
 
     runtime {
@@ -439,7 +439,97 @@ task RunNRAlignment {
     }
 }
 
-task TallyHits {
+# TODO: (tmorse) fuse me
+task RunCallHitsNR {
+    input {
+        File m8_file
+        File lineage_db
+        File taxon_blacklist
+        File deuterostome_db
+        File accession2taxid
+        Int min_read_length = 36
+        String docker_image_id
+        String count_type = "NR"
+    }
+
+    command <<<
+        set -euxo pipefail
+
+        python3 <<CODE
+        from idseq_dag.util.m8 import call_hits_m8, generate_taxon_count_json_from_m8
+        call_hits_m8(
+            input_m8="~{m8_file}",
+            lineage_map_path="~{lineage_db}",
+            accession2taxid_dict_path="~{accession2taxid}",
+            output_m8="rapsearch2.deduped.m8",
+            output_summary="rapsearch2.hitsummary.tab",
+            min_alignment_length=~{min_read_length},
+            deuterostome_path="~{deuterostome_db}",
+            taxon_whitelist_path=None,
+            taxon_blacklist_path="~{taxon_blacklist}",
+        )
+        generate_taxon_count_json_from_m8(
+            blastn_6_path="rapsearch2.deduped.m8",
+            hit_level_path="rapsearch2.hitsummary.tab",
+            count_type="~{count_type}",
+            lineage_map_path="~{lineage_db}",
+            deuterostome_path="~{deuterostome_db}",
+            taxon_whitelist_path=None,
+            taxon_blacklist_path="~{taxon_blacklist}",
+            duplicate_cluster_sizes_path=None,
+            output_json_file="rapsearch2_counts_with_dcr.json",
+        )
+        CODE
+        >>>
+
+    output {
+        File deduped_out_m8 = "rapsearch2.deduped.m8"
+        File hitsummary = "rapsearch2.hitsummary.tab"
+        File counts_json = "rapsearch2_counts_with_dcr.json"
+    }
+
+    runtime {
+        docker: docker_image_id
+    }
+}
+
+# TODO: (tmorse) fuse me
+task TallyHitsNT {
+    input {
+        File reads_fastq
+        File m8
+        File hitsummary
+        File reads_to_contigs_sam
+        String db_type
+        String docker_image_id
+    }
+
+    command <<<
+        set -euxo pipefail  
+        # TODO: (tmorse) remove when status upload is not dependent on idseq-dag see: https://app.shortcut.com/idseq/story/163323
+        # this comment is for the miniwdl plugin uploader to parse:
+        # --step-name tally_hits 
+        cat "~{reads_to_contigs_sam}" | grep -v "^@" | cut -f1,3,10 > reads_to_contigs.txt
+        python3 /usr/local/bin/tally_counts.py \
+            --reads-fastq-filepath "~{reads_fastq}" \
+            --m8-filepath "~{m8}" \
+            --hitsummary-filepath "~{hitsummary}" \
+            --reads-to-contigs-filepath reads_to_contigs.txt \
+            --output-filepath "tallied_hits_~{db_type}.csv" \
+    >>>
+
+    output {
+        File tallied_hits = "tallied_hits_~{db_type}.csv"
+        File reads_to_contigs = "reads_to_contigs.txt"
+    }
+
+    runtime {
+        docker: docker_image_id
+    }
+}
+
+# TODO: (tmorse) fuse me
+task TallyHitsNR {
     input {
         File reads_fastq
         File m8
@@ -619,7 +709,7 @@ workflow czid_long_read_mngs {
             docker_image_id = docker_image_id
     }
 
-    call RunCallHits as RunCallHitsNT { 
+    call RunCallHitsNT { 
       input:
         m8_file = RunNTAlignment.out_m8,
         lineage_db = lineage_db,
@@ -642,7 +732,7 @@ workflow czid_long_read_mngs {
         docker_image_id=docker_image_id
     }
 
-    call RunCallHits as RunCallHitsNR { 
+    call RunCallHitsNR { 
       input:
         m8_file = RunNRAlignment.out_m8,
         lineage_db = lineage_db,
@@ -654,7 +744,7 @@ workflow czid_long_read_mngs {
         docker_image_id = docker_image_id,
     }
 
-    call TallyHits as TallyHitsNT {
+    call TallyHitsNT {
       input:
         reads_fastq = RunSubsampling.subsampled_fastq,
         m8 = RunCallHitsNT.deduped_out_m8,
@@ -673,11 +763,11 @@ workflow czid_long_read_mngs {
         docker_image_id = docker_image_id
     }
 
-    call TallyHits as TallyHitsNR {
+    call TallyHitsNR {
       input:
         reads_fastq = RunSubsampling.subsampled_fastq,
-        m8 = RunCallHitsNT.deduped_out_m8,
-        hitsummary = RunCallHitsNT.hitsummary,
+        m8 = RunCallHitsNR.deduped_out_m8,
+        hitsummary = RunCallHitsNR.hitsummary,
         reads_to_contigs_sam = RunReadsToContigs.reads_to_contigs_sam,
         db_type = "nr",
         docker_image_id = docker_image_id,
@@ -687,11 +777,9 @@ workflow czid_long_read_mngs {
         File nt_deduped_out_m8 = RunCallHitsNT.deduped_out_m8
         File nt_hitsummary = RunCallHitsNT.hitsummary
         File nt_counts_json = RunCallHitsNT.counts_json
-        File? nt_output_read_count = RunCallHitsNT.output_read_count
         File nr_deduped_out_m8 = RunCallHitsNR.deduped_out_m8
         File nr_hitsummary = RunCallHitsNR.hitsummary
         File nr_counts_json = RunCallHitsNR.counts_json
-        File? nr_output_read_count = RunCallHitsNR.output_read_count
         File nt_tallied_hits = TallyHitsNT.tallied_hits
         File nr_tallied_hits = TallyHitsNR.tallied_hits
         File unmapped_reads = UnmappedReads.unmapped_reads
