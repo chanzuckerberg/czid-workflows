@@ -6,6 +6,7 @@ import idseq_dag.util.command as command
 import idseq_dag.util.command_patterns as command_patterns
 import idseq_dag.util.s3 as s3
 import idseq_dag.util.count as count
+from s3quilt import download_chunks_to_file
 
 class PipelineStepPrepareTaxonFasta(PipelineStep):
     '''
@@ -25,7 +26,7 @@ class PipelineStepPrepareTaxonFasta(PipelineStep):
             local_basename = f"{hit_type}_{os.path.basename(output_file)}.fasta"
             bucket, key = s3.split_identifiers(s3_file)
             local_file = os.path.join(self.output_dir_local, local_basename)
-            s3.fetch_byterange(first_byte, last_byte, bucket, key, local_file)
+            download_chunks_to_file(bucket, key, local_file, [first_byte], [last_byte - first_byte])
             partial_fasta_files.append(local_file)
         self.fasta_union(partial_fasta_files, output_file)
         for fasta in partial_fasta_files + [output_file]:

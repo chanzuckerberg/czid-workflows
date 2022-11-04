@@ -103,44 +103,6 @@ def get_s3_object_by_path(s3_path):
             raise
 
 
-def list_s3_keys(s3_path_prefix):
-    """Returns a list of s3 keys prefixed by s3_path_prefix."""
-    with log.log_context(context_name="s3.list_s3_objects", values={'s3_path_prefix': s3_path_prefix}, log_context_mode=log.LogContextMode.EXEC_LOG_EVENT):
-        parsed_url = urlparse(s3_path_prefix, allow_fragments=False)
-        bucket = parsed_url.netloc
-        prefix = parsed_url.path.lstrip('/')
-        # Use the AWS CLI instead of boto for thread safety
-        raw_response = command.execute(
-            command_patterns.SingleCommand(
-                cmd="aws",
-                args=[
-                    "s3api",
-                    "list-objects-v2",
-                    "--bucket", bucket,
-                    "--prefix", prefix,
-                ],
-                env=dict(os.environ, **refreshed_credentials()),
-            ),
-            capture_stdout=True,
-        )
-        parsed_response = json.loads(raw_response)
-        return [item['Key'] for item in parsed_response['Contents']]
-
-
-# Something similar to this exist's in s3's REST API
-#  the --query flag, but it doesn't support full regexes and
-#  doesn't appear to be in the python API
-def check_s3_presence_for_pattern(s3_path_prefix, pattern):
-    """
-    Returns True if s3 contains any keys in s3 that start with the s3 path
-    prefix match the pattern.
-    """
-    for key in list_s3_keys(s3_path_prefix):
-        if re.search(pattern, key):
-            return True
-    return False
-
-
 def check_s3_presence_for_file_list(s3_dir, file_list, allow_zero_byte_files=True):
     with botolock:
         for f in file_list:
@@ -516,23 +478,6 @@ def fetch_reference(src,  # pylint: disable=dangerous-default-value
                          okay_if_missing=False,  # It's NOT okay if missing on the last attempt.
                          is_reference=True,
                          touch_only=touch_only)
-
-
-def fetch_byterange(first_byte, last_byte, bucket, key, output_file):
-    get_range_params = [
-        "aws",
-        "s3api",
-        "get-object",
-        "--range",
-        f"bytes={first_byte}-{last_byte}",
-        "--bucket",
-        bucket,
-        "--key",
-        key,
-        output_file
-    ]
-    get_range_proc = subprocess.Popen(get_range_params, shell=False, stdout=subprocess.DEVNULL)
-    get_range_proc.wait()
 
 
 @command.retry
