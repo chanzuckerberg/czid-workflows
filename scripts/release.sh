@@ -11,8 +11,8 @@ fi
 
 export WORKFLOW_NAME=$1 RELEASE_TYPE=$2 RELEASE_NOTES="$3"
 
-if ! [[ -d "$(dirname $0)/../$WORKFLOW_NAME" ]]; then
-    echo "Unable to locate workflow under a top level directory $WORKFLOW_NAME" 1>&2
+if ! [[ -d "$(dirname $0)/../workflows/$WORKFLOW_NAME" ]]; then
+    echo "Unable to locate workflow under a top level directory workflows/$WORKFLOW_NAME" 1>&2
     exit 1
 fi
 
