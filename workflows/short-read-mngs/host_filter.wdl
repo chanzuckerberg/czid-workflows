@@ -244,13 +244,15 @@ task fastp_qc {
     Int cpu = 16
   }
   Boolean paired = defined(reads2_fastq)
+  String fastp_invocation = "fastp"
+        + " -i ${reads1_fastq} ${'-I ' + reads2_fastq}"
+        + " -o fastp1.fastq ${if (paired) then '-O fastp2.fastq' else ''}"
+        + " -w ${cpu} ${fastp_options}"
+        + " --adapter_fasta ${adapter_fasta} ${if (paired) then '--detect_adapter_for_pe' else ''}"
+
   command<<<
     set -euxo pipefail
-    fastp \
-        -i ~{reads1_fastq} ~{"-I " + reads2_fastq} \
-        -o fastp1.fastq ~{if (paired) then "-O fastp2.fastq" else ""} \
-        -w ~{cpu} ~{fastp_options} \
-        --adapter_fasta ~{adapter_fasta} ~{if (paired) then "--detect_adapter_for_pe" else ""}
+    ~{fastp_invocation}
     count="$(jq .read1_after_filtering.total_reads fastp.json)"
     if [ '~{paired}' == 'true' ]; then
         count=$((2 * count))
@@ -273,10 +275,12 @@ task fastp_qc {
       5. Complexity filter ([custom feature](https://github.com/mlin/fastp/tree/mlin/sdust)
          using the [SDUST algorithm](https://pubmed.ncbi.nlm.nih.gov/16796549/))
 
-      fastp flags:
+      fastp is run on the FASTQ file(s) from input validation:
       ```
-      ~{fastp_options}
+      ~{fastp_invocation}
       ```
+
+      fastp documentation can be found [here](https://github.com/OpenGene/fastp)
       """).strip(), file=outfile)
     EOF
   >>>
@@ -306,18 +310,15 @@ task kallisto {
     Int cpu = 16
   }
   Boolean paired = defined(reads2_fastq)
+  # TODO: input fragment length parameters for non-paired-end (l = average, s = std dev)
+  String kallisto_invocation = "/kallisto/kallisto quant"
+      + " -i '${kallisto_idx}' -o $(pwd) --plaintext ${if (paired) then '' else '--single -l 200 -s 20'} ${kallisto_options} -t ${cpu}"
+      + " '~{reads1_fastq}'" + if (defined(reads2_fastq)) then " '~{reads2_fastq}" else ""
 
   command <<<
     set -euxo pipefail
 
-    single=""
-    if [[ '~{paired}' != 'true' ]]; then
-      # TODO: input fragment length parameters (l = average, s = std dev)
-      single="--single -l 200 -s 20"
-    fi
-    # shellcheck disable=SC2086
-    /kallisto/kallisto quant -i '~{kallisto_idx}' -o "$(pwd)" --plaintext $single ~{kallisto_options} -t ~{cpu} \
-      ~{sep=' ' select_all([reads1_fastq, reads2_fastq])}
+    ~{kallisto_invocation}
     >&2 jq . run_info.json
 
     python3 - << 'EOF'
@@ -332,8 +333,14 @@ task kallisto {
       Not all CZ ID host species have transcripts indexed; for those without, kallisto is run using ERCC
       sequences only.
 
-      Please see the [kallisto manual](https://pachterlab.github.io/kallisto/manual) for details of
-      the `abundance.tsv` output format.
+      kallisto is run on the fastp-filtered FASTQ(s):
+
+      ```
+      ~{kallisto_invocation}
+      ```
+
+      kallisto documentation can be found [here](https://pachterlab.github.io/kallisto/manual), including
+      details of the `abundance.tsv` output format.
       """).strip(), file=outfile)
     EOF
   >>>
@@ -364,26 +371,23 @@ task bowtie2_filter {
     String docker_image_id
     Int cpu = 16
   }
+
   Boolean paired = defined(reads2_fastq)
+  String genome_name = basename(index_tar, ".bowtie2.tar")
+  String bowtie2_invocation =
+      "bowtie2 -x '/tmp/${genome_name}/${genome_name}' ${bowtie2_options} -p ${cpu}"
+        + (if (paired) then " -1 '${reads1_fastq}' -2 '${reads2_fastq}'" else " -U '${reads1_fastq}'")
+        + " -q -S '/tmp/bowtie2.sam'"
+
   command <<<
     set -euxo pipefail
-    TMPDIR="${TMPDIR:-/tmp}"
 
-    genome_name="$(basename '~{index_tar}' .bowtie2.tar)"
-    tar xf '~{index_tar}' -C "$TMPDIR"
+    tar xf '~{index_tar}' -C /tmp
 
-    if [[ '~{paired}' == 'true' ]]; then
-        bowtie2 -x "$TMPDIR/$genome_name/$genome_name" ~{bowtie2_options} -p ~{cpu} \
-            -q -1 '~{reads1_fastq}' -2 '~{reads2_fastq}' \
-            -S "$TMPDIR/bowtie2.sam"
-    else
-        bowtie2 -x "$TMPDIR/$genome_name/$genome_name" ~{bowtie2_options} -p ~{cpu} \
-            -q -U '~{reads1_fastq}' \
-            -S "$TMPDIR/bowtie2.sam"
-    fi
+    ~{bowtie2_invocation}
 
     # generate sort & compressed BAM file for archival
-    samtools sort -o "bowtie2_~{filter_type}.bam" -@ 4 -T "$TMPDIR" "$TMPDIR/bowtie2.sam" & samtools_pid=$!
+    samtools sort -o "bowtie2_~{filter_type}.bam" -@ 4 -T /tmp "/tmp/bowtie2.sam" & samtools_pid=$!
 
     # Extract reads [pairs] that did NOT map to the index
     if [[ '~{paired}' == 'true' ]]; then
@@ -392,9 +396,9 @@ task bowtie2_filter {
         # +  8 (mate unmapped)
         # ----
         #   13
-        samtools fastq -f 13 -1 'bowtie2_~{filter_type}_filtered1.fastq' -2 'bowtie2_~{filter_type}_filtered2.fastq' -0 /dev/null -s /dev/null "$TMPDIR/bowtie2.sam"
+        samtools fastq -f 13 -1 'bowtie2_~{filter_type}_filtered1.fastq' -2 'bowtie2_~{filter_type}_filtered2.fastq' -0 /dev/null -s /dev/null /tmp/bowtie2.sam
     else
-        samtools fastq -f 4 "$TMPDIR/bowtie2.sam" > 'bowtie2_~{filter_type}_filtered1.fastq'
+        samtools fastq -f 4 /tmp/bowtie2.sam > 'bowtie2_~{filter_type}_filtered1.fastq'
     fi
 
     count="$(cat bowtie2_~{filter_type}_filtered{1,2}.fastq | wc -l)"
@@ -411,6 +415,16 @@ task bowtie2_filter {
       [Bowtie2](https://bowtie-bio.sourceforge.net/bowtie2/index.shtml). Runs
       `bowtie2 ~{bowtie2_options}` using a precomputed index, then uses
       [samtools](http://www.htslib.org/) to keep reads *not* mapping to the ~{filter_type} genome.
+
+      Bowtie2 is run on the fastp-filtered FASTQ(s):
+
+      ```
+      ~{bowtie2_invocation}
+      ```
+
+      Then, non-mapping reads are selected using `samtools fastq -f ~{if (paired) then 13 else 4}`.
+
+      Bowtie2 documentation can be found [here](https://bowtie-bio.sourceforge.net/bowtie2/index.shtml)
       """).strip(), file=outfile)
     EOF
 
@@ -445,23 +459,20 @@ task hisat2_filter {
     String docker_image_id
     Int cpu = 16
   }
+
   Boolean paired = defined(reads2_fastq)
+  String genome_name = basename(index_tar, ".hisat2.tar")
+  String hisat2_invocation =
+      "/hisat2/hisat2 -x '/tmp/${genome_name}/${genome_name}' ${hisat2_options} -p ${cpu}"
+        + (if (paired) then " -1 '${reads1_fastq}' -2 '${reads2_fastq}'" else " -U '${reads2_fastq}'")
+        + " -q -S /tmp/hisat2.sam"
+
   command <<<
     set -euxo pipefail
-    TMPDIR="${TMPDIR:-/tmp}"
 
-    genome_name="$(basename '~{index_tar}' .hisat2.tar)"
-    tar xf '~{index_tar}' -C "$TMPDIR"
+    tar xf '~{index_tar}' -C /tmp
 
-    if [[ '~{paired}' == 'true' ]]; then
-        /hisat2/hisat2 -x "$TMPDIR/$genome_name/$genome_name" ~{hisat2_options} -p ~{cpu} \
-            -q -1 '~{reads1_fastq}' -2 '~{reads2_fastq}' \
-            -S "$TMPDIR/hisat2.sam"
-    else
-        /hisat2/hisat2 -x "$TMPDIR/$genome_name/$genome_name" ~{hisat2_options} -p ~{cpu} \
-            -q -U '~{reads1_fastq}' \
-            -S "$TMPDIR/hisat2.sam"
-    fi
+    ~{hisat2_invocation}
 
     # Extract reads [pairs] that did NOT map to the index
     if [[ '~{paired}' == 'true' ]]; then
@@ -470,9 +481,9 @@ task hisat2_filter {
         # +  8 (mate unmapped)
         # ----
         #   13
-        samtools fastq -f 13 -1 'hisat2_~{filter_type}_filtered1.fastq' -2 'hisat2_~{filter_type}_filtered2.fastq' -0 /dev/null -s /dev/null "$TMPDIR/hisat2.sam"
+        samtools fastq -f 13 -1 'hisat2_~{filter_type}_filtered1.fastq' -2 'hisat2_~{filter_type}_filtered2.fastq' -0 /dev/null -s /dev/null /tmp/hisat2.sam
     else
-        samtools fastq -f 4 "$TMPDIR/hisat2.sam" > 'hisat2_~{filter_type}_filtered1.fastq'
+        samtools fastq -f 4 /tmp/hisat2.sam > 'hisat2_~{filter_type}_filtered1.fastq'
     fi
 
     count="$(cat hisat2_~{filter_type}_filtered{1,2}.fastq | wc -l)"
@@ -491,7 +502,17 @@ task hisat2_filter {
       ~{filter_type} genome.
 
       HISAT2 complements Bowtie2 with a different algorithm that also models potential RNA splice
-      junctions (for those host species that CZ ID indexes transcript models).
+      junctions (if CZ ID indexes transcript models for the host).
+
+      HISAT2 is run on the bowtie2-filtered FASTQ(s):
+
+      ```
+      ~{hisat2_invocation}
+      ```
+
+      Then, non-mapping reads are selected using `samtools fastq -f ~{if (paired) then 13 else 4}`.
+
+      HISAT2 documentation can be found [here](http://daehwankimlab.github.io/hisat2/)
       """).strip(), file=outfile)
     EOF
   >>>
@@ -523,10 +544,16 @@ task collect_insert_size_metrics {
       print(textwrap.dedent("""
       # Picard CollectInsertSizeMetrics
 
-      Uses [CollectInsertSizeMetrics from PicardTools](https://gatk.broadinstitute.org/hc/en-us/articles/360037055772-CollectInsertSizeMetrics-Picard-)
-      to render a histogram of insert sizes, which can be useful to assess sequencing library
-      quality (for paired-end samples). The metrics are collected from the complete output of
-      Bowtie2 *including host-derived reads* that are otherwise excluded from downstream steps.
+      This step computes insert size metrics for Paired End samples. These metrics are computed by
+      the Broad Institute's Picard toolkit.
+
+      Picard is run on the output BAM file obtained from running Bowtie2 on the host genome:
+
+      ```
+      picard CollectInsertSizeMetrics 'I=~{bam}' O=picard_insert_metrics.txt H=insert_size_histogram.pdf
+      ```
+
+      Picard documentation can be found [here](https://gatk.broadinstitute.org/hc/en-us/articles/360037055772-CollectInsertSizeMetrics-Picard-)
       """).strip(), file=outfile)
     EOF
   >>>
