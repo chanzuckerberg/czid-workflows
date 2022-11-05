@@ -30,7 +30,8 @@ ALIGNMENT_WDL_VERSIONS: Dict[str, str] = {
 # mitigation for TooManyRequestExceptions
 config = Config(
     retries={
-        "max_attempts": 10
+        "max_attempts": 20,
+        "mode": "adaptive",
     }
 )
 
