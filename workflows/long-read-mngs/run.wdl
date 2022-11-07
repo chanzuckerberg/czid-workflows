@@ -211,12 +211,14 @@ task RunReadsToContigs {
 
         # convert non-contigs.fastq file to .fasta file
         seqtk seq -a sample.non_contigs.fastq > sample.non_contigs.fasta
+        cat sample.reads_to_contigs.sam | grep -v "^@" | cut -f1,3,10 > reads_to_contigs.tsv
     >>>
 
     output {
         File reads_to_contigs_sam = "sample.reads_to_contigs.sam"
         File reads_to_contigs_bam = "sample.reads_to_contigs.bam"
         File reads_to_contigs_bai = "sample.reads_to_contigs.bam.bai"
+        File reads_to_contigs_tsv = "reads_to_contigs.tsv"
         File non_contigs_fastq = "sample.non_contigs.fastq"
         File non_contigs_fasta = "sample.non_contigs.fasta"
     }
@@ -434,7 +436,7 @@ task RunCallHitsNR {
             output_json_file="rapsearch2_counts_with_dcr.json",
         )
         CODE
-        >>>
+    >>>
 
     output {
         File deduped_out_m8 = "rapsearch2.deduped.m8"
@@ -448,30 +450,77 @@ task RunCallHitsNR {
 }
 
 # TODO: (tmorse) fuse me
-task TallyHitsNT {
+task ReassignM8NT {
     input {
-        File reads_fastq
         File m8
-        File hitsummary
-        File reads_to_contigs_sam
-        String db_type
+        File reads_to_contigs_tsv
         String docker_image_id
     }
 
     command <<<
         set -euxo pipefail  
-        cat "~{reads_to_contigs_sam}" | grep -v "^@" | cut -f1,3,10 > reads_to_contigs.txt
+        python3 /usr/local/bin/reassign_hitsummary.py \
+            --m8-filepath "~{m8}" \
+            --reads-to-contigs-filepath "~{reads_to_contigs_tsv}" \
+            --output-filepath "m8_reassigned_nt.tab" \
+    >>>
+
+    output {
+        File m8_reassigned = "m8_reassigned_nt.tab"
+    }
+
+    runtime {
+        docker: docker_image_id
+    }
+}
+
+# TODO: (tmorse) fuse me
+task ReassignM8NR {
+    input {
+        File m8
+        File reads_to_contigs_tsv
+        String docker_image_id
+    }
+
+    command <<<
+        set -euxo pipefail  
+        python3 /usr/local/bin/reassign_hitsummary.py \
+            --m8-filepath "~{m8}" \
+            --reads-to-contigs-filepath "~{reads_to_contigs_tsv}" \
+            --output-filepath "m8_reassigned_nr.tab" \
+    >>>
+
+    output {
+        File m8_reassigned = "m8_reassigned_nr.tab"
+    }
+
+    runtime {
+        docker: docker_image_id
+    }
+}
+
+# TODO: (tmorse) fuse me
+task TallyHitsNT {
+    input {
+        File reads_fastq
+        File m8
+        File hitsummary
+        File reads_to_contigs_tsv
+        String docker_image_id
+    }
+
+    command <<<
+        set -euxo pipefail  
         python3 /usr/local/bin/tally_counts.py \
             --reads-fastq-filepath "~{reads_fastq}" \
             --m8-filepath "~{m8}" \
             --hitsummary-filepath "~{hitsummary}" \
-            --reads-to-contigs-filepath reads_to_contigs.txt \
-            --output-filepath "tallied_hits_~{db_type}.csv" \
+            --reads-to-contigs-filepath "~{reads_to_contigs_tsv}" \
+            --output-filepath "tallied_hits_nt.csv" \
     >>>
 
     output {
-        File tallied_hits = "tallied_hits_~{db_type}.csv"
-        File reads_to_contigs = "reads_to_contigs.txt"
+        File tallied_hits = "tallied_hits_nt.csv"
     }
 
     runtime {
@@ -485,25 +534,22 @@ task TallyHitsNR {
         File reads_fastq
         File m8
         File hitsummary
-        File reads_to_contigs_sam
-        String db_type
+        File reads_to_contigs_tsv
         String docker_image_id
     }
 
     command <<<
         set -euxo pipefail  
-        cat "~{reads_to_contigs_sam}" | grep -v "^@" | cut -f1,3,10 > reads_to_contigs.txt
         python3 /usr/local/bin/tally_counts.py \
             --reads-fastq-filepath "~{reads_fastq}" \
             --m8-filepath "~{m8}" \
             --hitsummary-filepath "~{hitsummary}" \
-            --reads-to-contigs-filepath reads_to_contigs.txt \
-            --output-filepath "tallied_hits_~{db_type}.csv" \
+            --reads-to-contigs-filepath "~{reads_to_contigs_tsv}" \
+            --output-filepath "tallied_hits_nr.csv" \
     >>>
 
     output {
-        File tallied_hits = "tallied_hits_~{db_type}.csv"
-        File reads_to_contigs = "reads_to_contigs.txt"
+        File tallied_hits = "tallied_hits_nr.csv"
     }
 
     runtime {
@@ -516,13 +562,13 @@ task UnmappedReads {
         File input_file
         File hitsummary_nt
         File hitsummary_nr
-        File reads_to_contigs_txt
+        File reads_to_contigs_tsv
         String docker_image_id
     }
     command <<<
         set -euxo pipefail
         cut -f1 "~{hitsummary_nt}" "~{hitsummary_nr}" | sort | uniq > mapped.txt
-        cut -f1,2 "~{reads_to_contigs_txt}" > all_reads.txt
+        cut -f1,2 "~{reads_to_contigs_tsv}" > all_reads.txt
         python3 << CODE
         with open("mapped.txt", "r") as m:
             mapped_hits = set(m.read().splitlines())
@@ -545,10 +591,126 @@ task UnmappedReads {
     output {
         File unmapped_reads = "unmapped_reads.fastq"
     }
+
     runtime {
         docker: docker_image_id
     }
+}
 
+task GenerateAnnotatedFasta {
+    input {
+        File pre_alignment_fasta
+        File nt_m8
+        File nr_m8
+        String docker_image_id
+    }
+
+    command <<<
+        set -euxo pipefail
+        python3 <<CODE
+        from idseq_dag.steps.generate_annotated_fasta import generate_annotated_fasta
+
+        generate_annotated_fasta(
+            pre_alignment_fa_path = "~{pre_alignment_fasta}",
+            nt_m8_path = "~{nt_m8}",
+            nr_m8_path = "~{nr_m8}"
+            annotated_fasta_path = "refined_annotated_merged.fa",
+            unidentified_fasta_path = "refined_unidentified.fa",
+        )
+        CODE
+    >>>
+
+    output {
+        # String step_description_md = read_string("refined_annotated_out.description.md")
+        File assembly_refined_annotated_merged_fa = "refined_annotated_merged.fa"
+        File assembly_refined_unidentified_fa = "refined_unidentified.fa"
+    }
+
+  runtime {
+    docker: docker_image_id
+  }
+}
+
+task GenerateTaxidFasta {
+    input {
+        File annotated_merged_fa
+        File nt_hitsummary_tab
+        File nr_hitsummary_tab
+        File lineage_db
+        String docker_image_id
+    }
+
+    command <<<
+        set -euxo pipefail
+        python3 <<CODE
+        from idseq_dag.steps.generate_taxid_fasta import generate_taxid_fasta
+
+        generate_taxid_fasta(
+            "~{annotated_merged_fa}",
+            "~{nt_hitsummary_tab}",
+            "~{nr_hitsummary_tab}",
+            "~{lineage_db}",
+            "refined_taxid_annot.fasta",
+        )
+        CODE
+    >>>
+
+    output {
+        # String step_description_md = read_string("refined_taxid_fasta_out.description.md")
+        File assembly_refined_taxid_annot_fasta = "refined_taxid_annot.fasta"
+        File? output_read_count = "refined_taxid_fasta_out.count"
+    }
+
+    runtime {
+        docker: docker_image_id
+    }
+}
+
+task GenerateTaxidLocator {
+    input {
+        File assembly_refined_taxid_annot_fasta
+        String docker_image_id
+    }
+
+    command <<<
+        set -euxo pipefail
+        idseq-dag-run-step --workflow-name postprocess \
+            --step-module idseq_dag.steps.generate_taxid_locator \
+            --step-class PipelineStepGenerateTaxidLocator \
+            --step-name refined_taxid_locator_out \
+            --input-files '[["~{assembly_refined_taxid_annot_fasta}"]]' \
+            --output-files '["assembly/refined_taxid_annot_sorted_nt.fasta", "assembly/refined_taxid_locations_nt.json", "assembly/refined_taxid_annot_sorted_nr.fasta", "assembly/refined_taxid_locations_nr.json", "assembly/refined_taxid_annot_sorted_genus_nt.fasta", "assembly/refined_taxid_locations_genus_nt.json", "assembly/refined_taxid_annot_sorted_genus_nr.fasta", "assembly/refined_taxid_locations_genus_nr.json", "assembly/refined_taxid_annot_sorted_family_nt.fasta", "assembly/refined_taxid_locations_family_nt.json", "assembly/refined_taxid_annot_sorted_family_nr.fasta", "assembly/refined_taxid_locations_family_nr.json", "assembly/refined_taxid_locations_combined.json"]' \
+            --output-dir-s3 '' \
+            --additional-files '{}' \
+            --additional-attributes '{}'
+    >>>
+
+    output {
+        String step_description_md = read_string("refined_taxid_locator_out.description.md")
+        File assembly_refined_taxid_annot_sorted_nt_fasta = "assembly/refined_taxid_annot_sorted_nt.fasta"
+        File assembly_refined_taxid_locations_nt_json = "assembly/refined_taxid_locations_nt.json"
+        File assembly_refined_taxid_annot_sorted_nr_fasta = "assembly/refined_taxid_anno    call ReassignM8NT {
+      input:
+        m8 = RunCallHitsNT.deduped_out_m8,
+        reads_to_contigs_tsv = RunReadsToContigs.reads_to_contigs_tsv,
+        docker_image_id = docker_image_id,
+    }t_sorted_nr.fasta"
+        File assembly_refined_taxid_locations_nr_json = "assembly/refined_taxid_locations_nr.json"
+        File assembly_refined_taxid_annot_sorted_genus_nt_fasta = "assembly/refined_taxid_annot_sorted_genus_nt.fasta"
+        File assembly_refined_taxid_locations_genus_nt_json = "assembly/refined_taxid_locations_genus_nt.json"
+        File assembly_refined_taxid_annot_sorted_genus_nr_fasta = "assembly/refined_taxid_annot_sorted_genus_nr.fasta"
+        File assembly_refined_taxid_locations_genus_nr_json = "assembly/refined_taxid_locations_genus_nr.json"
+        File assembly_refined_taxid_annot_sorted_family_nt_fasta = "assembly/refined_taxid_annot_sorted_family_nt.fasta"
+        File assembly_refined_taxid_locations_family_nt_json = "assembly/refined_taxid_locations_family_nt.json"
+        File assembly_refined_taxid_annot_sorted_family_nr_fasta = "assembly/refined_taxid_annot_sorted_family_nr.fasta"
+        File assembly_refined_taxid_locations_family_nr_json = "assembly/refined_taxid_locations_family_nr.json"
+        File assembly_refined_taxid_locations_combined_json = "assembly/refined_taxid_locations_combined.json"
+        File? output_read_count = "refined_taxid_locator_out.count"
+    }
+
+    runtime {
+        docker: docker_image_id
+    }
 }
 
 workflow czid_long_read_mngs {
@@ -697,8 +859,7 @@ workflow czid_long_read_mngs {
         reads_fastq = RunSubsampling.subsampled_fastq,
         m8 = RunCallHitsNT.deduped_out_m8,
         hitsummary = RunCallHitsNT.hitsummary,
-        reads_to_contigs_sam = RunReadsToContigs.reads_to_contigs_sam,
-        db_type = "nt",
+        reads_to_contigs_tsv = RunReadsToContigs.reads_to_contigs_tsv,
         docker_image_id = docker_image_id,
     }
 
@@ -707,7 +868,7 @@ workflow czid_long_read_mngs {
         input_file = RunSubsampling.subsampled_fastq,
         hitsummary_nt = RunCallHitsNT.hitsummary,
         hitsummary_nr = RunCallHitsNR.hitsummary,
-        reads_to_contigs_txt = TallyHitsNT.reads_to_contigs,
+        reads_to_contigs_tsv = RunReadsToContigs.reads_to_contigs_tsv,
         docker_image_id = docker_image_id
     }
 
@@ -716,9 +877,45 @@ workflow czid_long_read_mngs {
         reads_fastq = RunSubsampling.subsampled_fastq,
         m8 = RunCallHitsNR.deduped_out_m8,
         hitsummary = RunCallHitsNR.hitsummary,
-        reads_to_contigs_sam = RunReadsToContigs.reads_to_contigs_sam,
-        db_type = "nr",
+        reads_to_contigs_tsv = RunReadsToContigs.reads_to_contigs_tsv,
         docker_image_id = docker_image_id,
+    }
+
+    call ReassignM8NT {
+      input:
+        m8 = RunCallHitsNT.deduped_out_m8,
+        reads_to_contigs_tsv = RunReadsToContigs.reads_to_contigs_tsv,
+        docker_image_id = docker_image_id,
+    }
+
+    call ReassignM8NR {
+      input:
+        m8 = RunCallHitsNR.deduped_out_m8,
+        reads_to_contigs_tsv = RunReadsToContigs.reads_to_contigs_tsv,
+        docker_image_id = docker_image_id,
+    }
+
+    call GenerateAnnotatedFasta {
+      input:
+        pre_alignment_fasta = RunSubsampling.subsampled_fastq,
+        nt_m8 = ReassignM8NT.m8_reassigned,
+        nr_m8 = ReassignM8NR.m8_reassigned,
+        docker_image_id = docker_image_id,
+    }
+
+    call GenerateTaxidFasta {
+      input:
+        annotated_merged_fa = GenerateAnnotatedFasta.assembly_refined_annotated_merged_fa,
+        nt_hitsummary_tab = RunCallHitsNT.hitsummary,
+        nr_hitsummary_tab = RunCallHitsNR.hitsummary,
+        lineage_db = lineage_db,
+        docker_image_id = docker_image_id,
+    }
+
+    call GenerateTaxidLocator {
+      input:
+        assembly_refined_taxid_annot_fasta = GenerateTaxidFasta.assembly_refined_taxid_annot_fasta,
+        docker_image_id = docker_image_id
     }
 
     output {
@@ -731,5 +928,21 @@ workflow czid_long_read_mngs {
         File nt_tallied_hits = TallyHitsNT.tallied_hits
         File nr_tallied_hits = TallyHitsNR.tallied_hits
         File unmapped_reads = UnmappedReads.unmapped_reads
+        File refined_taxid_fasta_out_assembly_refined_taxid_annot_fasta = GenerateTaxidFasta.assembly_refined_taxid_annot_fasta
+        File? refined_taxid_fasta_out_count = GenerateTaxidFasta.output_read_count
+        File refined_taxid_locator_out_assembly_refined_taxid_annot_sorted_nt_fasta = GenerateTaxidLocator.assembly_refined_taxid_annot_sorted_nt_fasta
+        File refined_taxid_locator_out_assembly_refined_taxid_locations_nt_json = GenerateTaxidLocator.assembly_refined_taxid_locations_nt_json
+        File refined_taxid_locator_out_assembly_refined_taxid_annot_sorted_nr_fasta = GenerateTaxidLocator.assembly_refined_taxid_annot_sorted_nr_fasta
+        File refined_taxid_locator_out_assembly_refined_taxid_locations_nr_json = GenerateTaxidLocator.assembly_refined_taxid_locations_nr_json
+        File refined_taxid_locator_out_assembly_refined_taxid_annot_sorted_genus_nt_fasta = GenerateTaxidLocator.assembly_refined_taxid_annot_sorted_genus_nt_fasta
+        File refined_taxid_locator_out_assembly_refined_taxid_locations_genus_nt_json = GenerateTaxidLocator.assembly_refined_taxid_locations_genus_nt_json
+        File refined_taxid_locator_out_assembly_refined_taxid_annot_sorted_genus_nr_fasta = GenerateTaxidLocator.assembly_refined_taxid_annot_sorted_genus_nr_fasta
+        File refined_taxid_locator_out_assembly_refined_taxid_locations_genus_nr_json = GenerateTaxidLocator.assembly_refined_taxid_locations_genus_nr_json
+        File refined_taxid_locator_out_assembly_refined_taxid_annot_sorted_family_nt_fasta = GenerateTaxidLocator.assembly_refined_taxid_annot_sorted_family_nt_fasta
+        File refined_taxid_locator_out_assembly_refined_taxid_locations_family_nt_json = GenerateTaxidLocator.assembly_refined_taxid_locations_family_nt_json
+        File refined_taxid_locator_out_assembly_refined_taxid_annot_sorted_family_nr_fasta = GenerateTaxidLocator.assembly_refined_taxid_annot_sorted_family_nr_fasta
+        File refined_taxid_locator_out_assembly_refined_taxid_locations_family_nr_json = GenerateTaxidLocator.assembly_refined_taxid_locations_family_nr_json
+        File refined_taxid_locator_out_assembly_refined_taxid_locations_combined_json = GenerateTaxidLocator.assembly_refined_taxid_locations_combined_json
+        File? refined_taxid_locator_out_count = GenerateTaxidLocator.output_read_count
     }
 }
