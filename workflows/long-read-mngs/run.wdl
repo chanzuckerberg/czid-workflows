@@ -339,7 +339,7 @@ task RunCallHitsNT {
             output_json_file="gsnap_counts_with_dcr.json",
         )
         CODE
-        >>>
+    >>>
 
     output {
         File deduped_out_m8 = "gsnap.deduped.m8"
