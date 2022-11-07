@@ -136,12 +136,12 @@ class PipelineStepGenerateAnnotatedFasta(PipelineCountingStep):
         )
 
         generate_annotated_fasta(
-            pre_alignment_fa_path = self.input_files_local[0][-1],
-            nt_m8_path = self.input_files_local[1][1],
-            nr_m8_path = self.input_files_local[2][1],
-            annotated_fasta_path = annotated_fasta_path,
-            unidentified_fasta_path = unidentified_fasta_path,
-            duplicate_clusters_path = duplicate_clusters_path,
+            pre_alignment_fa_path=self.input_files_local[0][-1],
+            nt_m8_path=self.input_files_local[1][1],
+            nr_m8_path=self.input_files_local[2][1],
+            annotated_fasta_path=annotated_fasta_path,
+            unidentified_fasta_path=unidentified_fasta_path,
+            duplicate_clusters_path=duplicate_clusters_path,
         )
 
         if duplicate_clusters_path:
@@ -156,4 +156,3 @@ class PipelineStepGenerateAnnotatedFasta(PipelineCountingStep):
             counter_name="unidentified_fasta",
             fasta_files=[self._unique_unidentified_fasta()]
         )
-

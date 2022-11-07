@@ -387,7 +387,7 @@ task RunNRAlignment {
         fi
     >>>
 
-    output{
+    output {
         File out_m8 = "diamond.m8"
     }
 
