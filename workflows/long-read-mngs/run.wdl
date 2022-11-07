@@ -689,12 +689,7 @@ task GenerateTaxidLocator {
         String step_description_md = read_string("refined_taxid_locator_out.description.md")
         File assembly_refined_taxid_annot_sorted_nt_fasta = "assembly/refined_taxid_annot_sorted_nt.fasta"
         File assembly_refined_taxid_locations_nt_json = "assembly/refined_taxid_locations_nt.json"
-        File assembly_refined_taxid_annot_sorted_nr_fasta = "assembly/refined_taxid_anno    call ReassignM8NT {
-      input:
-        m8 = RunCallHitsNT.deduped_out_m8,
-        reads_to_contigs_tsv = RunReadsToContigs.reads_to_contigs_tsv,
-        docker_image_id = docker_image_id,
-    }t_sorted_nr.fasta"
+        File assembly_refined_taxid_annot_sorted_nr_fasta = "assembly/refined_taxid_annot_sorted_nr.fasta"
         File assembly_refined_taxid_locations_nr_json = "assembly/refined_taxid_locations_nr.json"
         File assembly_refined_taxid_annot_sorted_genus_nt_fasta = "assembly/refined_taxid_annot_sorted_genus_nt.fasta"
         File assembly_refined_taxid_locations_genus_nt_json = "assembly/refined_taxid_locations_genus_nt.json"

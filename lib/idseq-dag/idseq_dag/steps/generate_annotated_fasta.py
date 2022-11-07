@@ -87,7 +87,6 @@ def _annotate_fasta_with_accessions(merged_input_fasta, nt_m8, nr_m8, output_fas
                 sequence_data = input_fasta_f.readline()
 
 
-
 def generate_annotated_fasta(
     pre_alignment_fa_path: str,
     nt_m8_path: str,
