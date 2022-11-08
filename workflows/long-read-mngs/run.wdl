@@ -613,7 +613,7 @@ task GenerateAnnotatedFasta {
         generate_annotated_fasta(
             pre_alignment_fa_path = "~{pre_alignment_fasta}",
             nt_m8_path = "~{nt_m8}",
-            nr_m8_path = "~{nr_m8}"
+            nr_m8_path = "~{nr_m8}",
             annotated_fasta_path = "refined_annotated_merged.fa",
             unidentified_fasta_path = "refined_unidentified.fa",
         )
