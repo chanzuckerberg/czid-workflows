@@ -827,14 +827,14 @@ workflow czid_long_read_mngs {
     }
 
     call RunNRAlignment {
-      input:
-        assembled_reads_fa=RunAssembly.assembled_fasta,
-        db_path=diamond_db,
-        diamond_args=diamond_args,
-        run_locally=defined(diamond_local_db_path),
-        local_diamond_index=diamond_local_db_path,
-        s3_wd_uri=s3_wd_uri,
-        docker_image_id=docker_image_id
+        input:
+            assembled_reads_fa=RunAssembly.assembled_fasta,
+            db_path=diamond_db,
+            diamond_args=diamond_args,
+            run_locally=defined(diamond_local_db_path),
+            local_diamond_index=diamond_local_db_path,
+            s3_wd_uri=s3_wd_uri,
+            docker_image_id=docker_image_id
     }
 
     call RunCallHitsNR { 

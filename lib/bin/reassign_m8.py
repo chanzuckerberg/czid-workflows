@@ -34,7 +34,7 @@ def main(
     reads_to_contigs = reads_to_contigs[reads_to_contigs.contig_id != "*"]
     reassigned = pd.merge(m8, reads_to_contigs, left_on="read_or_contig_id", right_on="contig_id", how="outer")
     reassigned["read_or_contig_id"] = reassigned.apply(lambda row: row["read_id"] or row["read_or_contig_id"], axis=1)
-    reassigned = reassigned.drop(["read_id", "contig_id"])
+    reassigned = reassigned.drop(columns=["read_id", "contig_id"])
     reassigned.to_csv(output_filepath, header=False)
 
 
