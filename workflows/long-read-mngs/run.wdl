@@ -815,15 +815,15 @@ workflow czid_long_read_mngs {
     }
 
     call RunCallHitsNT { 
-      input:
-        m8_file = RunNTAlignment.out_m8,
-        lineage_db = lineage_db,
-        taxon_blacklist = taxon_blacklist,
-        deuterostome_db = deuterostome_db,
-        accession2taxid = accession2taxid_db,
-        min_read_length = min_read_length,
-        count_type = library_type,
-        docker_image_id = docker_image_id,
+        input:
+            m8_file = RunNTAlignment.out_m8,
+            lineage_db = lineage_db,
+            taxon_blacklist = taxon_blacklist,
+            deuterostome_db = deuterostome_db,
+            accession2taxid = accession2taxid_db,
+            min_read_length = min_read_length,
+            count_type = library_type,
+            docker_image_id = docker_image_id,
     }
 
     call RunNRAlignment {
