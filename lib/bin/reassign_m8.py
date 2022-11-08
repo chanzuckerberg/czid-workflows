@@ -8,7 +8,7 @@ def main(
     reads_to_contigs_filepath: str,
     output_filepath: str,
 ):
-    m8 = pd.read_csv(m8_filepath, sep="\t", index_col="read_id", names=[
+    m8 = pd.read_csv(m8_filepath, sep="\t", names=[
         "read_or_contig_id",
         "accession",
         "pid",
