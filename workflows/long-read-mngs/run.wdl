@@ -908,9 +908,9 @@ workflow czid_long_read_mngs {
     }
 
     call GenerateTaxidLocator {
-      input:
-        assembly_refined_taxid_annot_fasta = GenerateTaxidFasta.assembly_refined_taxid_annot_fasta,
-        docker_image_id = docker_image_id
+        input:
+            assembly_refined_taxid_annot_fasta = GenerateTaxidFasta.assembly_refined_taxid_annot_fasta,
+            docker_image_id = docker_image_id
     }
 
     output {
