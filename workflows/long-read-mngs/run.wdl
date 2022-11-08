@@ -459,7 +459,7 @@ task ReassignM8NT {
 
     command <<<
         set -euxo pipefail  
-        python3 /usr/local/bin/reassign_hitsummary.py \
+        python3 /usr/local/bin/reassign_m8.py \
             --m8-filepath "~{m8}" \
             --reads-to-contigs-filepath "~{reads_to_contigs_tsv}" \
             --output-filepath "m8_reassigned_nt.tab" \
@@ -484,7 +484,7 @@ task ReassignM8NR {
 
     command <<<
         set -euxo pipefail  
-        python3 /usr/local/bin/reassign_hitsummary.py \
+        python3 /usr/local/bin/reassign_m8.py \
             --m8-filepath "~{m8}" \
             --reads-to-contigs-filepath "~{reads_to_contigs_tsv}" \
             --output-filepath "m8_reassigned_nr.tab" \
