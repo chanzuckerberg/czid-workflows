@@ -17,6 +17,34 @@ def _old_read_name(new_read_name):
     return new_read_name.split(":", 4)[-1]
 
 
+def _annotate_fasta_with_accessions(merged_input_fasta, nt_m8, nr_m8, output_fasta):
+    def get_map(blastn_6_path):
+        with open(blastn_6_path) as blastn_6_f:
+            return {row["qseqid"]: row["sseqid"] for row in BlastnOutput6NTRerankedReader(blastn_6_f, filter_invalid=True)}
+
+    nt_map = get_map(nt_m8)
+    nr_map = get_map(nr_m8)
+
+    with open(merged_input_fasta, 'r', encoding='utf-8') as input_fasta_f:
+        with open(output_fasta, 'w') as output_fasta_f:
+            sequence_name = input_fasta_f.readline()
+            sequence_data = input_fasta_f.readline()
+
+            # TODO: (tmorse) fasta parsing
+            while sequence_name and sequence_data:
+                read_id = sequence_name.rstrip().lstrip('>')
+                # Need to annotate NR then NT in this order for alignment viz
+                # Its inverse is old_read_name()
+                new_read_name = "NR:{nr_accession}:NT:{nt_accession}:{read_id}".format(
+                    nr_accession=nr_map.get(read_id, ''),
+                    nt_accession=nt_map.get(read_id, ''),
+                    read_id=read_id)
+                output_fasta_f.write(">%s\n" % new_read_name)
+                output_fasta_f.write(sequence_data)
+                sequence_name = input_fasta_f.readline()
+                sequence_data = input_fasta_f.readline()
+
+
 def _generate_unidentified_fasta(
     input_fa,
     output_fa,
@@ -59,34 +87,6 @@ def _generate_unidentified_fasta(
                     output_file.write(read.sequence + "\n")  # write duplicate seq
 
 
-def _annotate_fasta_with_accessions(merged_input_fasta, nt_m8, nr_m8, output_fasta):
-    def get_map(blastn_6_path):
-        with open(blastn_6_path) as blastn_6_f:
-            return {row["qseqid"]: row["sseqid"] for row in BlastnOutput6NTRerankedReader(blastn_6_f, filter_invalid=True)}
-
-    nt_map = get_map(nt_m8)
-    nr_map = get_map(nr_m8)
-
-    with open(merged_input_fasta, 'r', encoding='utf-8') as input_fasta_f:
-        with open(output_fasta, 'w') as output_fasta_f:
-            sequence_name = input_fasta_f.readline()
-            sequence_data = input_fasta_f.readline()
-
-            # TODO: (tmorse) fasta parsing
-            while sequence_name and sequence_data:
-                read_id = sequence_name.rstrip().lstrip('>')
-                # Need to annotate NR then NT in this order for alignment viz
-                # Its inverse is old_read_name()
-                new_read_name = "NR:{nr_accession}:NT:{nt_accession}:{read_id}".format(
-                    nr_accession=nr_map.get(read_id, ''),
-                    nt_accession=nt_map.get(read_id, ''),
-                    read_id=read_id)
-                output_fasta_f.write(">%s\n" % new_read_name)
-                output_fasta_f.write(sequence_data)
-                sequence_name = input_fasta_f.readline()
-                sequence_data = input_fasta_f.readline()
-
-
 def generate_annotated_fasta(
     pre_alignment_fa_path: str,
     nt_m8_path: str,
@@ -106,14 +106,12 @@ def generate_annotated_fasta(
         clusters_dict = None
 
     _annotate_fasta_with_accessions(pre_alignment_fa_path, nt_m8_path, nr_m8_path, annotated_fasta_path)
-    # TODO: (tmorse) verify if this is needed
-    if unique_unidentified_fasta:
-        _generate_unidentified_fasta(
-            annotated_fasta_path,
-            unidentified_fasta_path,
-            clusters_dict,
-            unique_unidentified_fasta
-        )
+    _generate_unidentified_fasta(
+        annotated_fasta_path,
+        unidentified_fasta_path,
+        clusters_dict,
+        unique_unidentified_fasta
+    )
 
 
 class PipelineStepGenerateAnnotatedFasta(PipelineCountingStep):

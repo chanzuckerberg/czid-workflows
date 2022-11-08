@@ -899,12 +899,12 @@ workflow czid_long_read_mngs {
     }
 
     call GenerateTaxidFasta {
-      input:
-        annotated_merged_fa = GenerateAnnotatedFasta.assembly_refined_annotated_merged_fa,
-        nt_hitsummary_tab = RunCallHitsNT.hitsummary,
-        nr_hitsummary_tab = RunCallHitsNR.hitsummary,
-        lineage_db = lineage_db,
-        docker_image_id = docker_image_id,
+        input:
+            annotated_merged_fa = GenerateAnnotatedFasta.assembly_refined_annotated_merged_fa,
+            nt_hitsummary_tab = RunCallHitsNT.hitsummary,
+            nr_hitsummary_tab = RunCallHitsNR.hitsummary,
+            lineage_db = lineage_db,
+            docker_image_id = docker_image_id,
     }
 
     call GenerateTaxidLocator {
