@@ -802,16 +802,16 @@ workflow czid_long_read_mngs {
     }
 
     call RunNTAlignment {
-      input:
-        all_sequences_to_align = PrepareNTAlignmentInputs.all_sequences_to_align,
-        s3_wd_uri = s3_wd_uri,
+        input:
+            all_sequences_to_align = PrepareNTAlignmentInputs.all_sequences_to_align,
+            s3_wd_uri = s3_wd_uri,
 
-        db_path = minimap2_db,
-        minimap2_args = minimap2_args,
-        run_locally = defined(minimap2_local_db_path),
-        local_minimap2_index = minimap2_local_db_path,
-        prefix= minimap2_prefix,
-        docker_image_id = docker_image_id
+            db_path = minimap2_db,
+            minimap2_args = minimap2_args,
+            run_locally = defined(minimap2_local_db_path),
+            local_minimap2_index = minimap2_local_db_path,
+            prefix= minimap2_prefix,
+            docker_image_id = docker_image_id
     }
 
     call RunCallHitsNT { 
