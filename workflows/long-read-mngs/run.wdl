@@ -599,7 +599,7 @@ task UnmappedReads {
 
 task GenerateAnnotatedFasta {
     input {
-        File pre_alignment_fasta
+        File pre_alignment_fastq
         File nt_m8
         File nr_m8
         String docker_image_id
@@ -610,8 +610,10 @@ task GenerateAnnotatedFasta {
         python3 <<CODE
         from idseq_dag.steps.generate_annotated_fasta import generate_annotated_fasta
 
+        seqkit fq2fa ~{pre_alignment_fastq} -o pre_alignment.fa
+
         generate_annotated_fasta(
-            pre_alignment_fa_path = "~{pre_alignment_fasta}",
+            pre_alignment_fa_path = "pre_alignment.fa",
             nt_m8_path = "~{nt_m8}",
             nr_m8_path = "~{nr_m8}",
             annotated_fasta_path = "refined_annotated_merged.fa",
@@ -1201,7 +1203,7 @@ workflow czid_long_read_mngs {
 
     call GenerateAnnotatedFasta {
       input:
-        pre_alignment_fasta = RunSubsampling.subsampled_fastq,
+        pre_alignment_fastq = RunSubsampling.subsampled_fastq,
         nt_m8 = ReassignM8NT.m8_reassigned,
         nr_m8 = ReassignM8NR.m8_reassigned,
         docker_image_id = docker_image_id,

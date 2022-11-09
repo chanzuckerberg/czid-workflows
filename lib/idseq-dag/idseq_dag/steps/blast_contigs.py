@@ -420,7 +420,7 @@ def _generate_taxon_summary(
         tax_level = idx + 1
         for taxid, contig_counts in summary.items():
             entry = {'taxid': taxid, 'tax_level': tax_level,
-                        'count_type': db_type.upper(), 'contig_counts': contig_counts}
+                     'count_type': db_type.upper(), 'contig_counts': contig_counts}
             output_array.append(entry)
 
     return output_array
@@ -672,7 +672,6 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
         else:
             assert db_type == 'nr'
             PipelineStepBlastContigs.run_blast_nr(blast_index_path, blast_m8, *args)
-
 
     @staticmethod
     def run_blast_nt(blast_index_path, blast_m8, assembled_contig, reference_fasta, blast_top_m8):
