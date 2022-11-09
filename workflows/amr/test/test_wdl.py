@@ -16,8 +16,8 @@ class TestAMR(WDLTestCase):
         with open(res["outputs"]["RunRgiMain.main_amr_results"]) as main_results:
             lastline = main_results.read().splitlines()[-1]
         main = lastline.split("\t")
-        self.assertEqual(main[2], "3")
-        self.assertEqual(main[3], "281")
+        self.assertEqual(main[2], "75")
+        self.assertEqual(main[3], "260")
 
     def testRgiEmptyMain(self):
         inputs = {
