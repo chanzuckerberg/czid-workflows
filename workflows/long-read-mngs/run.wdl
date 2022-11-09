@@ -607,10 +607,10 @@ task GenerateAnnotatedFasta {
 
     command <<<
         set -euxo pipefail
+        seqkit fq2fa ~{pre_alignment_fastq} -o pre_alignment.fa
+
         python3 <<CODE
         from idseq_dag.steps.generate_annotated_fasta import generate_annotated_fasta
-
-        seqkit fq2fa ~{pre_alignment_fastq} -o pre_alignment.fa
 
         generate_annotated_fasta(
             pre_alignment_fa_path = "pre_alignment.fa",
