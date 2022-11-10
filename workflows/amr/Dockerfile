@@ -23,7 +23,7 @@ RUN pip3 install -r requirements.txt
 
 RUN git clone https://github.com/rzlim08/rgi.git
 RUN mkdir -p rgi/inputs/heatmap_inputs
-RUN cd rgi/ && git checkout 646191872345e4fc70f32db1993a99c9ab331318 && python setup.py build && python setup.py test && python setup.py install
+RUN cd rgi/ && git checkout 20b22dab2676e6cdfd16245dd15b9af3d266cb1b && python setup.py build && python setup.py test && python setup.py install
 
 # load databases
 RUN curl -LO https://czid-public-references.s3.us-west-2.amazonaws.com/test/AMRv2/card.json && \
