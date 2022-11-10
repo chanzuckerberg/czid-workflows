@@ -9,7 +9,7 @@ task RunValidateInput {
     command <<<
         set -euxo pipefail
         filter_count "~{input_fastq}" original "No reads provided"
-        fastp -i "~{input_fastq}" -o sample_validated.fastq
+        fastp --disable_adapter_trimming -i "~{input_fastq}" -o sample_validated.fastq
         filter_count sample_validated.fastq validated "No reads remaining after input validation"
     >>>
 
@@ -34,7 +34,7 @@ task RunQualityFilter {
 
     command <<<
         set -euxo pipefail
-        fastp -i "~{input_fastq}" --qualified_quality_phred 9 --length_required 100 --low_complexity_filter --complexity_threshold 30 --dont_eval_duplication -o sample_quality_filtered.fastq
+        fastp --disable_adapter_trimming -i "~{input_fastq}" --qualified_quality_phred 9 --length_required 100 --low_complexity_filter --complexity_threshold 30 --dont_eval_duplication -o sample_quality_filtered.fastq
         filter_count sample_quality_filtered.fastq quality_filtered "No reads remaining after quality filtering"
     >>>
 
@@ -214,17 +214,13 @@ task RunAssembly {
 
 task GenerateContigStats {
     input {
-        File input_fasta
-        File assembled_reads_fa
+        File reads_to_contigs_sam
         File reads_to_contig_tsv
         String docker_image_id
     }
 
     command <<<
         set -euxo pipefail
-        bowtie2-build "~{assembled_reads_fa}" bowtie-contig
-        bowtie2 -x bowtie-contig -f -U "~{input_fasta}" --very-sensitive -p 32 > bowtie.sam
-
         python3 <<CODE
         import csv
         from idseq_dag.steps.run_assembly import generate_info_from_sam
@@ -232,7 +228,9 @@ task GenerateContigStats {
         with open("~{reads_to_contig_tsv}") as f:
             read2contig = {row[0]: row[1] for row in csv.reader(f, delimiter="\t")}
 
-        generate_info_from_sam("bowtie.sam", read2contig, "contig_stats.json")
+        contig_stats = generate_info_from_sam("~{reads_to_contigs_sam}", read2contig)
+        with open("contig_stats.json", 'w') as f:
+            json.dump(contig_stats, f)
         CODE
     >>>
 
@@ -1136,8 +1134,7 @@ workflow czid_long_read_mngs {
 
     call GenerateContigStats {
         input:
-            input_fasta = PreAssemblyFasta.fasta,
-            assembled_reads_fa = RunAssembly.assembled_fasta,
+            reads_to_contigs_sam = RunReadsToContigs.reads_to_contigs_sam,
             reads_to_contig_tsv = RunReadsToContigs.reads_to_contigs_tsv,
             docker_image_id = docker_image_id,
     }
