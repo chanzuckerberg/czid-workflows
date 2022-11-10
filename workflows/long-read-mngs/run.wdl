@@ -150,6 +150,26 @@ task RunSubsampling {
     }
 }
 
+task PreAssemblyFasta {
+    input {
+        File input_fastq
+        String docker_image_id
+    }
+
+    command <<<
+        set -euxo pipefail
+        seqkit fq2fa ~{input_fastq} -o pre_assembly.fa
+    >>>
+
+    output {
+        File fasta = "pre_assembly.fa"
+    }
+
+    runtime {
+        docker: docker_image_id
+    }
+}
+
 task RunAssembly {
     input {
         File input_fastq
@@ -194,7 +214,7 @@ task RunAssembly {
 
 task GenerateContigStats {
     input {
-        File input_fastq
+        File input_fasta
         File assembled_reads_fa
         File reads_to_contig_tsv
         String docker_image_id
@@ -203,7 +223,7 @@ task GenerateContigStats {
     command <<<
         set -euxo pipefail
         bowtie2-build "~{assembled_reads_fa}" bowtie-contig
-        bowtie2 -x bowtie-contig -f -U "~{input_fastq}" --very-sensitive -p 32 > bowtie.sam
+        bowtie2 -x bowtie-contig -f -U "~{input_fasta}" --very-sensitive -p 32 > bowtie.sam
 
         python3 <<CODE
         import csv
@@ -632,7 +652,7 @@ task UnmappedReads {
 
 task GenerateAnnotatedFasta {
     input {
-        File pre_alignment_fastq
+        File pre_alignment_fasta
         File nt_m8
         File nr_m8
         String docker_image_id
@@ -640,13 +660,11 @@ task GenerateAnnotatedFasta {
 
     command <<<
         set -euxo pipefail
-        seqkit fq2fa ~{pre_alignment_fastq} -o pre_alignment.fa
-
         python3 <<CODE
         from idseq_dag.steps.generate_annotated_fasta import generate_annotated_fasta
 
         generate_annotated_fasta(
-            pre_alignment_fa_path = "pre_alignment.fa",
+            pre_alignment_fa_path = "~{pre_alignment_fasta}",
             nt_m8_path = "~{nt_m8}",
             nr_m8_path = "~{nr_m8}",
             annotated_fasta_path = "refined_annotated_merged.fa",
@@ -1063,13 +1081,13 @@ workflow czid_long_read_mngs {
     call RunValidateInput {
         input:
             input_fastq = input_fastq,
-            docker_image_id = docker_image_id
+            docker_image_id = docker_image_id,
     }
 
     call RunQualityFilter {
         input:
             input_fastq = RunValidateInput.validated_output,
-            docker_image_id = docker_image_id
+            docker_image_id = docker_image_id,
     }
 
     call RunHostFilter {
@@ -1077,7 +1095,7 @@ workflow czid_long_read_mngs {
             input_fastq = RunQualityFilter.fastp_output,
             library_type = library_type,
             minimap_host_db = minimap_host_db,
-            docker_image_id = docker_image_id
+            docker_image_id = docker_image_id,
     }
 
     call RunHumanFilter {
@@ -1092,6 +1110,12 @@ workflow czid_long_read_mngs {
         input:
             input_fastq = RunHumanFilter.human_filter_fastq,
             subsample_depth = subsample_depth,
+            docker_image_id = docker_image_id,
+    }
+
+    call PreAssemblyFasta {
+        input:
+            input_fastq = RunSubsampling.subsampled_fastq,
             docker_image_id = docker_image_id,
     }
 
@@ -1112,10 +1136,10 @@ workflow czid_long_read_mngs {
 
     call GenerateContigStats {
         input:
-            input_fastq = RunSubsampling.subsampled_fastq,
+            input_fasta = PreAssemblyFasta.fasta,
             assembled_reads_fa = RunAssembly.assembled_fasta,
             reads_to_contig_tsv = RunReadsToContigs.reads_to_contigs_tsv,
-            docker_image_id = docker_image_id
+            docker_image_id = docker_image_id,
     }
 
 
@@ -1136,7 +1160,7 @@ workflow czid_long_read_mngs {
             run_locally = defined(minimap2_local_db_path),
             local_minimap2_index = minimap2_local_db_path,
             prefix= minimap2_prefix,
-            docker_image_id = docker_image_id
+            docker_image_id = docker_image_id,
     }
 
     call RunCallHitsNT { 
@@ -1159,7 +1183,7 @@ workflow czid_long_read_mngs {
             run_locally=defined(diamond_local_db_path),
             local_diamond_index=diamond_local_db_path,
             s3_wd_uri=s3_wd_uri,
-            docker_image_id=docker_image_id
+            docker_image_id=docker_image_id,
     }
 
     call RunCallHitsNR { 
@@ -1196,7 +1220,7 @@ workflow czid_long_read_mngs {
             hitsummary_nt = RunCallHitsNT.hitsummary,
             hitsummary_nr = RunCallHitsNR.hitsummary,
             reads_to_contigs_tsv = RunReadsToContigs.reads_to_contigs_tsv,
-            docker_image_id = docker_image_id
+            docker_image_id = docker_image_id,
     }
 
     call TallyHitsNR {
@@ -1288,7 +1312,7 @@ workflow czid_long_read_mngs {
 
     call GenerateAnnotatedFasta {
       input:
-        pre_alignment_fastq = RunSubsampling.subsampled_fastq,
+        pre_alignment_fasta = PreAssemblyFasta.fasta,
         nt_m8 = ReassignM8NT.m8_reassigned,
         nr_m8 = ReassignM8NR.m8_reassigned,
         docker_image_id = docker_image_id,
