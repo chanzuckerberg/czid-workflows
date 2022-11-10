@@ -469,15 +469,16 @@ def generate_contig_taxon_summary(
     taxon_whitelist_path,
     taxon_blacklist_path,
     lineage_db_path,
+    top_m8_output,
+    refined_hit_summary_output,
     contig_summary_json_output,
     refined_counts_with_dcr_output,
     duplicate_cluster_sizes_path=None,
 ):
-    top_m8 = "top.m8"
     if db_type.lower() == "nt":
-        _get_top_m8_nt(m8_file, top_m8)
+        _get_top_m8_nt(m8_file, top_m8_output)
     elif db_type.lower() == "nr":
-        _get_top_m8_nr(m8_file, top_m8)
+        _get_top_m8_nr(m8_file, top_m8_output)
 
     read_dict, accession_dict, _ = m8.summarize_hits(hit_summary)
     with open(read_to_contig_tsv_path) as f:
@@ -485,7 +486,7 @@ def generate_contig_taxon_summary(
 
     updated_read_dict, read2blastm8, contig2lineage, added_reads = _update_read_dict(
         read2contig,
-        top_m8,
+        top_m8_output,
         read_dict,
         accession_dict,
         db_type,
@@ -509,7 +510,6 @@ def generate_contig_taxon_summary(
     with open(contig_summary_json_output, 'w') as f:
         json.dump(contig_taxon_summary, f)
 
-    refined_hit_summary = "refined_hit_summary.tab"
     refined_m8 = "refined.m8"
     _generate_m8_and_hit_summary(
         updated_read_dict,
@@ -517,13 +517,13 @@ def generate_contig_taxon_summary(
         read2blastm8,
         hit_summary,
         m8_file,
-        refined_hit_summary,
+        refined_hit_summary_output,
         refined_m8,
     )
 
     m8.generate_taxon_count_json_from_m8(
         refined_m8,
-        refined_hit_summary,
+        refined_hit_summary_output,
         db_type.upper(),
         lineage_db_path,
         deuterostome_db_path,

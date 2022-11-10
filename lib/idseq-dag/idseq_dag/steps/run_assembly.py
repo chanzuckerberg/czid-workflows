@@ -12,6 +12,33 @@ from idseq_dag.util.m8 import MIN_CONTIG_SIZE
 from idseq_dag.util.count import get_read_cluster_size, load_duplicate_cluster_sizes, READ_COUNTING_MODE, ReadCountingMode
 
 
+def generate_info_from_sam(bowtie_sam_file, read2contig, duplicate_cluster_sizes_path=None):
+    contig_stats = defaultdict(int)
+    contig_unique_counts = defaultdict(int)
+    if duplicate_cluster_sizes_path:
+        duplicate_cluster_sizes = load_duplicate_cluster_sizes(duplicate_cluster_sizes_path)
+    with open(bowtie_sam_file, "r", encoding='utf-8') as samf:
+        for line in samf:
+            if line[0] == '@':
+                continue
+            fields = line.split("\t")
+            read = fields[0]
+            contig = fields[2]
+            if duplicate_cluster_sizes_path:
+                contig_stats[contig] += get_read_cluster_size(duplicate_cluster_sizes, read)  # these are non-unique read counts now
+            else:
+                contig_stats[contig] += 1
+            contig_unique_counts[contig] += 1
+            if contig != '*':
+                read2contig[read] = contig
+    for contig, unique_count in contig_unique_counts.items():  # TODO can't we just filter those out after spades, IN ONE PLACE
+        if unique_count < MIN_CONTIG_SIZE:
+            del contig_stats[contig]
+        elif READ_COUNTING_MODE == ReadCountingMode.COUNT_UNIQUE:
+            contig_stats[contig] = unique_count
+    return contig_stats
+
+
 class PipelineStepRunAssembly(PipelineStep):
     """ To obtain longer contigs for improved sensitivity in mapping, short reads must be
     de novo assembled using SPADES.
@@ -186,32 +213,9 @@ class PipelineStepRunAssembly(PipelineStep):
                 }
             )
         )
-        contig_stats = PipelineStepRunAssembly.generate_info_from_sam(output_bowtie_sam, read2contig, duplicate_cluster_sizes_path)
+        contig_stats = generate_info_from_sam(output_bowtie_sam, read2contig, duplicate_cluster_sizes_path)
         with open(output_contig_stats, 'w') as ocf:
             json.dump(contig_stats, ocf)
-
-    @staticmethod
-    def generate_info_from_sam(bowtie_sam_file, read2contig, duplicate_cluster_sizes_path):
-        contig_stats = defaultdict(int)
-        contig_unique_counts = defaultdict(int)
-        duplicate_cluster_sizes = load_duplicate_cluster_sizes(duplicate_cluster_sizes_path)
-        with open(bowtie_sam_file, "r", encoding='utf-8') as samf:
-            for line in samf:
-                if line[0] == '@':
-                    continue
-                fields = line.split("\t")
-                read = fields[0]
-                contig = fields[2]
-                contig_stats[contig] += get_read_cluster_size(duplicate_cluster_sizes, read)  # these are non-unique read counts now
-                contig_unique_counts[contig] += 1
-                if contig != '*':
-                    read2contig[read] = contig
-        for contig, unique_count in contig_unique_counts.items():  # TODO can't we just filter those out after spades, IN ONE PLACE
-            if unique_count < MIN_CONTIG_SIZE:
-                del contig_stats[contig]
-            elif READ_COUNTING_MODE == ReadCountingMode.COUNT_UNIQUE:
-                contig_stats[contig] = unique_count
-        return contig_stats
 
     def count_reads(self):
         ''' count reads '''

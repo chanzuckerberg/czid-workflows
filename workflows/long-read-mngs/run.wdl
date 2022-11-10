@@ -192,6 +192,39 @@ task RunAssembly {
     }
 }
 
+task GenerateContigStats {
+    input {
+        File input_fastq
+        File assembled_reads_fa
+        File reads_to_contig_tsv
+        String docker_image_id
+    }
+
+    command <<<
+        set -euxo pipefail
+        bowtie2-build "~{assembled_reads_fa}" bowtie-contig
+        bowtie2 -x bowtie-contig -f -U "~{input_fastq}" --very-sensitive -p 32 > bowtie.sam
+
+        python3 <<CODE
+        import csv
+        from idseq_dag.steps.run_assembly import generate_info_from_sam
+
+        with open("~{reads_to_contig_tsv}") as f:
+            read2contig = {row[0]: row[1] for row in csv.reader(f, delimiter="\t")}
+
+        generate_info_from_sam("bowtie.sam", read2contig, "contig_stats.json")
+        CODE
+    >>>
+
+    output {
+        File contig_stats_json = "contig_stats.json"
+    }
+
+    runtime {
+        docker: docker_image_id
+    }
+}
+
 task RunReadsToContigs {
     input {
         File input_fastq
@@ -737,6 +770,7 @@ task SummarizeContigsNT {
             "~{taxon_whitelist}",
             "~{taxon_blacklist}",
             "~{lineage_db}",
+            "gsnap.blast.top.m8"
             "gsnap_contig_summary.json",
             "refined_gsnap_counts_with_dcr.json",
         )
@@ -744,6 +778,8 @@ task SummarizeContigsNT {
     >>>
 
     output {
+        File top_m8 = "gsnap.blast.top.m8"
+        File refined_hit_summary = ""
         File refined_counts_with_dcr_json = "refined_gsnap_counts_with_dcr.json"
         File contig_summary_json = "gsnap_contig_summary.json"
     }
@@ -780,6 +816,7 @@ task SummarizeContigsNR {
             "~{taxon_whitelist}",
             "~{taxon_blacklist}",
             "~{lineage_db}",
+            "rapsearch2.blast.top.m8"
             "rapsearch2_contig_summary.json",
             "refined_rapsearch2_counts_with_dcr.json",
         )
@@ -788,6 +825,7 @@ task SummarizeContigsNR {
 
 
     output {
+        File top_m8 = "rapsearch2.blast.top.m8"
         File refined_counts_with_dcr_json = "refined_rapsearch2_counts_with_dcr.json"
         File contig_summary_json = "rapsearch2_contig_summary.json"
     }
@@ -1009,7 +1047,7 @@ workflow czid_long_read_mngs {
         File taxon_whitelist = "s3://czid-public-references/taxonomy/2020-02-10/respiratory_taxon_whitelist.txt"
         Int min_read_length = 36
         File deuterostome_db
-        File nt_info_db = "s3://czid-public-references/alignment_data/2021-01-22/nt_info.db"
+        File nt_info_db
 
         String? minimap2_db
         String minimap2_args = "-cx asm20 --secondary=yes"
@@ -1047,14 +1085,14 @@ workflow czid_long_read_mngs {
             input_fastq = RunHostFilter.host_filter_fastq,
             library_type = library_type,
             minimap_human_db = minimap_human_db,
-            docker_image_id = docker_image_id
+            docker_image_id = docker_image_id,
     }
 
     call RunSubsampling {
         input:
             input_fastq = RunHumanFilter.human_filter_fastq,
             subsample_depth = subsample_depth,
-            docker_image_id = docker_image_id
+            docker_image_id = docker_image_id,
     }
 
     call RunAssembly {
@@ -1062,13 +1100,21 @@ workflow czid_long_read_mngs {
             input_fastq = RunSubsampling.subsampled_fastq,
             guppy_basecaller_setting = guppy_basecaller_setting,
             polishing_iterations = polishing_iterations,
-            docker_image_id = docker_image_id
+            docker_image_id = docker_image_id,
     }
 
     call RunReadsToContigs {
         input:
             input_fastq = RunSubsampling.subsampled_fastq,
             assembled_reads = RunAssembly.assembled_fasta,
+            docker_image_id = docker_image_id,
+    }
+
+    call GenerateContigStats {
+        input:
+            input_fastq = RunSubsampling.subsampled_fastq,
+            assembled_reads_fa = RunAssembly.assembled_fasta,
+            reads_to_contig_tsv = RunReadsToContigs.reads_to_contigs_tsv,
             docker_image_id = docker_image_id
     }
 
@@ -1077,7 +1123,7 @@ workflow czid_long_read_mngs {
         input:
             non_contig_reads_fa = RunReadsToContigs.non_contigs_fasta,
             assembled_reads_fa = RunAssembly.assembled_fasta,
-            docker_image_id = docker_image_id
+            docker_image_id = docker_image_id,
     }
 
     call RunNTAlignment {
@@ -1266,12 +1312,12 @@ workflow czid_long_read_mngs {
     call GenerateCoverageViz {
         input:
             refined_gsnap_in_gsnap_reassigned_m8 = ReassignM8NT.m8_reassigned,
-            refined_gsnap_in_gsnap_hitsummary2_tab = "",
-            refined_gsnap_in_gsnap_blast_top_m8 = ReassignM8NR.m8_reassigned,
-            contig_in_contig_coverage_json = "",
-            contig_in_contig_stats_json = "",
-            contig_in_contigs_fasta = "",
-            gsnap_m8_gsnap_deduped_m8 = "",
+            refined_gsnap_in_gsnap_hitsummary2_tab = RunCallHitsNT.hitsummary,
+            refined_gsnap_in_gsnap_blast_top_m8 = SummarizeContigsNT.top_m8,
+            contig_in_contig_coverage_json = GenerateCoverageStats.contig_coverage_json,
+            contig_in_contig_stats_json = GenerateContigStats.contig_stats_json,
+            contig_in_contigs_fasta = RunAssembly.assembled_fasta,
+            gsnap_m8_gsnap_deduped_m8 = RunCallHitsNT.deduped_out_m8,
             nt_info_db = nt_info_db,
             docker_image_id = docker_image_id,
     }
