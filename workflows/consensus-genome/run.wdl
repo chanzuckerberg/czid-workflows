@@ -41,7 +41,7 @@ workflow consensus_genome {
 
         # set default min_length to 350 unless midnight primers are used
         Int min_length = if primer_set == "nCoV-2019/V1200" then 250 else 350
-        # set default max_length to 1500 unless midnight primers are used
+        # set default max_length to 700 unless midnight primers are used
         Int max_length = if primer_set == "nCoV-2019/V1200" then 1500 else 700
         # normalise: default is set to 1000 to avoid spurious indels observed in validation
         Int normalise  = 1000
