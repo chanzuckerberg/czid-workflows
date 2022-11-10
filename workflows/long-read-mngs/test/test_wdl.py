@@ -24,6 +24,7 @@ class TestLongReadMNGS(WDLTestCase):
         "lineage_db": os.path.join(ref_bucket, "taxonomy/2021-01-22/taxid-lineages.db"),
         "taxon_blacklist": os.path.join(ref_bucket, "taxonomy/2021-01-22/taxon_blacklist.txt"),
         "deuterostome_db": os.path.join(ref_bucket, "taxonomy/2021-01-22/deuterostome_taxids.txt"),
+        "nt_info_db": os.path.join(ref_bucket, "ncbi-indexes-prod/2021-01-22/index-generation-2/nt_info.marisa"),
     }
 
     def _tallied_hits_assertions(self, outputs: Dict[str, str], name: str):
