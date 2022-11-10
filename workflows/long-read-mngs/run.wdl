@@ -9,12 +9,13 @@ task RunValidateInput {
     command <<<
         set -euxo pipefail
         filter_count "~{input_fastq}" original "No reads provided"
-        fastp --disable_adapter_trimming -i "~{input_fastq}" -o sample_validated.fastq
+        fastp --html fastp.html --disable_adapter_trimming -i "~{input_fastq}" -o sample_validated.fastq
         filter_count sample_validated.fastq validated "No reads remaining after input validation"
     >>>
 
     output {
         File validated_output = "sample_validated.fastq"
+        File fastp_html = "fastp.html"
         File raw_reads = "original_reads.count"
         File raw_bases = "original_bases.count"
         File validated_reads = "validated_reads.count"
@@ -1344,6 +1345,7 @@ workflow czid_long_read_mngs {
     }
 
     output {
+        File fastp_html = RunValidateInput.fastp_html
         File nt_deduped_out_m8 = RunCallHitsNT.deduped_out_m8
         File nt_hitsummary = RunCallHitsNT.hitsummary
         File nt_counts_json = RunCallHitsNT.counts_json
