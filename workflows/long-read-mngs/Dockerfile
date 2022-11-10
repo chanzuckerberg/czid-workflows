@@ -11,6 +11,7 @@ RUN sed -i s/archive.ubuntu.com/us-west-2.ec2.archive.ubuntu.com/ /etc/apt/sourc
 
 RUN apt-get -qq update && apt-get -qq -y install \
     apt-utils \
+    bowtie2 \
     build-essential \
     cmake \
     curl \
