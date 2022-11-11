@@ -788,6 +788,7 @@ task SummarizeContigsNT {
             "~{taxon_blacklist}",
             "~{lineage_db}",
             "gsnap.blast.top.m8"
+            "gsnap.hitsummary2.tab",
             "gsnap_contig_summary.json",
             "refined_gsnap_counts_with_dcr.json",
         )
@@ -796,7 +797,7 @@ task SummarizeContigsNT {
 
     output {
         File top_m8 = "gsnap.blast.top.m8"
-        File refined_hit_summary = ""
+        File refined_hit_summary = "gsnap.hitsummary2.tab"
         File refined_counts_with_dcr_json = "refined_gsnap_counts_with_dcr.json"
         File contig_summary_json = "gsnap_contig_summary.json"
     }
@@ -834,6 +835,7 @@ task SummarizeContigsNR {
             "~{taxon_blacklist}",
             "~{lineage_db}",
             "rapsearch2.blast.top.m8"
+            "rapsearch2.hitsummary2.tab",
             "rapsearch2_contig_summary.json",
             "refined_rapsearch2_counts_with_dcr.json",
         )
@@ -843,6 +845,7 @@ task SummarizeContigsNR {
 
     output {
         File top_m8 = "rapsearch2.blast.top.m8"
+        File refined_hit_summary = "rapsearch2.hitsummary2.tab"
         File refined_counts_with_dcr_json = "refined_rapsearch2_counts_with_dcr.json"
         File contig_summary_json = "rapsearch2_contig_summary.json"
     }
@@ -1334,7 +1337,7 @@ workflow czid_long_read_mngs {
     call GenerateCoverageViz {
         input:
             refined_gsnap_in_gsnap_reassigned_m8 = ReassignM8NT.m8_reassigned,
-            refined_gsnap_in_gsnap_hitsummary2_tab = RunCallHitsNT.hitsummary,
+            refined_gsnap_in_gsnap_hitsummary2_tab = SummarizeContigsNT.refined_hit_summary,
             refined_gsnap_in_gsnap_blast_top_m8 = SummarizeContigsNT.top_m8,
             contig_in_contig_coverage_json = GenerateCoverageStats.contig_coverage_json,
             contig_in_contig_stats_json = GenerateContigStats.contig_stats_json,
