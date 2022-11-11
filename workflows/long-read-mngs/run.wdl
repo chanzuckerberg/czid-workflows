@@ -223,7 +223,7 @@ task GenerateContigStats {
     command <<<
         set -euxo pipefail
         python3 <<CODE
-        import csv
+        import csv, json
         from idseq_dag.steps.run_assembly import generate_info_from_sam
 
         with open("~{reads_to_contig_tsv}") as f:
