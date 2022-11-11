@@ -787,7 +787,7 @@ task SummarizeContigsNT {
             "~{taxon_whitelist}",
             "~{taxon_blacklist}",
             "~{lineage_db}",
-            "gsnap.blast.top.m8"
+            "gsnap.blast.top.m8",
             "gsnap.hitsummary2.tab",
             "gsnap_contig_summary.json",
             "refined_gsnap_counts_with_dcr.json",
@@ -834,7 +834,7 @@ task SummarizeContigsNR {
             "~{taxon_whitelist}",
             "~{taxon_blacklist}",
             "~{lineage_db}",
-            "rapsearch2.blast.top.m8"
+            "rapsearch2.blast.top.m8",
             "rapsearch2.hitsummary2.tab",
             "rapsearch2_contig_summary.json",
             "refined_rapsearch2_counts_with_dcr.json",
