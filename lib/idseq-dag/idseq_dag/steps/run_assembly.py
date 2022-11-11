@@ -32,7 +32,7 @@ def generate_info_from_sam(bowtie_sam_file, read2contig, duplicate_cluster_sizes
             if contig != '*':
                 read2contig[read] = contig
     for contig, unique_count in contig_unique_counts.items():  # TODO can't we just filter those out after spades, IN ONE PLACE
-        if unique_count < MIN_CONTIG_SIZE:
+        if unique_count < MIN_CONTIG_SIZE: # TODO: Ryan - I don't really understand why this is here
             del contig_stats[contig]
         elif READ_COUNTING_MODE == ReadCountingMode.COUNT_UNIQUE:
             contig_stats[contig] = unique_count

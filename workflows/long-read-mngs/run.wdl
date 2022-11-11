@@ -169,6 +169,10 @@ task PreAssemblyFasta {
     runtime {
         docker: docker_image_id
     }
+    
+    meta {
+        description: "converts fastq to fasta to confirm with the format required by GenerateAnnotatedFasta"
+    }
 }
 
 task RunAssembly {
@@ -226,9 +230,11 @@ task GenerateContigStats {
         import csv
         from idseq_dag.steps.run_assembly import generate_info_from_sam
 
+        # TODO: could read2contig just be an empty dict? 
         with open("~{reads_to_contig_tsv}") as f:
             read2contig = {row[0]: row[1] for row in csv.reader(f, delimiter="\t")}
 
+        # TODO: Ryan - check whether the output from flye is similar to spades, eg if no contig '*'
         contig_stats = generate_info_from_sam("~{reads_to_contigs_sam}", read2contig)
         with open("contig_stats.json", 'w') as f:
             json.dump(contig_stats, f)
@@ -241,6 +247,10 @@ task GenerateContigStats {
 
     runtime {
         docker: docker_image_id
+    }
+
+    meta { 
+        description: "Generates a count of the number of reads that map to each contig"
     }
 }
 
@@ -263,7 +273,7 @@ task RunReadsToContigs {
 
         # convert non-contigs.fastq file to .fasta file
         seqtk seq -a sample.non_contigs.fastq > sample.non_contigs.fasta
-        cat sample.reads_to_contigs.sam | grep -v "^@" | cut -f1,3,10 > reads_to_contigs.tsv
+        grep -v "^@" sample.reads_to_contigs.sam | cut -f1,3,10 > reads_to_contigs.tsv
     >>>
 
     output {
@@ -277,6 +287,10 @@ task RunReadsToContigs {
 
     runtime {
         docker: docker_image_id
+    }
+
+    meta { 
+        description: "Uses minimap2 to align reads back to contigs"
     }
 }
 
@@ -511,6 +525,7 @@ task ReassignM8NT {
 
     command <<<
         set -euxo pipefail  
+        # TODO Ryan - since we do assembly before alignment, will this do anything? 
         python3 /usr/local/bin/reassign_m8.py \
             --m8-filepath "~{m8}" \
             --reads-to-contigs-filepath "~{reads_to_contigs_tsv}" \
@@ -523,6 +538,9 @@ task ReassignM8NT {
 
     runtime {
         docker: docker_image_id
+    }
+    meta { 
+        description: "Reassigns mapping from read mapping to contig mappping if it exists"
     }
 }
 
@@ -548,6 +566,10 @@ task ReassignM8NR {
 
     runtime {
         docker: docker_image_id
+    }
+
+    meta { 
+        description: "Reassigns mapping from read mapping to contig mappping if it exists"
     }
 }
 
@@ -662,6 +684,7 @@ task GenerateAnnotatedFasta {
         python3 <<CODE
         from idseq_dag.steps.generate_annotated_fasta import generate_annotated_fasta
 
+        # TODO - Ryan - can we use the unidentified fasta instead of the Unmapped Reads step? 
         generate_annotated_fasta(
             pre_alignment_fa_path = "~{pre_alignment_fasta}",
             nt_m8_path = "~{nt_m8}",
@@ -680,6 +703,10 @@ task GenerateAnnotatedFasta {
 
   runtime {
     docker: docker_image_id
+  }
+  
+  meta { 
+    description: "Generates a fasta annotate with nt/nr calls to accession. Also creates an unidentified fasta"
   }
 }
 
@@ -716,6 +743,11 @@ task GenerateTaxidFasta {
     runtime {
         docker: docker_image_id
     }
+
+    meta { 
+        description: "Uses the output of GenerateAnnotatedFasta and generates a fasta with TaxId resolved at species, genus, and family levels"
+    }
+
 }
 
 task GenerateTaxidLocator {
@@ -726,6 +758,7 @@ task GenerateTaxidLocator {
 
     command <<<
         set -euxo pipefail
+        # TODO: Ryan -deeper dive into what this does
         idseq-dag-run-step --workflow-name postprocess \
             --step-module idseq_dag.steps.generate_taxid_locator \
             --step-class PipelineStepGenerateTaxidLocator \
@@ -757,6 +790,10 @@ task GenerateTaxidLocator {
 
     runtime {
         docker: docker_image_id
+    }
+
+    meta {
+        description: "sorts fasta annotated with taxid by species, genus, and family"
     }
 }
 
@@ -795,14 +832,18 @@ task SummarizeContigsNT {
     >>>
 
     output {
-        File top_m8 = "gsnap.blast.top.m8"
+        File top_m8 = "gsnap.blast.top.m8" # since we're using the deduped input, I think this should be the same? 
         File refined_hit_summary = ""
-        File refined_counts_with_dcr_json = "refined_gsnap_counts_with_dcr.json"
+        File refined_counts_with_dcr_json = "refined_gsnap_counts_with_dcr.json" # is this the same as "ReassignM8NT"?
         File contig_summary_json = "gsnap_contig_summary.json"
     }
 
     runtime {
         docker: docker_image_id
+    }
+
+    meta {
+        description: "generates a summary of the contig and read alignments"
     }
 }
 
@@ -850,6 +891,9 @@ task SummarizeContigsNR {
     runtime {
         docker: docker_image_id
     }
+    meta {
+        description: "generates a summary of the contig and read alignments"
+    }
 }
 
 task GenerateCoverageStats {
@@ -863,6 +907,10 @@ task GenerateCoverageStats {
         set -euxo pipefail
         python3 <<CODE
         from idseq_dag.steps.generate_coverage_stats import generate_coverage_stats
+        # TODO Ryan : I think there are some coverage statistics generated from Flye, can we use those? 
+        # Also we could probably simplify this even further by running the bash scripts outside of the python 
+        # samtools view -S -b "${read_contig_sam}" | samtools sort - -o "${bam_file}";' 
+        # samtools index ${bam_file}
         generate_coverage_stats(
             contigs_fasta="~{contigs_fasta}",
             read_contig_sam="~{read_contig_sam}",
@@ -880,6 +928,10 @@ task GenerateCoverageStats {
 
   runtime {
     docker: docker_image_id
+  }
+
+  meta { 
+    description: "runs pileup on the assembly output to get contig coverage"
   }
 }
 
