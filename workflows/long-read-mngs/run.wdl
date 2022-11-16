@@ -201,10 +201,11 @@ task RunAssembly {
         fi
 
         zip -r temp_flye_out.zip temp_flye_out
+        mv sample.assembled_reads.fasta contigs.fasta # rename output file for webapp
     >>>
 
     output {
-        File assembled_fasta = "sample.assembled_reads.fasta"
+        File assembled_fasta = "contigs.fasta"
         File temp_assembly_dir = "temp_flye_out.zip"
     }
 
@@ -1365,6 +1366,7 @@ workflow czid_long_read_mngs {
         File nr_counts_json = RunCallHitsNR.counts_json
         File nt_tallied_hits = TallyHitsNT.tallied_hits
         File nr_tallied_hits = TallyHitsNR.tallied_hits
+        File contig_stats = GenerateContigStats.contig_stats_json
         File unmapped_reads = UnmappedReads.unmapped_reads
         File coverage_out_assembly_contig_coverage_json = GenerateCoverageStats.contig_coverage_json
         File coverage_out_assembly_contig_coverage_summary_csv = GenerateCoverageStats.contig_coverage_summary_csv
