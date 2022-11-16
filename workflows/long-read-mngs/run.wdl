@@ -770,6 +770,8 @@ task SummarizeContigsNT {
         File taxon_whitelist
         File taxon_blacklist
         File lineage_db
+        Boolean use_deuterostome_filter
+        Boolean use_taxon_whitelist
         String docker_image_id
     }
 
@@ -817,6 +819,8 @@ task SummarizeContigsNR {
         File taxon_whitelist
         File taxon_blacklist
         File lineage_db
+        Boolean use_deuterostome_filter
+        Boolean use_taxon_whitelist
         String docker_image_id
     }
 
@@ -1256,6 +1260,8 @@ workflow czid_long_read_mngs {
             taxon_whitelist = taxon_whitelist,
             taxon_blacklist = taxon_blacklist,
             lineage_db = lineage_db,
+            use_deuterostome_filter = use_deuterostome_filter,
+            use_taxon_whitelist = use_taxon_whitelist,
             docker_image_id = docker_image_id,
     }
 
@@ -1268,6 +1274,8 @@ workflow czid_long_read_mngs {
             taxon_whitelist = taxon_whitelist,
             taxon_blacklist = taxon_blacklist,
             lineage_db = lineage_db,
+            use_deuterostome_filter = use_deuterostome_filter,
+            use_taxon_whitelist = use_taxon_whitelist,
             docker_image_id = docker_image_id,
     }
 
