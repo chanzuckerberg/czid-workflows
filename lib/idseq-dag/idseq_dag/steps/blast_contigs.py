@@ -312,7 +312,8 @@ def _update_read_dict(read2contig, blast_top_blastn_6_path, read_dict, accession
             else:
                 # else add the contig
                 contig2accession[contig_id] = (accession_id, row)
-            contig2lineage[contig_id] = accession_dict[accession_id]
+            if accession_id in accession_dict:
+                contig2lineage[contig_id] = accession_dict[accession_id]
 
         for read_id, contig_id in read2contig.items():
             (accession, m8_row) = contig2accession.get(contig_id, (None, None))
@@ -608,7 +609,7 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
         read2contig = {}
         PipelineStepRunAssembly.generate_info_from_sam(bowtie_sam, read2contig, duplicate_cluster_sizes_path)
 
-        (updated_read_dict, read2blastm8, contig2lineage, added_reads) = self.update_read_dict(
+        (updated_read_dict, read2blastm8, contig2lineage, added_reads) = _update_read_dict(
             read2contig, blast_top_m8, read_dict, accession_dict, db_type)
         self.generate_m8_and_hit_summary(updated_read_dict, added_reads, read2blastm8,
                                          hit_summary, deduped_m8,

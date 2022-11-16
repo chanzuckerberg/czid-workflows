@@ -1136,12 +1136,12 @@ workflow czid_long_read_mngs {
             docker_image_id = docker_image_id,
     }
 
-    call GenerateContigStats {
-        input:
-            reads_to_contigs_sam = RunReadsToContigs.reads_to_contigs_sam,
-            reads_to_contig_tsv = RunReadsToContigs.reads_to_contigs_tsv,
-            docker_image_id = docker_image_id,
-    }
+    # call GenerateContigStats {
+    #     input:
+    #         reads_to_contigs_sam = RunReadsToContigs.reads_to_contigs_sam,
+    #         reads_to_contig_tsv = RunReadsToContigs.reads_to_contigs_tsv,
+    #         docker_image_id = docker_image_id,
+    # }
 
 
     call PrepareNTAlignmentInputs {
