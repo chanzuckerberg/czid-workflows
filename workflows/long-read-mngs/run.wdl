@@ -254,7 +254,7 @@ task RunReadsToContigs {
     command <<<
         set -euxo pipefail
         # use minimap2 to align reads back to contigs
-        minimap2 -ax map-ont "~{assembled_reads}" "~{input_fastq}" -o sample.reads_to_contigs.sam -t 15
+        minimap2 -ax map-ont "~{assembled_reads}" "~{input_fastq}" -o sample.reads_to_contigs.sam -t 15 --secondary=no
         samtools view -b sample.reads_to_contigs.sam | samtools sort > sample.reads_to_contigs.bam
         samtools index sample.reads_to_contigs.bam sample.reads_to_contigs.bam.bai
 
@@ -783,8 +783,8 @@ task SummarizeContigsNT {
             "~{m8}",
             "~{hitsummary}",
             "nt",
-            "~{deuterostome_db}",
-            "~{taxon_whitelist}",
+            ~{if use_deuterostome_filter then '"~{deuterostome_db}"' else ''},
+            ~{if use_taxon_whitelist then '"~{taxon_whitelist}"' else ''},
             "~{taxon_blacklist}",
             "~{lineage_db}",
             "gsnap.blast.top.m8",
@@ -830,8 +830,8 @@ task SummarizeContigsNR {
             "~{m8}",
             "~{hitsummary}",
             "nt",
-            "~{deuterostome_db}",
-            "~{taxon_whitelist}",
+            ~{if use_deuterostome_filter then '"~{deuterostome_db}"' else ''},
+            ~{if use_taxon_whitelist then '"~{taxon_whitelist}"' else ''},
             "~{taxon_blacklist}",
             "~{lineage_db}",
             "rapsearch2.blast.top.m8",
