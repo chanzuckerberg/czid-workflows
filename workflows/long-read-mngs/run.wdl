@@ -1160,7 +1160,6 @@ workflow czid_long_read_mngs {
         input:
             all_sequences_to_align = PrepareNTAlignmentInputs.all_sequences_to_align,
             s3_wd_uri = s3_wd_uri,
-
             db_path = minimap2_db,
             minimap2_args = minimap2_args,
             run_locally = defined(minimap2_local_db_path),
