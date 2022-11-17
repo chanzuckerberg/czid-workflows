@@ -341,7 +341,6 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
 
         # Include some additional data.
         for contig_id, contig_obj in contigs.items():
-            name_parts = contig_id.split("_")
             for contig_hsp in contig_obj:
                 # The contig read count.
                 contig_hsp["num_reads"] = valid_contigs_with_read_counts[contig_id]

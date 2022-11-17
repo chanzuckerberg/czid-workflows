@@ -1321,11 +1321,11 @@ workflow czid_long_read_mngs {
 
 
     call GenerateAnnotatedFasta {
-      input:
-        pre_alignment_fasta = PreAssemblyFasta.fasta,
-        nt_m8 = ReassignM8NT.m8_reassigned,
-        nr_m8 = ReassignM8NR.m8_reassigned,
-        docker_image_id = docker_image_id,
+        input:
+            pre_alignment_fasta = PreAssemblyFasta.fasta,
+            nt_m8 = ReassignM8NT.m8_reassigned,
+            nr_m8 = ReassignM8NR.m8_reassigned,
+            docker_image_id = docker_image_id,
     }
 
     call GenerateTaxidFasta {
