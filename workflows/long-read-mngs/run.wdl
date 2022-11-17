@@ -1007,43 +1007,48 @@ task CombineJson {
     }
 }
 
-# task GenerateCoverageViz {
-#     input {
-#         File refined_gsnap_in_gsnap_reassigned_m8
-#         File refined_gsnap_in_gsnap_hitsummary2_tab
-#         File refined_gsnap_in_gsnap_blast_top_m8
-#         File contig_in_contig_coverage_json
-#         File contig_in_contig_stats_json
-#         File contig_in_contigs_fasta
-#         File gsnap_m8_gsnap_deduped_m8
-#         File nt_info_db
-#         String docker_image_id
-#     }
-# 
-#     command <<<
-#     set -euxo pipefail
-#     idseq-dag-run-step --workflow-name experimental \
-#         --step-module idseq_dag.steps.generate_coverage_viz \
-#         --step-class PipelineStepGenerateCoverageViz \
-#         --step-name coverage_viz_out \
-#         --input-files '[["~{refined_gsnap_in_gsnap_reassigned_m8}", "~{refined_gsnap_in_gsnap_hitsummary2_tab}", "~{refined_gsnap_in_gsnap_blast_top_m8}"], ["~{contig_in_contig_coverage_json}", "~{contig_in_contig_stats_json}", "~{contig_in_contigs_fasta}"], ["~{gsnap_m8_gsnap_deduped_m8}"]]' \
-#         --output-files '["coverage_viz_summary.json"]' \
-#         --output-dir-s3 '' \
-#         --additional-files '{"info_db": "~{nt_info_db}"}' \
-#         --additional-attributes '{}'
-#     >>>
-# 
-#     output {
-#         String step_description_md = read_string("coverage_viz_out.description.md")
-#         File coverage_viz_summary_json = "coverage_viz_summary.json"
-#         File? output_read_count = "coverage_viz_out.count"
-#         Array[File] coverage_viz = glob("coverage_viz/*_coverage_viz.json")
-#     }
-# 
-#     runtime {
-#         docker: docker_image_id
-#     }
-# }
+task GenerateCoverageViz {
+    input {
+        File refined_gsnap_in_gsnap_reassigned_m8
+        File refined_gsnap_in_gsnap_hitsummary2_tab
+        File refined_gsnap_in_gsnap_blast_top_m8
+        File contig_in_contig_coverage_json
+        File contig_in_contig_stats_json
+        File contig_in_contigs_fasta
+        File gsnap_m8_gsnap_deduped_m8
+        File nt_info_db
+        String docker_image_id
+    }
+
+    command <<<
+    set -euxo pipefail
+    python3 <<CODE
+        generate_coverage_viz(
+
+        )
+    CODE
+    idseq-dag-run-step --workflow-name experimental \
+        --step-module idseq_dag.steps.generate_coverage_viz \
+        --step-class PipelineStepGenerateCoverageViz \
+        --step-name coverage_viz_out \
+        --input-files '[["~{refined_gsnap_in_gsnap_reassigned_m8}", "~{refined_gsnap_in_gsnap_hitsummary2_tab}", "~{refined_gsnap_in_gsnap_blast_top_m8}"], ["~{contig_in_contig_coverage_json}", "~{contig_in_contig_stats_json}", "~{contig_in_contigs_fasta}"], ["~{gsnap_m8_gsnap_deduped_m8}"]]' \
+        --output-files '["coverage_viz_summary.json"]' \
+        --output-dir-s3 '' \
+        --additional-files '{"info_db": "~{nt_info_db}"}' \
+        --additional-attributes '{}'
+    >>>
+
+    output {
+        String step_description_md = read_string("coverage_viz_out.description.md")
+        File coverage_viz_summary_json = "coverage_viz_summary.json"
+        File? output_read_count = "coverage_viz_out.count"
+        Array[File] coverage_viz = glob("coverage_viz/*_coverage_viz.json")
+    }
+
+    runtime {
+        docker: docker_image_id
+    }
+}
 
 workflow czid_long_read_mngs {
     input {
@@ -1343,18 +1348,18 @@ workflow czid_long_read_mngs {
             docker_image_id = docker_image_id,
     }
     
-#    call GenerateCoverageViz {
-#        input:
-#            refined_gsnap_in_gsnap_reassigned_m8 = ReassignM8NT.m8_reassigned,
-#            refined_gsnap_in_gsnap_hitsummary2_tab = SummarizeContigsNT.refined_hit_summary,
-#            refined_gsnap_in_gsnap_blast_top_m8 = SummarizeContigsNT.top_m8,
-#            contig_in_contig_coverage_json = GenerateCoverageStats.contig_coverage_json,
-#            contig_in_contig_stats_json = GenerateContigStats.contig_stats_json,
-#            contig_in_contigs_fasta = RunAssembly.assembled_fasta,
-#            gsnap_m8_gsnap_deduped_m8 = RunCallHitsNT.deduped_out_m8,
-#            nt_info_db = nt_info_db,
-#            docker_image_id = docker_image_id,
-#    }
+    call GenerateCoverageViz {
+        input:
+            refined_gsnap_in_gsnap_reassigned_m8 = ReassignM8NT.m8_reassigned,
+            refined_gsnap_in_gsnap_hitsummary2_tab = SummarizeContigsNT.refined_hit_summary,
+            refined_gsnap_in_gsnap_blast_top_m8 = SummarizeContigsNT.top_m8,
+            contig_in_contig_coverage_json = GenerateCoverageStats.contig_coverage_json,
+            contig_in_contig_stats_json = GenerateContigStats.contig_stats_json,
+            contig_in_contigs_fasta = RunAssembly.assembled_fasta,
+            gsnap_m8_gsnap_deduped_m8 = RunCallHitsNT.deduped_out_m8,
+            nt_info_db = nt_info_db,
+            docker_image_id = docker_image_id,
+    }
 
     output {
         File fastp_html = RunValidateInput.fastp_html
@@ -1390,8 +1395,8 @@ workflow czid_long_read_mngs {
         File refined_taxid_locator_out_assembly_refined_taxid_locations_family_nr_json = GenerateTaxidLocator.assembly_refined_taxid_locations_family_nr_json
         File refined_taxid_locator_out_assembly_refined_taxid_locations_combined_json = GenerateTaxidLocator.assembly_refined_taxid_locations_combined_json
         File? refined_taxid_locator_out_count = GenerateTaxidLocator.output_read_count
-#        File coverage_viz_out_coverage_viz_summary_json = GenerateCoverageViz.coverage_viz_summary_json
-#        File? coverage_viz_out_count = GenerateCoverageViz.output_read_count
-#        Array[File] coverage_viz = GenerateCoverageViz.coverage_viz
+        File coverage_viz_out_coverage_viz_summary_json = GenerateCoverageViz.coverage_viz_summary_json
+        File? coverage_viz_out_count = GenerateCoverageViz.output_read_count
+        Array[File] coverage_viz = GenerateCoverageViz.coverage_viz
     }
 }
