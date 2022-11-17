@@ -130,6 +130,8 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
 
             # Number of bins to calculate coverage for.
             num_bins = min(max_num_bins, total_length)
+            if num_bins == 0:
+                continue
 
             # Aggregate the reads and contigs into "hit groups".
             # Divide the accession up into a number of bins, and group together small reads and contigs that fall in the same bin.
