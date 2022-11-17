@@ -1022,11 +1022,6 @@ task GenerateCoverageViz {
 
     command <<<
     set -euxo pipefail
-    python3 <<CODE
-        generate_coverage_viz(
-
-        )
-    CODE
     idseq-dag-run-step --workflow-name experimental \
         --step-module idseq_dag.steps.generate_coverage_viz \
         --step-class PipelineStepGenerateCoverageViz \
