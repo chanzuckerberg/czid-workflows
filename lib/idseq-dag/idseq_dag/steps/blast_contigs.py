@@ -356,7 +356,8 @@ def _generate_taxon_summary(
     added_reads_dict,
     db_type,
     duplicate_cluster_sizes_path,
-    should_keep
+    should_keep,
+    read2contig_bases = {},
 ):
     # Return an array with
     # { taxid: , tax_level:, contig_counts: { 'contig_name': <count>, .... } }
@@ -365,17 +366,19 @@ def _generate_taxon_summary(
         duplicate_cluster_sizes = load_duplicate_cluster_sizes(duplicate_cluster_sizes_path)
 
     def new_summary():
-        return defaultdict(lambda: defaultdict(lambda: [0, 0]))
+        return defaultdict(lambda: defaultdict(lambda: [0, 0, 0]))
 
     genus_summary = new_summary()
     species_summary = new_summary()
 
-    def record_read(species_taxid, genus_taxid, contig, read_id):
+    def record_read(species_taxid, genus_taxid, contig, read_id, base_count=None):
         cluster_size = get_read_cluster_size(duplicate_cluster_sizes, read_id) if duplicate_cluster_sizes else 1
 
         def increment(counters):
             counters[0] += 1
             counters[1] += cluster_size
+            if base_count:
+                counters[2] += base_count
 
         increment(species_summary[species_taxid][contig])
         increment(genus_summary[genus_taxid][contig])
@@ -390,13 +393,13 @@ def _generate_taxon_summary(
             species_taxid, genus_taxid = read_info["species_taxid"], read_info["genus_taxid"]
             contig = '*'
         if should_keep((species_taxid, genus_taxid)):
-            record_read(species_taxid, genus_taxid, contig, read_id)
+            record_read(species_taxid, genus_taxid, contig, read_id, read2contig_bases.get((read_id, contig), None))
 
     for read_id in added_reads_dict.keys():
         contig = read2contig[read_id]
         species_taxid, genus_taxid, _family_taxid = contig2lineage[contig]
         if should_keep((species_taxid, genus_taxid)):
-            record_read(species_taxid, genus_taxid, contig, read_id)
+            record_read(species_taxid, genus_taxid, contig, read_id, read2contig_bases.get((read_id, contig), None))
 
     # Filter out contigs that contain too few unique reads.
     # This used to happen in db_loader in idseq-web.  Any code left there that still appears to
@@ -406,10 +409,10 @@ def _generate_taxon_summary(
         for taxid in list(summary.keys()):
             contig_counts = summary[taxid]
             for contig in list(contig_counts.keys()):
-                unique_count, nonunique_count = contig_counts[contig]
+                unique_count, nonunique_count, _ = contig_counts[contig]
                 if unique_count < MIN_CONTIG_SIZE:
                     del contig_counts[contig]
-                else:
+                elif not read2contig_bases: # if there are bases to count, output everything
                     contig_counts[contig] = nonunique_count if READ_COUNTING_MODE == ReadCountingMode.COUNT_ALL else unique_count
             if not contig_counts:
                 del summary[taxid]
@@ -481,8 +484,13 @@ def generate_contig_taxon_summary(
         _get_top_m8_nr(m8_file, top_m8_output)
 
     read_dict, accession_dict, _ = m8.summarize_hits(hit_summary)
+    read2contig = {}
+    read2contig_bases = {}
     with open(read_to_contig_tsv_path) as f:
-        read2contig = {row[0]: row[1] for row in csv.reader(f, delimiter="\t")}
+        for row in csv.reader(f, delimiter="\t"):
+            read2contig[row[0]] = row[1]
+            read2contig_bases[(row[0], row[1])] = len(row[2]) # these should be roughly equal since we're only using primary hits
+
 
     updated_read_dict, read2blastm8, contig2lineage, added_reads = _update_read_dict(
         read2contig,
@@ -505,6 +513,7 @@ def generate_contig_taxon_summary(
         db_type,
         duplicate_cluster_sizes_path,
         should_keep,
+        read2contig_bases,
     )
 
     with open(contig_summary_json_output, 'w') as f:
