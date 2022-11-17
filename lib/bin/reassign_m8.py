@@ -31,9 +31,11 @@ def main(
         "read_id",
         "contig_id",
     ])
-    reads_to_contigs = reads_to_contigs[reads_to_contigs.contig_id != "*"]
+    reads_to_contigs = reads_to_contigs[reads_to_contigs.contig_id != "*"].drop_duplicates(["read_id"])
     reassigned = pd.merge(m8, reads_to_contigs, left_on="read_or_contig_id", right_on="contig_id", how="left")
-    reassigned["read_or_contig_id"] = reassigned.apply(lambda row: row["read_id"] or row["read_or_contig_id"], axis=1)
+    reassigned["read_or_contig_id"] = reassigned.apply(
+        lambda row: row["read_id"] if not pd.isnull(row["read_id"]) else row["read_or_contig_id"], axis=1
+        )
     reassigned = reassigned.drop(columns=["read_id", "contig_id"])
     reassigned.to_csv(output_filepath, header=False, sep="\t", index=False)
 

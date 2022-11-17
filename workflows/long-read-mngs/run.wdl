@@ -201,10 +201,11 @@ task RunAssembly {
         fi
 
         zip -r temp_flye_out.zip temp_flye_out
+        mv sample.assembled_reads.fasta contigs.fasta # rename output file for webapp
     >>>
 
     output {
-        File assembled_fasta = "sample.assembled_reads.fasta"
+        File assembled_fasta = "contigs.fasta"
         File temp_assembly_dir = "temp_flye_out.zip"
     }
 
@@ -254,7 +255,7 @@ task RunReadsToContigs {
     command <<<
         set -euxo pipefail
         # use minimap2 to align reads back to contigs
-        minimap2 -ax map-ont "~{assembled_reads}" "~{input_fastq}" -o sample.reads_to_contigs.sam -t 15
+        minimap2 -ax map-ont "~{assembled_reads}" "~{input_fastq}" -o sample.reads_to_contigs.sam -t 15 --secondary=no
         samtools view -b sample.reads_to_contigs.sam | samtools sort > sample.reads_to_contigs.bam
         samtools index sample.reads_to_contigs.bam sample.reads_to_contigs.bam.bai
 
@@ -770,6 +771,8 @@ task SummarizeContigsNT {
         File taxon_whitelist
         File taxon_blacklist
         File lineage_db
+        Boolean use_deuterostome_filter
+        Boolean use_taxon_whitelist
         String docker_image_id
     }
 
@@ -783,8 +786,8 @@ task SummarizeContigsNT {
             "~{m8}",
             "~{hitsummary}",
             "nt",
-            "~{deuterostome_db}",
-            "~{taxon_whitelist}",
+            ~{if use_deuterostome_filter then '"~{deuterostome_db}"' else 'None'},
+            ~{if use_taxon_whitelist then '"~{taxon_whitelist}"' else 'None'},
             "~{taxon_blacklist}",
             "~{lineage_db}",
             "gsnap.blast.top.m8",
@@ -817,6 +820,8 @@ task SummarizeContigsNR {
         File taxon_whitelist
         File taxon_blacklist
         File lineage_db
+        Boolean use_deuterostome_filter
+        Boolean use_taxon_whitelist
         String docker_image_id
     }
 
@@ -830,8 +835,8 @@ task SummarizeContigsNR {
             "~{m8}",
             "~{hitsummary}",
             "nt",
-            "~{deuterostome_db}",
-            "~{taxon_whitelist}",
+            ~{if use_deuterostome_filter then '"~{deuterostome_db}"' else 'None'},
+            ~{if use_taxon_whitelist then '"~{taxon_whitelist}"' else 'None'},
             "~{taxon_blacklist}",
             "~{lineage_db}",
             "rapsearch2.blast.top.m8",
@@ -1256,6 +1261,8 @@ workflow czid_long_read_mngs {
             taxon_whitelist = taxon_whitelist,
             taxon_blacklist = taxon_blacklist,
             lineage_db = lineage_db,
+            use_deuterostome_filter = use_deuterostome_filter,
+            use_taxon_whitelist = use_taxon_whitelist,
             docker_image_id = docker_image_id,
     }
 
@@ -1268,6 +1275,8 @@ workflow czid_long_read_mngs {
             taxon_whitelist = taxon_whitelist,
             taxon_blacklist = taxon_blacklist,
             lineage_db = lineage_db,
+            use_deuterostome_filter = use_deuterostome_filter,
+            use_taxon_whitelist = use_taxon_whitelist,
             docker_image_id = docker_image_id,
     }
 
@@ -1357,6 +1366,7 @@ workflow czid_long_read_mngs {
         File nr_counts_json = RunCallHitsNR.counts_json
         File nt_tallied_hits = TallyHitsNT.tallied_hits
         File nr_tallied_hits = TallyHitsNR.tallied_hits
+        File contig_stats = GenerateContigStats.contig_stats_json
         File unmapped_reads = UnmappedReads.unmapped_reads
         File coverage_out_assembly_contig_coverage_json = GenerateCoverageStats.contig_coverage_json
         File coverage_out_assembly_contig_coverage_summary_csv = GenerateCoverageStats.contig_coverage_summary_csv
