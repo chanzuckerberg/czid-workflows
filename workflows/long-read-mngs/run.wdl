@@ -880,15 +880,15 @@ task GenerateCoverageStats {
         CODE
     >>>
 
-  output {
-    # String step_description_md = read_string("coverage_out.description.md")
-    File contig_coverage_json = "contig_coverage.json"
-    File contig_coverage_summary_csv = "contig_coverage_summary.csv"
-  }
+    output {
+       # String step_description_md = read_string("coverage_out.description.md")
+       File contig_coverage_json = "contig_coverage.json"
+       File contig_coverage_summary_csv = "contig_coverage_summary.csv"
+    }
 
-  runtime {
-    docker: docker_image_id
-  }
+    runtime {
+        docker: docker_image_id
+    }
 }
 
 task ComputeMergedTaxonCounts {

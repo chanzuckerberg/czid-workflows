@@ -343,8 +343,6 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
         for contig_id, contig_obj in contigs.items():
             name_parts = contig_id.split("_")
             for contig_hsp in contig_obj:
-                # Total length of the contig. We extract this from the contig name.
-                contig_hsp["total_length"] = int(name_parts[3])
                 # The contig read count.
                 contig_hsp["num_reads"] = valid_contigs_with_read_counts[contig_id]
 
@@ -372,6 +370,7 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
                 if contig_name in contig_data:
                     for contig_hsp in contig_data[contig_name]:
                         contig_hsp["coverage"] = contig_coverage[contig_name]["coverage"]
+                        contig_hsp["total_length"] = contig_coverage[contig_name]["contig_len"]
 
     @staticmethod
     def augment_contig_data_with_byteranges(contigs_fasta, contig_data):

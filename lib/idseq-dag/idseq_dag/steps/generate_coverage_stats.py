@@ -64,7 +64,8 @@ def _process_contig(input_bam, output_csv, output_json, contig_name):
         "avg2xcnt": avg2xcnt / contig_len,
         "cnt0": cnt0 / contig_len,
         "cnt1": cnt1 / contig_len,
-        "cnt2": cnt2 / contig_len
+        "cnt2": cnt2 / contig_len,
+        "contig_len": contig_len,
     }
     output_json.write(json.dumps(contig_name) + ": ")
     output_json.write(json.dumps(stats))
