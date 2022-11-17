@@ -357,7 +357,7 @@ def _generate_taxon_summary(
     db_type,
     duplicate_cluster_sizes_path,
     should_keep,
-    read2contig_bases = {},
+    read2contig_bases={},
 ):
     # Return an array with
     # { taxid: , tax_level:, contig_counts: { 'contig_name': <count>, .... } }
@@ -412,7 +412,7 @@ def _generate_taxon_summary(
                 unique_count, nonunique_count, _ = contig_counts[contig]
                 if unique_count < MIN_CONTIG_SIZE:
                     del contig_counts[contig]
-                elif not read2contig_bases: # if there are bases to count, output everything
+                elif not read2contig_bases:  # if there are bases to count, output everything
                     contig_counts[contig] = nonunique_count if READ_COUNTING_MODE == ReadCountingMode.COUNT_ALL else unique_count
             if not contig_counts:
                 del summary[taxid]
@@ -489,8 +489,7 @@ def generate_contig_taxon_summary(
     with open(read_to_contig_tsv_path) as f:
         for row in csv.reader(f, delimiter="\t"):
             read2contig[row[0]] = row[1]
-            read2contig_bases[(row[0], row[1])] = len(row[2]) # these should be roughly equal since we're only using primary hits
-
+            read2contig_bases[(row[0], row[1])] = len(row[2])  # these should be roughly equal since we're only using primary hits
 
     updated_read_dict, read2blastm8, contig2lineage, added_reads = _update_read_dict(
         read2contig,
