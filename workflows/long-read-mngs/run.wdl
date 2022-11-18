@@ -264,7 +264,7 @@ task RunReadsToContigs {
 
         # convert non-contigs.fastq file to .fasta file
         seqtk seq -a sample.non_contigs.fastq > sample.non_contigs.fasta
-        cat sample.reads_to_contigs.sam | grep -v "^@" | cut -f1,3,10 > reads_to_contigs.tsv
+        samtools view -F 0x900 sample.reads_to_contigs.sam | grep -v "^@" | cut -f1,3,10 > reads_to_contigs.tsv
     >>>
 
     output {
