@@ -487,9 +487,9 @@ def generate_contig_taxon_summary(
     read2contig = {}
     read2contig_bases = {}
     with open(read_to_contig_tsv_path) as f:
-        for row in csv.reader(f, delimiter="\t"):
-            read2contig[row[0]] = row[1]
-            read2contig_bases[(row[0], row[1])] = len(row[2])  # these should be roughly equal since we're only using primary hits
+        for read_id, contig_id, sequence in csv.reader(f, delimiter="\t"):
+            read2contig[read_id] = contig_id
+            read2contig_bases[(read_id, contig_id)] = len(sequence)  # these should be roughly equal since we're only using primary hits
 
     updated_read_dict, read2blastm8, contig2lineage, added_reads = _update_read_dict(
         read2contig,
