@@ -376,6 +376,8 @@ def generate_taxon_count_json_from_m8(
                         if duplicate_cluster_sizes:
                             agg_bucket['nonunique_count'] += get_read_cluster_size(
                                 duplicate_cluster_sizes, read_id)
+                        else:
+                            agg_bucket['nonunique_count'] += 1
                         agg_bucket['unique_count'] += 1
                         agg_bucket['sum_percent_identity'] += percent_identity
                         agg_bucket['sum_alignment_length'] += alignment_length
