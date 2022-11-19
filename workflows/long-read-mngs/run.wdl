@@ -1344,18 +1344,18 @@ workflow czid_long_read_mngs {
             docker_image_id = docker_image_id,
     }
     
-    call GenerateCoverageViz {
-        input:
-            refined_gsnap_in_gsnap_reassigned_m8 = ReassignM8NT.m8_reassigned,
-            refined_gsnap_in_gsnap_hitsummary2_tab = SummarizeContigsNT.refined_hit_summary,
-            refined_gsnap_in_gsnap_blast_top_m8 = SummarizeContigsNT.top_m8,
-            contig_in_contig_coverage_json = GenerateCoverageStats.contig_coverage_json,
-            contig_in_contig_stats_json = GenerateContigStats.contig_stats_json,
-            contig_in_contigs_fasta = RunAssembly.assembled_fasta,
-            gsnap_m8_gsnap_deduped_m8 = RunCallHitsNT.deduped_out_m8,
-            nt_info_db = nt_info_db,
-            docker_image_id = docker_image_id,
-    }
+    # call GenerateCoverageViz {
+    #    input:
+    #        refined_gsnap_in_gsnap_reassigned_m8 = ReassignM8NT.m8_reassigned,
+    #        refined_gsnap_in_gsnap_hitsummary2_tab = SummarizeContigsNT.refined_hit_summary,
+    #        refined_gsnap_in_gsnap_blast_top_m8 = SummarizeContigsNT.top_m8,
+    #        contig_in_contig_coverage_json = GenerateCoverageStats.contig_coverage_json,
+    #        contig_in_contig_stats_json = GenerateContigStats.contig_stats_json,
+    #        contig_in_contigs_fasta = RunAssembly.assembled_fasta,
+    #        gsnap_m8_gsnap_deduped_m8 = RunCallHitsNT.deduped_out_m8,
+    #        nt_info_db = nt_info_db,
+    #        docker_image_id = docker_image_id,
+    #x}
 
     output {
         File fastp_html = RunValidateInput.fastp_html
@@ -1391,8 +1391,8 @@ workflow czid_long_read_mngs {
         File refined_taxid_locator_out_assembly_refined_taxid_locations_family_nr_json = GenerateTaxidLocator.assembly_refined_taxid_locations_family_nr_json
         File refined_taxid_locator_out_assembly_refined_taxid_locations_combined_json = GenerateTaxidLocator.assembly_refined_taxid_locations_combined_json
         File? refined_taxid_locator_out_count = GenerateTaxidLocator.output_read_count
-        File coverage_viz_out_coverage_viz_summary_json = GenerateCoverageViz.coverage_viz_summary_json
-        File? coverage_viz_out_count = GenerateCoverageViz.output_read_count
-        Array[File] coverage_viz = GenerateCoverageViz.coverage_viz
+        #File coverage_viz_out_coverage_viz_summary_json = GenerateCoverageViz.coverage_viz_summary_json
+        #File? coverage_viz_out_count = GenerateCoverageViz.output_read_count
+        #Array[File] coverage_viz = GenerateCoverageViz.coverage_viz
     }
 }
