@@ -611,7 +611,7 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
 
         (updated_read_dict, read2blastm8, contig2lineage, added_reads) = _update_read_dict(
             read2contig, blast_top_m8, read_dict, accession_dict, db_type)
-        self.generate_m8_and_hit_summary(updated_read_dict, added_reads, read2blastm8,
+        _generate_m8_and_hit_summary(updated_read_dict, added_reads, read2blastm8,
                                          hit_summary, deduped_m8,
                                          refined_hit_summary, refined_m8)
 
