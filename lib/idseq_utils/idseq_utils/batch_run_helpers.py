@@ -109,8 +109,7 @@ def _run_batch_job(
         level = logging.INFO if status != "FAILED" else logging.ERROR
         log.log(
             level,
-            "batch_job_status "
-            + json.dumps(
+            "batch_job_status " + json.dumps(
                 {
                     "job_id": job_id,
                     "job_name": job_name,
