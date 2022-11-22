@@ -271,6 +271,8 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
         """
         for accession_id in accession_data:
             entry = info_dict.get(accession_id)
+            if not entry:
+                raise Exception(f"missing accession id: {accession_id}")
 
             if entry:
                 # The name of the accession.
