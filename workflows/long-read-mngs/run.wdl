@@ -912,7 +912,7 @@ task SummarizeContigsNT {
     command <<<
         set -euxo pipefail
         python3 <<CODE
-        from idseq_dag.steps.taxon_summary import generate_taxon_summary_from_hit_summary
+        from idseq_dag.util.taxon_summary import generate_taxon_summary_from_hit_summary
 
         generate_taxon_summary_from_hit_summary(
             "~{hitsummary}",
@@ -951,7 +951,7 @@ task SummarizeContigsNR {
     command <<<
         set -euxo pipefail
         python3 <<CODE
-        from idseq_dag.steps.taxon_summary import generate_taxon_summary_from_hit_summary
+        from idseq_dag.util.taxon_summary import generate_taxon_summary_from_hit_summary
 
         generate_taxon_summary_from_hit_summary(
             "~{hitsummary}",
