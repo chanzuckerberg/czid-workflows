@@ -582,7 +582,7 @@ task SummarizeHitsNT {
             "~{accession2taxid_db}",
             ~{min_alignment_length},
             "gsnap.hitsummary2.tab",
-        ):
+        )
     >>>
 
     output {
@@ -626,7 +626,7 @@ task SummarizeHitsNR {
             "~{accession2taxid_db}",
             ~{min_alignment_length},
             "rapsearch2.hitsummary2.tab",
-        ):
+        )
     >>>
 
     output {
