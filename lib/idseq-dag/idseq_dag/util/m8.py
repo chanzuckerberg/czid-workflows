@@ -293,7 +293,7 @@ def _call_hits_m8_work(input_blastn_6_path, lineage_map, accession2taxid_dict,
 def generate_taxon_count_json_from_m8(
         blastn_6_path, hit_level_path, count_type, lineage_map_path,
         deuterostome_path, taxon_whitelist_path, taxon_blacklist_path,
-        duplicate_cluster_sizes_path, output_json_file, read_to_base_count = {}):
+        duplicate_cluster_sizes_path, output_json_file, read_to_base_count={}):
     # Parse through hit file and m8 input file and format a JSON file with
     # our desired attributes, including aggregated statistics.
 
@@ -428,7 +428,7 @@ def generate_taxon_count_json_from_m8(
                 agg_bucket['sum_e_value'] / unique_count,
                 "count_type":
                 count_type,
-                "base_count": 
+                "base_count":
                 agg_bucket["base_count"]
             }
             if agg_bucket.get('source_count_type'):
