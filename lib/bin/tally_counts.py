@@ -34,6 +34,13 @@ def main(
         "species_taxid",
         "genus_taxid",
         "family_taxid",
+        "contig_id",
+        "contig_accession_id",
+        "contig_species_taxid",
+        "contig_genus_taxid",
+        "contig_family_taxid",
+        "from_assembly",
+        "source_count_type",
     ], usecols=[
         "read_id",
         "species_taxid",
