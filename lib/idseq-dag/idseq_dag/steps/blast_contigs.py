@@ -347,4 +347,3 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
         )
         # further processing of getting the top m8 entry for each contig.
         get_top_m8_nr(blast_m8, blast_top_m8)
-

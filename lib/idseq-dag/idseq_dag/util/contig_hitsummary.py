@@ -5,8 +5,8 @@ from lineage import NULL_LINEAGE
 from dict import open_file_db_by_extension
 from m8 import build_should_keep_filter
 from parsing import HitSummaryMergedWriter
-from parsing import BlastnOutput6Reader 
-from parsing import BlastnOutput6NTRerankedReader 
+from parsing import BlastnOutput6Reader
+from parsing import BlastnOutput6NTRerankedReader
 
 
 def summarize_hits(
@@ -32,7 +32,7 @@ def summarize_hits(
     with open(blast6_path) as in_f, \
         open_file_db_by_extension(accession_to_taxid_path, "L") as accession_to_taxid, \
         open_file_db_by_extension(taxid_to_lineage_path, "lll") as taxid_to_lineage, \
-        open(hitsummary_output_path, 'w') as out_f:
+    open(hitsummary_output_path, 'w') as out_f:
 
         writer = HitSummaryMergedWriter(out_f)
 
@@ -71,7 +71,7 @@ def summarize_hits(
                     "contig_family_taxid": family_taxid,
                 })
                 continue
-            
+
             for read_id in contig_to_reads[qseqid]:
                 writer.writerow({
                     "read_id": read_id,

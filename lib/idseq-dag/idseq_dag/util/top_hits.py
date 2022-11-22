@@ -255,4 +255,3 @@ def get_top_m8_nt(
         BlastnOutput6NTRerankedWriter(blast_top_blastn_6_f).writerows(
             _optimal_hit_for_each_query_nt(blast_output, min_alignment_length, min_pident, max_evalue, False)
         )
-
