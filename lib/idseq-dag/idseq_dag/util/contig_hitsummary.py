@@ -30,9 +30,9 @@ def summarize_hits(
         deuterostome_path, taxon_allow_list_path, taxon_ignore_list_path)
 
     with open(blast6_path) as in_f, \
-        open_file_db_by_extension(accession_to_taxid_path, "L") as accession_to_taxid, \
-        open_file_db_by_extension(taxid_to_lineage_path, "lll") as taxid_to_lineage, \
-    open(hitsummary_output_path, 'w') as out_f:
+            open_file_db_by_extension(accession_to_taxid_path, "L") as accession_to_taxid, \
+            open_file_db_by_extension(taxid_to_lineage_path, "lll") as taxid_to_lineage, \
+            open(hitsummary_output_path, 'w') as out_f:
 
         writer = HitSummaryMergedWriter(out_f)
 
