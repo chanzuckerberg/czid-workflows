@@ -1,3 +1,4 @@
+import csv
 import json
 from collections import defaultdict
 
@@ -86,6 +87,7 @@ def generate_taxon_summary(
 
 
 def generate_taxon_summary_from_hit_summary(
+    read_to_contig_tsv_path: str,
     reassigned_m8_path: str,
     hitsummary_path: str,
     taxid_to_lineage_path: str,
@@ -99,9 +101,15 @@ def generate_taxon_summary_from_hit_summary(
     read_to_contig = {}
     contig_to_lineage = {}
     added_reads_dict = {}
+    read_to_base_count = {}
+
+    with open(read_to_contig_tsv_path) as f:
+        for read_id, contig_id, sequence in csv.reader(f, delimiter="\t"):
+            read_to_base_count[read_id] = len(sequence)  # reads should be theoretically unique
+            read_to_contig[read_id] = contig_id
+
     with open(hitsummary_path) as f:
         for row in HitSummaryMergedReader(f):
-            read_to_contig[row["read_id"]] = row["contig_id"]
             contig_to_lineage[row["contig_id"]] = (
                 row["contig_species_taxid"],
                 row["contig_genus_taxid"],
@@ -119,6 +127,7 @@ def generate_taxon_summary_from_hit_summary(
         taxon_blacklist_path,
         None,
         refined_counts_with_dcr_output_path,
+        read_to_base_count,
     )
 
     should_keep = build_should_keep_filter(

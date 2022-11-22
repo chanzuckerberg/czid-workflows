@@ -900,6 +900,7 @@ task GenerateTaxidLocator {
 # TODO: (tmorse) merge me
 task SummarizeContigsNT {
     input {
+        File read_to_contig_tsv
         File m8_reassigned
         File hitsummary
         File lineage_db
@@ -917,6 +918,7 @@ task SummarizeContigsNT {
         from idseq_dag.util.taxon_summary import generate_taxon_summary_from_hit_summary
 
         generate_taxon_summary_from_hit_summary(
+            "~{read_to_contig_tsv}",
             "~{m8_reassigned}",
             "~{hitsummary}",
             "~{lineage_db}",
@@ -943,6 +945,7 @@ task SummarizeContigsNT {
 # TODO: (tmorse) merge me
 task SummarizeContigsNR {
     input {
+        File read_to_contig_tsv
         File m8_reassigned
         File hitsummary
         File lineage_db
@@ -960,6 +963,7 @@ task SummarizeContigsNR {
         from idseq_dag.util.taxon_summary import generate_taxon_summary_from_hit_summary
 
         generate_taxon_summary_from_hit_summary(
+            "~{read_to_contig_tsv}",
             "~{m8_reassigned}",
             "~{hitsummary}",
             "~{lineage_db}",
@@ -1419,6 +1423,7 @@ workflow czid_long_read_mngs {
 
     call SummarizeContigsNT {
         input:
+            read_to_contig_tsv = RunReadsToContigs.reads_to_contigs_tsv,
             m8_reassigned = ReassignM8NT.m8_reassigned,
             hitsummary = SummarizeHitsNT.hit_summary,
             lineage_db = lineage_db,
@@ -1432,6 +1437,7 @@ workflow czid_long_read_mngs {
 
     call SummarizeContigsNR {
         input:
+            read_to_contig_tsv = RunReadsToContigs.reads_to_contigs_tsv,
             m8_reassigned = ReassignM8NR.m8_reassigned,
             hitsummary = SummarizeHitsNR.hit_summary,
             lineage_db = lineage_db,
