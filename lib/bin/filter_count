@@ -19,8 +19,8 @@ fi
 LINES=$(echo $WC_OUT | cut -f 2 -d ' ')
 CHARS=$(echo $WC_OUT | cut -f 3 -d ' ')
 BASES=$(expr $CHARS - $LINES)
-echo "{ \"$2\": \"$LINES\" }" > $2_reads.count
-echo "{ \"$2\": \"$BASES\" }" > $2_bases.count
+echo "{ \"$2_reads\": \"$LINES\" }" > $2_reads.count
+echo "{ \"$2_bases\": \"$BASES\" }" > $2_bases.count
 
 if [[ $LINES == 0 ]]; then
     raise_error InsufficientReadsError $3

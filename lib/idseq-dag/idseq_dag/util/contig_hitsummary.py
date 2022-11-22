@@ -1,12 +1,12 @@
 import csv
 from collections import defaultdict
 
-from lineage import NULL_LINEAGE
-from dict import open_file_db_by_extension
-from m8 import build_should_keep_filter
-from parsing import HitSummaryMergedWriter
-from parsing import BlastnOutput6Reader
-from parsing import BlastnOutput6NTRerankedReader
+from idseq_dag.util.lineage import NULL_LINEAGE
+from idseq_dag.util.dict import open_file_db_by_extension
+from idseq_dag.util.m8 import build_should_keep_filter
+from idseq_dag.util.parsing import HitSummaryMergedWriter
+from idseq_dag.util.parsing import BlastnOutput6Reader
+from idseq_dag.util.parsing import BlastnOutput6NTRerankedReader
 
 
 def summarize_hits(
