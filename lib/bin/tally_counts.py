@@ -45,7 +45,20 @@ def main(
         "read_id",
         "species_taxid",
         "genus_taxid",
+        "contig_id",
     ])
+    contig_hits = hitsummary[hitsummary["contig_id"] != "*"].groupby("contig_id").agg({
+        "species_taxid": lambda x: x.iloc[0],
+        "genus_taxid": lambda x: x.iloc[0],
+    })
+    contig_hits = contig_hits.reset_index()
+    contig_hits.columns = ["read_id", "species_taxid", "genus_taxid"]
+
+    read_hits = hitsummary[hitsummary["contig_id"] == "*"]
+    read_hits = read_hits.drop(columns=["contig_id"])
+    read_hits = read_hits.reset_index()
+
+    hitsummary = pd.concat([contig_hits, read_hits])
     hitsummary_n_rows = hitsummary.shape[0]
 
     # Add aln_len to the hitsummary df

@@ -2,7 +2,7 @@ import json
 from collections import defaultdict
 
 from idseq_dag.util.parsing import HitSummaryMergedReader
-from idseq_dag.util.m8 import MIN_CONTIG_SIZE, build_should_keep_filter
+from idseq_dag.util.m8 import MIN_CONTIG_SIZE, build_should_keep_filter, generate_taxon_count_json_from_m8
 from idseq_dag.util.count import READ_COUNTING_MODE, ReadCountingMode, get_read_cluster_size, load_duplicate_cluster_sizes
 
 def generate_taxon_summary(
@@ -86,12 +86,14 @@ def generate_taxon_summary(
 
 
 def generate_taxon_summary_from_hit_summary(
+    reassigned_m8_path: str,
     hitsummary_path: str,
+    taxid_to_lineage_path: str,
     deuterostome_db_path: str,
     taxon_whitelist_path: str,
     taxon_blacklist_path: str,
     db_type: str,
-    contig_to_lineage_output_path: str,
+    refined_counts_with_dcr_output_path: str,
     contig_summary_output_path: str,
 ):
     read_to_contig = {}
@@ -107,8 +109,17 @@ def generate_taxon_summary_from_hit_summary(
             )
             added_reads_dict[row["read_id"]] = 0
 
-    with open(contig_to_lineage_output_path, 'w') as c2lf:
-        json.dump(contig_to_lineage, c2lf)
+    generate_taxon_count_json_from_m8(
+        reassigned_m8_path,
+        hitsummary_path,
+        db_type.upper(),
+        taxid_to_lineage_path,
+        deuterostome_db_path,
+        taxon_whitelist_path,
+        taxon_blacklist_path,
+        None,
+        refined_counts_with_dcr_output_path,
+    )
 
     should_keep = build_should_keep_filter(
         deuterostome_db_path,

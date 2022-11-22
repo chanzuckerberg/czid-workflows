@@ -900,7 +900,9 @@ task GenerateTaxidLocator {
 # TODO: (tmorse) merge me
 task SummarizeContigsNT {
     input {
+        File m8_reassigned
         File hitsummary
+        File lineage_db
         File deuterostome_db
         File taxon_whitelist
         File taxon_blacklist
@@ -915,13 +917,15 @@ task SummarizeContigsNT {
         from idseq_dag.util.taxon_summary import generate_taxon_summary_from_hit_summary
 
         generate_taxon_summary_from_hit_summary(
+            "~{m8_reassigned}",
             "~{hitsummary}",
+            "~{lineage_db}",
             ~{if use_deuterostome_filter then '"~{deuterostome_db}"' else 'None'},
             ~{if use_taxon_whitelist then '"~{taxon_whitelist}"' else 'None'},
             "~{taxon_blacklist}",
             "nt",
-            "gsnap_contig_summary.json",
             "refined_gsnap_counts_with_dcr.json",
+            "gsnap_contig_summary.json",
         )
         CODE
     >>>
@@ -939,7 +943,9 @@ task SummarizeContigsNT {
 # TODO: (tmorse) merge me
 task SummarizeContigsNR {
     input {
+        File m8_reassigned
         File hitsummary
+        File lineage_db
         File deuterostome_db
         File taxon_whitelist
         File taxon_blacklist
@@ -954,13 +960,15 @@ task SummarizeContigsNR {
         from idseq_dag.util.taxon_summary import generate_taxon_summary_from_hit_summary
 
         generate_taxon_summary_from_hit_summary(
+            "~{m8_reassigned}",
             "~{hitsummary}",
+            "~{lineage_db}",
             ~{if use_deuterostome_filter then '"~{deuterostome_db}"' else 'None'},
             ~{if use_taxon_whitelist then '"~{taxon_whitelist}"' else 'None'},
             "~{taxon_blacklist}",
             "nr",
-            "rapsearch2_contig_summary.json",
             "refined_rapsearch2_counts_with_dcr.json",
+            "rapsearch2_contig_summary.json",
         )
         CODE
     >>>
@@ -1371,7 +1379,7 @@ workflow czid_long_read_mngs {
     call TallyHitsNT {
         input:
             reads_fastq = RunSubsampling.subsampled_fastq,
-            m8 = FindTopHitsNT.top_m8,
+            m8 = RunCallHitsNT.deduped_out_m8,
             hitsummary = SummarizeHitsNT.hit_summary,
             reads_to_contigs_tsv = RunReadsToContigs.reads_to_contigs_tsv,
             docker_image_id = docker_image_id,
@@ -1389,7 +1397,7 @@ workflow czid_long_read_mngs {
     call TallyHitsNR {
         input:
             reads_fastq = RunSubsampling.subsampled_fastq,
-            m8 = FindTopHitsNR.top_m8,
+            m8 = RunCallHitsNR.deduped_out_m8,
             hitsummary = SummarizeHitsNR.hit_summary,
             reads_to_contigs_tsv = RunReadsToContigs.reads_to_contigs_tsv,
             docker_image_id = docker_image_id,
@@ -1411,7 +1419,9 @@ workflow czid_long_read_mngs {
 
     call SummarizeContigsNT {
         input:
+            m8_reassigned = ReassignM8NT.m8_reassigned,
             hitsummary = SummarizeHitsNT.hit_summary,
+            lineage_db = lineage_db,
             deuterostome_db = deuterostome_db,
             taxon_whitelist = taxon_whitelist,
             taxon_blacklist = taxon_blacklist,
@@ -1422,7 +1432,9 @@ workflow czid_long_read_mngs {
 
     call SummarizeContigsNR {
         input:
+            m8_reassigned = ReassignM8NR.m8_reassigned,
             hitsummary = SummarizeHitsNR.hit_summary,
+            lineage_db = lineage_db,
             deuterostome_db = deuterostome_db,
             taxon_whitelist = taxon_whitelist,
             taxon_blacklist = taxon_blacklist,
@@ -1433,10 +1445,10 @@ workflow czid_long_read_mngs {
 
     call ComputeMergedTaxonCounts {
         input:
-            nt_m8 = RunCallHitsNT.deduped_out_m8,
+            nt_m8 = ReassignM8NT.m8_reassigned,
             nt_hitsummary2_tab = SummarizeHitsNT.hit_summary,
             nt_contig_summary_json = SummarizeContigsNT.contig_summary_json,
-            nr_m8 = RunCallHitsNR.deduped_out_m8,
+            nr_m8 = ReassignM8NR.m8_reassigned,
             nr_hitsummary2_tab = SummarizeHitsNR.hit_summary,
             nr_contig_summary_json = SummarizeContigsNR.contig_summary_json,
 
