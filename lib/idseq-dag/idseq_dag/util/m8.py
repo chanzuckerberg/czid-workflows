@@ -293,7 +293,7 @@ def _call_hits_m8_work(input_blastn_6_path, lineage_map, accession2taxid_dict,
 def generate_taxon_count_json_from_m8(
         blastn_6_path, hit_level_path, count_type, lineage_map_path,
         deuterostome_path, taxon_whitelist_path, taxon_blacklist_path,
-        duplicate_cluster_sizes_path, output_json_file):
+        duplicate_cluster_sizes_path, output_json_file, read_to_base_count = {}):
     # Parse through hit file and m8 input file and format a JSON file with
     # our desired attributes, including aggregated statistics.
 
@@ -368,6 +368,7 @@ def generate_taxon_count_json_from_m8(
                             agg_bucket = {
                                 'nonunique_count': 0,
                                 'unique_count': 0,
+                                'base_count': 0,
                                 'sum_percent_identity': 0.0,
                                 'sum_alignment_length': 0.0,
                                 'sum_e_value': 0.0
@@ -379,6 +380,7 @@ def generate_taxon_count_json_from_m8(
                         else:
                             agg_bucket['nonunique_count'] += 1
                         agg_bucket['unique_count'] += 1
+                        agg_bucket['base_count'] += read_to_base_count.get(read_id, 0)
                         agg_bucket['sum_percent_identity'] += percent_identity
                         agg_bucket['sum_alignment_length'] += alignment_length
                         agg_bucket['sum_e_value'] += e_value
@@ -425,7 +427,9 @@ def generate_taxon_count_json_from_m8(
                 "e_value":
                 agg_bucket['sum_e_value'] / unique_count,
                 "count_type":
-                count_type
+                count_type,
+                "base_count": 
+                agg_bucket["base_count"]
             }
             if agg_bucket.get('source_count_type'):
                 taxon_counts_row['source_count_type'] = list(agg_bucket['source_count_type'])
