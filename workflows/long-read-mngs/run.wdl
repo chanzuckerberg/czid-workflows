@@ -1371,7 +1371,7 @@ workflow czid_long_read_mngs {
     call TallyHitsNT {
         input:
             reads_fastq = RunSubsampling.subsampled_fastq,
-            m8 = RunCallHitsNT.deduped_out_m8,
+            m8 = FindTopHitsNT.top_m8,
             hitsummary = SummarizeHitsNT.hit_summary,
             reads_to_contigs_tsv = RunReadsToContigs.reads_to_contigs_tsv,
             docker_image_id = docker_image_id,
@@ -1389,7 +1389,7 @@ workflow czid_long_read_mngs {
     call TallyHitsNR {
         input:
             reads_fastq = RunSubsampling.subsampled_fastq,
-            m8 = RunCallHitsNR.deduped_out_m8,
+            m8 = FindTopHitsNR.top_m8,
             hitsummary = SummarizeHitsNR.hit_summary,
             reads_to_contigs_tsv = RunReadsToContigs.reads_to_contigs_tsv,
             docker_image_id = docker_image_id,
