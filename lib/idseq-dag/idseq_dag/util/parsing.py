@@ -154,6 +154,9 @@ class BlastnOutput6NTRerankedWriter(_BlastnOutput6NTRerankedSchema, _TypedDictTS
 class _HitSummarySchema:
     SCHEMA = [
         ("read_id", str),
+        # NOTE: (tmorse) this is always either 1 or -1 and the only place that appears to
+        #   depend on it lib/idseq-dag/idseq_dag/util/lineage.py:36 doesn't really use it
+        #   the code works fine if it is always 1 or -1 so the logic there is never really used
         ("level", int),
         ("taxid", str),
         ("accession_id", str),
