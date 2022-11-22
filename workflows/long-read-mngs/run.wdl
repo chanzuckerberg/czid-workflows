@@ -581,11 +581,13 @@ task SummarizeHitsNT {
             "~{lineage_db}",
             "~{accession2taxid_db}",
             ~{min_alignment_length},
+            "m8_reassigned_nt.tab",
             "gsnap.hitsummary2.tab",
         )
     >>>
 
     output {
+        File m8_reassigned = "m8_reassigned_nt.tab"
         File hit_summary = "gsnap.hitsummary2.tab"
     }
 
@@ -625,62 +627,14 @@ task SummarizeHitsNR {
             "~{lineage_db}",
             "~{accession2taxid_db}",
             ~{min_alignment_length},
+            "m8_reassigned_nr.tab",
             "rapsearch2.hitsummary2.tab",
         )
     >>>
 
     output {
-        File hit_summary = "rapsearch2.hitsummary2.tab"
-    }
-
-    runtime {
-        docker: docker_image_id
-    }
-}
-
-# TODO: (tmorse) fuse me
-task ReassignM8NT {
-    input {
-        File m8
-        File reads_to_contigs_tsv
-        String docker_image_id
-    }
-
-    command <<<
-        set -euxo pipefail  
-        python3 /usr/local/bin/reassign_m8.py \
-            --m8-filepath "~{m8}" \
-            --reads-to-contigs-filepath "~{reads_to_contigs_tsv}" \
-            --output-filepath "m8_reassigned_nt.tab" \
-    >>>
-
-    output {
-        File m8_reassigned = "m8_reassigned_nt.tab"
-    }
-
-    runtime {
-        docker: docker_image_id
-    }
-}
-
-# TODO: (tmorse) fuse me
-task ReassignM8NR {
-    input {
-        File m8
-        File reads_to_contigs_tsv
-        String docker_image_id
-    }
-
-    command <<<
-        set -euxo pipefail  
-        python3 /usr/local/bin/reassign_m8.py \
-            --m8-filepath "~{m8}" \
-            --reads-to-contigs-filepath "~{reads_to_contigs_tsv}" \
-            --output-filepath "m8_reassigned_nr.tab" \
-    >>>
-
-    output {
         File m8_reassigned = "m8_reassigned_nr.tab"
+        File hit_summary = "rapsearch2.hitsummary2.tab"
     }
 
     runtime {
@@ -1407,24 +1361,10 @@ workflow czid_long_read_mngs {
             docker_image_id = docker_image_id,
     }
 
-    call ReassignM8NT {
-        input:
-            m8 = RunCallHitsNT.deduped_out_m8,
-            reads_to_contigs_tsv = RunReadsToContigs.reads_to_contigs_tsv,
-            docker_image_id = docker_image_id,
-    }
-
-    call ReassignM8NR {
-        input:
-            m8 = RunCallHitsNR.deduped_out_m8,
-            reads_to_contigs_tsv = RunReadsToContigs.reads_to_contigs_tsv,
-            docker_image_id = docker_image_id,
-    }
-
     call SummarizeContigsNT {
         input:
             read_to_contig_tsv = RunReadsToContigs.reads_to_contigs_tsv,
-            m8_reassigned = ReassignM8NT.m8_reassigned,
+            m8_reassigned = SummarizeHitsNT.m8_reassigned,
             hitsummary = SummarizeHitsNT.hit_summary,
             lineage_db = lineage_db,
             deuterostome_db = deuterostome_db,
@@ -1438,7 +1378,7 @@ workflow czid_long_read_mngs {
     call SummarizeContigsNR {
         input:
             read_to_contig_tsv = RunReadsToContigs.reads_to_contigs_tsv,
-            m8_reassigned = ReassignM8NR.m8_reassigned,
+            m8_reassigned = SummarizeHitsNR.m8_reassigned,
             hitsummary = SummarizeHitsNR.hit_summary,
             lineage_db = lineage_db,
             deuterostome_db = deuterostome_db,
@@ -1451,10 +1391,10 @@ workflow czid_long_read_mngs {
 
     call ComputeMergedTaxonCounts {
         input:
-            nt_m8 = ReassignM8NT.m8_reassigned,
+            nt_m8 = SummarizeHitsNT.m8_reassigned,
             nt_hitsummary2_tab = SummarizeHitsNT.hit_summary,
             nt_contig_summary_json = SummarizeContigsNT.contig_summary_json,
-            nr_m8 = ReassignM8NR.m8_reassigned,
+            nr_m8 = SummarizeHitsNR.m8_reassigned,
             nr_hitsummary2_tab = SummarizeHitsNR.hit_summary,
             nr_contig_summary_json = SummarizeContigsNR.contig_summary_json,
 
@@ -1492,8 +1432,8 @@ workflow czid_long_read_mngs {
     call GenerateAnnotatedFasta {
         input:
             pre_alignment_fasta = PreAssemblyFasta.fasta,
-            nt_m8 = ReassignM8NT.m8_reassigned,
-            nr_m8 = ReassignM8NR.m8_reassigned,
+            nt_m8 = SummarizeHitsNT.m8_reassigned,
+            nr_m8 = SummarizeHitsNR.m8_reassigned,
             docker_image_id = docker_image_id,
     }
 
@@ -1514,7 +1454,7 @@ workflow czid_long_read_mngs {
     
     call GenerateCoverageViz {
         input:
-            refined_gsnap_in_gsnap_reassigned_m8 = ReassignM8NT.m8_reassigned,
+            refined_gsnap_in_gsnap_reassigned_m8 = SummarizeHitsNT.m8_reassigned,
             refined_gsnap_in_gsnap_hitsummary2_tab = SummarizeHitsNT.hit_summary,
             refined_gsnap_in_gsnap_blast_top_m8 = FindTopHitsNT.top_m8,
             contig_in_contig_coverage_json = GenerateCoverageStats.contig_coverage_json,

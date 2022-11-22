@@ -5,8 +5,8 @@ from idseq_dag.util.lineage import NULL_LINEAGE
 from idseq_dag.util.dict import open_file_db_by_extension
 from idseq_dag.util.m8 import build_should_keep_filter
 from idseq_dag.util.parsing import HitSummaryMergedWriter
-from idseq_dag.util.parsing import BlastnOutput6Reader
-from idseq_dag.util.parsing import BlastnOutput6NTRerankedReader
+from idseq_dag.util.parsing import BlastnOutput6Reader, BlastnOutput6Writer
+from idseq_dag.util.parsing import BlastnOutput6NTRerankedReader, BlastnOutput6NTRerankedWriter
 
 
 def summarize_hits(
@@ -19,6 +19,7 @@ def summarize_hits(
     taxid_to_lineage_path: str,
     accession_to_taxid_path: str,
     min_alignment_length: int,
+    m8_reassigned_output_path: str,
     hitsummary_output_path: str,
 ):
     with open(read_to_contig_tsv_path) as f:
@@ -32,9 +33,15 @@ def summarize_hits(
     with open(blast6_path) as in_f, \
             open_file_db_by_extension(accession_to_taxid_path, "L") as accession_to_taxid, \
             open_file_db_by_extension(taxid_to_lineage_path, "lll") as taxid_to_lineage, \
-            open(hitsummary_output_path, 'w') as out_f:
+            open(m8_reassigned_output_path, 'w') as m8_out_f, \
+            open(hitsummary_output_path, 'w') as hitsummary_out_f:
 
-        writer = HitSummaryMergedWriter(out_f)
+        if db_type.lower() == "nt":
+            m8_writer = BlastnOutput6NTRerankedWriter(m8_out_f)
+        else:
+            m8_writer = BlastnOutput6Writer(m8_out_f)
+
+        hitsummary_writer = HitSummaryMergedWriter(hitsummary_out_f)
 
         if db_type.lower() == "nt":
             reader = BlastnOutput6NTRerankedReader(
@@ -56,7 +63,8 @@ def summarize_hits(
                 continue
 
             if qseqid not in contig_to_reads:
-                writer.writerow({
+                m8_writer.writerow(hit)
+                hitsummary_writer.writerow({
                     "read_id": qseqid,
                     "level": 1,  # NOTE: this is always 1 regardless of the actual level
                     "taxid": species_taxid,
@@ -73,7 +81,10 @@ def summarize_hits(
                 continue
 
             for read_id in contig_to_reads[qseqid]:
-                writer.writerow({
+                hit = dict(**hit)
+                hit["qseqid"] = read_id
+                m8_writer.writerow(hit)
+                hitsummary_writer.writerow({
                     "read_id": read_id,
                     "level": 1,  # NOTE: this is always 1 regardless of the actual level
                     "taxid": species_taxid,
