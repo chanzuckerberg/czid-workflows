@@ -263,6 +263,7 @@ workflow consensus_genome {
                     Quast.quast_tsv,
                     AlignReads.alignments,
                     RunMinion.alignedbam,
+                    RunMinion.alignedbambai,
                     QuantifyERCCs.ercc_out,            # No ERCC results for ONT
                     QuantifyERCCs.ercc_out,            # No ERCC results for ONT
                     ComputeStats.output_stats,
@@ -860,6 +861,7 @@ task RunMinion {
         File primertrimmedbam = "~{sample}.primertrimmed.rg.sorted.bam"
         File primertrimmedbai = "~{sample}.primertrimmed.rg.sorted.bam.bai"
         File alignedbam = "~{sample}.sorted.bam"
+        File alignedbambai = "~{sample}.sorted.bam.bai"
         File vcf_pass = "~{sample}.pass.vcf"
         File vcf = "~{sample}.merged.vcf"
         File consensus_fa = "~{sample}.consensus.fasta"
