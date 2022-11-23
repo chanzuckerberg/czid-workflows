@@ -26,7 +26,7 @@ def generate_info_from_sam(bowtie_sam_file, read2contig, read2base_count={}, dup
             read = fields[0]
             contig = fields[2]
             if read2base_count:
-                base_counts[contig] += len(read2base_count[read])
+                base_counts[contig] += read2base_count[read]
             if duplicate_cluster_sizes_path:
                 contig_stats[contig] += get_read_cluster_size(duplicate_cluster_sizes, read)  # these are non-unique read counts now
             else:

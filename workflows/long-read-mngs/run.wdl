@@ -253,7 +253,7 @@ task GenerateContigStats {
         with open("~{reads_to_contig_tsv}") as f:
             read2contig = {row[0]: row[1] for row in csv.reader(f, delimiter="\t")}
         with open("~{reads_to_contig_tsv}") as f:
-            read2base_count = {row[0]: row[1] for row in csv.reader(f, delimiter="\t")}
+            read2base_count = {row[0]: len(row[2]) for row in csv.reader(f, delimiter="\t")}
 
         contig_stats, base_counts = generate_info_from_sam("~{reads_to_contigs_sam}", read2contig, read2base_count)
         with open("contig_stats.json", 'w') as f:
