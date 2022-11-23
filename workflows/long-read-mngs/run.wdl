@@ -87,6 +87,27 @@ task RunHostFilter {
     }
 }
 
+task ReadLengthMetrics {
+    input {
+        File input_fastq
+        String docker_image_id
+    }
+
+    command <<<
+        python3 /usr/local/bin/read_length_metrics.py \
+            --fasq-path "~{input_fastq}" \
+            --json-output-path read_length_metrics.json
+    >>>
+
+    output {
+        File metrics_json = "read_length_metrics.json"
+    }
+
+    runtime {
+        docker: docker_image_id
+    }
+}
+
 task RunHumanFilter {
     input {
         File input_fastq
@@ -1195,6 +1216,12 @@ workflow czid_long_read_mngs {
             docker_image_id = docker_image_id,
     }
 
+    call ReadLengthMetrics {
+        input:
+            input_fastq = RunHumanFilter.human_filter_fastq,
+            docker_image_id = docker_image_id,
+    }
+
     call RunSubsampling {
         input:
             input_fastq = RunHumanFilter.human_filter_fastq,
@@ -1467,6 +1494,7 @@ workflow czid_long_read_mngs {
 
     output {
         File fastp_html = RunValidateInput.fastp_html
+        File read_length_metrics = ReadLengthMetrics.metrics_json
         File nt_deduped_out_m8 = RunCallHitsNT.deduped_out_m8
         File nt_hitsummary = SummarizeHitsNT.hit_summary
         File nt_counts_json = RunCallHitsNT.counts_json

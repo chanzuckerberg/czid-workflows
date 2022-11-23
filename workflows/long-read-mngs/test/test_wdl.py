@@ -1,5 +1,6 @@
 import csv
 import gzip
+import json
 import os
 import tempfile
 from typing import Dict
@@ -41,6 +42,13 @@ class TestLongReadMNGS(WDLTestCase):
                 if prev:
                     self.assertGreaterEqual(prev, int(row[3]))
                 prev = int(row[3])
+
+    def _read_length_metrics_assertions(self, outputs: Dict[str, str]):
+        with open(outputs["czid_long_read_mngs.read_length_metrics"]) as f:
+            metrics = json.load(f)
+            self.assertLessEqual(metrics["read_length_min"], metrics["read_length_max"])
+            self.assertLessEqual(metrics["read_length_mean"], metrics["read_length_max"])
+            self.assertLessEqual(metrics["read_length_median"], metrics["read_length_max"])
 
     def _unmapped_reads_assertions(self, outputs: Dict[str, str]):
         self.assertIn("czid_long_read_mngs.unmapped_reads", outputs)
