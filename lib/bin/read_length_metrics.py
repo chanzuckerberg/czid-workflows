@@ -31,4 +31,4 @@ if __name__ == "__main__":
     parser.add_argument("--fastq-path")
     parser.add_argument("--json-output-path")
     args = parser.parse_args()
-    read_length_metrics(args.fasq_path, args.json_output_path)
+    read_length_metrics(args.fastq_path, args.json_output_path)
