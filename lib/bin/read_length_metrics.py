@@ -12,12 +12,14 @@ def read_length_metrics(
 ):
     read_lengths = np.array([len(seq.seq) for seq in SeqIO.parse(fastq_path, "fastq")])
     mean = np.mean(read_lengths)
+    # NOTE: int casts to convert from numpy int64 to python int because numpy int64 is not
+    #   JSON serializable
     read_length_stats = {
         "read_length_median": np.median(read_lengths),
-        "read_length_mode": stats.mode(read_lengths),
-        "read_length_absolute_deviation": np.abs(read_lengths - mean) / len(read_lengths),
-        "read_length_min": np.min(read_lengths),
-        "read_length_max": np.max(read_lengths),
+        "read_length_mode": int(stats.mode(read_lengths).mode[0]),
+        "read_length_absolute_deviation": np.sum(np.abs(read_lengths - mean)) / len(read_lengths),
+        "read_length_min": int(np.min(read_lengths)),
+        "read_length_max": int(np.max(read_lengths)),
         "read_length_mean": mean,
         "read_length_standard_deviation": np.std(read_lengths),
     }
