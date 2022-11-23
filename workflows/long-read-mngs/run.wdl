@@ -95,7 +95,7 @@ task ReadLengthMetrics {
 
     command <<<
         python3 /usr/local/bin/read_length_metrics.py \
-            --fasq-path "~{input_fastq}" \
+            --fastq-path "~{input_fastq}" \
             --json-output-path read_length_metrics.json
     >>>
 
