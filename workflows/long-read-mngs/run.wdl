@@ -1510,6 +1510,7 @@ workflow czid_long_read_mngs {
         File nt_tallied_hits = TallyHitsNT.tallied_hits
         File nr_tallied_hits = TallyHitsNR.tallied_hits
         File contig_stats = GenerateContigStats.contig_stats_json
+        File contig_base_counts = GenerateContigStats.contig_base_counts
         File unmapped_reads = UnmappedReads.unmapped_reads
         File coverage_out_assembly_contig_coverage_json = GenerateCoverageStats.contig_coverage_json
         File coverage_out_assembly_contig_coverage_summary_csv = GenerateCoverageStats.contig_coverage_summary_csv
