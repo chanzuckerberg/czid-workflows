@@ -1508,7 +1508,7 @@ workflow czid_long_read_mngs {
     }
 
     output {
-        File fastp_html = RunValidateInput.fastp_html
+        File fastp_html = RunQualityFilter.fastp_html
         File read_length_metrics = ReadLengthMetrics.metrics_json
         File nt_deduped_out_m8 = RunCallHitsNT.deduped_out_m8
         File nt_hitsummary = SummarizeHitsNT.hit_summary
