@@ -10,14 +10,28 @@ task RunValidateInput {
 
     command <<<
         set -euxo pipefail
+        
         filter_count "~{input_fastq}" original "No reads provided"
-        fastp --html fastp.html --disable_adapter_trimming -i "~{input_fastq}" -o sample_validated.fastq
+
+        export FASTQ_PATH="~{input_fastq}"
+        if [[ $FASTQ_PATH == *.gz ]]; then
+            pigz -dc "~{input_fastq}" > sample_validated.fastq
+        else
+            cp "~{input_fastq}" sample_validated.fastq
+        fi
+
+        python3 <<CODE
+        from Bio import SeqIO
+
+        for record in SeqIO.parse("sample_validated.fastq", "fastq"):
+            pass
+        CODE
+
         filter_count sample_validated.fastq validated "No reads remaining after input validation"
     >>>
 
     output {
         File validated_output = "sample_validated.fastq"
-        File fastp_html = "fastp.html"
         File raw_reads = "original_reads.count"
         File raw_bases = "original_bases.count"
         File validated_reads = "validated_reads.count"
@@ -37,7 +51,7 @@ task RunQualityFilter {
 
     command <<<
         set -euxo pipefail
-        fastp --disable_adapter_trimming -i "~{input_fastq}" --qualified_quality_phred 9 --length_required 100 --low_complexity_filter --complexity_threshold 30 --dont_eval_duplication -o sample_quality_filtered.fastq
+        fastp --html fastp.html --disable_adapter_trimming -i "~{input_fastq}" --qualified_quality_phred 9 --length_required 100 --low_complexity_filter --complexity_threshold 30 --dont_eval_duplication -o sample_quality_filtered.fastq
         filter_count sample_quality_filtered.fastq quality_filtered "No reads remaining after quality filtering"
     >>>
 
@@ -45,6 +59,7 @@ task RunQualityFilter {
         File fastp_output = "sample_quality_filtered.fastq"
         File quality_filtered_reads = "quality_filtered_reads.count"
         File quality_filtered_bases = "quality_filtered_bases.count"
+        File fastp_html = "fastp.html"
     }
 
     runtime {

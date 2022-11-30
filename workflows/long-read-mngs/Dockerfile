@@ -26,6 +26,7 @@ RUN apt-get -qq update && apt-get -qq -y install \
     make \
     minimap2 \
     moreutils \
+    pigz \
     pkg-config \
     python3-dev \
     python3-pip \
