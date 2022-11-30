@@ -267,15 +267,21 @@ task GenerateContigStats {
 
         with open("~{reads_to_contig_tsv}") as f:
             read2contig = {row[0]: row[1] for row in csv.reader(f, delimiter="\t")}
+        with open("~{reads_to_contig_tsv}") as f:
+            read2base_count = {row[0]: len(row[2]) for row in csv.reader(f, delimiter="\t")}
 
-        contig_stats = generate_info_from_sam("~{reads_to_contigs_sam}", read2contig)
+        contig_stats, base_counts = generate_info_from_sam("~{reads_to_contigs_sam}", read2contig, read2base_count)
         with open("contig_stats.json", 'w') as f:
             json.dump(contig_stats, f)
+
+        with open("contig_base_counts.json", 'w') as f:
+            json.dump(base_counts, f)
         CODE
     >>>
 
     output {
         File contig_stats_json = "contig_stats.json"
+        File contig_base_counts = "contig_base_counts.json"
     }
 
     runtime {
@@ -1519,6 +1525,7 @@ workflow czid_long_read_mngs {
         File nt_tallied_hits = TallyHitsNT.tallied_hits
         File nr_tallied_hits = TallyHitsNR.tallied_hits
         File contig_stats = GenerateContigStats.contig_stats_json
+        File contig_base_counts = GenerateContigStats.contig_base_counts
         File unmapped_reads = UnmappedReads.unmapped_reads
         File coverage_out_assembly_contig_coverage_json = GenerateCoverageStats.contig_coverage_json
         File coverage_out_assembly_contig_coverage_summary_csv = GenerateCoverageStats.contig_coverage_summary_csv
