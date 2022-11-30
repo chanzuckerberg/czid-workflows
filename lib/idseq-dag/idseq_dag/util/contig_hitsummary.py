@@ -55,7 +55,7 @@ def summarize_hits(
         for hit in reader:
             qseqid = hit["qseqid"]
             accession = hit["sseqid"]
-            taxid = accession_to_taxid.get(accession)
+            taxid = accession_to_taxid.get(accession.split(".")[0], "NA")
             lineage = taxid_to_lineage.get(str(taxid), NULL_LINEAGE)
             species_taxid, genus_taxid, family_taxid = lineage
 
