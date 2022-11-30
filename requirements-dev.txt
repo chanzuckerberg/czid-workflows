@@ -1,4 +1,4 @@
-miniwdl==1.7.0
+miniwdl==1.7.1
 pre-commit
 pytest
 pytest-xdist
