@@ -235,7 +235,9 @@ task RunAssembly {
             cat temp_flye_out/assembly.fasta > sample.assembled_reads.fasta
         else
             #just copy original .fastq to .fasta
-            seqtk seq -a "~{input_fastq}" > sample.assembled_reads.fasta 
+            
+            #seqtk seq -a "~{input_fastq}" > sample.assembled_reads.fasta 
+            touch sample.assembled_reads.fasta
         fi
 
         zip -r temp_flye_out.zip temp_flye_out
