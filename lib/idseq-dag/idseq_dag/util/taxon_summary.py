@@ -104,8 +104,8 @@ def generate_taxon_summary_from_hit_summary(
     read_to_base_count = {}
 
     with open(read_to_contig_tsv_path) as f:
-        for read_id, contig_id, sequence in csv.reader(f, delimiter="\t"):
-            read_to_base_count[read_id] = len(sequence)  # reads should be theoretically unique
+        for read_id, contig_id, sequence_length in csv.reader(f, delimiter="\t"):
+            read_to_base_count[read_id] = int(sequence_length)  # reads should be theoretically unique
             read_to_contig[read_id] = contig_id
 
     with open(hitsummary_path) as f:

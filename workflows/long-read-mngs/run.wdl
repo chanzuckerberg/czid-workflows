@@ -226,7 +226,7 @@ task RunAssembly {
         fi
 
         # run flye to assembly contigs
-        flye --threads $(nproc) --meta $flye_setting "~{input_fastq}" --out-dir temp_flye_out --iterations "~{polishing_iterations}"
+        flye --threads $(nproc) --meta $flye_setting "~{input_fastq}" --out-dir temp_flye_out --iterations "~{polishing_iterations}" || true
 
         # ERROR HANDLING - assembly somethings fails (due to low coverage) and is then missing...
         #                  ... the temp_flye_out/assembly.fasta file
@@ -268,7 +268,7 @@ task GenerateContigStats {
         with open("~{reads_to_contig_tsv}") as f:
             read2contig = {row[0]: row[1] for row in csv.reader(f, delimiter="\t")}
         with open("~{reads_to_contig_tsv}") as f:
-            read2base_count = {row[0]: len(row[2]) for row in csv.reader(f, delimiter="\t")}
+            read2base_count = {row[0]: int(row[2]) for row in csv.reader(f, delimiter="\t")}
 
         contig_stats, base_counts = generate_info_from_sam("~{reads_to_contigs_sam}", read2contig, read2base_count)
         with open("contig_stats.json", 'w') as f:
@@ -308,7 +308,7 @@ task RunReadsToContigs {
 
         # convert non-contigs.fastq file to .fasta file
         seqtk seq -a sample.non_contigs.fastq > sample.non_contigs.fasta
-        samtools view -F 0x900 sample.reads_to_contigs.sam | grep -v "^@" | cut -f1,3,10 > reads_to_contigs.tsv
+        samtools view -F 0x900 sample.reads_to_contigs.sam | grep -v "^@" | awk '{ print $1 "\t" $3 "\t" length($10)}' > reads_to_contigs.tsv
     >>>
 
     output {
