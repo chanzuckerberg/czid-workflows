@@ -226,7 +226,7 @@ task RunAssembly {
         fi
 
         # run flye to assembly contigs
-        flye --threads $(nproc) --meta $flye_setting "~{input_fastq}" --out-dir temp_flye_out --iterations "~{polishing_iterations}"
+        flye --threads $(nproc) --meta $flye_setting "~{input_fastq}" --out-dir temp_flye_out --iterations "~{polishing_iterations}" || true
 
         # ERROR HANDLING - assembly somethings fails (due to low coverage) and is then missing...
         #                  ... the temp_flye_out/assembly.fasta file
@@ -234,8 +234,8 @@ task RunAssembly {
         then
             cat temp_flye_out/assembly.fasta > sample.assembled_reads.fasta
         else
-            #just copy original .fastq to .fasta
-            seqtk seq -a "~{input_fastq}" > sample.assembled_reads.fasta 
+            # create empty contig file
+            touch sample.assembled_reads.fasta
         fi
 
         zip -r temp_flye_out.zip temp_flye_out
