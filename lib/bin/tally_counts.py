@@ -82,10 +82,9 @@ def main(
     reads_to_contigs = pd.read_csv(reads_to_contigs_filepath, sep="\t", names=[
         "read_id",
         "contig_id",
-        "alignment",
+        "alignment_length",
     ])
     reads_to_contigs = reads_to_contigs[reads_to_contigs.contig_id != "*"]
-    reads_to_contigs["alignment_length"] = reads_to_contigs["alignment"].str.len()
     # we want to only keep the longest alignment for each read so reads are not double counted
     reads_to_contigs = reads_to_contigs.sort_values("alignment_length", ascending=False).drop_duplicates(["read_id"])
     reads_to_contigs = reads_to_contigs[["read_id", "contig_id"]].set_index("read_id")
