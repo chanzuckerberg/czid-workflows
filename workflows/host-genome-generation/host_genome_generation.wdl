@@ -126,6 +126,9 @@ task GenerateHostGenome {
 
         # tar bowtie2 genome
         tar cvf "$BOWTIE2_GENOME.tar" -C $(pwd) $BOWTIE2_GENOME
+
+        minimap2 -x map-ont -d "~{host_name}_minimap2_genome_dna.mmi" fasta_with_ercc.fa
+        minimap2 -x splice -d "~{host_name}_minimap2_genome_rna.mmi" fasta_with_ercc.fa
     >>>
 
     output {
@@ -135,6 +138,8 @@ task GenerateHostGenome {
         File? gtf_with_ercc_gtf = "gtf_with_ercc.gtf"
         File star_genome_tar = "~{host_name}_STAR_genome.tar"
         File bowtie_genome_tar = "~{host_name}_bowtie2_genome.tar"
+        File minimap2_dna = "~{host_name}_minimap2_genome_dna.mmi"
+        File minimap2_rna = "~{host_name}_minimap2_genome_rna.mmi"
     }
 
     runtime {
