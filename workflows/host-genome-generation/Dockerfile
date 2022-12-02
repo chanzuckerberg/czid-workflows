@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.4
-FROM ubuntu:18.04
+FROM ubuntu:22.04
 ARG DEBIAN_FRONTEND=noninteractive
 
 # this brings in python2.7
