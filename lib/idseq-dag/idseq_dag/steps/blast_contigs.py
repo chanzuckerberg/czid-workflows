@@ -149,6 +149,7 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
     -db {blast_index_path}
     -out {blast_m8}
     -outfmt 6
+    -evalue 1e-10
     -num_alignments 5
     -num_threads 16
     ```
@@ -514,6 +515,8 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
                     blast_index_path,
                     "-out",
                     blast_m8,
+                    "-evalue",
+                    1e-10,
                     "-outfmt",
                     6,
                     "-num_alignments",

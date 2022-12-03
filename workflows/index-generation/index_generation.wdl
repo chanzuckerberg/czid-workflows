@@ -5,7 +5,7 @@ workflow index_generation {
         String index_name
         String ncbi_server = "https://ftp.ncbi.nih.gov"
         Boolean write_to_db = false
-        String? env
+        String? environ
         # TODO: (alignment_config) remove after alignment config table is removed
         String? s3_dir
         File? previous_lineages
@@ -77,10 +77,10 @@ workflow index_generation {
     }
 
 
-    if (write_to_db && defined(env) && defined(s3_dir)) {
+    if (write_to_db && defined(environ) && defined(s3_dir)) {
         call LoadTaxonLineages {
             input:
-            env = env,
+            environ = environ,
             index_name = index_name,
             s3_dir = s3_dir,
             versioned_taxid_lineages_csv = GenerateIndexLineages.versioned_taxid_lineages_csv,
@@ -339,7 +339,7 @@ task GenerateIndexLineages {
 
 task LoadTaxonLineages {
     input {
-        String? env
+        String? environ
         String index_name
         String? s3_dir
         File versioned_taxid_lineages_csv
@@ -353,9 +353,9 @@ task LoadTaxonLineages {
             aws ssm get-parameter --name "$1" --with-decryption | jq -r '.Parameter.Value'
         }
 
-        HOST=$(get_param "/idseq-~{env}-web/RDS_ADDRESS")
-        USER=$(get_param "/idseq-~{env}-web/DB_USERNAME")
-        DATABASE="idseq_~{env}"
+        HOST=$(get_param "/idseq-~{environ}-web/RDS_ADDRESS")
+        USER=$(get_param "/idseq-~{environ}-web/DB_USERNAME")
+        DATABASE="idseq_~{environ}"
 
         {
             echo "[client]"
@@ -370,7 +370,7 @@ task LoadTaxonLineages {
         # Remove the newline at end of file
         truncate -s -1 my.cnf
         # Append the password after the =
-        get_param "/idseq-~{env}-web/db_password" >> my.cnf
+        get_param "/idseq-~{environ}-web/db_password" >> my.cnf
 
         gzip -dc ~{versioned_taxid_lineages_csv} > "taxon_lineages_new.csv"
         COLS=$(head -n 1 "taxon_lineages_new.csv")
