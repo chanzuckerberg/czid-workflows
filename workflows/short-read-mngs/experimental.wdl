@@ -219,6 +219,7 @@ task NonhostFastq {
     docker: docker_image_id
   }
 }
+
 task RunGlueJob {
   input {
     String docker_image_id
