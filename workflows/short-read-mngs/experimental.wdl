@@ -225,6 +225,7 @@ task RunGlueJob {
     String docker_image_id
     String s3_wd_uri
   }
+
   command<<<
   # This command is specific to the CZ ID system
   set -euxo pipefail 

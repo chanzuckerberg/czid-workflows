@@ -2,15 +2,13 @@ import json
 import os
 import re
 import traceback
-from tempfile import NamedTemporaryFile
 from collections import defaultdict
 from urllib.parse import urlparse
 
-from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio.SeqIO.FastaIO import FastaWriter
-from s3quilt import download_chunks_to_file
+from s3quilt import download_chunks
 
 from idseq_dag.engine.pipeline_step import PipelineStep
 from idseq_dag.util.lineage import INVALID_CALL_BASE_ID
@@ -255,20 +253,30 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
         parsed = urlparse(nt_s3_path)
         accession_ids = [a_id for a_id in accession2seq.keys() if a_id in nt_loc_dict]
         accession_ranges = [nt_loc_dict[a_id] for a_id in accession_ids]
+        sequences = download_chunks(
+            parsed.hostname,
+            parsed.path[1:],
+            (s + hl for s, hl, _ in accession_ranges),
+            (sl for _, _, sl in accession_ranges),
+        )
 
-        with NamedTemporaryFile('r', suffix=".fasta") as fasta:
-            # this step does a parallelized download to a file
-            #   though we could download straight to memory this results in too much memory usage
-            download_chunks_to_file(
-                parsed.hostname,
-                parsed.path[1:],
-                fasta.name,
-                (s for s, _, _ in accession_ranges),
-                (hl + sl for _, hl, sl in accession_ranges),
-            )
-            for accession_id, record in zip(accession_ids, SeqIO.parse(fasta.name, 'fasta')):
-                accession2seq[accession_id]['ref_seq'] = str(record.seq)
-                accession2seq[accession_id]['ref_seq_len'] = len(record.seq)
+        """
+        we want to create the equivelent pairs to:
+
+          for accession_id, data in zip(accession_ids, data)
+
+        but we want to remove data from the `sequences` list as we add it to `accession2seq`
+        to avoid using too much memory double-storing the sequences. `pop` removes items
+        from the end so calling it on a whole list is the equivilent to iterating through it
+        in reverse. Since order doesn't matter it just needs to preserve the pairs between
+        `accession_ids` and `sequences` all we need to do is reverse iterate through
+        `accession_ids` to create the same result.
+        """
+        for accession_id in reversed(accession_ids):
+            data = sequences.pop()
+            ref_seq = data.replace("\n", "")
+            accession2seq[accession_id]['ref_seq'] = ref_seq
+            accession2seq[accession_id]['ref_seq_len'] = len(ref_seq)
 
     @staticmethod
     def compress_coverage(coverage):
