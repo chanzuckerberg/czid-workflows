@@ -49,16 +49,13 @@ databases:
             human_star_genome: s3://czid-public-references/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/human_STAR_genome.tar
             human_bowtie2_genome: s3://czid-public-references/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/human_bowtie2_genome.tar
         NonHostAlignment:
-            index_version: "2021-01-22"
             use_deuterostome_filter: true
             use_taxon_whitelist: false
             alignment_scalability: false
         Postprocess:
-            index_version: "2021-01-22" 
             use_deuterostome_filter: true
             use_taxon_whitelist: false
         Experimental:
-            index_version: "2021-01-22" 
             file_ext: "fastq"
             use_taxon_whitelist: false
 
