@@ -1,3 +1,4 @@
+import itertools
 import json
 import os
 import re
@@ -251,32 +252,23 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
     def get_sequences_by_accession_list_from_file(accession2seq, nt_loc_dict,
                                                   nt_s3_path):
         parsed = urlparse(nt_s3_path)
-        accession_ids = [a_id for a_id in accession2seq.keys() if a_id in nt_loc_dict]
-        accession_ranges = [nt_loc_dict[a_id] for a_id in accession_ids]
-        sequences = download_chunks(
-            parsed.hostname,
-            parsed.path[1:],
-            (s + hl for s, hl, _ in accession_ranges),
-            (sl for _, _, sl in accession_ranges),
-        )
+        chunk_size = 500
+        accession_ids_generator = (a_id for a_id in accession2seq.keys() if a_id in nt_loc_dict)
+        accession_ids = list(itertools.islice(accession_ids_generator, chunk_size))
+        while accession_ids:
+            accession_ranges = [nt_loc_dict[a_id] for a_id in accession_ids]
+            sequences = download_chunks(
+                parsed.hostname,
+                parsed.path[1:],
+                (s + hl for s, hl, _ in accession_ranges),
+                (sl for _, _, sl in accession_ranges),
+            )
+            accession_ids = list(itertools.islice(accession_ids_generator, chunk_size))
 
-        """
-        we want to create the equivelent pairs to:
-
-          for accession_id, data in zip(accession_ids, data)
-
-        but we want to remove data from the `sequences` list as we add it to `accession2seq`
-        to avoid using too much memory double-storing the sequences. `pop` removes items
-        from the end so calling it on a whole list is the equivilent to iterating through it
-        in reverse. Since order doesn't matter it just needs to preserve the pairs between
-        `accession_ids` and `sequences` all we need to do is reverse iterate through
-        `accession_ids` to create the same result.
-        """
-        for accession_id in reversed(accession_ids):
-            data = sequences.pop()
-            ref_seq = data.replace("\n", "")
-            accession2seq[accession_id]['ref_seq'] = ref_seq
-            accession2seq[accession_id]['ref_seq_len'] = len(ref_seq)
+            for accession_id, data in zip(accession_ids, sequences):
+                ref_seq = data.replace("\n", "")
+                accession2seq[accession_id]['ref_seq'] = ref_seq
+                accession2seq[accession_id]['ref_seq_len'] = len(ref_seq)
 
     @staticmethod
     def compress_coverage(coverage):

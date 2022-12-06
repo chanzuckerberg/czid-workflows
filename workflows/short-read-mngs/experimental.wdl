@@ -264,7 +264,6 @@ task RunGlueJob {
     fi 
     i=$((i + 1))
   done
-    
   >>>
 
   runtime { 
