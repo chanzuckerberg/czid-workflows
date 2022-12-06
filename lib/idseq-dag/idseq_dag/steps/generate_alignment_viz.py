@@ -254,16 +254,16 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
         parsed = urlparse(nt_s3_path)
         chunk_size = 500
         accession_ids_generator = (a_id for a_id in accession2seq.keys() if a_id in nt_loc_dict)
-        accession_ids = list(itertools.islice(accession_ids_generator, chunk_size))
+        accession_ids = list(itertools.islice(accession_ids_generator, 0, chunk_size))
         while accession_ids:
             accession_ranges = [nt_loc_dict[a_id] for a_id in accession_ids]
+            accession_ids = list(itertools.islice(accession_ids_generator, 0, chunk_size))
             sequences = download_chunks(
                 parsed.hostname,
                 parsed.path[1:],
                 (s + hl for s, hl, _ in accession_ranges),
                 (sl for _, _, sl in accession_ranges),
             )
-            accession_ids = list(itertools.islice(accession_ids_generator, chunk_size))
 
             for accession_id, data in zip(accession_ids, sequences):
                 ref_seq = data.replace("\n", "")

@@ -230,7 +230,6 @@ task RunGlueJob {
   # This command is specific to the CZ ID system
   set -euxo pipefail 
 
-
   BUCKET=$(echo "~{s3_wd_uri}" | cut -d/ -f 3)
   PIPELINE_RUN_ID=$(echo "~{s3_wd_uri}" | cut -d/ -f 7)
   if [[ $BUCKET == "idseq-samples-sandbox" ]]; then
