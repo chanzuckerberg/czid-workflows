@@ -257,7 +257,6 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
         accession_ids = list(itertools.islice(accession_ids_generator, 0, chunk_size))
         while accession_ids:
             accession_ranges = [nt_loc_dict[a_id] for a_id in accession_ids]
-            accession_ids = list(itertools.islice(accession_ids_generator, 0, chunk_size))
             sequences = download_chunks(
                 parsed.hostname,
                 parsed.path[1:],
@@ -269,6 +268,8 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
                 ref_seq = data.replace("\n", "")
                 accession2seq[accession_id]['ref_seq'] = ref_seq
                 accession2seq[accession_id]['ref_seq_len'] = len(ref_seq)
+
+            accession_ids = list(itertools.islice(accession_ids_generator, 0, chunk_size))
 
     @staticmethod
     def compress_coverage(coverage):

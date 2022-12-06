@@ -269,7 +269,7 @@ task RunGlueJob {
     docker: docker_image_id
   }
 }
-  
+
 
 workflow czid_experimental {
   input {
