@@ -53,7 +53,7 @@ def generate_taxon_summary(
             record_read(species_taxid, genus_taxid, contig, read_id)
 
     for read_id in added_reads_dict.keys():
-        contig = read2contig[read_id]
+        contig = read2contig.get(read_id, "*")
         species_taxid, genus_taxid, _family_taxid = contig2lineage[contig]
         if should_keep((species_taxid, genus_taxid)):
             record_read(species_taxid, genus_taxid, contig, read_id)
