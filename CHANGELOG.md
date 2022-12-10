@@ -16,6 +16,9 @@ In addition, if a modification is made that may affect the results of a pipeline
 
 ### Unreleased
 
+### short-read-mngs-v7.1.11
+- Reduce memory usage of generating the alignment viz
+
 ### short-read-mngs-v7.1.8
 - Eliminate downloading all of NR and NT
 - Fix spurious STAR error and raise correct error if pairs don't align
