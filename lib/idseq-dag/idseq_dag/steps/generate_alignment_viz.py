@@ -1,3 +1,4 @@
+import itertools
 import json
 import os
 import re
@@ -14,7 +15,6 @@ from idseq_dag.engine.pipeline_step import PipelineStep
 from idseq_dag.util.lineage import INVALID_CALL_BASE_ID
 import idseq_dag.util.log as log
 import idseq_dag.util.command as command
-import idseq_dag.util.s3 as s3
 
 from idseq_dag.util.dict import open_file_db_by_extension
 
@@ -252,20 +252,24 @@ class PipelineStepGenerateAlignmentViz(PipelineStep):
     def get_sequences_by_accession_list_from_file(accession2seq, nt_loc_dict,
                                                   nt_s3_path):
         parsed = urlparse(nt_s3_path)
-        accession_ids = [a_id for a_id in accession2seq.keys() if a_id in nt_loc_dict]
-        accession_ranges = [nt_loc_dict[a_id] for a_id in accession_ids]
-        sequences = download_chunks(
-            parsed.hostname,
-            parsed.path[1:],
-            (s for s, _, _ in accession_ranges),
-            (hl + sl for _, hl, sl in accession_ranges),
-        )
+        chunk_size = 500
+        accession_ids_generator = (a_id for a_id in accession2seq.keys() if a_id in nt_loc_dict)
+        accession_ids = list(itertools.islice(accession_ids_generator, 0, chunk_size))
+        while accession_ids:
+            accession_ranges = [nt_loc_dict[a_id] for a_id in accession_ids]
+            sequences = download_chunks(
+                parsed.hostname,
+                parsed.path[1:],
+                (s + hl for s, hl, _ in accession_ranges),
+                (sl for _, _, sl in accession_ranges),
+            )
 
-        for accession_id, data in zip(accession_ids, sequences):
-            _, ref_seq = data.split("\n", 1)
-            ref_seq = ref_seq.replace("\n", "")
-            accession2seq[accession_id]['ref_seq'] = ref_seq
-            accession2seq[accession_id]['ref_seq_len'] = len(ref_seq)
+            for accession_id, data in zip(accession_ids, sequences):
+                ref_seq = data.replace("\n", "")
+                accession2seq[accession_id]['ref_seq'] = ref_seq
+                accession2seq[accession_id]['ref_seq_len'] = len(ref_seq)
+
+            accession_ids = list(itertools.islice(accession_ids_generator, 0, chunk_size))
 
     @staticmethod
     def compress_coverage(coverage):

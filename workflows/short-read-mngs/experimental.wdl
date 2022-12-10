@@ -219,15 +219,16 @@ task NonhostFastq {
     docker: docker_image_id
   }
 }
+
 task RunGlueJob {
   input {
     String docker_image_id
     String s3_wd_uri
   }
+
   command<<<
   # This command is specific to the CZ ID system
   set -euxo pipefail 
-
 
   BUCKET=$(echo "~{s3_wd_uri}" | cut -d/ -f 3)
   PIPELINE_RUN_ID=$(echo "~{s3_wd_uri}" | cut -d/ -f 7)
@@ -262,14 +263,13 @@ task RunGlueJob {
     fi 
     i=$((i + 1))
   done
-    
   >>>
 
   runtime { 
     docker: docker_image_id
   }
 }
-  
+
 
 workflow czid_experimental {
   input {
