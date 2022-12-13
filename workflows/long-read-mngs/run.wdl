@@ -2,6 +2,44 @@ version 1.0
 
 # switch +
 
+task RunDownloadFastx { 
+    input { 
+        String accession
+        String docker_image_id
+    }
+
+    command <<<
+        set -euxo pipefail
+
+        n=0
+        until [ "$n" -ge 5 ]
+        do
+            ( ffq "~{accession}" --ftp --verbose | jq -r '.[] | select( .filetype | contains("fastq")) | .url' | sort > urls.txt ) && break  # substitute your command here
+            n=$((n+1)) 
+            sleep 15
+        done
+        if [ -f "urls.txt" ]; then 
+            counter=1
+            while read fastq; do 
+                curl -L $fastq -o "file_$counter.fastq.gz"
+                ((counter++))
+            done < urls.txt
+        else
+            set +x 
+            export error="InvalidInputFileError" cause="The input file was unable to be downloaded"
+            jq -nc ".wdl_error_message=true | .error=env.error | .cause=env.cause" > /dev/stderr
+            exit 1
+        fi 
+    >>>
+    output {
+        File fastq_1 = "file_1.fastq.gz"
+        File? fastq_2 = "file_2.fastq.gz"
+    }
+    runtime {
+        docker: docker_image_id
+    }
+}
+
 task RunValidateInput {
     input {
         File input_fastq
@@ -1175,7 +1213,8 @@ workflow czid_long_read_mngs {
         # this is required for remote alignment
         String? s3_wd_uri
 
-        File input_fastq
+        File? input_fastq
+        String? accession # either get an input file or an SRA/ENA accession
 
         String library_type = "RNA"
         String guppy_basecaller_setting = "hac" # fast, hac, super
@@ -1209,9 +1248,17 @@ workflow czid_long_read_mngs {
         Boolean use_taxon_whitelist = false
     }
 
+    if (defined(accession)) { 
+        call RunDownloadFastx {
+            input: 
+                accession = select_first([accession]),
+                docker_image_id = docker_image_id
+        }
+    }
+
     call RunValidateInput {
         input:
-            input_fastq = input_fastq,
+            input_fastq = select_first([input_fastq, RunDownloadFastx.fastq_1]),
             docker_image_id = docker_image_id,
     }
 
