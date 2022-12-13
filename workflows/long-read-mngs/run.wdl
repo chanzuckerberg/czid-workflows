@@ -18,7 +18,7 @@ task RunDownloadFastx {
             n=$((n+1)) 
             sleep 15
         done
-        if [ -f "urls.txt" ]; then 
+        if [ -s "urls.txt" ]; then 
             counter=1
             while read fastq; do 
                 curl -L $fastq -o "file_$counter.fastq.gz"

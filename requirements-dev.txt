@@ -7,6 +7,6 @@ ruamel.yaml
 taxadb
 boto3
 requests
-sklearn
+scikit-learn
 biopython
 marisa-trie
