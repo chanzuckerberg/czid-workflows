@@ -495,7 +495,7 @@ task RunSpades {
     >>>
     output { 
         File contigs = "spades/contigs.fasta"
-        File scaffolds? = "spades/scaffolds.fasta"
+        File? scaffolds = "spades/scaffolds.fasta"
     }
     runtime { 
         docker: docker_image_id
