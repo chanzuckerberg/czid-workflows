@@ -12,7 +12,7 @@ from idseq_dag.util.m8 import MIN_CONTIG_SIZE
 from idseq_dag.util.count import get_read_cluster_size, load_duplicate_cluster_sizes, READ_COUNTING_MODE, ReadCountingMode
 
 
-def generate_info_from_sam(bowtie_sam_file, read2contig, read2base_count={}, duplicate_cluster_sizes_path=None):
+def generate_info_from_sam(bowtie_sam_file, read2contig, read2base_count={}, duplicate_cluster_sizes_path=None, use_min_contig_size=True):
     contig_stats = defaultdict(int)
     contig_unique_counts = defaultdict(int)
     base_counts = defaultdict(int)
@@ -35,7 +35,7 @@ def generate_info_from_sam(bowtie_sam_file, read2contig, read2base_count={}, dup
             if contig != '*':
                 read2contig[read] = contig
     for contig, unique_count in contig_unique_counts.items():  # TODO can't we just filter those out after spades, IN ONE PLACE
-        if unique_count < MIN_CONTIG_SIZE:
+        if unique_count < MIN_CONTIG_SIZE and use_min_contig_size:
             del contig_stats[contig]
             del base_counts[contig]
         elif READ_COUNTING_MODE == ReadCountingMode.COUNT_UNIQUE:
