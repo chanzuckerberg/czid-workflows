@@ -12,7 +12,7 @@ from idseq_dag.util.m8 import MIN_CONTIG_SIZE
 from idseq_dag.util.count import get_read_cluster_size, load_duplicate_cluster_sizes, READ_COUNTING_MODE, ReadCountingMode
 
 
-#TODO: replace this with a simpler function. we don't really need the whole sam file
+# TODO: replace this with a simpler function. we don't really need the whole sam file
 def generate_info_from_sam(bowtie_sam_file, read2contig, read2base_count={}, duplicate_cluster_sizes_path=None):
     contig_stats = defaultdict(int)
     contig_unique_counts = defaultdict(int)
