@@ -12,10 +12,12 @@ from idseq_dag.util.m8 import MIN_CONTIG_SIZE
 from idseq_dag.util.count import get_read_cluster_size, load_duplicate_cluster_sizes, READ_COUNTING_MODE, ReadCountingMode
 
 
+# TODO: replace this with a simpler function. we don't really need the whole sam file
 def generate_info_from_sam(bowtie_sam_file, read2contig, read2base_count={}, duplicate_cluster_sizes_path=None):
     contig_stats = defaultdict(int)
     contig_unique_counts = defaultdict(int)
     base_counts = defaultdict(int)
+    seen = set()
     if duplicate_cluster_sizes_path:
         duplicate_cluster_sizes = load_duplicate_cluster_sizes(duplicate_cluster_sizes_path)
     with open(bowtie_sam_file, "r", encoding='utf-8') as samf:
@@ -24,6 +26,9 @@ def generate_info_from_sam(bowtie_sam_file, read2contig, read2base_count={}, dup
                 continue
             fields = line.split("\t")
             read = fields[0]
+            if read in seen:
+                continue
+            seen.add(read)
             contig = fields[2]
             if read2base_count:
                 base_counts[contig] += read2base_count[read]
