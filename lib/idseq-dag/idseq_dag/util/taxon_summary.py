@@ -14,6 +14,7 @@ def generate_taxon_summary(
     db_type,
     should_keep,
     duplicate_cluster_sizes_path=None,
+    use_min_contig_size=True
 ):
     # Return an array with
     # { taxid: , tax_level:, contig_counts: { 'contig_name': <count>, .... } }
@@ -67,7 +68,7 @@ def generate_taxon_summary(
             contig_counts = summary[taxid]
             for contig in list(contig_counts.keys()):
                 unique_count, nonunique_count = contig_counts[contig]
-                if unique_count < MIN_CONTIG_SIZE:
+                if unique_count < MIN_CONTIG_SIZE and use_min_contig_size:
                     del contig_counts[contig]
                 else:
                     contig_counts[contig] = nonunique_count if READ_COUNTING_MODE == ReadCountingMode.COUNT_ALL else unique_count
@@ -143,6 +144,7 @@ def generate_taxon_summary_from_hit_summary(
         added_reads_dict,
         db_type,
         should_keep,
+        use_min_contig_size=False
     )
 
     with open(contig_summary_output_path, 'w') as contig_outf:
