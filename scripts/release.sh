@@ -29,7 +29,8 @@ else
 fi
 
 if [[ $( git branch --show-current) != "main" ]]; then 
-    TAG=$TAG"-beta"
+    COMMIT=$(git rev-parse --short HEAD)
+    TAG=$TAG"-$COMMIT"
 fi
 
 TAG_MSG=$(mktemp)
