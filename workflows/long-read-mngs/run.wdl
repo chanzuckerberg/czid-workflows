@@ -1154,7 +1154,7 @@ task GenerateCoverageViz {
         --output-files '["coverage_viz_summary.json"]' \
         --output-dir-s3 '' \
         --additional-files '{"info_db": "~{nt_info_db}"}' \
-        --additional-attributes '{}'
+        --additional-attributes '{"min_contig_size": 1}'
     >>>
 
     output {
