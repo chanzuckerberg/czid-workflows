@@ -387,8 +387,8 @@ task RunNTAlignment {
     >>>
 
     output {
-        File out_paf = "gsnap.paf"
-        File out_m8 = "gsnap.m8"
+        File nt_out_paf = "gsnap.paf"
+        File nt_out_m8 = "gsnap.m8"
     }
 
     runtime {
@@ -439,8 +439,8 @@ task RunCallHitsNT {
     >>>
 
     output {
-        File deduped_out_m8 = "gsnap.deduped.m8"
-        File counts_json = "gsnap_counts_with_dcr.json"
+        File nt_deduped_out_m8 = "gsnap.deduped.m8"
+        File nt_counts_json = "gsnap_counts_with_dcr.json"
     }
 
     runtime {
@@ -484,7 +484,7 @@ task RunNRAlignment {
     >>>
 
     output {
-        File out_m8 = "diamond.m8"
+        File nr_out_m8 = "diamond.m8"
     }
 
     runtime {
@@ -535,8 +535,8 @@ task RunCallHitsNR {
     >>>
 
     output {
-        File deduped_out_m8 = "rapsearch2.deduped.m8"
-        File counts_json = "rapsearch2_counts_with_dcr.json"
+        File nr_deduped_out_m8 = "rapsearch2.deduped.m8"
+        File nr_counts_json = "rapsearch2_counts_with_dcr.json"
     }
 
     runtime {
@@ -1300,7 +1300,7 @@ workflow czid_long_read_mngs {
 
     call RunCallHitsNT { 
         input:
-            m8_file = RunNTAlignment.out_m8,
+            m8_file = RunNTAlignment.nt_out_m8,
             lineage_db = lineage_db,
             taxon_blacklist = taxon_blacklist,
             deuterostome_db = deuterostome_db,
@@ -1323,7 +1323,7 @@ workflow czid_long_read_mngs {
 
     call RunCallHitsNR { 
         input:
-            m8_file = RunNRAlignment.out_m8,
+            m8_file = RunNRAlignment.nr_out_m8,
             lineage_db = lineage_db,
             taxon_blacklist = taxon_blacklist,
             deuterostome_db = deuterostome_db,
@@ -1335,13 +1335,13 @@ workflow czid_long_read_mngs {
 
     call FindTopHitsNT {
         input:
-            deduped_m8 = RunCallHitsNT.deduped_out_m8,
+            deduped_m8 = RunCallHitsNT.nt_deduped_out_m8,
             docker_image_id = docker_image_id,
     }
 
     call FindTopHitsNR {
         input:
-            deduped_m8 = RunCallHitsNR.deduped_out_m8,
+            deduped_m8 = RunCallHitsNR.nr_deduped_out_m8,
             docker_image_id = docker_image_id,
     }
 
@@ -1385,7 +1385,7 @@ workflow czid_long_read_mngs {
     call TallyHitsNT {
         input:
             reads_fastq = RunSubsampling.subsampled_fastq,
-            m8 = RunCallHitsNT.deduped_out_m8,
+            m8 = RunCallHitsNT.nt_deduped_out_m8,
             hitsummary = SummarizeHitsNT.hit_summary,
             reads_to_contigs_tsv = RunReadsToContigs.reads_to_contigs_tsv,
             docker_image_id = docker_image_id,
@@ -1403,7 +1403,7 @@ workflow czid_long_read_mngs {
     call TallyHitsNR {
         input:
             reads_fastq = RunSubsampling.subsampled_fastq,
-            m8 = RunCallHitsNR.deduped_out_m8,
+            m8 = RunCallHitsNR.nr_deduped_out_m8,
             hitsummary = SummarizeHitsNR.hit_summary,
             reads_to_contigs_tsv = RunReadsToContigs.reads_to_contigs_tsv,
             docker_image_id = docker_image_id,
@@ -1508,7 +1508,7 @@ workflow czid_long_read_mngs {
             contig_in_contig_coverage_json = GenerateCoverageStats.contig_coverage_json,
             contig_in_contig_stats_json = GenerateContigStats.contig_stats_json,
             contig_in_contigs_fasta = RunAssembly.assembled_fasta,
-            gsnap_m8_gsnap_deduped_m8 = RunCallHitsNT.deduped_out_m8,
+            gsnap_m8_gsnap_deduped_m8 = RunCallHitsNT.nt_deduped_out_m8,
             nt_info_db = nt_info_db,
             docker_image_id = docker_image_id,
     }
@@ -1516,12 +1516,12 @@ workflow czid_long_read_mngs {
     output {
         File fastp_html = RunQualityFilter.fastp_html
         File read_length_metrics = ReadLengthMetrics.metrics_json
-        File nt_deduped_out_m8 = RunCallHitsNT.deduped_out_m8
+        File nt_deduped_out_m8 = RunCallHitsNT.nt_deduped_out_m8
         File nt_hitsummary = SummarizeHitsNT.hit_summary
-        File nt_counts_json = RunCallHitsNT.counts_json
-        File nr_deduped_out_m8 = RunCallHitsNR.deduped_out_m8
+        File nt_counts_json = RunCallHitsNT.nt_counts_json
+        File nr_deduped_out_m8 = RunCallHitsNR.nr_deduped_out_m8
         File nr_hitsummary = SummarizeHitsNR.hit_summary
-        File nr_counts_json = RunCallHitsNR.counts_json
+        File nr_counts_json = RunCallHitsNR.nr_counts_json
         File nt_tallied_hits = TallyHitsNT.tallied_hits
         File nr_tallied_hits = TallyHitsNR.tallied_hits
         File contig_stats = GenerateContigStats.contig_stats_json
