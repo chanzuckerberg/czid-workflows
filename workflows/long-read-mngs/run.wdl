@@ -456,8 +456,7 @@ task RunNRAlignment {
 
     command <<<
         set -euxo pipefail
-        if [ -s ~{assembled_reads_fa} ]
-        else
+        if ! [ -s ~{assembled_reads_fa} ]
             touch diamond.m8
             exit 0
         fi
