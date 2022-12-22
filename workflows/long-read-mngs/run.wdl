@@ -455,7 +455,12 @@ task RunNRAlignment {
     }
 
     command <<<
-        set -euxo pipefail  
+        set -euxo pipefail
+        if [ -s ~{assembled_reads_fa} ]
+        else
+            touch diamond.m8
+            exit 0
+        fi
         if [[ "~{run_locally}" == true ]]; then 
           diamond makedb --in "~{local_diamond_index}" -d reference
           diamond blastx -d reference -q "~{assembled_reads_fa}" -o "diamond.m8" "--~{diamond_args}"
