@@ -1,6 +1,6 @@
 version 1.0
 
-# switch -
+# switch +
 
 task RunValidateInput {
     input {
@@ -729,7 +729,7 @@ task TallyHitsNR {
     }
 
     command <<<
-        set -euxo pipefail  
+        set -euxo pipefail
         python3 /usr/local/bin/tally_counts.py \
             --reads-fastq-filepath "~{reads_fastq}" \
             --m8-filepath "~{m8}" \

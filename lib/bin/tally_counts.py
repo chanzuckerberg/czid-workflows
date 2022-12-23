@@ -1,4 +1,6 @@
 import argparse
+import csv
+import os
 
 import pandas as pd
 from Bio import SeqIO
@@ -11,6 +13,11 @@ def main(
     reads_to_contigs_filepath: str,
     output_filepath: str,
 ):
+    files = [reads_fastq_filepath, m8_filepath, hitsummary_filepath, reads_to_contigs_filepath]
+    if any(os.path.getsize(name) == 0 for name in files):
+        with open(output_filepath, 'w') as f:
+            csv.writer(f).writerow(["taxid", "level", "total_sequence_length", "total_alignment_length"])
+
     alignment_length = pd.read_csv(m8_filepath, sep="\t", index_col="read_id", names=[
         "read_id",
         "accession",
