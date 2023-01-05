@@ -26,6 +26,7 @@ RUN apt-get -qq update && apt-get -qq -y install \
     make \
     minimap2 \
     moreutils \
+    pigz \
     pkg-config \
     python3-dev \
     python3-pip \
@@ -40,7 +41,7 @@ RUN apt-get -qq update && apt-get -qq -y install \
     zlib1g-dev \
     && locale-gen en_US.UTF-8
 
-RUN pip3 install boto3 marisa-trie==0.7.7 requests biopython pandas
+RUN pip3 install boto3 marisa-trie==0.7.7 requests biopython pandas pysam scipy
 
 ADD https://raw.githubusercontent.com/chanzuckerberg/miniwdl/v1.1.5/examples/clean_download_cache.sh /usr/local/bin
 RUN chmod +x /usr/local/bin/clean_download_cache.sh
@@ -65,12 +66,6 @@ RUN wget https://github.com/fenderglass/Flye/archive/${FLYE_VER}.tar.gz && \
     python3 setup.py build && \
     python3 setup.py install
 
-COPY --from=lib idseq-dag /tmp/idseq-dag
-RUN pip3 install /tmp/idseq-dag && rm -rf /tmp/idseq-dag
-
-COPY --from=lib idseq_utils /tmp/idseq_utils
-RUN pip3 install /tmp/idseq_utils && rm -rf /tmp/idseq_utils
-
 WORKDIR /tmp
 RUN git clone --recursive https://github.com/mlin/minimap2-scatter.git
 WORKDIR /tmp/minimap2-scatter
@@ -85,5 +80,11 @@ WORKDIR /tmp/diamond/build
 RUN cmake -DCMAKE_BUILD_TYPE=Release ..
 RUN make -j6
 RUN mv diamond /usr/local/bin
+
+COPY --from=lib idseq-dag /tmp/idseq-dag
+RUN pip3 install /tmp/idseq-dag && rm -rf /tmp/idseq-dag
+
+COPY --from=lib idseq_utils /tmp/idseq_utils
+RUN pip3 install /tmp/idseq_utils && rm -rf /tmp/idseq_utils
 
 COPY --from=lib bin /usr/local/bin

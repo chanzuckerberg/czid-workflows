@@ -1,4 +1,6 @@
 import argparse
+import csv
+import os
 
 import pandas as pd
 from Bio import SeqIO
@@ -11,6 +13,12 @@ def main(
     reads_to_contigs_filepath: str,
     output_filepath: str,
 ):
+    files = [reads_fastq_filepath, m8_filepath, hitsummary_filepath, reads_to_contigs_filepath]
+    if any(os.path.getsize(name) == 0 for name in files):
+        with open(output_filepath, 'w') as f:
+            csv.writer(f).writerow(["taxid", "level", "total_sequence_length", "total_alignment_length"])
+        return
+
     alignment_length = pd.read_csv(m8_filepath, sep="\t", index_col="read_id", names=[
         "read_id",
         "accession",
@@ -34,11 +42,31 @@ def main(
         "species_taxid",
         "genus_taxid",
         "family_taxid",
+        "contig_id",
+        "contig_accession_id",
+        "contig_species_taxid",
+        "contig_genus_taxid",
+        "contig_family_taxid",
+        "from_assembly",
+        "source_count_type",
     ], usecols=[
         "read_id",
         "species_taxid",
         "genus_taxid",
+        "contig_id",
     ])
+    contig_hits = hitsummary[hitsummary["contig_id"] != "*"].groupby("contig_id").agg({
+        "species_taxid": lambda x: x.iloc[0],
+        "genus_taxid": lambda x: x.iloc[0],
+    })
+    contig_hits = contig_hits.reset_index()
+    contig_hits.columns = ["read_id", "species_taxid", "genus_taxid"]
+
+    read_hits = hitsummary[hitsummary["contig_id"] == "*"]
+    read_hits = read_hits.drop(columns=["contig_id"])
+    read_hits = read_hits.reset_index()
+
+    hitsummary = pd.concat([contig_hits, read_hits])
     hitsummary_n_rows = hitsummary.shape[0]
 
     # Add aln_len to the hitsummary df
@@ -62,10 +90,9 @@ def main(
     reads_to_contigs = pd.read_csv(reads_to_contigs_filepath, sep="\t", names=[
         "read_id",
         "contig_id",
-        "alignment",
+        "alignment_length",
     ])
     reads_to_contigs = reads_to_contigs[reads_to_contigs.contig_id != "*"]
-    reads_to_contigs["alignment_length"] = reads_to_contigs["alignment"].str.len()
     # we want to only keep the longest alignment for each read so reads are not double counted
     reads_to_contigs = reads_to_contigs.sort_values("alignment_length", ascending=False).drop_duplicates(["read_id"])
     reads_to_contigs = reads_to_contigs[["read_id", "contig_id"]].set_index("read_id")
