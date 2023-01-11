@@ -750,14 +750,14 @@ task TallyHitsNR {
 task UnmappedReads {
     input {
         File input_file
-        File hitsummary_nt
-        File hitsummary_nr
+        File nt_hit_summary
+        File nr_hit_summary
         File reads_to_contigs_tsv
         String docker_image_id
     }
     command <<<
         set -euxo pipefail
-        cut -f1 "~{hitsummary_nt}" "~{hitsummary_nr}" | sort | uniq > mapped.txt
+        cut -f1 "~{nt_hit_summary}" "~{nr_hit_summary}" | sort | uniq > mapped.txt
         cut -f1,2 "~{reads_to_contigs_tsv}" > all_reads.txt
         python3 << CODE
         with open("mapped.txt", "r") as m:
@@ -790,8 +790,8 @@ task UnmappedReads {
 task GenerateAnnotatedFasta {
     input {
         File pre_alignment_fasta
-        File nt_m8
-        File nr_m8
+        File nt_m8_reassigned
+        File nr_m8_reassigned
         String docker_image_id
     }
 
@@ -802,8 +802,8 @@ task GenerateAnnotatedFasta {
 
         generate_annotated_fasta(
             pre_alignment_fa_path = "~{pre_alignment_fasta}",
-            nt_m8_path = "~{nt_m8}",
-            nr_m8_path = "~{nr_m8}",
+            nt_m8_path = "~{nt_m8_reassigned}",
+            nr_m8_path = "~{nr_m8_reassigned}",
             annotated_fasta_path = "refined_annotated_merged.fa",
             unidentified_fasta_path = "refined_unidentified.fa",
         )
@@ -1022,11 +1022,12 @@ task GenerateCoverageStats {
 
 task ComputeMergedTaxonCounts {
     input {
-        File nt_m8
-        File nt_hitsummary2_tab
+        File nt_m8_reassigned
+        File nt_hit_summary
         File nt_contig_summary_json
-        File nr_m8
-        File nr_hitsummary2_tab
+
+        File nr_m8_reassigned
+        File nr_hit_summary
         File nr_contig_summary_json
 
         File lineage_db
@@ -1045,11 +1046,11 @@ task ComputeMergedTaxonCounts {
         python3 <<CODE
         from idseq_dag.steps.compute_merged_taxon_counts import compute_merged_taxon_counts
         compute_merged_taxon_counts(
-            "~{nt_m8}",
-            "~{nt_hitsummary2_tab}",
+            "~{nt_m8_reassigned}",
+            "~{nt_hit_summary}",
             "~{nt_contig_summary_json}",
-            "~{nr_m8}",
-            "~{nr_hitsummary2_tab}",
+            "~{nr_m8_reassigned}",
+            "~{nr_hit_summary}",
             "~{nr_contig_summary_json}",
             "~{lineage_db}",
             ~{if use_deuterostome_filter then '"~{deuterostome_db}"' else 'None'},
@@ -1138,13 +1139,13 @@ task CombineJson {
 
 task GenerateCoverageViz {
     input {
-        File refined_gsnap_in_gsnap_reassigned_m8
-        File refined_gsnap_in_gsnap_hitsummary2_tab
-        File refined_gsnap_in_gsnap_blast_top_m8
+        File nt_m8_reassigned
+        File nt_hit_summary
+        File nt_top_m8
         File contig_in_contig_coverage_json
         File contig_in_contig_stats_json
         File contig_in_contigs_fasta
-        File gsnap_m8_gsnap_deduped_m8
+        File nt_deduped_m8
         File nt_info_db
         String docker_image_id
     }
@@ -1155,7 +1156,7 @@ task GenerateCoverageViz {
         --step-module idseq_dag.steps.generate_coverage_viz \
         --step-class PipelineStepGenerateCoverageViz \
         --step-name coverage_viz_out \
-        --input-files '[["~{refined_gsnap_in_gsnap_reassigned_m8}", "~{refined_gsnap_in_gsnap_hitsummary2_tab}", "~{refined_gsnap_in_gsnap_blast_top_m8}"], ["~{contig_in_contig_coverage_json}", "~{contig_in_contig_stats_json}", "~{contig_in_contigs_fasta}"], ["~{gsnap_m8_gsnap_deduped_m8}"]]' \
+        --input-files '[["~{nt_m8_reassigned}", "~{nt_hit_summary}", "~{nt_top_m8}"], ["~{contig_in_contig_coverage_json}", "~{contig_in_contig_stats_json}", "~{contig_in_contigs_fasta}"], ["~{nt_deduped_m8}"]]' \
         --output-files '["coverage_viz_summary.json"]' \
         --output-dir-s3 '' \
         --additional-files '{"info_db": "~{nt_info_db}"}' \
@@ -1447,6 +1448,7 @@ workflow czid_long_read_mngs {
             nt_m8_reassigned = SummarizeHitsNT.nt_m8_reassigned,
             nt_hit_summary = SummarizeHitsNT.nt_hit_summary,
             nt_contig_summary_json = SummarizeContigsNT.nt_contig_summary_json,
+
             nr_m8_reassigned = SummarizeHitsNR.nr_m8_reassigned,
             nr_hit_summary = SummarizeHitsNR.nr_hit_summary,
             nr_contig_summary_json = SummarizeContigsNR.nr_contig_summary_json,
