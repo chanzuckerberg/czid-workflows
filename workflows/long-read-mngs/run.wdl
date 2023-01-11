@@ -387,8 +387,8 @@ task RunNTAlignment {
     >>>
 
     output {
-        File nt_out_paf = "gsnap.paf"
-        File nt_out_m8 = "gsnap.m8"
+        File nt_paf = "gsnap.paf"
+        File nt_m8 = "gsnap.m8"
     }
 
     runtime {
@@ -399,7 +399,7 @@ task RunNTAlignment {
 # TODO: (tmorse) fuse me
 task RunCallHitsNT {
     input {
-        File m8_file
+        File nt_m8
         File lineage_db
         File taxon_blacklist
         File deuterostome_db
@@ -414,7 +414,7 @@ task RunCallHitsNT {
         python3 <<CODE
         from idseq_dag.util.m8 import call_hits_m8, generate_taxon_count_json_from_m8
         call_hits_m8(
-            input_m8="~{m8_file}",
+            input_m8="~{nt_m8}",
             lineage_map_path="~{lineage_db}",
             accession2taxid_dict_path="~{accession2taxid}",
             output_m8="gsnap.deduped.m8",
@@ -439,7 +439,7 @@ task RunCallHitsNT {
     >>>
 
     output {
-        File nt_deduped_out_m8 = "gsnap.deduped.m8"
+        File nt_deduped_m8 = "gsnap.deduped.m8"
         File nt_counts_json = "gsnap_counts_with_dcr.json"
     }
 
@@ -489,7 +489,7 @@ task RunNRAlignment {
     >>>
 
     output {
-        File nr_out_m8 = "diamond.m8"
+        File nr_m8 = "diamond.m8"
     }
 
     runtime {
@@ -500,7 +500,7 @@ task RunNRAlignment {
 # TODO: (tmorse) fuse me
 task RunCallHitsNR {
     input {
-        File m8_file
+        File nr_m8
         File lineage_db
         File taxon_blacklist
         File deuterostome_db
@@ -515,7 +515,7 @@ task RunCallHitsNR {
         python3 <<CODE
         from idseq_dag.util.m8 import call_hits_m8, generate_taxon_count_json_from_m8
         call_hits_m8(
-            input_m8="~{m8_file}",
+            input_m8="~{nr_m8}",
             lineage_map_path="~{lineage_db}",
             accession2taxid_dict_path="~{accession2taxid}",
             output_m8="rapsearch2.deduped.m8",
@@ -540,7 +540,7 @@ task RunCallHitsNR {
     >>>
 
     output {
-        File nr_deduped_out_m8 = "rapsearch2.deduped.m8"
+        File nr_deduped_m8 = "rapsearch2.deduped.m8"
         File nr_counts_json = "rapsearch2_counts_with_dcr.json"
     }
 
@@ -552,7 +552,7 @@ task RunCallHitsNR {
 # TODO: (tmorse) fuse me
 task FindTopHitsNT {
     input {
-        File deduped_m8
+        File nt_deduped_m8
         String docker_image_id
     }
 
@@ -561,11 +561,11 @@ task FindTopHitsNT {
         python3 <<CODE
         from idseq_dag.steps.blast_contigs import get_top_m8_nt
 
-        get_top_m8_nt("~{deduped_m8}", "gsnap.blast.top.m8")
+        get_top_m8_nt("~{nt_deduped_m8}", "gsnap.blast.top.m8")
     >>>
 
     output {
-        File top_m8 = "gsnap.blast.top.m8"
+        File nt_top_m8 = "gsnap.blast.top.m8"
     }
 
     runtime {
@@ -576,7 +576,7 @@ task FindTopHitsNT {
 # TODO: (tmorse) fuse me
 task FindTopHitsNR {
     input {
-        File deduped_m8
+        File nr_deduped_m8
         String docker_image_id
     }
 
@@ -585,11 +585,11 @@ task FindTopHitsNR {
         python3 <<CODE
         from idseq_dag.steps.blast_contigs import get_top_m8_nr
 
-        get_top_m8_nr("~{deduped_m8}", "rapsearch2.blast.top.m8")
+        get_top_m8_nr("~{nr_deduped_m8}", "rapsearch2.blast.top.m8")
     >>>
 
     output {
-        File top_m8 = "rapsearch2.blast.top.m8"
+        File nr_top_m8 = "rapsearch2.blast.top.m8"
     }
 
     runtime {
@@ -600,7 +600,7 @@ task FindTopHitsNR {
 # TODO: (tmorse) fuse me
 task SummarizeHitsNT {
     input {
-        File top_m8
+        File nt_top_m8
         File read_to_contig_tsv
         File deuterostome_db
         File taxon_whitelist
@@ -619,7 +619,7 @@ task SummarizeHitsNT {
         from idseq_dag.util.contig_hitsummary import summarize_hits
 
         summarize_hits(
-            "~{top_m8}",
+            "~{nt_top_m8}",
             "nt",
             "~{read_to_contig_tsv}",
             ~{if use_deuterostome_filter then '"~{deuterostome_db}"' else 'None'},
@@ -634,8 +634,8 @@ task SummarizeHitsNT {
     >>>
 
     output {
-        File m8_reassigned = "m8_reassigned_nt.tab"
-        File hit_summary = "gsnap.hitsummary2.tab"
+        File nt_m8_reassigned = "m8_reassigned_nt.tab"
+        File nt_hit_summary = "gsnap.hitsummary2.tab"
     }
 
     runtime {
@@ -646,7 +646,7 @@ task SummarizeHitsNT {
 # TODO: (tmorse) fuse me
 task SummarizeHitsNR {
     input {
-        File top_m8
+        File nr_top_m8
         File read_to_contig_tsv
         File deuterostome_db
         File taxon_whitelist
@@ -665,7 +665,7 @@ task SummarizeHitsNR {
         from idseq_dag.util.contig_hitsummary import summarize_hits
 
         summarize_hits(
-            "~{top_m8}",
+            "~{nr_top_m8}",
             "nr",
             "~{read_to_contig_tsv}",
             ~{if use_deuterostome_filter then '"~{deuterostome_db}"' else 'None'},
@@ -680,8 +680,8 @@ task SummarizeHitsNR {
     >>>
 
     output {
-        File m8_reassigned = "m8_reassigned_nr.tab"
-        File hit_summary = "rapsearch2.hitsummary2.tab"
+        File nr_m8_reassigned = "m8_reassigned_nr.tab"
+        File nr_hit_summary = "rapsearch2.hitsummary2.tab"
     }
 
     runtime {
@@ -693,8 +693,8 @@ task SummarizeHitsNR {
 task TallyHitsNT {
     input {
         File reads_fastq
-        File m8
-        File hitsummary
+        File nt_deduped_m8
+        File nt_hit_summary
         File reads_to_contigs_tsv
         String docker_image_id
     }
@@ -703,8 +703,8 @@ task TallyHitsNT {
         set -euxo pipefail  
         python3 /usr/local/bin/tally_counts.py \
             --reads-fastq-filepath "~{reads_fastq}" \
-            --m8-filepath "~{m8}" \
-            --hitsummary-filepath "~{hitsummary}" \
+            --m8-filepath "~{nt_deduped_m8}" \
+            --hitsummary-filepath "~{nt_hit_summary}" \
             --reads-to-contigs-filepath "~{reads_to_contigs_tsv}" \
             --output-filepath "tallied_hits_nt.csv" \
     >>>
@@ -722,8 +722,8 @@ task TallyHitsNT {
 task TallyHitsNR {
     input {
         File reads_fastq
-        File m8
-        File hitsummary
+        File nr_deduped_m8
+        File nr_hit_summary
         File reads_to_contigs_tsv
         String docker_image_id
     }
@@ -732,8 +732,8 @@ task TallyHitsNR {
         set -euxo pipefail
         python3 /usr/local/bin/tally_counts.py \
             --reads-fastq-filepath "~{reads_fastq}" \
-            --m8-filepath "~{m8}" \
-            --hitsummary-filepath "~{hitsummary}" \
+            --m8-filepath "~{nr_deduped_m8}" \
+            --hitsummary-filepath "~{nr_hit_summary}" \
             --reads-to-contigs-filepath "~{reads_to_contigs_tsv}" \
             --output-filepath "tallied_hits_nr.csv" \
     >>>
@@ -750,14 +750,14 @@ task TallyHitsNR {
 task UnmappedReads {
     input {
         File input_file
-        File hitsummary_nt
-        File hitsummary_nr
+        File nt_hit_summary
+        File nr_hit_summary
         File reads_to_contigs_tsv
         String docker_image_id
     }
     command <<<
         set -euxo pipefail
-        cut -f1 "~{hitsummary_nt}" "~{hitsummary_nr}" | sort | uniq > mapped.txt
+        cut -f1 "~{nt_hit_summary}" "~{nr_hit_summary}" | sort | uniq > mapped.txt
         cut -f1,2 "~{reads_to_contigs_tsv}" > all_reads.txt
         python3 << CODE
         with open("mapped.txt", "r") as m:
@@ -790,8 +790,8 @@ task UnmappedReads {
 task GenerateAnnotatedFasta {
     input {
         File pre_alignment_fasta
-        File nt_m8
-        File nr_m8
+        File nt_m8_reassigned
+        File nr_m8_reassigned
         String docker_image_id
     }
 
@@ -802,8 +802,8 @@ task GenerateAnnotatedFasta {
 
         generate_annotated_fasta(
             pre_alignment_fa_path = "~{pre_alignment_fasta}",
-            nt_m8_path = "~{nt_m8}",
-            nr_m8_path = "~{nr_m8}",
+            nt_m8_path = "~{nt_m8_reassigned}",
+            nr_m8_path = "~{nr_m8_reassigned}",
             annotated_fasta_path = "refined_annotated_merged.fa",
             unidentified_fasta_path = "refined_unidentified.fa",
         )
@@ -824,8 +824,8 @@ task GenerateAnnotatedFasta {
 task GenerateTaxidFasta {
     input {
         File annotated_merged_fa
-        File nt_hitsummary_tab
-        File nr_hitsummary_tab
+        File nt_hit_summary
+        File nr_hit_summary
         File lineage_db
         String docker_image_id
     }
@@ -837,8 +837,8 @@ task GenerateTaxidFasta {
 
         generate_taxid_fasta(
             "~{annotated_merged_fa}",
-            "~{nt_hitsummary_tab}",
-            "~{nr_hitsummary_tab}",
+            "~{nt_hit_summary}",
+            "~{nr_hit_summary}",
             "~{lineage_db}",
             "refined_taxid_annot.fasta",
         )
@@ -902,8 +902,8 @@ task GenerateTaxidLocator {
 task SummarizeContigsNT {
     input {
         File read_to_contig_tsv
-        File m8_reassigned
-        File hitsummary
+        File nt_m8_reassigned
+        File nt_hit_summary
         File lineage_db
         File deuterostome_db
         File taxon_whitelist
@@ -920,8 +920,8 @@ task SummarizeContigsNT {
 
         generate_taxon_summary_from_hit_summary(
             "~{read_to_contig_tsv}",
-            "~{m8_reassigned}",
-            "~{hitsummary}",
+            "~{nt_m8_reassigned}",
+            "~{nt_hit_summary}",
             "~{lineage_db}",
             ~{if use_deuterostome_filter then '"~{deuterostome_db}"' else 'None'},
             ~{if use_taxon_whitelist then '"~{taxon_whitelist}"' else 'None'},
@@ -934,8 +934,8 @@ task SummarizeContigsNT {
     >>>
 
     output {
-        File refined_counts_with_dcr_json = "refined_gsnap_counts_with_dcr.json"
-        File contig_summary_json = "gsnap_contig_summary.json"
+        File nt_refined_counts_with_dcr_json = "refined_gsnap_counts_with_dcr.json"
+        File nt_contig_summary_json = "gsnap_contig_summary.json"
     }
 
     runtime {
@@ -947,8 +947,8 @@ task SummarizeContigsNT {
 task SummarizeContigsNR {
     input {
         File read_to_contig_tsv
-        File m8_reassigned
-        File hitsummary
+        File nr_m8_reassigned
+        File nr_hit_summary
         File lineage_db
         File deuterostome_db
         File taxon_whitelist
@@ -965,8 +965,8 @@ task SummarizeContigsNR {
 
         generate_taxon_summary_from_hit_summary(
             "~{read_to_contig_tsv}",
-            "~{m8_reassigned}",
-            "~{hitsummary}",
+            "~{nr_m8_reassigned}",
+            "~{nr_hit_summary}",
             "~{lineage_db}",
             ~{if use_deuterostome_filter then '"~{deuterostome_db}"' else 'None'},
             ~{if use_taxon_whitelist then '"~{taxon_whitelist}"' else 'None'},
@@ -980,8 +980,8 @@ task SummarizeContigsNR {
 
 
     output {
-        File refined_counts_with_dcr_json = "refined_rapsearch2_counts_with_dcr.json"
-        File contig_summary_json = "rapsearch2_contig_summary.json"
+        File nr_refined_counts_with_dcr_json = "refined_rapsearch2_counts_with_dcr.json"
+        File nr_contig_summary_json = "rapsearch2_contig_summary.json"
     }
 
     runtime {
@@ -1022,11 +1022,12 @@ task GenerateCoverageStats {
 
 task ComputeMergedTaxonCounts {
     input {
-        File nt_m8
-        File nt_hitsummary2_tab
+        File nt_m8_reassigned
+        File nt_hit_summary
         File nt_contig_summary_json
-        File nr_m8
-        File nr_hitsummary2_tab
+
+        File nr_m8_reassigned
+        File nr_hit_summary
         File nr_contig_summary_json
 
         File lineage_db
@@ -1045,11 +1046,11 @@ task ComputeMergedTaxonCounts {
         python3 <<CODE
         from idseq_dag.steps.compute_merged_taxon_counts import compute_merged_taxon_counts
         compute_merged_taxon_counts(
-            "~{nt_m8}",
-            "~{nt_hitsummary2_tab}",
+            "~{nt_m8_reassigned}",
+            "~{nt_hit_summary}",
             "~{nt_contig_summary_json}",
-            "~{nr_m8}",
-            "~{nr_hitsummary2_tab}",
+            "~{nr_m8_reassigned}",
+            "~{nr_hit_summary}",
             "~{nr_contig_summary_json}",
             "~{lineage_db}",
             ~{if use_deuterostome_filter then '"~{deuterostome_db}"' else 'None'},
@@ -1138,13 +1139,13 @@ task CombineJson {
 
 task GenerateCoverageViz {
     input {
-        File refined_gsnap_in_gsnap_reassigned_m8
-        File refined_gsnap_in_gsnap_hitsummary2_tab
-        File refined_gsnap_in_gsnap_blast_top_m8
+        File nt_m8_reassigned
+        File nt_hit_summary
+        File nt_top_m8
         File contig_in_contig_coverage_json
         File contig_in_contig_stats_json
         File contig_in_contigs_fasta
-        File gsnap_m8_gsnap_deduped_m8
+        File nt_deduped_m8
         File nt_info_db
         String docker_image_id
     }
@@ -1155,7 +1156,7 @@ task GenerateCoverageViz {
         --step-module idseq_dag.steps.generate_coverage_viz \
         --step-class PipelineStepGenerateCoverageViz \
         --step-name coverage_viz_out \
-        --input-files '[["~{refined_gsnap_in_gsnap_reassigned_m8}", "~{refined_gsnap_in_gsnap_hitsummary2_tab}", "~{refined_gsnap_in_gsnap_blast_top_m8}"], ["~{contig_in_contig_coverage_json}", "~{contig_in_contig_stats_json}", "~{contig_in_contigs_fasta}"], ["~{gsnap_m8_gsnap_deduped_m8}"]]' \
+        --input-files '[["~{nt_m8_reassigned}", "~{nt_hit_summary}", "~{nt_top_m8}"], ["~{contig_in_contig_coverage_json}", "~{contig_in_contig_stats_json}", "~{contig_in_contigs_fasta}"], ["~{nt_deduped_m8}"]]' \
         --output-files '["coverage_viz_summary.json"]' \
         --output-dir-s3 '' \
         --additional-files '{"info_db": "~{nt_info_db}"}' \
@@ -1305,7 +1306,7 @@ workflow czid_long_read_mngs {
 
     call RunCallHitsNT { 
         input:
-            m8_file = RunNTAlignment.nt_out_m8,
+            nt_m8 = RunNTAlignment.nt_m8,
             lineage_db = lineage_db,
             taxon_blacklist = taxon_blacklist,
             deuterostome_db = deuterostome_db,
@@ -1328,7 +1329,7 @@ workflow czid_long_read_mngs {
 
     call RunCallHitsNR { 
         input:
-            m8_file = RunNRAlignment.nr_out_m8,
+            nr_m8 = RunNRAlignment.nr_m8,
             lineage_db = lineage_db,
             taxon_blacklist = taxon_blacklist,
             deuterostome_db = deuterostome_db,
@@ -1340,19 +1341,19 @@ workflow czid_long_read_mngs {
 
     call FindTopHitsNT {
         input:
-            deduped_m8 = RunCallHitsNT.nt_deduped_out_m8,
+            nt_deduped_m8 = RunCallHitsNT.nt_deduped_m8,
             docker_image_id = docker_image_id,
     }
 
     call FindTopHitsNR {
         input:
-            deduped_m8 = RunCallHitsNR.nr_deduped_out_m8,
+            nr_deduped_m8 = RunCallHitsNR.nr_deduped_m8,
             docker_image_id = docker_image_id,
     }
 
     call SummarizeHitsNT {
         input:
-            top_m8 = FindTopHitsNT.top_m8,
+            nt_top_m8 = FindTopHitsNT.nt_top_m8,
             read_to_contig_tsv = RunReadsToContigs.reads_to_contigs_tsv,
             deuterostome_db = deuterostome_db,
             taxon_whitelist = taxon_whitelist,
@@ -1367,7 +1368,7 @@ workflow czid_long_read_mngs {
 
     call SummarizeHitsNR {
         input:
-            top_m8 = FindTopHitsNR.top_m8,
+            nr_top_m8 = FindTopHitsNR.nr_top_m8,
             read_to_contig_tsv = RunReadsToContigs.reads_to_contigs_tsv,
             deuterostome_db = deuterostome_db,
             taxon_whitelist = taxon_whitelist,
@@ -1390,8 +1391,8 @@ workflow czid_long_read_mngs {
     call TallyHitsNT {
         input:
             reads_fastq = RunSubsampling.subsampled_fastq,
-            m8 = RunCallHitsNT.nt_deduped_out_m8,
-            hitsummary = SummarizeHitsNT.hit_summary,
+            nt_deduped_m8 = RunCallHitsNT.nt_deduped_m8,
+            nt_hit_summary = SummarizeHitsNT.nt_hit_summary,
             reads_to_contigs_tsv = RunReadsToContigs.reads_to_contigs_tsv,
             docker_image_id = docker_image_id,
     }
@@ -1399,8 +1400,8 @@ workflow czid_long_read_mngs {
     call UnmappedReads {
         input:
             input_file = RunSubsampling.subsampled_fastq,
-            hitsummary_nt = SummarizeHitsNT.hit_summary,
-            hitsummary_nr = SummarizeHitsNR.hit_summary,
+            nt_hit_summary = SummarizeHitsNT.nt_hit_summary,
+            nr_hit_summary = SummarizeHitsNR.nr_hit_summary,
             reads_to_contigs_tsv = RunReadsToContigs.reads_to_contigs_tsv,
             docker_image_id = docker_image_id,
     }
@@ -1408,8 +1409,8 @@ workflow czid_long_read_mngs {
     call TallyHitsNR {
         input:
             reads_fastq = RunSubsampling.subsampled_fastq,
-            m8 = RunCallHitsNR.nr_deduped_out_m8,
-            hitsummary = SummarizeHitsNR.hit_summary,
+            nr_deduped_m8 = RunCallHitsNR.nr_deduped_m8,
+            nr_hit_summary = SummarizeHitsNR.nr_hit_summary,
             reads_to_contigs_tsv = RunReadsToContigs.reads_to_contigs_tsv,
             docker_image_id = docker_image_id,
     }
@@ -1417,8 +1418,8 @@ workflow czid_long_read_mngs {
     call SummarizeContigsNT {
         input:
             read_to_contig_tsv = RunReadsToContigs.reads_to_contigs_tsv,
-            m8_reassigned = SummarizeHitsNT.m8_reassigned,
-            hitsummary = SummarizeHitsNT.hit_summary,
+            nt_m8_reassigned = SummarizeHitsNT.nt_m8_reassigned,
+            nt_hit_summary = SummarizeHitsNT.nt_hit_summary,
             lineage_db = lineage_db,
             deuterostome_db = deuterostome_db,
             taxon_whitelist = taxon_whitelist,
@@ -1431,8 +1432,8 @@ workflow czid_long_read_mngs {
     call SummarizeContigsNR {
         input:
             read_to_contig_tsv = RunReadsToContigs.reads_to_contigs_tsv,
-            m8_reassigned = SummarizeHitsNR.m8_reassigned,
-            hitsummary = SummarizeHitsNR.hit_summary,
+            nr_m8_reassigned = SummarizeHitsNR.nr_m8_reassigned,
+            nr_hit_summary = SummarizeHitsNR.nr_hit_summary,
             lineage_db = lineage_db,
             deuterostome_db = deuterostome_db,
             taxon_whitelist = taxon_whitelist,
@@ -1444,12 +1445,13 @@ workflow czid_long_read_mngs {
 
     call ComputeMergedTaxonCounts {
         input:
-            nt_m8 = SummarizeHitsNT.m8_reassigned,
-            nt_hitsummary2_tab = SummarizeHitsNT.hit_summary,
-            nt_contig_summary_json = SummarizeContigsNT.contig_summary_json,
-            nr_m8 = SummarizeHitsNR.m8_reassigned,
-            nr_hitsummary2_tab = SummarizeHitsNR.hit_summary,
-            nr_contig_summary_json = SummarizeContigsNR.contig_summary_json,
+            nt_m8_reassigned = SummarizeHitsNT.nt_m8_reassigned,
+            nt_hit_summary = SummarizeHitsNT.nt_hit_summary,
+            nt_contig_summary_json = SummarizeContigsNT.nt_contig_summary_json,
+
+            nr_m8_reassigned = SummarizeHitsNR.nr_m8_reassigned,
+            nr_hit_summary = SummarizeHitsNR.nr_hit_summary,
+            nr_contig_summary_json = SummarizeContigsNR.nr_contig_summary_json,
 
             lineage_db = lineage_db,
             deuterostome_db = deuterostome_db,
@@ -1464,8 +1466,8 @@ workflow czid_long_read_mngs {
     call CombineTaxonCounts {
         input:
             counts_json_files = [
-                SummarizeContigsNT.refined_counts_with_dcr_json,
-                SummarizeContigsNR.refined_counts_with_dcr_json,
+                SummarizeContigsNT.nt_refined_counts_with_dcr_json,
+                SummarizeContigsNR.nr_refined_counts_with_dcr_json,
                 ComputeMergedTaxonCounts.merged_taxon_counts_with_dcr_json
             ],
             docker_image_id = docker_image_id,
@@ -1474,8 +1476,8 @@ workflow czid_long_read_mngs {
     call CombineJson {
         input:
             json_files = [
-                SummarizeContigsNT.contig_summary_json,
-                SummarizeContigsNR.contig_summary_json,
+                SummarizeContigsNT.nt_contig_summary_json,
+                SummarizeContigsNR.nr_contig_summary_json,
                 ComputeMergedTaxonCounts.merged_contig_summary_json
             ],
             docker_image_id = docker_image_id,
@@ -1485,16 +1487,16 @@ workflow czid_long_read_mngs {
     call GenerateAnnotatedFasta {
         input:
             pre_alignment_fasta = PreAssemblyFasta.fasta,
-            nt_m8 = SummarizeHitsNT.m8_reassigned,
-            nr_m8 = SummarizeHitsNR.m8_reassigned,
+            nt_m8_reassigned = SummarizeHitsNT.nt_m8_reassigned,
+            nr_m8_reassigned = SummarizeHitsNR.nr_m8_reassigned,
             docker_image_id = docker_image_id,
     }
 
     call GenerateTaxidFasta {
         input:
             annotated_merged_fa = GenerateAnnotatedFasta.assembly_refined_annotated_merged_fa,
-            nt_hitsummary_tab = SummarizeHitsNT.hit_summary,
-            nr_hitsummary_tab = SummarizeHitsNR.hit_summary,
+            nt_hit_summary = SummarizeHitsNT.nt_hit_summary,
+            nr_hit_summary = SummarizeHitsNR.nr_hit_summary,
             lineage_db = lineage_db,
             docker_image_id = docker_image_id,
     }
@@ -1507,13 +1509,13 @@ workflow czid_long_read_mngs {
     
     call GenerateCoverageViz {
         input:
-            refined_gsnap_in_gsnap_reassigned_m8 = SummarizeHitsNT.m8_reassigned,
-            refined_gsnap_in_gsnap_hitsummary2_tab = SummarizeHitsNT.hit_summary,
-            refined_gsnap_in_gsnap_blast_top_m8 = FindTopHitsNT.top_m8,
+            nt_m8_reassigned = SummarizeHitsNT.nt_m8_reassigned,
+            nt_hit_summary = SummarizeHitsNT.nt_hit_summary,
+            nt_top_m8 = FindTopHitsNT.nt_top_m8,
             contig_in_contig_coverage_json = GenerateCoverageStats.contig_coverage_json,
             contig_in_contig_stats_json = GenerateContigStats.contig_stats_json,
             contig_in_contigs_fasta = RunAssembly.assembled_fasta,
-            gsnap_m8_gsnap_deduped_m8 = RunCallHitsNT.nt_deduped_out_m8,
+            nt_deduped_m8 = RunCallHitsNT.nt_deduped_m8,
             nt_info_db = nt_info_db,
             docker_image_id = docker_image_id,
     }
@@ -1521,11 +1523,11 @@ workflow czid_long_read_mngs {
     output {
         File fastp_html = RunQualityFilter.fastp_html
         File read_length_metrics = ReadLengthMetrics.metrics_json
-        File nt_deduped_out_m8 = RunCallHitsNT.nt_deduped_out_m8
-        File nt_hitsummary = SummarizeHitsNT.hit_summary
+        File nt_deduped_m8 = RunCallHitsNT.nt_deduped_m8
+        File nt_hit_summary = SummarizeHitsNT.nt_hit_summary
         File nt_counts_json = RunCallHitsNT.nt_counts_json
-        File nr_deduped_out_m8 = RunCallHitsNR.nr_deduped_out_m8
-        File nr_hitsummary = SummarizeHitsNR.hit_summary
+        File nr_deduped_m8 = RunCallHitsNR.nr_deduped_m8
+        File nr_hit_summary = SummarizeHitsNR.nr_hit_summary
         File nr_counts_json = RunCallHitsNR.nr_counts_json
         File nt_tallied_hits = TallyHitsNT.tallied_hits
         File nr_tallied_hits = TallyHitsNR.tallied_hits

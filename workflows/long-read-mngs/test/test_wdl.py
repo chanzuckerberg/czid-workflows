@@ -59,8 +59,8 @@ class TestLongReadMNGS(WDLTestCase):
     def testLongReadMNGSZipped(self):
         res = self.run_miniwdl([f"input_fastq={os.path.join(os.path.dirname(__file__), 'test_files/test.fastq.gz')}"])
         outputs = res["outputs"]
-        self.assertIn("czid_long_read_mngs.nt_deduped_out_m8", outputs)
-        self.assertIn("czid_long_read_mngs.nr_deduped_out_m8", outputs)
+        self.assertIn("czid_long_read_mngs.nt_deduped_m8", outputs)
+        self.assertIn("czid_long_read_mngs.nr_deduped_m8", outputs)
 
         # test tally hits
         self._tallied_hits_assertions(outputs, "nt_tallied_hits")
@@ -78,8 +78,8 @@ class TestLongReadMNGS(WDLTestCase):
 
             res = self.run_miniwdl([f"input_fastq={f.name}"])
             outputs = res["outputs"]
-            self.assertIn("czid_long_read_mngs.nt_deduped_out_m8", outputs)
-            self.assertIn("czid_long_read_mngs.nr_deduped_out_m8", outputs)
+            self.assertIn("czid_long_read_mngs.nt_deduped_m8", outputs)
+            self.assertIn("czid_long_read_mngs.nr_deduped_m8", outputs)
 
             # test tally hits
             self._tallied_hits_assertions(outputs, "nt_tallied_hits")
