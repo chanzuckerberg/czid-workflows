@@ -340,7 +340,7 @@ task RemoveUnmappedContigs {
         from Bio import SeqIO
 
         with open("~{reads_to_contig_tsv}") as f:
-            contigs_with_reads = set(row[1] for row in csv.reader(f))
+            contigs_with_reads = set(row[1] for row in csv.reader(f, delimiter="\t"))
         
         contigs = SeqIo.parse("~{assembled_reads}", "fasta")
         SeqIO.write((contig for contig in contigs if contig.id in contigs_with_reads), "mapped_contigs.fasta", "fasta")
