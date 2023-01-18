@@ -49,9 +49,19 @@ task RunQualityFilter {
         String docker_image_id
     }
 
+    String fastp_invocation = "fastp"
+            + " --html fastp.html"
+            + " --disable_adapter_trimming"
+            + " -i ${input_fastq}"
+            + " --qualified_quality_phred 9"
+            + " --length_required 100"
+            + " --low_complexity_filter --complexity_threshold 30"
+            + " --dont_eval_duplication"
+            + " -o sample_quality_filtered.fastq"
+
     command <<<
         set -euxo pipefail
-        fastp --html fastp.html --disable_adapter_trimming -i "~{input_fastq}" --qualified_quality_phred 9 --length_required 100 --low_complexity_filter --complexity_threshold 30 --dont_eval_duplication -o sample_quality_filtered.fastq
+        ~{fastp_invocation}
         filter_count sample_quality_filtered.fastq quality_filtered "No reads remaining after quality filtering"
 
         python3 - << 'EOF'
