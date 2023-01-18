@@ -67,25 +67,25 @@ task RunQualityFilter {
         python3 - << 'EOF'
         import textwrap
         with open("fastp.description.md", "w") as outfile:
-        print(textwrap.dedent("""
-        # fastp read trimming & filtering
+            print(textwrap.dedent("""
+            # fastp read trimming & filtering
 
-        Processes the reads using [fastp](https://github.com/OpenGene/fastp):
+            Processes the reads using [fastp](https://github.com/OpenGene/fastp):
 
-        1. Trim adapters
-        2. Quality score filter
-        3. Non-called base (N) filter
-        4. Length filter
-        5. Complexity filter ([custom feature](https://github.com/mlin/fastp/tree/mlin/sdust)
-            using the [SDUST algorithm](https://pubmed.ncbi.nlm.nih.gov/16796549/))
+            1. Trim adapters
+            2. Quality score filter
+            3. Non-called base (N) filter
+            4. Length filter
+            5. Complexity filter ([custom feature](https://github.com/mlin/fastp/tree/mlin/sdust)
+                using the [SDUST algorithm](https://pubmed.ncbi.nlm.nih.gov/16796549/))
 
-        fastp is run on the FASTQ file(s) from input validation:
-        ```
-        ~{fastp_invocation}
-        ```
+            fastp is run on the FASTQ file(s) from input validation:
+            ```
+            ~{fastp_invocation}
+            ```
 
-        fastp documentation can be found [here](https://github.com/OpenGene/fastp)
-        """).strip(), file=outfile)
+            fastp documentation can be found [here](https://github.com/OpenGene/fastp)
+            """).strip(), file=outfile)
         EOF
     >>>
 
