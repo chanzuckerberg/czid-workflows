@@ -123,6 +123,29 @@ task RunHostFilter {
         samtools view -S -b sample.hostfiltered.sam > sample.hostfiltered.bam
 
         filter_count sample.hostfiltered.fastq host_filtered "No reads remaining after host filtering"
+
+        python3 - << 'EOF'
+        import textwrap
+
+        with open("host_filter.description.md", "w") as outfile:
+            print(textwrap.dedent("""
+            Implements the step for running minimap2 host filtering.
+
+            The minimap2 aligner is used for host filtration. Unmapped reads are passed to the subsequent step. Different parameters are required for alignment of RNA vs DNA reads using minimap2. Therefore, based on the initial input validation, the appropriate parameters are selected.
+
+            If the sample is of type RNA, minimap2 uses splice-aware configuration:
+            '''
+            minimap2 -t {threads} -ax splice {minimap_host_db} {input_fastq} -o sample.hostfiltered.sam --split-prefix temp_name
+            '''
+
+            If the sample is of type DNA, minimap2 uses standard map-ont configuration:
+            '''
+            minimap2 -t {threads} -ax map-ont {minimap_host_db} {input_fastq} -o sample.hostfiltered.sam --split-prefix temp_name
+            '''
+
+            Minimap2 documentation can be found [here](https://lh3.github.io/minimap2/minimap2.html).
+            """).strip(), file=outfile)
+        EOF
     >>>
 
     output {
