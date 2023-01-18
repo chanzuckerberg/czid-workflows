@@ -53,9 +53,34 @@ task RunQualityFilter {
         set -euxo pipefail
         fastp --html fastp.html --disable_adapter_trimming -i "~{input_fastq}" --qualified_quality_phred 9 --length_required 100 --low_complexity_filter --complexity_threshold 30 --dont_eval_duplication -o sample_quality_filtered.fastq
         filter_count sample_quality_filtered.fastq quality_filtered "No reads remaining after quality filtering"
+
+        python3 - << 'EOF'
+        import textwrap
+        with open("fastp.description.md", "w") as outfile:
+        print(textwrap.dedent("""
+        # fastp read trimming & filtering
+
+        Processes the reads using [fastp](https://github.com/OpenGene/fastp):
+
+        1. Trim adapters
+        2. Quality score filter
+        3. Non-called base (N) filter
+        4. Length filter
+        5. Complexity filter ([custom feature](https://github.com/mlin/fastp/tree/mlin/sdust)
+            using the [SDUST algorithm](https://pubmed.ncbi.nlm.nih.gov/16796549/))
+
+        fastp is run on the FASTQ file(s) from input validation:
+        ```
+        ~{fastp_invocation}
+        ```
+
+        fastp documentation can be found [here](https://github.com/OpenGene/fastp)
+        """).strip(), file=outfile)
+        EOF
     >>>
 
     output {
+        String step_description_md = read_string("fastp.description.md")
         File fastp_output = "sample_quality_filtered.fastq"
         File quality_filtered_reads = "quality_filtered_reads.count"
         File quality_filtered_bases = "quality_filtered_bases.count"
