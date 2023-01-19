@@ -120,6 +120,7 @@ class PipelineStepGenerateAnnotatedFasta(PipelineCountingStep):
     """
 
     _unique_unidentified_fasta = None
+
     def run(self):
         # See app/lib/dags/postprocess.json.jbuilder in idseq-web
         duplicate_clusters_path = None

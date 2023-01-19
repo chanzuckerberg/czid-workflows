@@ -42,7 +42,7 @@ def generate_info_from_sam(bowtie_sam_file, read2contig, duplicate_cluster_sizes
     for contig, unique_count in contig_unique_counts.items():  # TODO can't we just filter those out after spades, IN ONE PLACE
         if unique_count < MIN_CONTIG_SIZE and use_min_contig_size:
             del contig_stats[contig]
-            base_counts.pop(contig, None) # also deletes contig, but doesn't fail if doesn't exist
+            base_counts.pop(contig, None)  # also deletes contig, but doesn't fail if doesn't exist
         elif READ_COUNTING_MODE == ReadCountingMode.COUNT_UNIQUE:
             contig_stats[contig] = unique_count
     return contig_stats, base_counts
