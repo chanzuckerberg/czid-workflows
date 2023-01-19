@@ -13,7 +13,7 @@ from idseq_dag.util.count import get_read_cluster_size, load_duplicate_cluster_s
 
 
 # TODO: replace this with a simpler function. we don't really need the whole sam file
-def generate_info_from_sam(bowtie_sam_file, read2contig, read2base_count={}, duplicate_cluster_sizes_path=None, use_min_contig_size=True):
+def generate_info_from_sam(bowtie_sam_file, read2contig, duplicate_cluster_sizes_path=None, read2base_count={}, use_min_contig_size=True):
     contig_stats = defaultdict(int)
     contig_unique_counts = defaultdict(int)
     base_counts = defaultdict(int)
@@ -42,7 +42,7 @@ def generate_info_from_sam(bowtie_sam_file, read2contig, read2base_count={}, dup
     for contig, unique_count in contig_unique_counts.items():  # TODO can't we just filter those out after spades, IN ONE PLACE
         if unique_count < MIN_CONTIG_SIZE and use_min_contig_size:
             del contig_stats[contig]
-            del base_counts[contig]
+            base_counts.pop(contig, None) # also deletes contig, but doesn't fail if doesn't exist
         elif READ_COUNTING_MODE == ReadCountingMode.COUNT_UNIQUE:
             contig_stats[contig] = unique_count
     return contig_stats, base_counts
@@ -222,7 +222,7 @@ class PipelineStepRunAssembly(PipelineStep):
                 }
             )
         )
-        contig_stats, _ = generate_info_from_sam(output_bowtie_sam, read2contig, duplicate_cluster_sizes_path)
+        contig_stats, _ = generate_info_from_sam(output_bowtie_sam, read2contig, duplicate_cluster_sizes_path=duplicate_cluster_sizes_path)
         with open(output_contig_stats, 'w') as ocf:
             json.dump(contig_stats, ocf)
 

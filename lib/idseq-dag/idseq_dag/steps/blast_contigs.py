@@ -10,7 +10,7 @@ import os
 from idseq_dag.engine.pipeline_step import PipelineStep
 from idseq_dag.util.trace_lock import TraceLock
 
-from idseq_dag.steps.run_assembly import PipelineStepRunAssembly
+from idseq_dag.steps.run_assembly import generate_info_from_sam
 from idseq_dag.util.lineage import DEFAULT_BLACKLIST_S3, DEFAULT_WHITELIST_S3
 from idseq_dag.util.parsing import BlastnOutput6Reader
 from idseq_dag.util.parsing import BlastnOutput6NTReader
@@ -97,7 +97,7 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
         (read_dict, accession_dict, _selected_genera) = m8.summarize_hits(hit_summary)
         PipelineStepBlastContigs.run_blast(db_type, blast_m8, assembled_contig, reference_fasta, blast_top_m8)
         read2contig = {}
-        PipelineStepRunAssembly.generate_info_from_sam(bowtie_sam, read2contig, duplicate_cluster_sizes_path)
+        generate_info_from_sam(bowtie_sam, read2contig, duplicate_cluster_sizes_path=duplicate_cluster_sizes_path)
 
         (updated_read_dict, read2blastm8, contig2lineage, added_reads) = self.update_read_dict(
             read2contig, blast_top_m8, read_dict, accession_dict, db_type)
@@ -128,7 +128,7 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
             with log.log_context("PipelineStepBlastContigs", {"substep": "generate_taxon_count_json_from_m8", "db_type": db_type, "refined_counts": refined_counts_with_dcr}):
                 m8.generate_taxon_count_json_from_m8(refined_m8, refined_hit_summary, db_type.upper(),
                                                      lineage_db, deuterostome_db, taxon_whitelist, taxon_blacklist,
-                                                     refined_counts_with_dcr, duplicate_cluster_sizes_path)
+                                                     duplicate_cluster_sizes_path=duplicate_cluster_sizes_path, output_json_file=refined_counts_with_dcr)
 
         # generate contig stats at genus/species level
         with log.log_context("PipelineStepBlastContigs", {"substep": "generate_taxon_summary"}):
@@ -138,9 +138,9 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
                 updated_read_dict,
                 added_reads,
                 db_type,
-                duplicate_cluster_sizes_path,
                 # same filter as applied in generate_taxon_count_json_from_m8
-                m8.build_should_keep_filter(deuterostome_db, taxon_whitelist, taxon_blacklist)
+                m8.build_should_keep_filter(deuterostome_db, taxon_whitelist, taxon_blacklist),
+                duplicate_cluster_sizes_path
             )
 
         with log.log_context("PipelineStepBlastContigs", {"substep": "generate_taxon_summary_json", "contig_summary_json": contig_summary_json}):
