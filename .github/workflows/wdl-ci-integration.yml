@@ -26,7 +26,7 @@ jobs:
           fetch-depth: 2
       - id: list_dirs
         # only run on wdl dirs with diff
-        run: echo "{matrix}={./scripts/diff-workflows.sh |jq -cnR '[inputs|select(length>0)]')}" >> $GITHUB_OUTPUT
+        run: echo "matrix=$(./scripts/diff-workflows.sh |jq -cnR '[inputs|select(length>0)]')" >> $GITHUB_OUTPUT
 
   wdl-ci:
     runs-on: self-hosted
