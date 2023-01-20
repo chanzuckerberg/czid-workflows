@@ -27,6 +27,8 @@ workflow index_generation {
         File? gtf_with_ercc_gtf = GenerateHostGenome.gtf_with_ercc_gtf
         File star_genome_tar = GenerateHostGenome.star_genome_tar
         File bowtie_genome_tar = GenerateHostGenome.bowtie_genome_tar
+        File minimap2_dna = GenerateHostGenome.minimap2_dna
+        File minimap2_rna = GenerateHostGenome.minimap2_rna
     }
 }
 
