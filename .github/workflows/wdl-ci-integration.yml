@@ -26,11 +26,12 @@ jobs:
           fetch-depth: 2
       - id: list_dirs
         # only run on wdl dirs with diff
-        run: echo "::set-output name=matrix::$(find workflows|xargs git diff --name-status HEAD^|cut -c 3-|sed 's/^workflows\///g'|xargs dirname|sed 's/\/.*$//g'|sort|uniq|jq -cnR '[inputs|select(length>0)]')"
+        run: echo "matrix=$(./scripts/diff-workflows.sh |jq -cnR '[inputs|select(length>0)]')" >> $GITHUB_OUTPUT
 
   wdl-ci:
     runs-on: self-hosted
     needs: list-workflow-dirs
+    if: ${{ needs['list-workflow-dirs'].outputs.matrix != '[]' && needs['list-workflow-dirs'].outputs.matrix != '' }}
     strategy:
       matrix:
         workflow_dir: ${{fromJson(needs['list-workflow-dirs'].outputs.matrix)}}
