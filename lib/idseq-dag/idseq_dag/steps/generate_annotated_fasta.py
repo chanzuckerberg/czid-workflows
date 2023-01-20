@@ -119,18 +119,21 @@ class PipelineStepGenerateAnnotatedFasta(PipelineCountingStep):
     Generate annotated fasta and unidentified fasta
     """
 
+    _unique_unidentified_fasta = None
+
     def run(self):
         # See app/lib/dags/postprocess.json.jbuilder in idseq-web
         duplicate_clusters_path = None
         if len(self.input_files_local) == 5:
             duplicate_clusters_path = self.input_files_local[3][0]
 
-        annotated_fasta_path = self.output_files_local()[0],
-        unidentified_fasta_path = self.output_files_local()[1],
+        annotated_fasta_path = self.output_files_local()[0]
+        unidentified_fasta_path = self.output_files_local()[1]
         unique_unidentified_fasta = join(
             dirname(unidentified_fasta_path),
             'unique_' + basename(unidentified_fasta_path)
         )
+        self._unique_unidentified_fasta = unique_unidentified_fasta
 
         generate_annotated_fasta(
             pre_alignment_fa_path=self.input_files_local[0][-1],
@@ -139,6 +142,7 @@ class PipelineStepGenerateAnnotatedFasta(PipelineCountingStep):
             annotated_fasta_path=annotated_fasta_path,
             unidentified_fasta_path=unidentified_fasta_path,
             duplicate_clusters_path=duplicate_clusters_path,
+            unique_unidentified_fasta=unique_unidentified_fasta
         )
 
         if duplicate_clusters_path:
@@ -151,5 +155,5 @@ class PipelineStepGenerateAnnotatedFasta(PipelineCountingStep):
         super()._count_reads_work(
             cluster_key=_old_read_name,
             counter_name="unidentified_fasta",
-            fasta_files=[self._unique_unidentified_fasta()]
+            fasta_files=[self._unique_unidentified_fasta]
         )

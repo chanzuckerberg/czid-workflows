@@ -5,6 +5,7 @@ from collections import namedtuple
 import idseq_dag.util.log as log
 
 from idseq_dag.engine.pipeline_step import PipelineStep
+from idseq_dag.util.lineage import DEFAULT_BLACKLIST_S3
 from idseq_dag.util.m8 import generate_taxon_count_json_from_m8
 from idseq_dag.util.parsing import HitSummaryMergedReader, HitSummaryMergedWriter, BlastnOutput6NTRerankedReader, BlastnOutput6NTRerankedWriter
 
@@ -33,8 +34,8 @@ def _create_taxon_count_file(
         deuterostome_db,
         taxon_whitelist,
         taxon_blacklist,
-        cluster_sizes_path,
-        merged_taxon_count_filename
+        duplicate_cluster_sizes_path=cluster_sizes_path,
+        output_json_file=merged_taxon_count_filename
     )
 
 
@@ -218,9 +219,9 @@ class ComputeMergedTaxonCounts(PipelineStep):
             self.outputs.merged_m8_filename,
             self.outputs.merged_hit_filename,
             self.outputs.merged_taxon_count_filename,
-            self.additional_files["deuterostome_db"],
-            self.additional_files["taxon_whitelist"],
-            self.additional_files["taxon_blacklist"],
+            self.additional_files.get("deuterostome_db", None),
+            self.additional_files.get("taxon_whitelist", None),
+            self.additional_files.get("taxon_blacklist", DEFAULT_BLACKLIST_S3),
             self.inputs.cluster_sizes_filename,
         )
         _merge_contigs(

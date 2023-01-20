@@ -126,9 +126,9 @@ def generate_taxon_summary_from_hit_summary(
         deuterostome_db_path,
         taxon_whitelist_path,
         taxon_blacklist_path,
-        None,
-        refined_counts_with_dcr_output_path,
-        read_to_base_count,
+        duplicate_cluster_sizes_path=None,
+        output_json_file=refined_counts_with_dcr_output_path,
+        read_to_base_count=read_to_base_count,
     )
 
     should_keep = build_should_keep_filter(
