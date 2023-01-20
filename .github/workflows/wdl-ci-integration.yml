@@ -31,6 +31,7 @@ jobs:
   wdl-ci:
     runs-on: self-hosted
     needs: list-workflow-dirs
+    if: ${{ needs['list-workflow-dirs'].outputs.matrix != '[]' && needs['list-workflow-dirs'].outputs.matrix != '' }}
     strategy:
       matrix:
         workflow_dir: ${{fromJson(needs['list-workflow-dirs'].outputs.matrix)}}
