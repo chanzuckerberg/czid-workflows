@@ -325,6 +325,37 @@ task RunReadsToContigs {
     }
 }
 
+task RemoveUnmappedContigs {
+    input {
+        File assembled_reads
+        File reads_to_contig_tsv
+        String docker_image_id
+    }
+
+    command <<<
+        set -euxo pipefail
+        python3 <<CODE
+        import csv
+        from collections import Counter
+        from Bio import SeqIO
+
+        with open("~{reads_to_contig_tsv}") as f:
+            contigs_with_reads = set(row[1] for row in csv.reader(f, delimiter="\t"))
+        
+        contigs = SeqIO.parse("~{assembled_reads}", "fasta")
+        SeqIO.write((contig for contig in contigs if contig.id in contigs_with_reads), "mapped_contigs.fasta", "fasta")
+        CODE
+    >>>
+
+    output {
+        File mapped_contigs_fasta = "mapped_contigs.fasta"
+    }
+
+    runtime {
+        docker: docker_image_id
+    }
+}
+
 task PrepareNTAlignmentInputs {
     input {
         File non_contig_reads_fa
@@ -1277,6 +1308,13 @@ workflow czid_long_read_mngs {
             docker_image_id = docker_image_id,
     }
 
+    call RemoveUnmappedContigs {
+        input:
+            assembled_reads = RunAssembly.assembled_fasta,
+            reads_to_contig_tsv = RunReadsToContigs.reads_to_contigs_tsv,
+            docker_image_id = docker_image_id,
+    }
+
     call GenerateContigStats {
         input:
             reads_to_contigs_sam = RunReadsToContigs.reads_to_contigs_sam,
@@ -1288,7 +1326,7 @@ workflow czid_long_read_mngs {
     call PrepareNTAlignmentInputs {
         input:
             non_contig_reads_fa = RunReadsToContigs.non_contigs_fasta,
-            assembled_reads_fa = RunAssembly.assembled_fasta,
+            assembled_reads_fa = RemoveUnmappedContigs.mapped_contigs_fasta,
             docker_image_id = docker_image_id,
     }
 
@@ -1318,7 +1356,7 @@ workflow czid_long_read_mngs {
 
     call RunNRAlignment {
         input:
-            assembled_reads_fa=RunAssembly.assembled_fasta,
+            assembled_reads_fa=RemoveUnmappedContigs.mapped_contigs_fasta,
             db_path=diamond_db,
             diamond_args=diamond_args,
             run_locally=defined(diamond_local_db_path),
@@ -1383,7 +1421,7 @@ workflow czid_long_read_mngs {
 
     call GenerateCoverageStats {
         input:
-            contigs_fasta = RunAssembly.assembled_fasta,
+            contigs_fasta = RemoveUnmappedContigs.mapped_contigs_fasta,
             read_contig_sam = RunReadsToContigs.reads_to_contigs_sam,
             docker_image_id = docker_image_id,
     }
@@ -1514,7 +1552,7 @@ workflow czid_long_read_mngs {
             nt_top_m8 = FindTopHitsNT.nt_top_m8,
             contig_in_contig_coverage_json = GenerateCoverageStats.contig_coverage_json,
             contig_in_contig_stats_json = GenerateContigStats.contig_stats_json,
-            contig_in_contigs_fasta = RunAssembly.assembled_fasta,
+            contig_in_contigs_fasta = RemoveUnmappedContigs.mapped_contigs_fasta,
             nt_deduped_m8 = RunCallHitsNT.nt_deduped_m8,
             nt_info_db = nt_info_db,
             docker_image_id = docker_image_id,
