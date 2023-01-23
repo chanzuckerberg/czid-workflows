@@ -485,6 +485,7 @@ task RunGsnapFilter {
   }
 }
 
+
 workflow czid_host_filter {
   input {
     String docker_image_id

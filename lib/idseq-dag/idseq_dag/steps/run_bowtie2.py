@@ -91,6 +91,22 @@ class PipelineStepRunBowtie2(PipelineCountingStep):
         )
         log.write("Finished Bowtie alignment.")
 
+        # sort bowtie2 output file
+        # samtools sort -n -O sam -o bowtie2.sam bowtie2.sam
+        samtools_sort_params = [
+            "sort",
+            "-n",
+            "-O", "sam",
+            "-o", output_sam_file,
+            output_sam_file
+        ]
+        command.execute(
+            command_patterns.SingleCommand(
+                cmd="samtools",
+                args=samtools_sort_params
+            )
+        )
+
         if len(input_fas) == 2:
             convert.generate_unmapped_pairs_from_sam(output_sam_file,
                                                      output_fas)
