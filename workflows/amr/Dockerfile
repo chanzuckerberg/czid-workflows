@@ -40,10 +40,6 @@ RUN wget -nv -O /tmp/HISAT2.zip https://cloud.biohpc.swmed.edu/index.php/s/oTtGW
         && unzip /tmp/HISAT2.zip && mv hisat2-*/* . && rm /tmp/HISAT2.zip
 RUN curl -L https://github.com/pachterlab/kallisto/releases/download/v0.46.1/kallisto_linux-v0.46.1.tar.gz | tar xz -C /
 
-# Uninstall build only dependencies
-RUN apt-get purge -y g++ libperl4-corelibs-perl make
-WORKDIR /
-
 # Install rgi dependencies
 RUN curl -L https://github.com/bbuchfink/diamond/releases/download/v0.8.36/diamond-linux64.tar.gz | tar xz && mv diamond /usr/local/bin
 RUN curl -L http://www.unafold.org/download/oligoarrayaux-3.8.tar.gz | tar xz && cd oligoarrayaux-3.8/ && ./configure && make install 
