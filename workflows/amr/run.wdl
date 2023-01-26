@@ -366,6 +366,7 @@ task RunRgiKmerMain {
     command <<< 
         set -exuo pipefail
         time rgi load \
+            -i "{card_json}" \
             --wildcard_annotation "~{wildcard_data}" \
             --wildcard_version 3.1.0 \
             --wildcard_index "~{wildcard_index}" \
@@ -398,6 +399,7 @@ task RunRgiKmerBwt {
         set -exuo pipefail
         
         time rgi load \
+            -i "{card_json}" \
             --wildcard_annotation "~{wildcard_data}" \
             --wildcard_version 3.1.0 \
             --wildcard_index "~{wildcard_index}" \
