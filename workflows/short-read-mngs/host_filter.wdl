@@ -54,15 +54,13 @@ workflow czid_host_filter {
   }
 
   # If RNAseq, quantify host transcripts and ERCC
-  if (nucleotide_type == "RNA") {
-    call kallisto {
-      input:
-      reads1_fastq = fastp_qc.fastp1_fastq,
-      reads2_fastq = fastp_qc.fastp2_fastq,
-      kallisto_idx = kallisto_idx,
-      docker_image_id = docker_image_id,
-      cpu = cpu
-    }
+  call kallisto {
+    input:
+    reads1_fastq = fastp_qc.fastp1_fastq,
+    reads2_fastq = fastp_qc.fastp2_fastq,
+    kallisto_idx = kallisto_idx,
+    docker_image_id = docker_image_id,
+    cpu = cpu
   }
 
   # Filter out host reads.
