@@ -669,5 +669,7 @@ task RunSubsample {
   }
   runtime {
     docker: docker_image_id
+    cpu: 4
+    memory: "8G"
   }
 }
