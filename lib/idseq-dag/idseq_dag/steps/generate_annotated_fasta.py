@@ -18,14 +18,14 @@ def _old_read_name(new_read_name):
 
 
 def _annotate_fasta_with_accessions(
-    merged_input_fasta, 
-    nt_m8, 
-    nr_m8, 
-    output_fasta, 
-    output_unmapped_fasta, 
-    clusters_dict = None, 
-    unique_output_fa = None
-    ):
+    merged_input_fasta,
+    nt_m8,
+    nr_m8,
+    output_fasta,
+    output_unmapped_fasta,
+    clusters_dict=None,
+    unique_output_fa=None
+):
     def get_map(blastn_6_path):
         with open(blastn_6_path) as blastn_6_f:
             return {row["qseqid"]: row["sseqid"] for row in BlastnOutput6NTRerankedReader(blastn_6_f, filter_invalid=True)}
@@ -35,39 +35,37 @@ def _annotate_fasta_with_accessions(
 
     unique_output_file = open(unique_output_fa, "w") if clusters_dict else None
 
-    with open(merged_input_fasta, 'r', encoding='utf-8') as input_fasta_f:
-        with open(output_fasta, 'w') as output_fasta_f:
-            with open(output_unmapped_fasta, "w") as output_unmapped_fasta_f:
-                sequence_name = input_fasta_f.readline()
-                sequence_data = input_fasta_f.readline()
+    with open(merged_input_fasta, 'r', encoding='utf-8') as input_fasta_f, open(output_fasta, 'w') as output_fasta_f, open(output_unmapped_fasta, "w") as output_unmapped_fasta_f:
+        sequence_name = input_fasta_f.readline()
+        sequence_data = input_fasta_f.readline()
 
-                # TODO: (tmorse) fasta parsing
-                while sequence_name and sequence_data:
-                    read_id = sequence_name.rstrip().lstrip('>')
-                    # Need to annotate NR then NT in this order for alignment viz
-                    # Its inverse is old_read_name()
-                    nr_accession = nr_map.get(read_id, '')
-                    nt_accession = nt_map.get(read_id, '')
-                    new_read_name = ">NR:{nr_accession}:NT:{nt_accession}:{read_id}".format(
-                        nr_accession=nr_accession,
-                        nt_accession=nt_accession,
-                        read_id=read_id)
-                    if nt_accession or nr_accession:
-                        output_fasta_f.write("%s\n" % new_read_name)
-                        output_fasta_f.write(sequence_data)
-                    else:
-                        output_unmapped_fasta_f.write("%s\n" % new_read_name)
-                        output_unmapped_fasta_f.write(sequence_data)
-                        if clusters_dict and unique_output_file:
-                            output_clusters(
-                                output_unmapped_fasta_f,
-                                unique_output_file, 
-                                new_read_name, 
-                                sequence_data, 
-                                clusters_dict, 
-                            )
-                    sequence_name = input_fasta_f.readline()
-                    sequence_data = input_fasta_f.readline()
+        # TODO: (tmorse) fasta parsing
+        while sequence_name and sequence_data:
+            read_id = sequence_name.rstrip().lstrip('>')
+            # Need to annotate NR then NT in this order for alignment viz
+            # Its inverse is old_read_name()
+            nr_accession = nr_map.get(read_id, '')
+            nt_accession = nt_map.get(read_id, '')
+            new_read_name = ">NR:{nr_accession}:NT:{nt_accession}:{read_id}".format(
+                nr_accession=nr_accession,
+                nt_accession=nt_accession,
+                read_id=read_id)
+            output_file = output_fasta_f if nt_accession or nr_accession else output_unmapped_fasta_f
+            output_file.write(new_read_name + '\n')
+            output_file.write(sequence_data)
+
+            if not (nt_accession or nr_accession) and clusters_dict and unique_output_file:
+                output_clusters(
+                    output_unmapped_fasta_f,
+                    unique_output_file,
+                    new_read_name,
+                    sequence_data,
+                    clusters_dict,
+                )
+            sequence_name = input_fasta_f.readline()
+            sequence_data = input_fasta_f.readline()
+    if unique_output_file:
+        unique_output_file.close()
 
 def output_clusters(output_unmapped_fasta_f, unique_output_file, read_header, read_sequence, clusters_dict):
     unique_output_file.write(read_header + "\n")
@@ -148,13 +146,13 @@ def generate_annotated_fasta(
         clusters_dict = None
 
     _annotate_fasta_with_accessions(
-        pre_alignment_fa_path, 
-        nt_m8_path, 
-        nr_m8_path, 
-        annotated_fasta_path, 
+        pre_alignment_fa_path,
+        nt_m8_path,
+        nr_m8_path,
+        annotated_fasta_path,
         unidentified_fasta_path,
-        clusters_dict = clusters_dict,
-        unique_output_fa = unique_unidentified_fasta,
+        clusters_dict=clusters_dict,
+        unique_output_fa=unique_unidentified_fasta,
     )
 
 
