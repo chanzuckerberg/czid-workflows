@@ -67,6 +67,7 @@ def _annotate_fasta_with_accessions(
     if unique_output_file:
         unique_output_file.close()
 
+
 def output_clusters(output_unmapped_fasta_f, unique_output_file, read_header, read_sequence, clusters_dict):
     unique_output_file.write(read_header + "\n")
     unique_output_file.write(read_sequence)
@@ -83,48 +84,6 @@ def output_clusters(output_unmapped_fasta_f, unique_output_file, read_header, re
         other_header = UNMAPPED_HEADER_PREFIX + other_key + header_suffix
         output_unmapped_fasta_f.write(other_header + "\n")
         output_unmapped_fasta_f.write(read_sequence)  # write duplicate seq
-
-
-def _generate_unidentified_fasta(
-    input_fa,
-    output_fa,
-    clusters_dict=None,
-    unique_output_fa=None
-):
-    """
-    Generates files with all unmapped reads. If COUNT_ALL, which was added
-    in v4, then include non-unique reads extracted upstream by czid-dedup.
-
-    unique_output_fa exists primarily for counting. See count_reads above.
-    """
-    unique_output_file = open(unique_output_fa, "w") if clusters_dict else None
-    with open(output_fa, "w") as output_file:
-        for read in fasta.iterator(input_fa):
-            if not read.header.startswith(UNMAPPED_HEADER_PREFIX):
-                continue
-
-            output_file.write(read.header + "\n")
-            output_file.write(read.sequence + "\n")
-            if unique_output_file:
-                unique_output_file.write(read.header + "\n")
-                unique_output_file.write(read.sequence + "\n")
-
-            if clusters_dict:
-                # get inner part of header like
-                # '>NR::NT::NB501961:14:HM7TLBGX2:4:23511:18703:20079/2'
-                line = read.header
-                header_suffix = ""
-                if line[-2:-1] == "/":  # /1 or /2
-                    line, header_suffix = line[:-2], line[-2:]
-                    assert header_suffix in ('/1', '/2')
-                    assert len(read.header) == len(line) + len(header_suffix)
-
-                key = line.split(UNMAPPED_HEADER_PREFIX)[1]
-                other_keys = clusters_dict[key][1:]  # key should always be present
-                for other_key in other_keys:
-                    other_header = UNMAPPED_HEADER_PREFIX + other_key + header_suffix
-                    output_file.write(other_header + "\n")
-                    output_file.write(read.sequence + "\n")  # write duplicate seq
 
 
 def generate_annotated_fasta(
