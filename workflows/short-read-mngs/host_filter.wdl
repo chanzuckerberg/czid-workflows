@@ -17,6 +17,7 @@ workflow czid_host_filter {
     File bowtie2_index_tar
     File hisat2_index_tar
     File kallisto_idx
+    File? gtf_gz  # Ensembl GTF for host species
 
     File human_bowtie2_index_tar
     File human_hisat2_index_tar
@@ -53,12 +54,16 @@ workflow czid_host_filter {
     cpu = cpu
   }
 
-  # If RNAseq, quantify host transcripts and ERCC
+  # Quantify host transcripts and ERCC
+  # NOTE: we run kallisto even if nucleotide_type == "DNA" in order to get ERCC read counts.
+  # The transcript & gene abundances are ~meaningless in that case, of course. This isn't a big
+  # wasted cost because kallisto is so fast.
   call kallisto {
     input:
     reads1_fastq = fastp_qc.fastp1_fastq,
     reads2_fastq = fastp_qc.fastp2_fastq,
     kallisto_idx = kallisto_idx,
+    gtf_gz = gtf_gz,
     docker_image_id = docker_image_id,
     cpu = cpu
   }
@@ -152,7 +157,9 @@ workflow czid_host_filter {
     File fastp_html = fastp_qc.fastp_html
     File fastp_json = fastp_qc.fastp_json
 
-    File? kallisto_abundance_tsv = kallisto.abundance_tsv
+    File kallisto_transcript_abundance_tsv = kallisto.transcript_abundance_tsv
+    File kallisto_ERCC_counts_tsv = kallisto.ERCC_counts_tsv
+    File? kallisto_gene_abundance_tsv = kallisto.gene_abundance_tsv
 
     File bowtie2_host_filtered1_fastq = bowtie2_filter.filtered1_fastq
     File? bowtie2_host_filtered2_fastq = bowtie2_filter.filtered2_fastq
@@ -302,6 +309,7 @@ task kallisto {
     File reads1_fastq
     File? reads2_fastq
     File kallisto_idx
+    File? gtf_gz
     String kallisto_options = ""
 
     String docker_image_id
@@ -311,7 +319,7 @@ task kallisto {
   # TODO: input fragment length parameters for non-paired-end (l = average, s = std dev)
   String kallisto_invocation = "/kallisto/kallisto quant"
       + " -i '${kallisto_idx}' -o $(pwd) --plaintext ${if (paired) then '' else '--single -l 200 -s 20'} ${kallisto_options} -t ${cpu}"
-      + " '~{reads1_fastq}'" + if (defined(reads2_fastq)) then " '~{reads2_fastq}" else ""
+      + " '~{reads1_fastq}'" + if (defined(reads2_fastq)) then " '~{reads2_fastq}'" else ""
 
   command <<<
     set -euxo pipefail
@@ -319,15 +327,56 @@ task kallisto {
     ~{kallisto_invocation}
     >&2 jq . run_info.json
 
+    mv abundance.tsv transcript_abundance.tsv
+
+    # extract ERCC counts
+    echo -e "target_id\test_counts" > ERCC_counts.tsv
+    grep ERCC- transcript_abundance.tsv | cut -f1,4 >> ERCC_counts.tsv
+
+    # If we've been provided the GTF, then roll up the transcript abundance estimates by gene.
+    if [[ -n '~{gtf_gz}' ]]; then
+      python3 - transcript_abundance.tsv '~{gtf_gz}' << 'EOF'
+    # Given kallisto output tsv based on index of Ensembl transcripts FASTA, and matching
+    # Ensembl GTF, report the total est_counts and tpm for each gene (sum over all transcripts
+    # of each gene).
+    import sys
+    import pandas as pd
+    import gtfparse
+
+    kallisto_df = pd.read_csv(sys.argv[1], sep="\t")
+
+    gtf_df = gtfparse.read_gtf(sys.argv[2])
+    tx_df = gtf_df[gtf_df["feature"] == "transcript"][
+        ["transcript_id", "transcript_version", "gene_id"]
+    ]
+    # kallisto target_id is a versioned transcript ID e.g. "ENST00000390446.3", while the GTF
+    # breaks out: transcript_id "ENST00000390446"; transcript_version "3";
+    # synthesize a column with the versioned transcript ID for merging.
+    tx_df = tx_df.assign(
+        transcript_id_version=tx_df["transcript_id"] + "." + tx_df["transcript_version"]
+    )
+
+    merged_df = pd.merge(
+        kallisto_df[["target_id", "est_counts", "tpm"]],
+        tx_df[["transcript_id_version", "gene_id"]],
+        left_on="target_id",
+        right_on="transcript_id_version",
+    )
+
+    gene_abundance = merged_df.groupby("gene_id").sum(numeric_only=True)
+    gene_abundance.to_csv("gene_abundance.tsv", sep="\t")
+    EOF
+    fi
+
     python3 - << 'EOF'
     import textwrap
     with open("kallisto.description.md", "w") as outfile:
       print(textwrap.dedent("""
       # kallisto RNA quantification
 
-      Quantifies host transcripts using [kallisto](https://pachterlab.github.io/kallisto/about)
-      (for RNA-seq samples only). The host transcript sequences are sourced from Ensembl, along
-      with [ERCC control sequences](https://www.nist.gov/programs-projects/external-rna-controls-consortium).
+      Quantifies host transcripts using [kallisto](https://pachterlab.github.io/kallisto/about).
+      The host transcript sequences are sourced from Ensembl, along with
+      [ERCC control sequences](https://www.nist.gov/programs-projects/external-rna-controls-consortium).
       Not all CZ ID host species have transcripts indexed; for those without, kallisto is run using ERCC
       sequences only.
 
@@ -338,14 +387,16 @@ task kallisto {
       ```
 
       kallisto documentation can be found [here](https://pachterlab.github.io/kallisto/manual), including
-      details of the `abundance.tsv` output format.
+      details of the `transcript_abundance.tsv` output format.
       """).strip(), file=outfile)
     EOF
   >>>
 
   output {
     String step_description_md = read_string("kallisto.description.md")
-    File abundance_tsv = "abundance.tsv"
+    File transcript_abundance_tsv = "transcript_abundance.tsv"
+    File ERCC_counts_tsv = "ERCC_counts.tsv"
+    File? gene_abundance_tsv = "gene_abundance.tsv"
   }
 
   runtime {
