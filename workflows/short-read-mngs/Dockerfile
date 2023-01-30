@@ -184,6 +184,7 @@ RUN curl -Ls https://github.com/chanzuckerberg/s3parcp/releases/download/v0.2.0-
 # fastp (libdeflate libisal (dh-autoreconf nasm))
 # hisat2
 # bowtie2 [already installed]
+# kallisto + python gtfparse
 WORKDIR /tmp
 RUN wget -nv -O - https://github.com/intel/isa-l/archive/refs/tags/v2.30.0.tar.gz | tar zx
 RUN cd isa-l-* && ./autogen.sh && ./configure && make -j8 && make install
@@ -196,6 +197,7 @@ WORKDIR /hisat2
 RUN wget -nv -O /tmp/HISAT2.zip https://cloud.biohpc.swmed.edu/index.php/s/oTtGWbWjaxsQ2Ho/download \
         && unzip /tmp/HISAT2.zip && mv hisat2-*/* . && rm /tmp/HISAT2.zip
 RUN curl -L https://github.com/pachterlab/kallisto/releases/download/v0.46.1/kallisto_linux-v0.46.1.tar.gz | tar xz -C /
+RUN pip3 install gtfparse~=2
 
 # Uninstall build only dependencies
 RUN apt-get purge -y g++ libperl4-corelibs-perl make
