@@ -116,7 +116,7 @@ RUN chmod +x /usr/bin/PriceSeqFilter
 RUN curl -Ls https://github.com/chanzuckerberg/s3parcp/releases/download/v0.2.0-alpha/s3parcp_0.2.0-alpha_Linux_x86_64.tar.gz | tar -C /usr/bin -xz s3parcp
 
 # FIXME: check if use of pandas, pysam is necessary
-RUN pip3 install pysam==0.14.1 pandas==0.25.3
+RUN pip3 install pysam==0.14.1 pandas==1.3.5
 
 # Workaround for srst2 refusing to work with upstream bowtie2 and samtools
 # FIXME: replace srst2 with a more appropriate tool
