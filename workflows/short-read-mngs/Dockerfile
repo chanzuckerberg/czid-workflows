@@ -197,7 +197,7 @@ WORKDIR /hisat2
 RUN wget -nv -O /tmp/HISAT2.zip https://cloud.biohpc.swmed.edu/index.php/s/oTtGWbWjaxsQ2Ho/download \
         && unzip /tmp/HISAT2.zip && mv hisat2-*/* . && rm /tmp/HISAT2.zip
 RUN curl -L https://github.com/pachterlab/kallisto/releases/download/v0.46.1/kallisto_linux-v0.46.1.tar.gz | tar xz -C /
-RUN pip3 install 'gtfparse>=2,<3'
+RUN pip3 install 'gtfparse>=1.3.0,<2'
 
 # Uninstall build only dependencies
 RUN apt-get purge -y g++ libperl4-corelibs-perl make
