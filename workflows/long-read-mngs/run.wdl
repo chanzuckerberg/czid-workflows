@@ -68,7 +68,7 @@ task RunQualityFilter {
         import textwrap
         with open("fastp.description.md", "w") as outfile:
             print(textwrap.dedent("""
-            # fastp read trimming & filtering
+            **fastp read trimming & filtering**
 
             Processes the reads using [fastp](https://github.com/OpenGene/fastp):
 
