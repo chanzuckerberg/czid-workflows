@@ -43,6 +43,7 @@ workflow amr {
         call GetTotalReads { 
             input:
             total_read_file = select_first([host_filter_stage.input_read_count])
+            docker_image_id = host_filtering_docker_image_id
         }
     }
     call RunRgiBwtKma {
