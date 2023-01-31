@@ -89,6 +89,8 @@ miniwdl run workflows/short-read-mngs/local_driver.wdl \
 ```
 Where `fastqs_0` and `fastqs_1` are paired-end fastq files. For single-end reads, just use `fastqs_0`.
 
+The `.yml` file contains default databases for host filtering and alignment as well as supplemental helper files. You can change the values in these files to suit your analysis. 
+
 #### Files and Databases
 In the local_test.yml file and within the `wdl` files, there are references to some default files and databases. A description of some of these files is below:  
 
