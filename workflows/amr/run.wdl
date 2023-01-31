@@ -7,6 +7,7 @@ workflow amr {
         Array[File]? non_host_reads
         File? raw_reads_0
         File? raw_reads_1
+        Int? total_reads
         File? contigs
         String docker_image_id
         String sample_name
@@ -38,6 +39,10 @@ workflow amr {
             ),
             min_contig_length = min_contig_length,
             docker_image_id = host_filtering_docker_image_id,
+        }
+        call GetTotalReads { 
+            input:
+            total_read_file = host_filter_stage.input_read_count
         }
     }
     call RunRgiBwtKma {
@@ -90,6 +95,7 @@ workflow amr {
         kma_output = RunRgiBwtKma.kma_amr_results,
         kma_species_output = RunRgiKmerBwt.kma_species_calling,
         gene_coverage = MakeGeneCoverage.output_gene_coverage,
+        total_reads = select_first([total_reads, GetTotalReads.total_reads])
         docker_image_id = docker_image_id,
         sample_name = sample_name
     }
@@ -139,6 +145,18 @@ workflow amr {
         docker_image_id = docker_image_id
     }
 
+}
+
+task GetTotalReads { 
+    input {
+        File total_read_file
+    }
+    command <<<
+        jq "~{total_read_file" >> $VAR 
+    >>>
+    output {
+        Int total_reads = $VAR 
+    }
 }
 
 task RunResultsPerSample {
