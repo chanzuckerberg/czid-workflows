@@ -42,7 +42,7 @@ workflow amr {
         }
         call GetTotalReads { 
             input:
-            total_read_file = select_first([host_filter_stage.input_read_count])
+            total_read_file = select_first([host_filter_stage.input_read_count]),
             docker_image_id = host_filtering_docker_image_id
         }
     }
@@ -151,6 +151,7 @@ workflow amr {
 task GetTotalReads { 
     input {
         File total_read_file
+        String docker_image_id
     }
 
     command <<<
