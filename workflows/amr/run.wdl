@@ -42,7 +42,7 @@ workflow amr {
         }
         call GetTotalReads { 
             input:
-            total_read_file = host_filter_stage.input_read_count
+            total_read_file = select_first([host_filter_stage.input_read_count])
         }
     }
     call RunRgiBwtKma {
@@ -95,7 +95,7 @@ workflow amr {
         kma_output = RunRgiBwtKma.kma_amr_results,
         kma_species_output = RunRgiKmerBwt.kma_species_calling,
         gene_coverage = MakeGeneCoverage.output_gene_coverage,
-        total_reads = select_first([total_reads, GetTotalReads.total_reads])
+        total_reads = select_first([total_reads, GetTotalReads.total_reads]),
         docker_image_id = docker_image_id,
         sample_name = sample_name
     }
@@ -151,11 +151,17 @@ task GetTotalReads {
     input {
         File total_read_file
     }
+
     command <<<
-        jq "~{total_read_file" >> $VAR 
+        jq '.fastqs' > total_reads.txt < "~{total_read_file}"
     >>>
+
     output {
-        Int total_reads = $VAR 
+        Int total_reads = read_int("total_reads.txt")
+    }
+
+    runtime {
+        docker: docker_image_id
     }
 }
 
@@ -166,6 +172,7 @@ task RunResultsPerSample {
         File kma_output
         File kma_species_output
         File gene_coverage
+        Int total_reads
         String docker_image_id
         String sample_name
     }
