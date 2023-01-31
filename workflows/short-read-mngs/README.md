@@ -11,23 +11,32 @@ The documentation presented here reflects the current CZ ID pipeline status and 
 
 1. Host Filtering and QC
 2. Alignment and Taxonomic Aggregation
-3. Reporting and Visualization
+3. Assembly and Realignment
+4. Reporting and Visualization
 The pipeline relies on a variety of different software, whose versions are listed below. The most up-to-date version information can be found in the Dockerfile.
 
 ## Running Short-Read MNGS locally
 
-### Short-Read MNGS viral pipeline 
-
-
-
-
-### Short-Read MNGS full pipeline
+### Short-Read MNGS viral pipeline dependencies 
+* The short-read mngs viral pipeline uses a database that has been restricted to only viral reads. This is only used for end-to-end testing without having to download the entire databse. 
 
 #### System Requirements
-* >1TB of harddrive space 
+* \> 10GB of harddrive space
+* 16GB of RAM
+
+#### Dependencies
+* Docker 
+* miniwdl 
+* python3
+
+
+### Short-Read MNGS full pipeline dependencies
+
+#### System Requirements
+* \>1TB of harddrive space 
     * Mostly used to store full NT and NR databases 
 * 64GB of RAM
-* >=4 CPUS
+* \>=4 CPUS
 
 #### Dependencies
 * Docker
@@ -35,7 +44,7 @@ The pipeline relies on a variety of different software, whose versions are liste
 * python3 
 
 
-#### Run
+### Runing the Pipeline Locally Step-by-Step
 Clone the `czid-workflows` repo with: 
 
 ```bash 
@@ -61,8 +70,16 @@ Install the miniwdl dependencies with:
 ```bash
 pip3 install -r requirements-dev.txt
 ```
+If running the viral pipeline, run with: 
+```bash 
+miniwdl run workflows/short-read-mngs/local_driver.wdl \
+    docker_image_id=czid-short-read-mngs \
+    fastqs_0=workflows/short-read-mngs/test/norg_6__nacc_27__uniform_weight_per_organism__hiseq_reads__v6__R1.fastq.gz \
+    fastqs_1=workflows/short-read-mngs/test/norg_6__nacc_27__uniform_weight_per_organism__hiseq_reads__v6__R2.fastq.gz \
+    -i workflows/short-read-mngs/test/local_test_viral.yml --verbose
+```
 
-Run the pipeline with: 
+If running the full pipeline, run:
 ```bash 
 miniwdl run workflows/short-read-mngs/local_driver.wdl \
     docker_image_id=czid-short-read-mngs \
@@ -70,7 +87,6 @@ miniwdl run workflows/short-read-mngs/local_driver.wdl \
     fastqs_1=workflows/short-read-mngs/test/norg_6__nacc_27__uniform_weight_per_organism__hiseq_reads__v6__R2.fastq.gz \
     -i workflows/short-read-mngs/test/local_test.yml --verbose
 ```
-
 Where `fastqs_0` and `fastqs_1` are paired-end fastq files. For single-end reads, just use `fastqs_0`.
 
 #### Files and Databases
