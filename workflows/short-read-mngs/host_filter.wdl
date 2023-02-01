@@ -436,7 +436,7 @@ task bowtie2_filter {
     ~{bowtie2_invocation}
 
     # generate sort & compressed BAM file for archival
-    samtools sort -o "bowtie2_~{filter_type}.bam" -@ 4 -T /tmp "/tmp/bowtie2.sam" & samtools_pid=$!
+    samtools sort -n -o "bowtie2_~{filter_type}.bam" -@ 4 -T /tmp "/tmp/bowtie2.sam" & samtools_pid=$!
 
     # Extract reads [pairs] that did NOT map to the index
     if [[ '~{paired}' == 'true' ]]; then
