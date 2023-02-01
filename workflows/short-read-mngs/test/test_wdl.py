@@ -19,7 +19,7 @@ class TestRunValidate(WDLTestCase):
 
     def testValidateWindows(self):
         fastqs_0 = os.path.join(os.path.dirname(__file__), "windows1.fastq.gz")
-        args = self.rv_args + [f"fastqs={fastqs_0}"]
+        args = self.rv_args + [f"reads1_fastq={fastqs_0}"]
         res = self.run_miniwdl(args, task="RunValidateInput")
         with open(res["outputs"]["RunValidateInput.valid_input1_fastq"]) as f:
             hash = hashlib.md5(f.read().encode("utf-8")).hexdigest()
@@ -27,7 +27,7 @@ class TestRunValidate(WDLTestCase):
 
     def testInvalidInput(self):
         fastqs_0 = os.path.join(os.path.dirname(__file__), "host_filter", "test_RunValidateInput_invalid_char.fastq")
-        args = self.rv_args + [f"fastqs={fastqs_0}"]
+        args = self.rv_args + [f"reads1_fastq={fastqs_0}"]
 
         with self.assertRaises(CalledProcessError) as ecm:
             self.run_miniwdl(args, task="RunValidateInput")
