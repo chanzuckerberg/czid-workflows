@@ -77,6 +77,7 @@ workflow amr {
     call RunRgiKmerMain { 
         input:
         main_output_json = RunRgiMain.output_json,
+        card_json = card_json,
         kmer_db = kmer_db,
         amr_kmer_db = amr_kmer_db,
         wildcard_data = wildcard_data,
@@ -356,6 +357,7 @@ task RunResultsPerSample {
 task RunRgiKmerMain {
     input {
         File main_output_json
+        File card_json
         File kmer_db
         File amr_kmer_db
         File wildcard_data 
@@ -365,7 +367,7 @@ task RunRgiKmerMain {
     command <<< 
         set -exuo pipefail
         time rgi load \
-            -i "{card_json}" \
+            -i "~{card_json}" \
             --wildcard_annotation "~{wildcard_data}" \
             --wildcard_version 3.1.0 \
             --wildcard_index "~{wildcard_index}" \
@@ -398,6 +400,7 @@ task RunRgiKmerBwt {
         set -exuo pipefail
         
         time rgi load \
+            -i "~{card_json}" \
             --wildcard_annotation "~{wildcard_data}" \
             --wildcard_version 3.1.0 \
             --wildcard_index "~{wildcard_index}" \
