@@ -3,7 +3,7 @@ FROM ubuntu:22.04
 ARG DEBIAN_FRONTEND=noninteractive
 
 # This brings in python2.7
-RUN apt-get update && apt-get install -y bowtie2 curl minimap2 pigz dh-autoreconf nasm
+RUN apt-get update && apt-get install -y wget bowtie2 curl minimap2 pigz dh-autoreconf nasm make git g++ unzip python3-pip
 
 # Install STAR, the package rna-star does not include STARlong
 RUN curl -L https://github.com/alexdobin/STAR/archive/2.5.3a.tar.gz | tar xz
