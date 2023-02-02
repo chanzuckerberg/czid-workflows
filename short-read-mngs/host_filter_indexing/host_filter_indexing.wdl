@@ -225,7 +225,7 @@ task minimap2_index {
     all_fasta="$TMPDIR/all.fasta"
     pigz -dc ~{sep(' ',fasta_gz)} > "$all_fasta"
 
-    >&2 minimap2 ~{opts} -d '~{genome_name}.mmi' "$all_fasta"
+    >&2 minimap2-scatter ~{opts} -d '~{genome_name}.mmi' "$all_fasta"
     >&2 ls -l
   >>>
 
