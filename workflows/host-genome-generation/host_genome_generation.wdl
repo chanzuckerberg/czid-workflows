@@ -28,7 +28,7 @@ workflow host_filter_indexing {
     # Sequence names must be unique among all FASTAs!
     Array[File] other_fasta_gz = []
 
-    String docker
+    String docker_image_id
   }
 
   call ensure_gz as genome_fasta {
@@ -36,45 +36,59 @@ workflow host_filter_indexing {
     # existing host genome FASTAs which we archived without compression.
     input:
     maybe_gz = genome_fasta_gz,
-    docker
+    docker_image_id
+  }
+
+  call concatenate_and_unzip_fastas {
+    input:
+    fasta_gz = flatten([[genome_fasta.gz, ERCC_fasta_gz], other_fasta_gz]),
+    docker_image_id,
   }
 
   call bowtie2_build {
     input:
-    fasta_gz = flatten([[genome_fasta.gz, ERCC_fasta_gz], other_fasta_gz]),
-    genome_name, docker
+    fasta = concatenate_and_unzip_fastas.fasta,
+    genome_name,
+    docker_image_id,
   }
 
   call hisat2_build {
     input:
-    fasta_gz = flatten([[genome_fasta.gz, ERCC_fasta_gz], other_fasta_gz]),
-    transcripts_gtf_gz, genome_name, docker
+    fasta = concatenate_and_unzip_fastas.fasta,
+    transcripts_gtf_gz,
+    genome_name,
+    docker_image_id,
   }
 
   call kallisto_index {
     input:
     transcripts_fasta_gz = flatten([transcripts_fasta_gz, [ERCC_fasta_gz]]),
-    genome_name, docker
+    genome_name,
+    docker_image_id,
   }
 
   call minimap2_index as minimap2_index_dna {
     input:
-    fasta_gz = flatten([[genome_fasta.gz, ERCC_fasta_gz], other_fasta_gz]),
+    fasta = concatenate_and_unzip_fastas.fasta,
     nucleotide_type = "dna",
-    genome_name, docker
+    genome_name,
+    docker_image_id,
   }
 
   call minimap2_index as minimap2_index_rna {
     input:
-    fasta_gz = flatten([[genome_fasta.gz, ERCC_fasta_gz], other_fasta_gz]),
+    fasta = concatenate_and_unzip_fastas.fasta,
     nucleotide_type = "rna",
-    genome_name, docker
+    genome_name,
+    docker_image_id,
   }
 
   call star_generate {
     input:
-    fasta_gz = flatten([[genome_fasta.gz, ERCC_fasta_gz], other_fasta_gz]),
-    transcripts_gtf_gz, genome_name, docker
+    fasta = concatenate_and_unzip_fastas.fasta,
+    transcripts_gtf_gz,
+    genome_name,
+    docker_image_id,
   }
 
   output {
@@ -97,7 +111,7 @@ workflow host_filter_indexing {
 task ensure_gz {
   input {
     File maybe_gz
-    String docker
+    String docker_image_id
   }
 
   String name = basename(maybe_gz)
@@ -117,7 +131,28 @@ task ensure_gz {
   }
 
   runtime {
-      docker: docker
+      docker: docker_image_id
+      cpu: 4
+      memory: "4GiB"
+  }
+}
+
+task concatenate_and_unzip_fastas {
+  input {
+    Array[File] fasta_gz
+    String docker_image_id
+  }
+
+  command <<<
+    pigz -dc ~{sep(' ',fasta_gz)} > "all.fasta"
+  >>>
+
+  output {
+      File fasta = "all.fasta"
+  }
+
+  runtime {
+      docker: docker_image_id
       cpu: 4
       memory: "4GiB"
   }
@@ -125,23 +160,20 @@ task ensure_gz {
 
 task bowtie2_build {
   input {
-    Array[File] fasta_gz
+    File fasta
     String genome_name
     Int seed = 42
 
     Int cpu = 16
-    String docker
+    String docker_image_id
   }
 
   command <<<
     set -euxo pipefail
     TMPDIR=${TMPDIR:-/tmp}
 
-    all_fasta="$TMPDIR/all.fasta"
-    pigz -dc ~{sep(' ',fasta_gz)} > "$all_fasta"
-
     mkdir -p "$TMPDIR"'/bt2/~{genome_name}'
-    >&2 bowtie2-build --seed ~{seed} --threads ~{cpu} "$all_fasta" "$TMPDIR"'/bt2/~{genome_name}/~{genome_name}'
+    >&2 bowtie2-build --seed ~{seed} --threads ~{cpu} "~{fasta}" "$TMPDIR"'/bt2/~{genome_name}/~{genome_name}'
     >&2 ls -lR "$TMPDIR/bt2"
     env -C "$TMPDIR/bt2" tar c . > '~{genome_name}.bowtie2.tar'
   >>>
@@ -151,7 +183,7 @@ task bowtie2_build {
   }
 
   runtime {
-      docker: docker
+      docker: docker_image_id
       cpu: cpu
       memory: "~{cpu*2}GiB"
   }
@@ -159,20 +191,17 @@ task bowtie2_build {
 
 task hisat2_build {
   input {
-    Array[File] fasta_gz
+    File fasta
     File? transcripts_gtf_gz
     String genome_name
 
     Int cpu = 32
-    String docker
+    String docker_image_id
   }
 
   command <<<
     set -euxo pipefail
     TMPDIR=${TMPDIR:-/tmp}
-
-    all_fasta="$TMPDIR/all.fasta"
-    pigz -dc ~{sep(' ',fasta_gz)} > "$all_fasta"
 
     mkdir -p "$TMPDIR"'/hisat2/~{genome_name}'
     if [[ -n '~{transcripts_gtf_gz}' ]]; then
@@ -182,9 +211,9 @@ task hisat2_build {
       wait $pid
       >&2 /hisat2/hisat2-build -p 16 \
         --exon "$TMPDIR/genome.exon" --ss "$TMPDIR/genome.ss" \
-        "$all_fasta" "$TMPDIR"'/hisat2/~{genome_name}/~{genome_name}'
+        "~{fasta}" "$TMPDIR"'/hisat2/~{genome_name}/~{genome_name}'
     else
-      >&2 /hisat2/hisat2-build -p 16 "$all_fasta" "$TMPDIR"'/hisat2/~{genome_name}/~{genome_name}'
+      >&2 /hisat2/hisat2-build -p 16 "~{fasta}" "$TMPDIR"'/hisat2/~{genome_name}/~{genome_name}'
     fi
     >&2 ls -lR "$TMPDIR/hisat2"
     env -C "$TMPDIR/hisat2" tar c . > '~{genome_name}.hisat2.tar'
@@ -195,7 +224,7 @@ task hisat2_build {
   }
 
   runtime {
-    docker: docker
+    docker: docker_image_id
     cpu: cpu
     memory: "240G"
   }
@@ -206,7 +235,7 @@ task kallisto_index {
     Array[File] transcripts_fasta_gz
     String genome_name
 
-    String docker
+    String docker_image_id
   }
 
   String idx_fn = "~{genome_name}.kallisto.idx"
@@ -221,31 +250,28 @@ task kallisto_index {
   }
 
   runtime {
-    docker: docker
+    docker: docker_image_id
     memory: "16GiB"
   }
 }
 
 task minimap2_index {
   input {
-    Array[File] fasta_gz
+    File fasta
     String genome_name
     String nucleotide_type
 
-    String docker
+    String docker_image_id
   }
 
   command <<<
     set -euxo pipefail
     TMPDIR=${TMPDIR:-/tmp}
 
-    all_fasta="$TMPDIR/all.fasta"
-    pigz -dc ~{sep(' ',fasta_gz)} > "$all_fasta"
-
     if [ "~{nucleotide_type}" == "dna" ]; then
-        >&2 minimap2 -x map-ont -d '~{genome_name}_{nucleotide_type}.mmi' "$all_fasta"
+        >&2 minimap2 -x map-ont -d '~{genome_name}_{nucleotide_type}.mmi' "~{fasta}"
     else
-        >&2 minimap2 -x splice -d '~{genome_name}_{nucleotide_type}.mmi' "$all_fasta"
+        >&2 minimap2 -x splice -d '~{genome_name}_{nucleotide_type}.mmi' "~{fasta}"
     fi
     >&2 ls -l
   >>>
@@ -255,28 +281,25 @@ task minimap2_index {
   }
 
   runtime {
-      docker: docker
+      docker: docker_image_id
       memory: "32GiB"
   }
 }
 
 task star_generate {
   input {
-    Array[File] fasta_gz
+    File fasta
     File? transcripts_gtf_gz
     String genome_name
 
 
     Int cpu = 32
-    String docker
+    String docker_image_id
   }
 
   command <<<
     set -euxo pipefail
     TMPDIR=${TMPDIR:-/tmp}
-
-    all_fasta="$TMPDIR/all.fasta"
-    pigz -dc ~{sep(' ',fasta_gz)} > "$all_fasta"
 
     gtf_flag=""
     if [[ -n '~{transcripts_gtf_gz}' ]]; then
@@ -296,7 +319,7 @@ task star_generate {
       --sjdbGTFfile "~{transcripts_gtf_gz}" \
       --runThreadN ~{cpu} \
       --runMode genomeGenerate \
-      --genomeFastaFiles "$all_fasta" \
+      --genomeFastaFiles "~{fasta}" \
       --limitGenomeGenerateRAM 64000000000 \
       --genomeDir "$STAR_GENOME/part-0" $gtf_flag
 
@@ -312,7 +335,7 @@ task star_generate {
   }
 
   runtime {
-      docker: docker
+      docker: docker_image_id
       cpu: cpu
       memory: "64GiB"
   }
