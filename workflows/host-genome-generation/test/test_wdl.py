@@ -8,8 +8,8 @@ class TestIndexGeneration(WDLTestCase):
     wdl = os.path.join(os.path.dirname(__file__), "..", "host_genome_generation.wdl")
     common_inputs = {
         "genome_name": "test",
-        "genome_fasta_gz": os.path.join(os.path.dirname(__file__), "fixtures/input.fasta"),
-        "ERCC_fasta_gz": os.path.join(os.path.dirname(__file__), "fixtures/ERCC.fasta"),
+        "genome_fasta_gz": os.path.join(os.path.dirname(__file__), "fixtures/input.fa.gz"),
+        "ERCC_fasta_gz": os.path.join(os.path.dirname(__file__), "fixtures/ERCC.fa.gz"),
     }
 
     def testIndexGeneration(self):
