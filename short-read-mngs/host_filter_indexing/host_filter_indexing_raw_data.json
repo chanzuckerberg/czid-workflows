@@ -59,6 +59,11 @@
         "ftp://ftp.ensembl.org/pub/release-108/fasta/felis_catus/ncrna/Felis_catus.Felis_catus_9.0.ncrna.fa.gz"
       ]
     },
+    "chelonia_mydas": {
+      "genome_fasta_gz": "https://czid-public-references.s3.amazonaws.com/host_filter/chelonia_mydas/2023-01-09/GCF_015237465.2_rCheMyd1.pri.v2_genomic.fna.gz",
+      "transcripts_gtf_gz": null,
+      "transcripts_fasta_gz": []
+    },
     "chicken": {
       "genome_fasta_gz": "ftp://ftp.ensembl.org/pub/release-108/fasta/gallus_gallus/dna/Gallus_gallus.bGalGal1.mat.broiler.GRCg7b.dna_sm.toplevel.fa.gz",
       "transcripts_gtf_gz": "ftp://ftp.ensembl.org/pub/release-108/gtf/gallus_gallus/Gallus_gallus.bGalGal1.mat.broiler.GRCg7b.108.gtf.gz",
@@ -80,6 +85,14 @@
         "ftp://ftp.ensembl.org/pub/release-108/fasta/canis_lupus_familiaris/ncrna/Canis_lupus_familiaris.ROS_Cfam_1.0.ncrna.fa.gz"
       ]
     },
+    "drosophila_melanogaster": {
+      "genome_fasta_gz": "ftp://ftp.ensembl.org/pub/release-108/fasta/drosophila_melanogaster/dna/Drosophila_melanogaster.BDGP6.32.dna_sm.toplevel.fa.gz",
+      "transcripts_gtf_gz": "ftp://ftp.ensembl.org/pub/release-108/gtf/drosophila_melanogaster/Drosophila_melanogaster.BDGP6.32.108.gtf.gz",
+      "transcripts_fasta_gz": [
+        "ftp://ftp.ensembl.org/pub/release-108/fasta/drosophila_melanogaster/cdna/Drosophila_melanogaster.BDGP6.32.cdna.all.fa.gz",
+        "ftp://ftp.ensembl.org/pub/release-108/fasta/drosophila_melanogaster/ncrna/Drosophila_melanogaster.BDGP6.32.ncrna.fa.gz"
+      ]
+    },
     "ercc": {
       "genome_fasta_gz": "s3://czid-public-references/test/empty_file",
       "transcripts_gtf_gz": null,
@@ -92,6 +105,11 @@
     },
     "field_vole": {
       "genome_fasta_gz": "https://czid-public-references.s3.amazonaws.com/host_filter/field_vole/2019-07-24/GCA_001305995.1_ASM130599v1_genomic.fna",
+      "transcripts_gtf_gz": null,
+      "transcripts_fasta_gz": []
+    },
+    "gray_whale": {
+      "genome_fasta_gz": "https://czid-public-references.s3.amazonaws.com/host_filter/gray_whale/2023-01-20/GCA_002189225.1_ASM218922v1_genomic.fna.gz",
       "transcripts_gtf_gz": null,
       "transcripts_fasta_gz": []
     },
@@ -168,6 +186,14 @@
       "transcripts_fasta_gz": [
         "ftp://ftp.ensembl.org/pub/release-108/fasta/amphiprion_percula/cdna/Amphiprion_percula.Nemo_v1.cdna.all.fa.gz",
         "ftp://ftp.ensembl.org/pub/release-108/fasta/amphiprion_percula/ncrna/Amphiprion_percula.Nemo_v1.ncrna.fa.gz"
+      ]
+    },
+    "pea-aphid": {
+      "genome_fasta_gz": "ftp://ftp.ensemblgenomes.org/pub/metazoa/release-55/fasta/acyrthosiphon_pisum/dna/Acyrthosiphon_pisum.pea_aphid_22Mar2018_4r6ur.dna_sm.toplevel.fa.gz",
+      "transcripts_gtf_gz": "ftp://ftp.ensemblgenomes.org/pub/metazoa/release-55/gtf/acyrthosiphon_pisum/Acyrthosiphon_pisum.pea_aphid_22Mar2018_4r6ur.55.gtf.gz",
+      "transcripts_fasta_gz": [
+        "ftp://ftp.ensemblgenomes.org/pub/metazoa/release-55/fasta/acyrthosiphon_pisum/cdna/Acyrthosiphon_pisum.pea_aphid_22Mar2018_4r6ur.cdna.all.fa.gz",
+        "ftp://ftp.ensemblgenomes.org/pub/metazoa/release-55/fasta/acyrthosiphon_pisum/ncrna/Acyrthosiphon_pisum.pea_aphid_22Mar2018_4r6ur.ncrna.fa.gz"
       ]
     },
     "pig": {
@@ -280,5 +306,4 @@
         "ftp://ftp.ensembl.org/pub/release-108/fasta/danio_rerio/ncrna/Danio_rerio.GRCz11.ncrna.fa.gz"
       ]
     }
-  }
-  
+}
