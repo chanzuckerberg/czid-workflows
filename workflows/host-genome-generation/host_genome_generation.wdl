@@ -316,7 +316,6 @@ task star_generate {
     mkdir -p "$STAR_GENOME/part-0"
 
     STAR \
-      --sjdbGTFfile "~{transcripts_gtf_gz}" \
       --runThreadN ~{cpu} \
       --runMode genomeGenerate \
       --genomeFastaFiles "~{fasta}" \
