@@ -305,7 +305,7 @@ task star_generate {
     if [[ -n '~{transcripts_gtf_gz}' ]]; then
       transcripts_gtf="$TMPDIR/transcripts.gtf"
       pigz -dc '~{transcripts_gtf_gz}' > "$transcripts_gtf"
-      gtf_flag = "--sjdbGTFfile \"$transcripts_gtf\""
+      gtf_flag="--sjdbGTFfile \"$transcripts_gtf\""
     fi
 
     # Make directory for STAR genome
