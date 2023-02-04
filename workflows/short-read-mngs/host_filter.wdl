@@ -1,5 +1,43 @@
 version 1.0
 
+task RunDownloadFastx { 
+    input { 
+        String accession
+        String docker_image_id
+    }
+
+    command <<<
+        set -euxo pipefail
+
+        n=0
+        until [ "$n" -ge 5 ]
+        do
+            ( ffq "~{accession}" --ftp --verbose | jq -r '.[] | select( .filetype | contains("fastq")) | .url' | sort > urls.txt ) && break  # substitute your command here
+            n=$((n+1)) 
+            sleep 15
+        done
+        if [ -s "urls.txt" ]; then 
+            counter=1
+            while read fastq; do 
+                curl -L $fastq -o "file_$counter.fastq.gz"
+                ((counter++))
+            done < urls.txt
+        else
+            set +x 
+            export error="InvalidInputFileError" cause="The input file was unable to be downloaded"
+            jq -nc ".wdl_error_message=true | .error=env.error | .cause=env.cause" > /dev/stderr
+            exit 1
+        fi 
+    >>>
+    output {
+        File fastq_0 = "file_1.fastq.gz"
+        File? fastq_1 = "file_2.fastq.gz"
+    }
+    runtime {
+        docker: docker_image_id
+    }
+}
+
 task RunValidateInput {
   input {
     String docker_image_id
@@ -490,8 +528,9 @@ workflow czid_host_filter {
   input {
     String docker_image_id
     String s3_wd_uri
-    File fastqs_0
+    File? fastqs_0
     File? fastqs_1
+    String? accession
     String file_ext
     String nucleotide_type
     String host_genome
@@ -504,12 +543,19 @@ workflow czid_host_filter {
     Int max_input_fragments
     Int max_subsample_fragments
   }
+  if (defined(accession)) { 
+    call RunDownloadFastx {
+      input:
+        accession = select_first([accession]),
+        docker_image_id = docker_image_id 
+    }
+  }
 
   call RunValidateInput {
     input:
       docker_image_id = docker_image_id,
       s3_wd_uri = s3_wd_uri,
-      fastqs = select_all([fastqs_0, fastqs_1]),
+      fastqs = select_all([fastqs_0, fastqs_1, RunDownloadFastx.fastq_0, RunDownloadFastx.fastq_1]),
       file_ext = file_ext,
       max_input_fragments = max_input_fragments
   }
@@ -620,6 +666,8 @@ workflow czid_host_filter {
   }
 
   output {
+    File? fastq_0 = RunDownloadFastx.fastq_0
+    File? fastq_1 = RunDownloadFastx.fastq_1
     File validate_input_out_validate_input_summary_json = RunValidateInput.validate_input_summary_json
     File? validate_input_out_count = RunValidateInput.output_read_count
     File star_out_unmapped1_fastq = RunStar.unmapped1_fastq
