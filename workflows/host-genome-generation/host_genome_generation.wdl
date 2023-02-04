@@ -269,15 +269,15 @@ task minimap2_index {
     TMPDIR=${TMPDIR:-/tmp}
 
     if [ "~{nucleotide_type}" == "dna" ]; then
-        >&2 minimap2 -x map-ont -d '~{genome_name}_{nucleotide_type}.mmi' "~{fasta}"
+        >&2 minimap2 -x map-ont -d '~{genome_name}_~{nucleotide_type}.mmi' "~{fasta}"
     else
-        >&2 minimap2 -x splice -d '~{genome_name}_{nucleotide_type}.mmi' "~{fasta}"
+        >&2 minimap2 -x splice -d '~{genome_name}_~{nucleotide_type}.mmi' "~{fasta}"
     fi
     >&2 ls -l
   >>>
 
   output {
-      File index_mmi = "~{genome_name}_{nucleotide_type}.mmi"
+      File index_mmi = "~{genome_name}_~{nucleotide_type}.mmi"
   }
 
   runtime {
