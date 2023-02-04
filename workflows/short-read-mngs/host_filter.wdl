@@ -99,20 +99,18 @@ workflow czid_host_filter {
 
   # Additionally filter out human reads, if the host is non-human.
   if (host_genome != "human") {
-    call bowtie2_filter as bowtie2_human_filter {
+    call bowtie2_human_filter {
       input:
       reads1_fastq = hisat2_filter.filtered1_fastq,
       reads2_fastq = hisat2_filter.filtered2_fastq,
-      filter_type = "human",
       index_tar = human_bowtie2_index_tar,
       docker_image_id = docker_image_id,
       cpu = cpu
     }
-    call hisat2_filter as hisat2_human_filter {
+    call hisat2_human_filter {
       input:
       reads1_fastq = bowtie2_human_filter.filtered1_fastq,
       reads2_fastq = bowtie2_human_filter.filtered2_fastq,
-      filter_type = "human",
       index_tar = human_hisat2_index_tar,
       docker_image_id = docker_image_id,
       cpu = cpu
@@ -411,7 +409,6 @@ task bowtie2_filter {
   input {
     File reads1_fastq
     File? reads2_fastq
-    String filter_type = "host" # or human
 
     # GENOME_NAME.bowtie2.tar should contain GENOME_NAME/GENOME_NAME.*.bt*
     File index_tar
@@ -436,7 +433,7 @@ task bowtie2_filter {
     ~{bowtie2_invocation}
 
     # generate sort & compressed BAM file for archival
-    samtools sort -n -o "bowtie2_~{filter_type}.bam" -@ 4 -T /tmp "/tmp/bowtie2.sam" & samtools_pid=$!
+    samtools sort -n -o "bowtie2_host.bam" -@ 4 -T /tmp "/tmp/bowtie2.sam" & samtools_pid=$!
 
     # Extract reads [pairs] that did NOT map to the index
     if [[ '~{paired}' == 'true' ]]; then
@@ -445,25 +442,25 @@ task bowtie2_filter {
         # +  8 (mate unmapped)
         # ----
         #   13
-        samtools fastq -f 13 -1 'bowtie2_~{filter_type}_filtered1.fastq' -2 'bowtie2_~{filter_type}_filtered2.fastq' -0 /dev/null -s /dev/null /tmp/bowtie2.sam
+        samtools fastq -f 13 -1 'bowtie2_host_filtered1.fastq' -2 'bowtie2_host_filtered2.fastq' -0 /dev/null -s /dev/null /tmp/bowtie2.sam
     else
-        samtools fastq -f 4 /tmp/bowtie2.sam > 'bowtie2_~{filter_type}_filtered1.fastq'
+        samtools fastq -f 4 /tmp/bowtie2.sam > 'bowtie2_host_filtered1.fastq'
     fi
 
-    count="$(cat bowtie2_~{filter_type}_filtered{1,2}.fastq | wc -l)"
+    count="$(cat bowtie2_host_filtered{1,2}.fastq | wc -l)"
     count=$((count / 4))
-    jq --null-input --arg count "$count" '{"bowtie2_~{filter_type}_filtered_out":$count}' > 'bowtie2_~{filter_type}_filtered_out.count'
+    jq --null-input --arg count "$count" '{"bowtie2_host_filtered_out":$count}' > 'bowtie2_host_filtered_out.count'
 
     python3 - << 'EOF'
     import textwrap
     with open("bowtie2.description.md", "w") as outfile:
       print(textwrap.dedent("""
-      # bowtie2 ~{filter_type} filtering
+      # bowtie2 host filtering
 
-      Filters out reads matching the ~{filter_type} genome using
+      Filters out reads matching the host genome using
       [Bowtie2](https://bowtie-bio.sourceforge.net/bowtie2/index.shtml). Runs
       `bowtie2 ~{bowtie2_options}` using a precomputed index, then uses
-      [samtools](http://www.htslib.org/) to keep reads *not* mapping to the ~{filter_type} genome.
+      [samtools](http://www.htslib.org/) to keep reads *not* mapping to the host genome.
 
       Bowtie2 is run on the fastp-filtered FASTQ(s):
 
@@ -482,10 +479,10 @@ task bowtie2_filter {
 
   output {
     String step_description_md = read_string("bowtie2.description.md")
-    File filtered1_fastq = glob("bowtie2_*_filtered1.fastq")[0]
-    File? filtered2_fastq = if paired then glob("bowtie2_*_filtered2.fastq")[0] else reads2_fastq
-    File reads_out_count = "bowtie2_~{filter_type}_filtered_out.count"
-    File bam = "bowtie2_~{filter_type}.bam"
+    File filtered1_fastq = "bowtie2_host_filtered1.fastq"
+    File? filtered2_fastq = "bowtie2_host_filtered2.fastq"
+    File reads_out_count = "bowtie2_host_filtered_out.count"
+    File bam = "bowtie2_host.bam"
   }
   runtime {
     docker: docker_image_id
@@ -499,7 +496,6 @@ task hisat2_filter {
   input {
     File reads1_fastq
     File? reads2_fastq
-    String filter_type = "host" # or human
 
     # GENOME_NAME.hisat2.tar should contain GENOME_NAME/GENOME_NAME.*.ht2
     File index_tar
@@ -530,25 +526,25 @@ task hisat2_filter {
         # +  8 (mate unmapped)
         # ----
         #   13
-        samtools fastq -f 13 -1 'hisat2_~{filter_type}_filtered1.fastq' -2 'hisat2_~{filter_type}_filtered2.fastq' -0 /dev/null -s /dev/null /tmp/hisat2.sam
+        samtools fastq -f 13 -1 'hisat2_host_filtered1.fastq' -2 'hisat2_host_filtered2.fastq' -0 /dev/null -s /dev/null /tmp/hisat2.sam
     else
-        samtools fastq -f 4 /tmp/hisat2.sam > 'hisat2_~{filter_type}_filtered1.fastq'
+        samtools fastq -f 4 /tmp/hisat2.sam > 'hisat2_host_filtered1.fastq'
     fi
 
-    count="$(cat hisat2_~{filter_type}_filtered{1,2}.fastq | wc -l)"
+    count="$(cat hisat2_host_filtered{1,2}.fastq | wc -l)"
     count=$((count / 4))
-    jq --null-input --arg count "$count" '{"hisat2_~{filter_type}_filtered_out":$count}' > 'hisat2_~{filter_type}_filtered_out.count'
+    jq --null-input --arg count "$count" '{"hisat2_host_filtered_out":$count}' > 'hisat2_host_filtered_out.count'
 
     python3 - << 'EOF'
     import textwrap
     with open("hisat2.description.md", "w") as outfile:
       print(textwrap.dedent("""
-      # HISAT2 ~{filter_type} filtering
+      # HISAT2 host filtering
 
-      Filters out reads matching the ~{filter_type} genome using
+      Filters out reads matching the host genome using
       [HISAT2](http://daehwankimlab.github.io/hisat2/). Runs `hisat2` using a precomputed index,
       then uses [samtools](http://www.htslib.org/) to keep reads *not* mapping to the
-      ~{filter_type} genome.
+      host genome.
 
       HISAT2 complements Bowtie2 with a different algorithm that also models potential RNA splice
       junctions (if CZ ID indexes transcript models for the host).
@@ -568,9 +564,163 @@ task hisat2_filter {
 
   output {
     String step_description_md = read_string("hisat2.description.md")
-    File filtered1_fastq = glob("hisat2_*_filtered1.fastq")[0]
-    File? filtered2_fastq = if paired then glob("hisat2_*_filtered2.fastq")[0] else reads2_fastq
-    File reads_out_count = "hisat2_~{filter_type}_filtered_out.count"
+    File filtered1_fastq = "hisat2_host_filtered1.fastq"
+    File? filtered2_fastq = "hisat2_host_filtered2.fastq"
+    File reads_out_count = "hisat2_host_filtered_out.count"
+  }
+  runtime {
+    docker: docker_image_id
+    cpu: cpu
+    memory: "~{cpu*2}G"
+  }
+}
+
+###################################################################################################
+### NOTE: bowtie2_human_filter and hisat2_human_filter are roughly copy/paste of the _host_filter
+###       tasks above. We'd much prefer to consolidate them, but the webapp pipeline visualization
+###       isn't yet able to handle WDL tasks used multiple times with dynamic output filenames.
+###################################################################################################
+
+task bowtie2_human_filter {
+  # Remove reads [pairs] with bowtie2 hits to the given index
+  input {
+    File reads1_fastq
+    File? reads2_fastq
+
+    # GENOME_NAME.bowtie2.tar should contain GENOME_NAME/GENOME_NAME.*.bt*
+    File index_tar
+    String bowtie2_options = "--very-sensitive-local"
+
+    String docker_image_id
+    Int cpu = 16
+  }
+
+  Boolean paired = defined(reads2_fastq)
+  String genome_name = basename(index_tar, ".bowtie2.tar")
+  String bowtie2_invocation =
+      "bowtie2 -x '/tmp/${genome_name}/${genome_name}' ${bowtie2_options} -p ${cpu}"
+        + (if (paired) then " -1 '${reads1_fastq}' -2 '${reads2_fastq}'" else " -U '${reads1_fastq}'")
+        + " -q -S '/tmp/bowtie2.sam'"
+
+  command <<<
+    set -euxo pipefail
+
+    tar xf '~{index_tar}' -C /tmp
+
+    ~{bowtie2_invocation}
+
+    # generate sort & compressed BAM file for archival
+    samtools sort -n -o "bowtie2_human.bam" -@ 4 -T /tmp "/tmp/bowtie2.sam" & samtools_pid=$!
+
+    # Extract reads [pairs] that did NOT map to the index
+    if [[ '~{paired}' == 'true' ]]; then
+        #    1 (read paired)
+        #    4 (read unmapped)
+        # +  8 (mate unmapped)
+        # ----
+        #   13
+        samtools fastq -f 13 -1 'bowtie2_human_filtered1.fastq' -2 'bowtie2_human_filtered2.fastq' -0 /dev/null -s /dev/null /tmp/bowtie2.sam
+    else
+        samtools fastq -f 4 /tmp/bowtie2.sam > 'bowtie2_human_filtered1.fastq'
+    fi
+
+    count="$(cat bowtie2_human_filtered{1,2}.fastq | wc -l)"
+    count=$((count / 4))
+    jq --null-input --arg count "$count" '{"bowtie2_human_filtered_out":$count}' > 'bowtie2_human_filtered_out.count'
+
+    python3 - << 'EOF'
+    import textwrap
+    with open("bowtie2.description.md", "w") as outfile:
+      print(textwrap.dedent("""
+      # bowtie2 human filtering
+
+      Filters out reads matching the human genome using
+      [Bowtie2](https://bowtie-bio.sourceforge.net/bowtie2/index.shtml). This is similar to the
+      host filtering task, but CZ ID also filters non-human samples against human genome indexes
+      to alleviate any potential data privacy concerns.
+      """).strip(), file=outfile)
+    EOF
+
+    wait $samtools_pid
+  >>>
+
+  output {
+    String step_description_md = read_string("bowtie2.description.md")
+    File filtered1_fastq = "bowtie2_human_filtered1.fastq"
+    File? filtered2_fastq = "bowtie2_human_filtered2.fastq"
+    File reads_out_count = "bowtie2_human_filtered_out.count"
+    File bam = "bowtie2_human.bam"
+  }
+  runtime {
+    docker: docker_image_id
+    cpu: cpu
+    memory: "~{cpu*2}G"
+  }
+}
+
+task hisat2_human_filter {
+  # Remove reads [pairs] with HISAT2 hits to the given index
+  input {
+    File reads1_fastq
+    File? reads2_fastq
+
+    # GENOME_NAME.hisat2.tar should contain GENOME_NAME/GENOME_NAME.*.ht2
+    File index_tar
+    String hisat2_options = ""
+
+    String docker_image_id
+    Int cpu = 16
+  }
+
+  Boolean paired = defined(reads2_fastq)
+  String genome_name = basename(index_tar, ".hisat2.tar")
+  String hisat2_invocation =
+      "/hisat2/hisat2 -x '/tmp/${genome_name}/${genome_name}' ${hisat2_options} -p ${cpu}"
+        + (if (paired) then " -1 '${reads1_fastq}' -2 '${reads2_fastq}'" else " -U '${reads2_fastq}'")
+        + " -q -S /tmp/hisat2.sam"
+
+  command <<<
+    set -euxo pipefail
+
+    tar xf '~{index_tar}' -C /tmp
+
+    ~{hisat2_invocation}
+
+    # Extract reads [pairs] that did NOT map to the index
+    if [[ '~{paired}' == 'true' ]]; then
+        #    1 (read paired)
+        #    4 (read unmapped)
+        # +  8 (mate unmapped)
+        # ----
+        #   13
+        samtools fastq -f 13 -1 'hisat2_human_filtered1.fastq' -2 'hisat2_human_filtered2.fastq' -0 /dev/null -s /dev/null /tmp/hisat2.sam
+    else
+        samtools fastq -f 4 /tmp/hisat2.sam > 'hisat2_human_filtered1.fastq'
+    fi
+
+    count="$(cat hisat2_human_filtered{1,2}.fastq | wc -l)"
+    count=$((count / 4))
+    jq --null-input --arg count "$count" '{"hisat2_human_filtered_out":$count}' > 'hisat2_human_filtered_out.count'
+
+    python3 - << 'EOF'
+    import textwrap
+    with open("hisat2.description.md", "w") as outfile:
+      print(textwrap.dedent("""
+      # HISAT2 human filtering
+
+      Filters out reads matching the human genome using
+      [HISAT2](http://daehwankimlab.github.io/hisat2/). This is similar to the host filtering
+      task, but CZ ID also filters non-human samples against human genome indexes to alleviate any
+      potential data privacy concerns.
+      """).strip(), file=outfile)
+    EOF
+  >>>
+
+  output {
+    String step_description_md = read_string("hisat2.description.md")
+    File filtered1_fastq = "hisat2_human_filtered1.fastq"
+    File? filtered2_fastq = "hisat2_human_filtered2.fastq"
+    File reads_out_count = "hisat2_human_filtered_out.count"
   }
   runtime {
     docker: docker_image_id
