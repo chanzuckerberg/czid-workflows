@@ -322,7 +322,10 @@ task kallisto {
   command <<<
     set -euxo pipefail
 
-    ~{kallisto_invocation}
+    # NOTE: kallisto exit code will be 1 if no reads pseudoalign, which we don't necessarily
+    #       consider an error. Therefore decide success based on existence of run_info.json and
+    #       abundance.tsv
+    ~{kallisto_invocation} || true
     >&2 jq . run_info.json
 
     mv abundance.tsv transcript_abundance.tsv
