@@ -327,7 +327,8 @@ task RunResultsPerSample {
             
             nr = remove_na(set(sub_df['All Mapped Reads_kma_amr']))
             result['num_reads'] = max(nr) if len(nr) > 0 else None
-            
+            result['total_reads'] = total_reads
+
             pid = remove_na(set(sub_df['Best_Identities_contig_amr']))
             result['contig_percent_id'] = sum(pid) / len(pid) if len(pid) > 0 else None
             
@@ -342,15 +343,12 @@ task RunResultsPerSample {
             sp = remove_na(set(sub_df['CARD*kmer Prediction_contig_sp']).union(set(sub_df['CARD*kmer Prediction_kma_sp'])))
             final_species = {} 
             for s in sp:
-                #print(s)
                 if 'Unknown' in s:
-                    #print('a')
                     final_species[s] = 0
                     continue
                 else:
                     split_sp = s.split(';')
                     for t in split_sp:
-                        #print(t.strip())
                         this_t = t.strip()
                         if ':' in this_t: #not just a space
                             species_name = t.split(':')[0]
@@ -361,7 +359,7 @@ task RunResultsPerSample {
         final_df = pd.DataFrame.from_dict(result_df)
         final_df = final_df.transpose()
         final_df = final_df[["sample_name", "gene_family", "drug_class", "resistance_mechanism", "model_type", "num_contigs", 
-                             "cutoff", "contig_coverage_breadth", "contig_percent_id", "contig_species", "num_reads", "read_coverage_breadth", "read_coverage_depth", "read_species"]]
+                             "cutoff", "contig_coverage_breadth", "contig_percent_id", "contig_species", "num_reads", "total_reads", "read_coverage_breadth", "read_coverage_depth", "read_species"]]
         final_df.sort_index(inplace=True)
         final_df.dropna(subset=['drug_class'], inplace=True)
         final_df.to_csv("primary_AMR_report.tsv", sep='\t', index_label="gene_name")
