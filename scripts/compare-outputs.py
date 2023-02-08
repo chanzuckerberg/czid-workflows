@@ -2,7 +2,6 @@ import argparse
 import json
 from pathlib import Path
 import subprocess
-import sys
 
 
 def process_md5sum_file(filepath: str):
@@ -76,7 +75,8 @@ def print_json_hash(outfile: str):
 def main():
     # set up the argument parser
     parser = argparse.ArgumentParser(
-        description="A script that reads in outputs.json files from miniwdl and runs md5sum on the files. Prints out a diff of the files. Depends on md5sum. "
+        description="A script that reads in outputs.json files from miniwdl and runs md5sum on the files. \
+        Prints out a diff of the files. Depends on md5sum. "
     )
     parser.add_argument(
         "miniwdl_output_1",
