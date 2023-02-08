@@ -1217,7 +1217,7 @@ workflow czid_long_read_mngs {
         String library_type = "RNA"
         String guppy_basecaller_setting = "hac" # fast, hac, super
 
-        Int subsample_depth = 400000 # should be 4x the number of reads desired
+        Int subsample_depth = 12000000 # should be 4x the number of reads desired
 
         File minimap_host_db
         File minimap_human_db
