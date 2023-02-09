@@ -220,57 +220,6 @@ task NonhostFastq {
   }
 }
 
-task RunGlueJob {
-  input {
-    String docker_image_id
-    String s3_wd_uri
-  }
-
-  command<<<
-  # This command is specific to the CZ ID system
-  set -euxo pipefail 
-
-  BUCKET=$(echo "~{s3_wd_uri}" | cut -d/ -f 3)
-  PIPELINE_RUN_ID=$(echo "~{s3_wd_uri}" | cut -d/ -f 7)
-  if [[ $BUCKET == "idseq-samples-sandbox" ]]; then
-   ENV=sandbox
-  elif [[ $BUCKET == "idseq-samples-staging" ]]; then
-   ENV=staging
-  elif [[ $BUCKET == "idseq-prod-samples-us-west-2" ]]; then
-   ENV=prod
-  else 
-    exit 0
-  fi
-  JOBID=$(aws glue start-job-run --job-name "$ENV"_heatmap_es_job --region us-west-2 --arguments="--user_pipeline_run_ids=$PIPELINE_RUN_ID,--user_background_id=26,--job_type=selected_runs" | jq -r .JobRunId) 
-  i=0
-  while true; do 
-    JOBSTATE=$(aws glue get-job-run --job-name staging_heatmap_es_job --run-id $JOBID | jq -r .JobRun.JobRunState)
-    if [[ $JOBSTATE == "SUCCEEDED" ]]; then 
-      exit 0 
-    elif [[ $JOBSTATE == "FAILED" ]]; then 
-      exit 1
-    elif [[ $JOBSTATE == "ERROR" ]]; then 
-      exit 1
-    elif [[ $JOBSTATE == "TIMEOUT" ]]; then 
-      exit 1
-    else 
-      sleep 60
-    fi
-    
-    # Timeout 
-    if [[ $i -gt 15 ]]; then 
-      exit 1
-    fi 
-    i=$((i + 1))
-  done
-  >>>
-
-  runtime { 
-    docker: docker_image_id
-  }
-}
-
-
 workflow czid_experimental {
   input {
     String docker_image_id
@@ -297,7 +246,6 @@ workflow czid_experimental {
     File resist_genome_db = "s3://czid-public-references/amr/ARGannot_r2.fasta"
     File resist_genome_bed = "s3://czid-public-references/amr/argannot_genome.bed"
     Boolean use_taxon_whitelist = false
-    Boolean enable_glue = false
   }
 
   call GenerateTaxidFasta {
@@ -371,13 +319,6 @@ workflow czid_experimental {
       nonhost_fasta_refined_taxid_annot_fasta = nonhost_fasta_refined_taxid_annot_fasta,
       duplicate_clusters_csv = duplicate_clusters_csv,
       use_taxon_whitelist = use_taxon_whitelist
-  }
-  if (enable_glue) {
-    call RunGlueJob {
-      input:
-        docker_image_id = docker_image_id,
-        s3_wd_uri = s3_wd_uri,
-    }
   }
 
   output {
