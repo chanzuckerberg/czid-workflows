@@ -303,6 +303,57 @@ task CombineTaxonCounts {
   }
 }
 
+task OutputResultsCSV { 
+  input { 
+    String docker_image_id
+    String s3_wd_uri
+    File counts_json_file 
+    File lineage_csv
+  }
+  command <<<
+  set -euxo pipefail
+  gunzip -c "~{lineage_csv}" > "lineage.csv"
+
+  python3 <<CODE
+  import json
+  import pandas as pd
+  from idseq_dag.util.dict import open_file_db_by_extension
+
+  with open("~{counts_json_file}") as f:
+    taxon_counts = json.load(f)["pipeline_output"]["taxon_counts_attributes"]
+  df = pd.DataFrame(taxon_counts)
+  df = df.loc[df["count_type"] != "merged_NT_NR", ~df.columns.isin(['base_count', 'source_count_type'])]
+  lineage = pd.read_csv("lineage.csv", index_col='taxid', usecols = ['taxid','tax_name'], squeeze=True).to_dict()
+  df["family"] = df.family_taxid.map(lambda x: lineage.get(int(x), x))
+  df["genus"] = df.genus_taxid.map(lambda x: lineage.get(int(x), x))
+  df["taxon_name"] = df.tax_id.map(lambda x: lineage.get(int(x), x))
+
+  column_order = [
+    "tax_id",
+    "tax_level",
+    "taxon_name",
+    "genus", 
+    "family",
+    "count_type",
+    "count",
+    "nonunique_count",
+    "dcr",
+    "percent_identity",
+    "alignment_length",
+    "e_value",
+  ]
+  df[column_order].sort_values(by=["count_type", "tax_level", "count"], ascending=False).to_csv("result.csv", index=None)
+
+  CODE
+  >>>
+  output {
+    File result_csv = "result.csv"
+  }
+  runtime {
+    docker: docker_image_id
+  }
+}
+
 task CombineJson {
   input {
     String docker_image_id
@@ -481,6 +532,8 @@ workflow czid_postprocess {
     File lineage_db = "s3://czid-public-references/taxonomy/2021-01-22/taxid-lineages.db"
     File taxon_blacklist = "s3://czid-public-references/taxonomy/2021-01-22/taxon_blacklist.txt"
     File deuterostome_db = "s3://czid-public-references/taxonomy/2021-01-22/deuterostome_taxids.txt"
+    File lineage_csv = "s3://czid-public-references/ncbi-indexes-prod/2021-01-22/index-generation-2/versioned-taxid-lineages.csv.gz"
+    Boolean output_results_csv = false
     Boolean use_deuterostome_filter = true
     Boolean use_taxon_whitelist = false
     Int min_contig_length = 100
@@ -601,6 +654,16 @@ workflow czid_postprocess {
         BlastContigs_refined_rapsearch2_out.assembly_refined_rapsearch2_counts_with_dcr_json,
         ComputeMergedTaxonCounts.merged_taxon_counts_with_dcr_json
       ]
+  }
+
+  if (output_results_csv) { 
+    call OutputResultsCSV { 
+      input:
+      docker_image_id = docker_image_id,
+      s3_wd_uri = s3_wd_uri,
+      counts_json_file = CombineTaxonCounts.assembly_refined_taxon_counts_with_dcr_json,
+      lineage_csv = lineage_csv
+    }
   }
 
   call CombineJson {
