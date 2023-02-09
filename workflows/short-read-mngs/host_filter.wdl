@@ -328,15 +328,15 @@ task kallisto {
     ~{kallisto_invocation} || true
     >&2 jq . run_info.json
 
-    mv abundance.tsv transcript_abundance.tsv
+    mv abundance.tsv reads_per_transcript.kallisto.tsv
 
     # extract ERCC counts
     echo -e "target_id\test_counts" > ERCC_counts.tsv
-    grep ERCC- transcript_abundance.tsv | cut -f1,4 >> ERCC_counts.tsv
+    grep ERCC- reads_per_transcript.kallisto.tsv | cut -f1,4 >> ERCC_counts.tsv
 
     # If we've been provided the GTF, then roll up the transcript abundance estimates by gene.
     if [[ -n '~{gtf_gz}' ]]; then
-      python3 - transcript_abundance.tsv '~{gtf_gz}' << 'EOF'
+      python3 - reads_per_transcript.kallisto.tsv '~{gtf_gz}' << 'EOF'
     # Given kallisto output tsv based on index of Ensembl transcripts FASTA, and matching
     # Ensembl GTF, report the total est_counts and tpm for each gene (sum over all transcripts
     # of each gene).
@@ -365,7 +365,7 @@ task kallisto {
     )
 
     gene_abundance = merged_df.groupby("gene_id").sum(numeric_only=True)
-    gene_abundance.to_csv("gene_abundance.tsv", sep="\t")
+    gene_abundance.to_csv("reads_per_gene.kallisto.tsv", sep="\t")
     EOF
     fi
 
@@ -395,9 +395,9 @@ task kallisto {
 
   output {
     String step_description_md = read_string("kallisto.description.md")
-    File transcript_abundance_tsv = "transcript_abundance.tsv"
+    File transcript_abundance_tsv = "reads_per_transcript.kallisto.tsv"
     File ERCC_counts_tsv = "ERCC_counts.tsv"
-    File? gene_abundance_tsv = "gene_abundance.tsv"
+    File? gene_abundance_tsv = "reads_per_gene.kallisto.tsv"
   }
 
   runtime {
