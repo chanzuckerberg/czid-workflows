@@ -145,7 +145,7 @@ workflow czid_host_filter {
   }
 
   output {
-    File reads_in_count = RunValidateInput.reads_in_count
+    File input_read_count = RunValidateInput.reads_in_count
     File validate_input_out_validate_input_summary_json = RunValidateInput.validate_input_summary_json
     File validate_input_out_count = RunValidateInput.reads_out_count
 
