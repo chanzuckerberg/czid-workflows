@@ -777,7 +777,7 @@ task collect_insert_size_metrics {
 task RunCZIDDedup {
   input {
     File hisat2_filtered1_fastq
-    File? reads2_fastq
+    File? hisat2_filtered2_fastq
     String docker_image_id
     String s3_wd_uri
   }
