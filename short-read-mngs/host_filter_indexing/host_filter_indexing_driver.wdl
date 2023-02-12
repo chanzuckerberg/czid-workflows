@@ -7,6 +7,7 @@ struct HostRawData {
     File genome_fasta_gz
     File? transcripts_gtf_gz
     Array[File] transcripts_fasta_gz
+    Array[File]? other_fasta_gz
 }
 
 struct HostIndex {
@@ -43,6 +44,7 @@ workflow host_filter_indexing_driver {
             genome_fasta_gz = host1data.genome_fasta_gz,
             transcripts_gtf_gz = host1data.transcripts_gtf_gz,
             transcripts_fasta_gz = host1data.transcripts_fasta_gz,
+            other_fasta_gz = select_first([host1data.other_fasta_gz, []]),
             ERCC_fasta_gz, docker
         }
         Pair[String,HostIndex] entry = (host1, HostIndex {

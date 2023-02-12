@@ -156,13 +156,19 @@
       "transcripts_gtf_gz": null,
       "transcripts_fasta_gz": []
     },
-    "mosquito": {
-      "genome_fasta_gz": "ftp://ftp.ensemblgenomes.org/pub/metazoa/release-55/fasta/anopheles_gambiae/dna/Anopheles_gambiae.AgamP4.dna_sm.toplevel.fa.gz",
-      "transcripts_gtf_gz": "ftp://ftp.ensemblgenomes.org/pub/metazoa/release-55/gtf/anopheles_gambiae/Anopheles_gambiae.AgamP4.55.gtf.gz",
-      "transcripts_fasta_gz": [
-        "ftp://ftp.ensemblgenomes.org/pub/metazoa/release-55/fasta/anopheles_gambiae/cdna/Anopheles_gambiae.AgamP4.cdna.all.fa.gz",
-        "ftp://ftp.ensemblgenomes.org/pub/metazoa/release-55/fasta/anopheles_gambiae/ncrna/Anopheles_gambiae.AgamP4.ncrna.fa.gz"
-      ]
+    "mosquitos": {
+      "genome_fasta_gz": "ftp://ftp.ensemblgenomes.org/pub/metazoa/release-56/fasta/anopheles_gambiae/dna/Anopheles_gambiae.AgamP4.dna_sm.toplevel.fa.gz",
+      "other_fasta_gz": [
+        "ftp://ftp.ensemblgenomes.ebi.ac.uk/pub/metazoa/release-56/fasta/culex_quinquefasciatus/dna/Culex_quinquefasciatus.CpipJ2.dna_sm.toplevel.fa.gz",
+        "ftp://ftp.ensemblgenomes.ebi.ac.uk/pub/metazoa/release-56/fasta/aedes_aegypti_lvpagwg/dna/Aedes_aegypti_lvpagwg.AaegL5.dna_sm.toplevel.fa.gz",
+        "ftp://ftp.ensemblgenomes.ebi.ac.uk/pub/metazoa/release-56/fasta/anopheles_sinensis/dna/Anopheles_sinensis.AsinS2.dna_sm.toplevel.fa.gz",
+        "ftp://ftp.ensemblgenomes.ebi.ac.uk/pub/metazoa/release-56/fasta/anopheles_darlingi/dna/Anopheles_darlingi.AdarC3.dna_sm.toplevel.fa.gz",
+        "ftp://ftp.ensemblgenomes.ebi.ac.uk/pub/metazoa/release-56/fasta/anopheles_stephensi/dna/Anopheles_stephensi.AsteS1.dna_sm.toplevel.fa.gz",
+        "ftp://ftp.ensemblgenomes.ebi.ac.uk/pub/metazoa/release-56/fasta/anopheles_farauti/dna/Anopheles_farauti.AfarF2.dna_sm.toplevel.fa.gz",
+        "ftp://ftp.ensemblgenomes.ebi.ac.uk/pub/metazoa/release-56/fasta/anopheles_minimus/dna/Anopheles_minimus.AminM1.dna_sm.toplevel.fa.gz"
+      ],
+      "transcripts_gtf_gz": null,
+      "transcripts_fasta_gz": []
     },
     "mouse": {
       "genome_fasta_gz": "ftp://ftp.ensembl.org/pub/release-108/fasta/mus_musculus/dna/Mus_musculus.GRCm39.dna_sm.toplevel.fa.gz",
