@@ -146,6 +146,8 @@ workflow czid_host_filter {
 
   output {
     File input_read_count = RunValidateInput.reads_in_count
+    File validate_input_out_valid_input1_fastq = RunValidateInput.valid_input1_fastq
+    File? validate_input_out_valid_input2_fastq = RunValidateInput.valid_input2_fastq
     File validate_input_out_validate_input_summary_json = RunValidateInput.validate_input_summary_json
     File validate_input_out_count = RunValidateInput.reads_out_count
 
@@ -162,6 +164,7 @@ workflow czid_host_filter {
     File bowtie2_host_filtered1_fastq = bowtie2_filter.bowtie2_host_filtered1_fastq
     File? bowtie2_host_filtered2_fastq = bowtie2_filter.bowtie2_host_filtered2_fastq
     File bowtie2_host_filtered_out_count = bowtie2_filter.reads_out_count
+    File bowtie2_host_filtered_bam = bowtie2_filter.bam
     File hisat2_host_filtered1_fastq = hisat2_filter.hisat2_host_filtered1_fastq
     File? hisat2_host_filtered2_fastq = hisat2_filter.hisat2_host_filtered2_fastq
     File hisat2_host_filtered_out_count = hisat2_filter.reads_out_count
