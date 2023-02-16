@@ -270,7 +270,7 @@ task fastp_qc {
     import textwrap
     with open("fastp.description.md", "w") as outfile:
       print(textwrap.dedent("""
-      # fastp read trimming & filtering
+      **fastp read trimming & filtering**
 
       Processes the reads using [fastp](https://github.com/OpenGene/fastp):
 
@@ -376,7 +376,7 @@ task kallisto {
     import textwrap
     with open("kallisto.description.md", "w") as outfile:
       print(textwrap.dedent("""
-      # kallisto RNA quantification
+      **kallisto RNA quantification**
 
       Quantifies host transcripts using [kallisto](https://pachterlab.github.io/kallisto/about).
       The host transcript sequences are sourced from Ensembl, along with
@@ -461,7 +461,7 @@ task bowtie2_filter {
     import textwrap
     with open("bowtie2.description.md", "w") as outfile:
       print(textwrap.dedent("""
-      # bowtie2 host filtering
+      **bowtie2 host filtering**
 
       Filters out reads matching the host genome using
       [Bowtie2](https://bowtie-bio.sourceforge.net/bowtie2/index.shtml). Runs
@@ -545,7 +545,7 @@ task hisat2_filter {
     import textwrap
     with open("hisat2.description.md", "w") as outfile:
       print(textwrap.dedent("""
-      # HISAT2 host filtering
+      **HISAT2 host filtering**
 
       Filters out reads matching the host genome using
       [HISAT2](http://daehwankimlab.github.io/hisat2/). Runs `hisat2` using a precomputed index,
@@ -638,7 +638,7 @@ task bowtie2_human_filter {
     import textwrap
     with open("bowtie2.description.md", "w") as outfile:
       print(textwrap.dedent("""
-      # bowtie2 human filtering
+      **bowtie2 human filtering**
 
       Filters out reads matching the human genome using
       [Bowtie2](https://bowtie-bio.sourceforge.net/bowtie2/index.shtml). This is similar to the
@@ -712,7 +712,7 @@ task hisat2_human_filter {
     import textwrap
     with open("hisat2.description.md", "w") as outfile:
       print(textwrap.dedent("""
-      # HISAT2 human filtering
+      **HISAT2 human filtering**
 
       Filters out reads matching the human genome using
       [HISAT2](http://daehwankimlab.github.io/hisat2/). This is similar to the host filtering
@@ -747,7 +747,7 @@ task collect_insert_size_metrics {
     import textwrap
     with open("collect_insert_size_metrics.description.md", "w") as outfile:
       print(textwrap.dedent("""
-      # Picard CollectInsertSizeMetrics
+      **Picard CollectInsertSizeMetrics**
 
       This step computes insert size metrics for Paired End samples. These metrics are computed by
       the Broad Institute's Picard toolkit.
