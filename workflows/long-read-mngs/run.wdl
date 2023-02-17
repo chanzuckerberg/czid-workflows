@@ -793,6 +793,7 @@ task FindTopHitsNT {
         from idseq_dag.steps.blast_contigs import get_top_m8_nt
 
         get_top_m8_nt("~{nt_deduped_m8}", "gsnap.blast.top.m8")
+        CODE
 
         python3 - << 'EOF'
         import textwrap
@@ -828,6 +829,7 @@ task FindTopHitsNR {
         from idseq_dag.steps.blast_contigs import get_top_m8_nr
 
         get_top_m8_nr("~{nr_deduped_m8}", "rapsearch2.blast.top.m8")
+        CODE
 
         python3 - << 'EOF'
         import textwrap
@@ -883,6 +885,7 @@ task SummarizeHitsNT {
             ~{min_alignment_length},
             "m8_reassigned_nt.tab",
             "gsnap.hitsummary2.tab",
+        CODE
 
         python3 - << 'EOF'
         import textwrap
@@ -939,6 +942,7 @@ task SummarizeHitsNR {
             "m8_reassigned_nr.tab",
             "rapsearch2.hitsummary2.tab",
         )
+        CODE
 
         python3 - << 'EOF'
         import textwrap
