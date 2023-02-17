@@ -885,6 +885,7 @@ task SummarizeHitsNT {
             ~{min_alignment_length},
             "m8_reassigned_nt.tab",
             "gsnap.hitsummary2.tab",
+        )
         CODE
 
         python3 - << 'EOF'
@@ -894,7 +895,6 @@ task SummarizeHitsNT {
             Generates a summary of all the reads aligning to NT, including those assembled into contigs
             """).strip(), file=outfile)
         EOF
-        )
     >>>
 
     output {
