@@ -405,18 +405,9 @@ task GenerateContigStats {
         with open("contig_base_counts.json", 'w') as f:
             json.dump(base_counts, f)
         CODE
-
-        python3 - << 'EOF'
-        import textwrap
-        with open("contig_stats.description.md", "w") as outfile:
-            print(textwrap.dedent("""
-            Generates a count of the number of reads/bases that map to each contig
-            """).strip(), file=outfile)
-        EOF
     >>>
 
     output {
-        String step_description_md = read_string("contig_stats.description.md")
         File contig_stats_json = "contig_stats.json"
         File contig_base_counts = "contig_base_counts.json"
     }
@@ -579,18 +570,9 @@ task RunNTAlignment {
         fi
         python3 /usr/local/lib/python3.10/dist-packages/idseq_utils/paf2blast6.py gsnap.paf
         mv *frompaf.m8 "gsnap.m8" # TODO: rewrite paf2blast6.py to output in this format
-
-        python3 - << 'EOF'
-        import textwrap
-        with open("nt_alignment.description.md", "w") as outfile:
-            print(textwrap.dedent("""
-            Aligns contigs and non-contig reads to the NCBI nucleotide (NT) database using minimap2.
-            """).strip(), file=outfile)
-        EOF
     >>>
 
     output {
-        String step_description_md = read_string("nt_alignment.description.md")
         File nt_paf = "gsnap.paf"
         File nt_m8 = "gsnap.m8"
     }
@@ -699,18 +681,9 @@ task RunNRAlignment {
         CODE
         diamond --version > diamond_version.txt
         fi
-
-        python3 - << 'EOF'
-        import textwrap
-        with open("nr_alignment.description.md", "w") as outfile:
-            print(textwrap.dedent("""
-            Aligns contigs to the NCBI protein (NR) database using DIAMOND.
-            """).strip(), file=outfile)
-        EOF
     >>>
 
     output {
-        String step_description_md = read_string("nr_alignment.description.md")
         File nr_m8 = "diamond.m8"
     }
 
@@ -887,18 +860,9 @@ task SummarizeHitsNT {
             "gsnap.hitsummary2.tab",
         )
         CODE
-
-        python3 - << 'EOF'
-        import textwrap
-        with open("summarize_hits_nt.description.md", "w") as outfile:
-            print(textwrap.dedent("""
-            Generates a summary of all the reads aligning to NT, including those assembled into contigs
-            """).strip(), file=outfile)
-        EOF
     >>>
 
     output {
-        String step_description_md = read_string("summarize_hits_nt.description.md")
         File nt_m8_reassigned = "m8_reassigned_nt.tab"
         File nt_hit_summary = "gsnap.hitsummary2.tab"
     }
@@ -943,18 +907,9 @@ task SummarizeHitsNR {
             "rapsearch2.hitsummary2.tab",
         )
         CODE
-
-        python3 - << 'EOF'
-        import textwrap
-        with open("summarize_hits_nr.description.md", "w") as outfile:
-            print(textwrap.dedent("""
-            Generates a summary of reads assembled into contigs aligned to NR
-            """).strip(), file=outfile)
-        EOF
     >>>
 
     output {
-        String step_description_md = read_string("summarize_hits_nr.description.md")
         File nr_m8_reassigned = "m8_reassigned_nr.tab"
         File nr_hit_summary = "rapsearch2.hitsummary2.tab"
     }
@@ -982,18 +937,9 @@ task TallyHitsNT {
             --hitsummary-filepath "~{nt_hit_summary}" \
             --reads-to-contigs-filepath "~{reads_to_contigs_tsv}" \
             --output-filepath "tallied_hits_nt.csv" \
-
-        python3 - << 'EOF'
-        import textwrap
-        with open("tally_hits_nt.description.md", "w") as outfile:
-            print(textwrap.dedent("""
-            Computes per-taxon statistics based on NT alignments
-            """).strip(), file=outfile)
-        EOF
     >>>
 
     output {
-        String step_description_md = read_string("tally_hits_nt.description.md")
         File tallied_hits = "tallied_hits_nt.csv"
     }
 
@@ -1020,18 +966,9 @@ task TallyHitsNR {
             --hitsummary-filepath "~{nr_hit_summary}" \
             --reads-to-contigs-filepath "~{reads_to_contigs_tsv}" \
             --output-filepath "tallied_hits_nr.csv" \
-
-        python3 - << 'EOF'
-        import textwrap
-        with open("tally_hits_nr.description.md", "w") as outfile:
-            print(textwrap.dedent("""
-            Computes per-taxon statistics based on NR alignments
-            """).strip(), file=outfile)
-        EOF
     >>>
 
     output {
-        String step_description_md = read_string("tally_hits_nr.description.md")
         File tallied_hits = "tallied_hits_nr.csv"
     }
 
@@ -1069,18 +1006,9 @@ task UnmappedReads {
                 ur.write("\n")
         CODE
         seqkit grep -f "unmapped_reads.txt" "~{input_file}" > unmapped_reads.fastq
-
-        python3 - << 'EOF'
-        import textwrap
-        with open("unmapped_reads.description.md", "w") as outfile:
-            print(textwrap.dedent("""
-            Generates output containing unmapped reads
-            """).strip(), file=outfile)
-        EOF
     >>>
 
     output {
-        String step_description_md = read_string("unmapped_reads.description.md")
         File unmapped_reads = "unmapped_reads.fastq"
     }
 
@@ -1110,18 +1038,9 @@ task GenerateAnnotatedFasta {
             unidentified_fasta_path = "refined_unidentified.fa",
         )
         CODE
-
-        python3 - << 'EOF'
-        import textwrap
-        with open("refined_annotated_out.description.md", "w") as outfile:
-            print(textwrap.dedent("""
-            Annotates non-host FASTA with NCBI accession IDs
-            """).strip(), file=outfile)
-        EOF
     >>>
 
     output {
-        String step_description_md = read_string("refined_annotated_out.description.md")
         File assembly_refined_annotated_merged_fa = "refined_annotated_merged.fa"
         File assembly_refined_unidentified_fa = "refined_unidentified.fa"
     }
@@ -1183,18 +1102,9 @@ task GenerateTaxidLocator {
             --output-dir-s3 '' \
             --additional-files '{}' \
             --additional-attributes '{}'
-
-        python3 - << 'EOF'
-        import textwrap
-        with open("refined_taxid_locator_out.description.md", "w") as outfile:
-            print(textwrap.dedent("""
-            Generates and annotates non-host FASTA with taxonomy IDs
-            """).strip(), file=outfile)
-        EOF
     >>>
 
     output {
-        String step_description_md = read_string("refined_taxid_locator_out.description.md")
         File assembly_refined_taxid_annot_sorted_nt_fasta = "assembly/refined_taxid_annot_sorted_nt.fasta"
         File assembly_refined_taxid_locations_nt_json = "assembly/refined_taxid_locations_nt.json"
         File assembly_refined_taxid_annot_sorted_nr_fasta = "assembly/refined_taxid_annot_sorted_nr.fasta"
@@ -1249,18 +1159,9 @@ task SummarizeContigsNT {
             "gsnap_contig_summary.json",
         )
         CODE
-
-        python3 - << 'EOF'
-        import textwrap
-        with open("summarize_contigs_nt.description.md", "w") as outfile:
-            print(textwrap.dedent("""
-            Generates a summary of the NT contig alignments
-            """).strip(), file=outfile)
-        EOF
     >>>
 
     output {
-        String step_description_md = read_string("summarize_contigs_nt.description.md")
         File nt_refined_counts_with_dcr_json = "refined_gsnap_counts_with_dcr.json"
         File nt_contig_summary_json = "gsnap_contig_summary.json"
     }
@@ -1303,19 +1204,10 @@ task SummarizeContigsNR {
             "rapsearch2_contig_summary.json",
         )
         CODE
-
-        python3 - << 'EOF'
-        import textwrap
-        with open("summarize_contigs_nr.description.md", "w") as outfile:
-            print(textwrap.dedent("""
-            Generates a summary of the NR contig alignments
-            """).strip(), file=outfile)
-        EOF
     >>>
 
 
     output {
-        String step_description_md = read_string("summarize_contigs_nr.description.md")
         File nr_refined_counts_with_dcr_json = "refined_rapsearch2_counts_with_dcr.json"
         File nr_contig_summary_json = "rapsearch2_contig_summary.json"
     }
@@ -1343,18 +1235,9 @@ task GenerateCoverageStats {
             coverage_summary_csv_output="contig_coverage_summary.csv",
         )
         CODE
-
-        python3 - << 'EOF'
-        import textwrap
-        with open("coverage_out.description.md", "w") as outfile:
-            print(textwrap.dedent("""
-            Calculates coverage statistics for assembled contigs
-            """).strip(), file=outfile)
-        EOF
     >>>
 
     output {
-       String step_description_md = read_string("coverage_out.description.md")
        File contig_coverage_json = "contig_coverage.json"
        File contig_coverage_summary_csv = "contig_coverage_summary.csv"
     }
@@ -1406,18 +1289,9 @@ task ComputeMergedTaxonCounts {
             "merged_contig_summary.json",
         )
         CODE
-
-        python3 - << 'EOF'
-        import textwrap
-        with open("compute_merged_taxon_counts_out.description.md", "w") as outfile:
-            print(textwrap.dedent("""
-            Merges taxon results from NT database and from NR database
-            """).strip(), file=outfile)
-        EOF
     >>>
 
     output {
-        String step_description_md = read_string("compute_merged_taxon_counts_out.description.md")
         File merged_m8 = "merged.m8"
         File merged_hitsummary2_tab = "merged.hitsummary2.tab"
         File merged_taxon_counts_with_dcr_json = "merged_taxon_counts_with_dcr.json"
@@ -1529,18 +1403,9 @@ task GenerateCoverageViz {
         --output-dir-s3 '' \
         --additional-files '{"info_db": "~{nt_info_db}"}' \
         --additional-attributes '{"min_contig_size": 1}'
-
-        python3 - << 'EOF'
-        import textwrap
-        with open("coverage_viz_out.description.md", "w") as outfile:
-            print(textwrap.dedent("""
-            Generates JSON files for coverage viz to be consumed by the web app
-            """).strip(), file=outfile)
-        EOF
     >>>
 
     output {
-        String step_description_md = read_string("coverage_viz_out.description.md")
         File coverage_viz_summary_json = "coverage_viz_summary.json"
         File? output_read_count = "coverage_viz_out.count"
         Array[File] coverage_viz = glob("coverage_viz/*_coverage_viz.json")
