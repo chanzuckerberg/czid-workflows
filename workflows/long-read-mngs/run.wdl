@@ -49,13 +49,48 @@ task RunQualityFilter {
         String docker_image_id
     }
 
+    String fastp_invocation = "fastp"
+            + " --html fastp.html"
+            + " --disable_adapter_trimming"
+            + " -i ${input_fastq}"
+            + " --qualified_quality_phred 9"
+            + " --length_required 100"
+            + " --low_complexity_filter --complexity_threshold 30"
+            + " --dont_eval_duplication"
+            + " -o sample_quality_filtered.fastq"
+
     command <<<
         set -euxo pipefail
-        fastp --html fastp.html --disable_adapter_trimming -i "~{input_fastq}" --qualified_quality_phred 9 --length_required 100 --low_complexity_filter --complexity_threshold 30 --dont_eval_duplication -o sample_quality_filtered.fastq
+        ~{fastp_invocation}
         filter_count sample_quality_filtered.fastq quality_filtered "No reads remaining after quality filtering"
+
+        python3 - << 'EOF'
+        import textwrap
+        with open("fastp.description.md", "w") as outfile:
+            print(textwrap.dedent("""
+            **fastp read trimming & filtering**
+
+            Processes the reads using [fastp](https://github.com/OpenGene/fastp):
+
+            1. Trim adapters
+            2. Quality score filter
+            3. Non-called base (N) filter
+            4. Length filter
+            5. Complexity filter ([custom feature](https://github.com/mlin/fastp/tree/mlin/sdust)
+                using the [SDUST algorithm](https://pubmed.ncbi.nlm.nih.gov/16796549/))
+
+            fastp is run on the FASTQ file(s) from input validation:
+            ```
+            ~{fastp_invocation}
+            ```
+
+            fastp documentation can be found [here](https://github.com/OpenGene/fastp)
+            """).strip(), file=outfile)
+        EOF
     >>>
 
     output {
+        String step_description_md = read_string("fastp.description.md")
         File fastp_output = "sample_quality_filtered.fastq"
         File quality_filtered_reads = "quality_filtered_reads.count"
         File quality_filtered_bases = "quality_filtered_bases.count"
@@ -88,9 +123,33 @@ task RunHostFilter {
         samtools view -S -b sample.hostfiltered.sam > sample.hostfiltered.bam
 
         filter_count sample.hostfiltered.fastq host_filtered "No reads remaining after host filtering"
+
+        python3 - << 'EOF'
+        import textwrap
+
+        with open("host_filter.description.md", "w") as outfile:
+            print(textwrap.dedent("""
+            Implements the step for running minimap2 host filtering.
+
+            The minimap2 aligner is used for host filtration. Unmapped reads are passed to the subsequent step. Different parameters are required for alignment of RNA vs DNA reads using minimap2. Therefore, based on the initial input validation, the appropriate parameters are selected.
+
+            If the sample is of type RNA, minimap2 uses splice-aware configuration:
+            '''
+            minimap2 -t {threads} -ax splice {minimap_host_db} {input_fastq} -o sample.hostfiltered.sam --split-prefix temp_name
+            '''
+
+            If the sample is of type DNA, minimap2 uses standard map-ont configuration:
+            '''
+            minimap2 -t {threads} -ax map-ont {minimap_host_db} {input_fastq} -o sample.hostfiltered.sam --split-prefix temp_name
+            '''
+
+            Minimap2 documentation can be found [here](https://lh3.github.io/minimap2/minimap2.html).
+            """).strip(), file=outfile)
+        EOF
     >>>
 
     output {
+        String step_description_md = read_string("host_filter.description.md")
         File host_filter_sam = "sample.hostfiltered.bam"
         File host_filter_fastq = "sample.hostfiltered.fastq"
         File host_filtered_reads = "host_filtered_reads.count"
@@ -112,9 +171,18 @@ task ReadLengthMetrics {
         python3 /usr/local/bin/read_length_metrics.py \
             --fastq-path "~{input_fastq}" \
             --json-output-path read_length_metrics.json
+
+        python3 - << 'EOF'
+        import textwrap
+        with open("read_length_metrics.description.md", "w") as outfile:
+            print(textwrap.dedent("""
+            Generates read length summary metrics to describe the total read length distribution
+            """).strip(), file=outfile)
+        EOF
     >>>
 
     output {
+        String step_description_md = read_string("read_length_metrics.description.md")
         File metrics_json = "read_length_metrics.json"
     }
 
@@ -148,9 +216,33 @@ task RunHumanFilter {
         samtools view -S -b sample.humanfiltered.sam > sample.humanfiltered.bam
 
         filter_count sample.humanfiltered.fastq human_filtered "No reads remaining after human read filtering"
+        
+        python3 - << 'EOF'
+        import textwrap
+        with open("human_filter.description.md", "w") as outfile:
+            print(textwrap.dedent("""
+                Implements the step for running minimap2 human filtering, regardless of the selected host.
+
+                The minimap2 aligner is used for human filtration. Unmapped reads are passed to the subsequent step. Different parameters are required for alignment of RNA vs DNA reads using minimap2. Therefore, based on the initial input validation, the appropriate parameters are selected.
+
+
+                If the sample is of type RNA, minimap2 uses splice-aware configuration:
+                '''
+                minimap2 -t {threads} -ax splice {minimap_human_db} {input_fastq} -o sample.humanfiltered.sam --split-prefix temp_name
+                '''
+
+                If the sample is of type DNA, minimap2 uses standard map-ont configuration:
+                '''
+                minimap2 -t {threads} -ax map-ont {minimap_human_db} {input_fastq} -o sample.humanfiltered.sam --split-prefix temp_name
+                '''
+
+                Minimap2 documentation can be found [here](https://lh3.github.io/minimap2/minimap2.html).
+            """).strip(), file=outfile)
+        EOF
     >>>
 
     output {
+        String step_description_md = read_string("human_filter.description.md")
         File human_filter_sam = "sample.humanfiltered.bam"
         File human_filter_fastq = "sample.humanfiltered.fastq"
         File human_filtered_reads = "human_filtered_reads.count"
@@ -176,9 +268,20 @@ task RunSubsampling {
 
         # We should always have reads after subsampling, but adding for consistency with other steps
         filter_count sample.subsampled.fastq subsampled "No reads remaining after subsampling"
+
+        python3 - << 'EOF'
+        import textwrap
+        with open("subsampling.description.md", "w") as outfile:
+            print(textwrap.dedent("""
+            Subsamples to 100,000 reads.
+
+            For samples with a high fraction of non-host reads (i.e., stool samples), the FASTA outputs following host and quality filtration steps may contain large numbers of sequences. Alignment to NT and NR databases is a resource-intensive step. To reduce computational time, the reads are sub-sampled to 100,000 total reads.
+            """).strip(), file=outfile)
+        EOF
     >>>
 
     output {
+        String step_description_md = read_string("subsampling.description.md")
         File subsampled_fastq = "sample.subsampled.fastq"
         File subsampled_reads = "subsampled_reads.count"
         File subsampled_bases = "subsampled_bases.count"
@@ -198,9 +301,18 @@ task PreAssemblyFasta {
     command <<<
         set -euxo pipefail
         seqkit fq2fa ~{input_fastq} -o pre_assembly.fa
+
+        python3 - << 'EOF'
+        import textwrap
+        with open("pre_assembly.description.md", "w") as outfile:
+            print(textwrap.dedent("""
+            Converts subsampled FASTQ to FASTA (the necessary intermediate file format ahead of assembly).
+            """).strip(), file=outfile)
+        EOF
     >>>
 
     output {
+        String step_description_md = read_string("pre_assembly.description.md")
         File fasta = "pre_assembly.fa"
     }
 
@@ -240,9 +352,25 @@ task RunAssembly {
 
         zip -r temp_flye_out.zip temp_flye_out
         mv sample.assembled_reads.fasta contigs.fasta # rename output file for webapp
+
+        python3 - << 'EOF'
+        import textwrap
+        with open("assembly.description.md", "w") as outfile:
+            print(textwrap.dedent("""
+            To obtain longer contigs for improved sensitivity during mapping, long reads are de novo assembled using metaFlye.
+
+            metaFlye is the Flye software option optimised for low-coverage samples, and run with one iteration of polishing, as follows:
+            '''
+            flye --threads $(nproc) --meta $flye_setting {input_fastq} --out-dir temp_flye_out --iterations 1
+            '''
+
+            Flye documentation can be found [here](https://github.com/fenderglass/Flye).
+            """).strip(), file=outfile)
+        EOF
     >>>
 
     output {
+        String step_description_md = read_string("assembly.description.md")
         File assembled_fasta = "contigs.fasta"
         File temp_assembly_dir = "temp_flye_out.zip"
     }
@@ -277,9 +405,18 @@ task GenerateContigStats {
         with open("contig_base_counts.json", 'w') as f:
             json.dump(base_counts, f)
         CODE
+
+        python3 - << 'EOF'
+        import textwrap
+        with open("contig_stats.description.md", "w") as outfile:
+            print(textwrap.dedent("""
+            Generates a count of the number of reads/bases that map to each contig
+            """).strip(), file=outfile)
+        EOF
     >>>
 
     output {
+        String step_description_md = read_string("contig_stats.description.md")
         File contig_stats_json = "contig_stats.json"
         File contig_base_counts = "contig_base_counts.json"
     }
@@ -309,9 +446,25 @@ task RunReadsToContigs {
         # convert non-contigs.fastq file to .fasta file
         seqtk seq -a sample.non_contigs.fastq > sample.non_contigs.fasta
         samtools view -F 0x900 sample.reads_to_contigs.sam | awk '{ print $1 "\t" $3 "\t" length($10)}' > reads_to_contigs.tsv
+
+        python3 - << 'EOF'
+        import textwrap
+        with open("reads_to_contigs.description.md", "w") as outfile:
+            print(textwrap.dedent("""
+            Aligns reads back to contigs to identify reads associated with each contig. 
+
+            During assembly, the metaFlye output loses the information about which contig each individual read belongs to. Therefore, we use minimap2 to map the original reads onto their assembled contigs and samtools to extract non-contig reads.
+
+            Reads are mapped to the contigs as follows:
+            '''
+            minimap2 -ax map-ont {assembled_reads} {input_fastq} -o sample.reads_to_contigs.sam -t 15 --secondary=no
+            '''
+            """).strip(), file=outfile)
+        EOF
     >>>
 
     output {
+        String step_description_md = read_string("reads_to_contigs.description.md")
         File reads_to_contigs_sam = "sample.reads_to_contigs.sam"
         File reads_to_contigs_bam = "sample.reads_to_contigs.bam"
         File reads_to_contigs_bai = "sample.reads_to_contigs.bam.bai"
@@ -370,9 +523,20 @@ task PrepareNTAlignmentInputs {
 
         # remove duplicates from full .fasta (important when assembly failed)
         seqkit rmdup -s < sample.all_sequences_to_align_full.fasta > sample.all_sequences_to_align.fasta
+
+        python3 - << 'EOF'
+        import textwrap
+        with open("prepare_nt_alignnment_inputs.description.md", "w") as outfile:
+            print(textwrap.dedent("""
+            Merges contigs and non-contig reads ahead of NT alignment.
+
+            During the NT alignment step, both contigs and non-contig reads are aligned to the NCBI database. Prior to the alignment, this step merges the contigs and non-contig reads into a single input file.
+            """).strip(), file=outfile)
+        EOF
     >>>
 
     output {
+        String step_description_md = read_string("prepare_nt_alignnment_inputs.description.md")
         File all_sequences_to_align = "sample.all_sequences_to_align.fasta"
     }
 
@@ -415,9 +579,18 @@ task RunNTAlignment {
         fi
         python3 /usr/local/lib/python3.10/dist-packages/idseq_utils/paf2blast6.py gsnap.paf
         mv *frompaf.m8 "gsnap.m8" # TODO: rewrite paf2blast6.py to output in this format
+
+        python3 - << 'EOF'
+        import textwrap
+        with open("nt_alignment.description.md", "w") as outfile:
+            print(textwrap.dedent("""
+            Aligns contigs and non-contig reads to the NCBI nucleotide (NT) database using minimap2.
+            """).strip(), file=outfile)
+        EOF
     >>>
 
     output {
+        String step_description_md = read_string("nt_alignment.description.md")
         File nt_paf = "gsnap.paf"
         File nt_m8 = "gsnap.m8"
     }
@@ -467,9 +640,18 @@ task RunCallHitsNT {
             output_json_file="gsnap_counts_with_dcr.json",
         )
         CODE
+
+        python3 - << 'EOF'
+        import textwrap
+        with open("call_hits_nt.description.md", "w") as outfile:
+            print(textwrap.dedent("""
+            Assigns accessions from minimap2 alignments to their respective taxon
+            """).strip(), file=outfile)
+        EOF
     >>>
 
     output {
+        String step_description_md = read_string("call_hits_nt.description.md")
         File nt_deduped_m8 = "gsnap.deduped.m8"
         File nt_counts_json = "gsnap_counts_with_dcr.json"
     }
@@ -517,9 +699,18 @@ task RunNRAlignment {
         CODE
         diamond --version > diamond_version.txt
         fi
+
+        python3 - << 'EOF'
+        import textwrap
+        with open("nr_alignment.description.md", "w") as outfile:
+            print(textwrap.dedent("""
+            Aligns contigs to the NCBI protein (NR) database using DIAMOND.
+            """).strip(), file=outfile)
+        EOF
     >>>
 
     output {
+        String step_description_md = read_string("nr_alignment.description.md")
         File nr_m8 = "diamond.m8"
     }
 
@@ -568,9 +759,18 @@ task RunCallHitsNR {
             output_json_file="rapsearch2_counts_with_dcr.json",
         )
         CODE
+
+        python3 - << 'EOF'
+        import textwrap
+        with open("call_hits_nr.description.md", "w") as outfile:
+            print(textwrap.dedent("""
+            Assigns accessions from DIAMOND alignments to their respective taxon
+            """).strip(), file=outfile)
+        EOF
     >>>
 
     output {
+        String step_description_md = read_string("call_hits_nr.description.md")
         File nr_deduped_m8 = "rapsearch2.deduped.m8"
         File nr_counts_json = "rapsearch2_counts_with_dcr.json"
     }
@@ -593,9 +793,20 @@ task FindTopHitsNT {
         from idseq_dag.steps.blast_contigs import get_top_m8_nt
 
         get_top_m8_nt("~{nt_deduped_m8}", "gsnap.blast.top.m8")
+
+        python3 - << 'EOF'
+        import textwrap
+        with open("find_top_hits_nt.description.md", "w") as outfile:
+            print(textwrap.dedent("""
+            Gets the top hit for each read and contig alignment for NT. 
+
+            Amongst all equally good hits, the top hit is assigned based on the accession with the most total read count. Otherwise, the hit is assigned randomly.
+            """).strip(), file=outfile)
+        EOF
     >>>
 
     output {
+        String step_description_md = read_string("find_top_hits_nt.description.md")
         File nt_top_m8 = "gsnap.blast.top.m8"
     }
 
@@ -617,9 +828,20 @@ task FindTopHitsNR {
         from idseq_dag.steps.blast_contigs import get_top_m8_nr
 
         get_top_m8_nr("~{nr_deduped_m8}", "rapsearch2.blast.top.m8")
+
+        python3 - << 'EOF'
+        import textwrap
+        with open("find_top_hits_nr.description.md", "w") as outfile:
+            print(textwrap.dedent("""
+            Gets the top hit for each contig alignment for NR
+
+            Amongst all equally good hits, the top hit is assigned based on the accession with the most total read count. Otherwise, the hit is assigned randomly.
+            """).strip(), file=outfile)
+        EOF
     >>>
 
     output {
+        String step_description_md = read_string("find_top_hits_nr.description.md")
         File nr_top_m8 = "rapsearch2.blast.top.m8"
     }
 
@@ -661,10 +883,19 @@ task SummarizeHitsNT {
             ~{min_alignment_length},
             "m8_reassigned_nt.tab",
             "gsnap.hitsummary2.tab",
+
+        python3 - << 'EOF'
+        import textwrap
+        with open("summarize_hits_nt.description.md", "w") as outfile:
+            print(textwrap.dedent("""
+            Generates a summary of all the reads aligning to NT, including those assembled into contigs
+            """).strip(), file=outfile)
+        EOF
         )
     >>>
 
     output {
+        String step_description_md = read_string("summarize_hits_nt.description.md")
         File nt_m8_reassigned = "m8_reassigned_nt.tab"
         File nt_hit_summary = "gsnap.hitsummary2.tab"
     }
@@ -708,9 +939,18 @@ task SummarizeHitsNR {
             "m8_reassigned_nr.tab",
             "rapsearch2.hitsummary2.tab",
         )
+
+        python3 - << 'EOF'
+        import textwrap
+        with open("summarize_hits_nr.description.md", "w") as outfile:
+            print(textwrap.dedent("""
+            Generates a summary of reads assembled into contigs aligned to NR
+            """).strip(), file=outfile)
+        EOF
     >>>
 
     output {
+        String step_description_md = read_string("summarize_hits_nr.description.md")
         File nr_m8_reassigned = "m8_reassigned_nr.tab"
         File nr_hit_summary = "rapsearch2.hitsummary2.tab"
     }
@@ -738,9 +978,18 @@ task TallyHitsNT {
             --hitsummary-filepath "~{nt_hit_summary}" \
             --reads-to-contigs-filepath "~{reads_to_contigs_tsv}" \
             --output-filepath "tallied_hits_nt.csv" \
+
+        python3 - << 'EOF'
+        import textwrap
+        with open("tally_hits_nt.description.md", "w") as outfile:
+            print(textwrap.dedent("""
+            Computes per-taxon statistics based on NT alignments
+            """).strip(), file=outfile)
+        EOF
     >>>
 
     output {
+        String step_description_md = read_string("tally_hits_nt.description.md")
         File tallied_hits = "tallied_hits_nt.csv"
     }
 
@@ -767,9 +1016,18 @@ task TallyHitsNR {
             --hitsummary-filepath "~{nr_hit_summary}" \
             --reads-to-contigs-filepath "~{reads_to_contigs_tsv}" \
             --output-filepath "tallied_hits_nr.csv" \
+
+        python3 - << 'EOF'
+        import textwrap
+        with open("tally_hits_nr.description.md", "w") as outfile:
+            print(textwrap.dedent("""
+            Computes per-taxon statistics based on NR alignments
+            """).strip(), file=outfile)
+        EOF
     >>>
 
     output {
+        String step_description_md = read_string("tally_hits_nr.description.md")
         File tallied_hits = "tallied_hits_nr.csv"
     }
 
@@ -807,9 +1065,18 @@ task UnmappedReads {
                 ur.write("\n")
         CODE
         seqkit grep -f "unmapped_reads.txt" "~{input_file}" > unmapped_reads.fastq
+
+        python3 - << 'EOF'
+        import textwrap
+        with open("unmapped_reads.description.md", "w") as outfile:
+            print(textwrap.dedent("""
+            Generates output containing unmapped reads
+            """).strip(), file=outfile)
+        EOF
     >>>
 
     output {
+        String step_description_md = read_string("unmapped_reads.description.md")
         File unmapped_reads = "unmapped_reads.fastq"
     }
 
@@ -839,10 +1106,18 @@ task GenerateAnnotatedFasta {
             unidentified_fasta_path = "refined_unidentified.fa",
         )
         CODE
+
+        python3 - << 'EOF'
+        import textwrap
+        with open("refined_annotated_out.description.md", "w") as outfile:
+            print(textwrap.dedent("""
+            Annotates non-host FASTA with NCBI accession IDs
+            """).strip(), file=outfile)
+        EOF
     >>>
 
     output {
-        # String step_description_md = read_string("refined_annotated_out.description.md")
+        String step_description_md = read_string("refined_annotated_out.description.md")
         File assembly_refined_annotated_merged_fa = "refined_annotated_merged.fa"
         File assembly_refined_unidentified_fa = "refined_unidentified.fa"
     }
@@ -904,6 +1179,14 @@ task GenerateTaxidLocator {
             --output-dir-s3 '' \
             --additional-files '{}' \
             --additional-attributes '{}'
+
+        python3 - << 'EOF'
+        import textwrap
+        with open("refined_taxid_locator_out.description.md", "w") as outfile:
+            print(textwrap.dedent("""
+            Generates and annotates non-host FASTA with taxonomy IDs
+            """).strip(), file=outfile)
+        EOF
     >>>
 
     output {
@@ -962,9 +1245,18 @@ task SummarizeContigsNT {
             "gsnap_contig_summary.json",
         )
         CODE
+
+        python3 - << 'EOF'
+        import textwrap
+        with open("summarize_contigs_nt.description.md", "w") as outfile:
+            print(textwrap.dedent("""
+            Generates a summary of the NT contig alignments
+            """).strip(), file=outfile)
+        EOF
     >>>
 
     output {
+        String step_description_md = read_string("summarize_contigs_nt.description.md")
         File nt_refined_counts_with_dcr_json = "refined_gsnap_counts_with_dcr.json"
         File nt_contig_summary_json = "gsnap_contig_summary.json"
     }
@@ -1007,10 +1299,19 @@ task SummarizeContigsNR {
             "rapsearch2_contig_summary.json",
         )
         CODE
+
+        python3 - << 'EOF'
+        import textwrap
+        with open("summarize_contigs_nr.description.md", "w") as outfile:
+            print(textwrap.dedent("""
+            Generates a summary of the NR contig alignments
+            """).strip(), file=outfile)
+        EOF
     >>>
 
 
     output {
+        String step_description_md = read_string("summarize_contigs_nr.description.md")
         File nr_refined_counts_with_dcr_json = "refined_rapsearch2_counts_with_dcr.json"
         File nr_contig_summary_json = "rapsearch2_contig_summary.json"
     }
@@ -1038,10 +1339,18 @@ task GenerateCoverageStats {
             coverage_summary_csv_output="contig_coverage_summary.csv",
         )
         CODE
+
+        python3 - << 'EOF'
+        import textwrap
+        with open("coverage_out.description.md", "w") as outfile:
+            print(textwrap.dedent("""
+            Calculates coverage statistics for assembled contigs
+            """).strip(), file=outfile)
+        EOF
     >>>
 
     output {
-       # String step_description_md = read_string("coverage_out.description.md")
+       String step_description_md = read_string("coverage_out.description.md")
        File contig_coverage_json = "contig_coverage.json"
        File contig_coverage_summary_csv = "contig_coverage_summary.csv"
     }
@@ -1093,10 +1402,18 @@ task ComputeMergedTaxonCounts {
             "merged_contig_summary.json",
         )
         CODE
+
+        python3 - << 'EOF'
+        import textwrap
+        with open("compute_merged_taxon_counts_out.description.md", "w") as outfile:
+            print(textwrap.dedent("""
+            Merges taxon results from NT database and from NR database
+            """).strip(), file=outfile)
+        EOF
     >>>
 
     output {
-        # String step_description_md = read_string("compute_merged_taxon_counts_out.description.md")
+        String step_description_md = read_string("compute_merged_taxon_counts_out.description.md")
         File merged_m8 = "merged.m8"
         File merged_hitsummary2_tab = "merged.hitsummary2.tab"
         File merged_taxon_counts_with_dcr_json = "merged_taxon_counts_with_dcr.json"
@@ -1125,6 +1442,14 @@ task CombineTaxonCounts {
             --output-dir-s3 '' \
             --additional-files '{}' \
             --additional-attributes '{}'
+
+        python3 - << 'EOF'
+        import textwrap
+        with open("refined_taxon_count_out.description.md", "w") as outfile:
+            print(textwrap.dedent("""
+            Combines taxon count files from NT and NR
+            """).strip(), file=outfile)
+        EOF
     >>>
 
     output {
@@ -1155,6 +1480,14 @@ task CombineJson {
             --output-dir-s3 '' \
             --additional-files '{}' \
             --additional-attributes '{}'
+
+        python3 - << 'EOF'
+        import textwrap
+        with open("contig_summary_out.description.md", "w") as outfile:
+            print(textwrap.dedent("""
+            Records statistics on the assembled contigs
+            """).strip(), file=outfile)
+        EOF
     >>>
 
     output {
@@ -1192,6 +1525,14 @@ task GenerateCoverageViz {
         --output-dir-s3 '' \
         --additional-files '{"info_db": "~{nt_info_db}"}' \
         --additional-attributes '{"min_contig_size": 1}'
+
+        python3 - << 'EOF'
+        import textwrap
+        with open("coverage_viz_out.description.md", "w") as outfile:
+            print(textwrap.dedent("""
+            Generates JSON files for coverage viz to be consumed by the web app
+            """).strip(), file=outfile)
+        EOF
     >>>
 
     output {
