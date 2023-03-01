@@ -5,6 +5,7 @@ import os
 import tempfile
 from typing import Dict
 from test_util import WDLTestCase
+from subprocess import CalledProcessError
 
 
 class TestLongReadMNGS(WDLTestCase):
@@ -87,3 +88,14 @@ class TestLongReadMNGS(WDLTestCase):
 
             # test unmapped reads
             self._unmapped_reads_assertions(outputs)
+
+    def testCorruptedGzip(self):
+        input_path = os.path.join(os.path.dirname(__file__), 'test_files/not_a_gzip_file.fastq.gz')
+        with self.assertRaises(CalledProcessError) as ecm:
+            self.run_miniwdl(args=[f"input_fastq={input_path}"], task="RunValidateInput")
+        self.assertRunFailed(
+            ecm,
+            task="RunValidateInput",
+            error="InvalidFileFormatError",
+            cause="The file: not_a_gzip_file.fastq.gz is not a proper gzip file"
+        )
