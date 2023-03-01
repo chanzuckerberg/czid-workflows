@@ -9,9 +9,14 @@
 #   2: a prefix for the output files such as (sample_validated)
 #   3: a message to display to the user if all reads are filtered out at this step
 
-set -euxo pipefail
+set -euo pipefail
 
 if [[ $1 == *gz ]]; then
+    # gzip -t checks the whole file so might be a bit slow. 
+    # a faster but more imperfect method would be to check that the first 2 bytes equal 0x8b1f
+    if ! gzip -t $1 > /dev/null 2>&1; then
+        raise_error InvalidFileFormatError "The file: $(basename $1) is not a proper gzip file"
+    fi
     WC_OUT=$(gzip -dc $1 | awk 'NR % 4 == 2' | wc)
 else
     WC_OUT=$(cat $1 | awk 'NR % 4 == 2' | wc)
