@@ -55,6 +55,7 @@ RUN apt-get -q install -y \
         liblz4-tool \
         lbzip2 \
         docker.io \
+        python3-dev \
         python3-pip \
         python3-setuptools \
         python3-wheel \
@@ -67,7 +68,8 @@ RUN apt-get -q install -y \
         samtools \
         fastx-toolkit \
         seqtk \
-        bedtools
+        bedtools \
+        build-essential
 
 # The following packages pull in python2.7
 RUN apt-get -q install -y \
