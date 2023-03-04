@@ -111,8 +111,8 @@ class PipelineStepGenerateTaxidLocator(PipelineStep):
             return seq_name.replace('>', ':').split(":").index(taxid_field) + 1
         else:
             # if seq_name is empty the input_fasta is empty
-            return -1 
-            
+            return -1
+
     @staticmethod
     def get_taxid(seq_name, taxid_field):
         parts = seq_name.decode('utf-8')
