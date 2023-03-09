@@ -1769,33 +1769,72 @@ workflow czid_long_read_mngs {
     }
 
     output {
+        # RunValidateInput
+        File raw_reads = RunValidateInput.raw_reads
+        File raw_bases = RunValidateInput.raw_bases
+        File validated_reads = RunValidateInput.validated_reads
+        File validated_bases = RunValidateInput.validated_bases
+        # RunQualityFilter
         File fastp_html = RunQualityFilter.fastp_html
+        File quality_filtered_reads = RunQualityFilter.quality_filtered_reads
+        File quality_filtered_bases = RunQualityFilter.quality_filtered_bases
+        # RunHostFilter
+        File host_filtered_reads = RunHostFilter.host_filtered_reads
+        File host_filtered_bases = RunHostFilter.host_filtered_bases
+        # ReadLengthMetrics
         File read_length_metrics = ReadLengthMetrics.metrics_json
-        File nt_deduped_m8 = RunCallHitsNT.nt_deduped_m8
-        File nt_hit_summary = SummarizeHitsNT.nt_hit_summary
-        File nt_counts_json = RunCallHitsNT.nt_counts_json
-        File nr_deduped_m8 = RunCallHitsNR.nr_deduped_m8
-        File nr_hit_summary = SummarizeHitsNR.nr_hit_summary
-        File nr_counts_json = RunCallHitsNR.nr_counts_json
-        File nt_tallied_hits = TallyHitsNT.tallied_hits
-        File nr_tallied_hits = TallyHitsNR.tallied_hits
+        # RunHumanFilter
+        File human_filtered_reads = RunHumanFilter.human_filtered_reads
+        File human_filtered_bases = RunHumanFilter.human_filtered_bases
+        # RunSubsampling
+        File subsampled_reads = RunSubsampling.subsampled_reads
+        File subsampled_bases = RunSubsampling.subsampled_bases
+        # PreAssemblyFasta
+        # RunAssembly
+        File contigs_fasta = RunAssembly.assembled_fasta
+        # GenerateContigStats
         File contig_stats = GenerateContigStats.contig_stats_json
         File contig_base_counts = GenerateContigStats.contig_base_counts
+        # RunReadsToContigs
+        # RemoveUnmappedContigs
+        # PrepareNTAlignmentInputs
+        # RunNTAlignment
+        File nt_alignment = RunNTAlignment.nt_m8
+        # RunCallHitsNT
+        File nt_deduped_m8 = RunCallHitsNT.nt_deduped_m8
+        File nt_counts_json = RunCallHitsNT.nt_counts_json
+        # RunNRAlignment
+        File nr_alignment = RunNRAlignment.nr_m8
+        # RunCallHitsNR
+        File nr_deduped_m8 = RunCallHitsNR.nr_deduped_m8
+        File nr_counts_json = RunCallHitsNR.nr_counts_json
+        # FindTopHitsNT
+        File nt_top_m8 = FindTopHitsNT.nt_top_m8
+        # FindTopHitsNR
+        File nr_top_m8 = FindTopHitsNR.nr_top_m8
+        # SummarizeHitsNT
+        File nt_hit_summary = SummarizeHitsNT.nt_hit_summary
+        # SummarizeHitsNR
+        File nr_hit_summary = SummarizeHitsNR.nr_hit_summary
+        # TallyHitsNT
+        File nt_tallied_hits = TallyHitsNT.tallied_hits
+        # TallyHitsNR
+        File nr_tallied_hits = TallyHitsNR.tallied_hits
+        # UnmappedReads
         File unmapped_reads = UnmappedReads.unmapped_reads
-        File coverage_out_assembly_contig_coverage_json = GenerateCoverageStats.contig_coverage_json
-        File coverage_out_assembly_contig_coverage_summary_csv = GenerateCoverageStats.contig_coverage_summary_csv
-        File refined_taxon_count_out_assembly_refined_taxon_counts_with_dcr_json = CombineTaxonCounts.refined_taxon_counts_with_dcr_json
-        File? refined_taxon_count_out_count = CombineTaxonCounts.output_read_count
-        File contig_summary_out_assembly_combined_contig_summary_json = CombineJson.combined_contig_summary_json
-        File? contig_summary_out_count = CombineJson.output_read_count
+        # GenerateAnnotatedFasta
+        File assembly_refined_annotated_merged_fa = GenerateAnnotatedFasta.assembly_refined_annotated_merged_fa
+        File assembly_refined_unidentified_fa = GenerateAnnotatedFasta.assembly_refined_unidentified_fa
+        # GenerateTaxidFasta
         File refined_taxid_fasta_out_assembly_refined_taxid_annot_fasta = GenerateTaxidFasta.refined_taxid_annot_fasta
         File? refined_taxid_fasta_out_count = GenerateTaxidFasta.output_read_count
+        # GenerateTaxidLocator
         File refined_taxid_locator_out_assembly_refined_taxid_annot_sorted_nt_fasta = GenerateTaxidLocator.assembly_refined_taxid_annot_sorted_nt_fasta
         File refined_taxid_locator_out_assembly_refined_taxid_locations_nt_json = GenerateTaxidLocator.assembly_refined_taxid_locations_nt_json
         File refined_taxid_locator_out_assembly_refined_taxid_annot_sorted_nr_fasta = GenerateTaxidLocator.assembly_refined_taxid_annot_sorted_nr_fasta
         File refined_taxid_locator_out_assembly_refined_taxid_locations_nr_json = GenerateTaxidLocator.assembly_refined_taxid_locations_nr_json
         File refined_taxid_locator_out_assembly_refined_taxid_annot_sorted_genus_nt_fasta = GenerateTaxidLocator.assembly_refined_taxid_annot_sorted_genus_nt_fasta
-        File refined_taxid_locator_out_assembly_refined_taxid_locations_genus_nt_json = GenerateTaxidLocator.assembly_refined_taxid_locations_genus_nt_json
+        File refined_taxid_locator_out_assembly_refined_taxid_locations_genus_nt_jsoFindTopHitsNRn = GenerateTaxidLocator.assembly_refined_taxid_locations_genus_nt_json
         File refined_taxid_locator_out_assembly_refined_taxid_annot_sorted_genus_nr_fasta = GenerateTaxidLocator.assembly_refined_taxid_annot_sorted_genus_nr_fasta
         File refined_taxid_locator_out_assembly_refined_taxid_locations_genus_nr_json = GenerateTaxidLocator.assembly_refined_taxid_locations_genus_nr_json
         File refined_taxid_locator_out_assembly_refined_taxid_annot_sorted_family_nt_fasta = GenerateTaxidLocator.assembly_refined_taxid_annot_sorted_family_nt_fasta
@@ -1804,6 +1843,19 @@ workflow czid_long_read_mngs {
         File refined_taxid_locator_out_assembly_refined_taxid_locations_family_nr_json = GenerateTaxidLocator.assembly_refined_taxid_locations_family_nr_json
         File refined_taxid_locator_out_assembly_refined_taxid_locations_combined_json = GenerateTaxidLocator.assembly_refined_taxid_locations_combined_json
         File? refined_taxid_locator_out_count = GenerateTaxidLocator.output_read_count
+        # SummarizeContigsNT
+        # SummarizeContigsNR
+        # GenerateCoverageStats
+        File coverage_out_assembly_contig_coverage_json = GenerateCoverageStats.contig_coverage_json
+        File coverage_out_assembly_contig_coverage_summary_csv = GenerateCoverageStats.contig_coverage_summary_csv
+        # ComputeMergedTaxonCounts
+        # CombineTaxonCounts
+        File refined_taxon_count_out_assembly_refined_taxon_counts_with_dcr_json = CombineTaxonCounts.refined_taxon_counts_with_dcr_json
+        File? refined_taxon_count_out_count = CombineTaxonCounts.output_read_count
+        # CombineJson
+        File contig_summary_out_assembly_combined_contig_summary_json = CombineJson.combined_contig_summary_json
+        File? contig_summary_out_count = CombineJson.output_read_count
+        # GenerateCoverageViz
         File coverage_viz_out_coverage_viz_summary_json = GenerateCoverageViz.coverage_viz_summary_json
         File? coverage_viz_out_count = GenerateCoverageViz.output_read_count
         Array[File] coverage_viz = GenerateCoverageViz.coverage_viz
