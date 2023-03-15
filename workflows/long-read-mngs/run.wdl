@@ -1784,9 +1784,11 @@ workflow czid_long_read_mngs {
         # ReadLengthMetrics
         File read_length_metrics = ReadLengthMetrics.metrics_json
         # RunHumanFilter
+        File human_filter_fastq = RunHumanFilter.human_filter_fastq
         File human_filtered_reads = RunHumanFilter.human_filtered_reads
         File human_filtered_bases = RunHumanFilter.human_filtered_bases
         # RunSubsampling
+        File subsampled_fastq = RunSubsampling.subsampled_fastq
         File subsampled_reads = RunSubsampling.subsampled_reads
         File subsampled_bases = RunSubsampling.subsampled_bases
         # PreAssemblyFasta
