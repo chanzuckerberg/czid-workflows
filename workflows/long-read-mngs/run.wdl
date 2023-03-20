@@ -1804,6 +1804,7 @@ workflow czid_long_read_mngs {
         File contig_base_counts = GenerateContigStats.contig_base_counts
         # RunReadsToContigs
         # RemoveUnmappedContigs
+        File mapped_contigs_fasta = RemoveUnmappedContigs.mapped_contigs_fasta
         # PrepareNTAlignmentInputs
         # RunNTAlignment
         File nt_alignment = RunNTAlignment.nt_m8
