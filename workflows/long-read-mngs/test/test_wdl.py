@@ -52,8 +52,8 @@ class TestLongReadMNGS(WDLTestCase):
             self.assertLessEqual(metrics["read_length_median"], metrics["read_length_max"])
 
     def _unmapped_reads_assertions(self, outputs: Dict[str, str]):
-        self.assertIn("czid_long_read_mngs.unmapped_reads", outputs)
-        with open(outputs["czid_long_read_mngs.unmapped_reads"]) as f:
+        self.assertIn("czid_long_read_mngs.unmapped_fq", outputs)
+        with open(outputs["czid_long_read_mngs.unmapped_fq"]) as f:
             unmapped = f.readlines()
             self.assertGreaterEqual(len(unmapped), 40)  # TODO: figure out why this changes
 
