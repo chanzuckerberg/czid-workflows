@@ -1006,11 +1006,16 @@ task UnmappedReads {
                 ur.write("\n")
         CODE
         seqkit grep -f "unmapped_reads.txt" "~{input_file}" > unmapped_reads.fastq
+
+        filter_count unmapped_reads.fastq unmapped
     >>>
 
     output {
-        File unmapped_reads = "unmapped_reads.fastq"
+        File unmapped_fq = "unmapped_reads.fastq"
+        File unmapped_reads = "unmapped_reads.count"
+        File unmapped_bases = "unmapped_bases.count"
     }
+
 
     runtime {
         docker: docker_image_id
@@ -1823,7 +1828,9 @@ workflow czid_long_read_mngs {
         # TallyHitsNR
         File nr_tallied_hits = TallyHitsNR.tallied_hits
         # UnmappedReads
+        File unmapped_fq = UnmappedReads.unmapped_fq
         File unmapped_reads = UnmappedReads.unmapped_reads
+        File unmapped_bases = UnmappedReads.unmapped_bases
         # GenerateAnnotatedFasta
         File assembly_refined_annotated_merged_fa = GenerateAnnotatedFasta.assembly_refined_annotated_merged_fa
         File assembly_refined_unidentified_fa = GenerateAnnotatedFasta.assembly_refined_unidentified_fa
