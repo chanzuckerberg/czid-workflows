@@ -1006,11 +1006,16 @@ task UnmappedReads {
                 ur.write("\n")
         CODE
         seqkit grep -f "unmapped_reads.txt" "~{input_file}" > unmapped_reads.fastq
+
+        filter_count unmapped_reads.fastq unmapped
     >>>
 
     output {
-        File unmapped_reads = "unmapped_reads.fastq"
+        File unmapped_fq = "unmapped_reads.fastq"
+        File unmapped_reads = "unmapped_reads.count"
+        File unmapped_bases = "unmapped_bases.count"
     }
+
 
     runtime {
         docker: docker_image_id
@@ -1769,6 +1774,20 @@ workflow czid_long_read_mngs {
     }
 
     output {
+        File raw_reads = RunValidateInput.raw_reads
+        File raw_bases = RunValidateInput.raw_bases
+        File validated_reads = RunValidateInput.validated_reads
+        File validated_bases = RunValidateInput.validated_bases
+        File quality_filtered_reads = RunQualityFilter.quality_filtered_reads
+        File quality_filtered_bases = RunQualityFilter.quality_filtered_bases
+        File host_filtered_reads = RunHostFilter.host_filtered_reads
+        File host_filtered_bases = RunHostFilter.host_filtered_bases
+        File human_filtered_reads = RunHumanFilter.human_filtered_reads
+        File human_filtered_bases = RunHumanFilter.human_filtered_bases
+        File subsampled_reads = RunSubsampling.subsampled_reads
+        File subsampled_bases = RunSubsampling.subsampled_bases
+        File unmapped_reads = UnmappedReads.unmapped_reads
+        File unmapped_bases = UnmappedReads.unmapped_bases
         File fastp_html = RunQualityFilter.fastp_html
         File read_length_metrics = ReadLengthMetrics.metrics_json
         File nt_deduped_m8 = RunCallHitsNT.nt_deduped_m8
@@ -1781,7 +1800,7 @@ workflow czid_long_read_mngs {
         File nr_tallied_hits = TallyHitsNR.tallied_hits
         File contig_stats = GenerateContigStats.contig_stats_json
         File contig_base_counts = GenerateContigStats.contig_base_counts
-        File unmapped_reads = UnmappedReads.unmapped_reads
+        File unmapped_fq = UnmappedReads.unmapped_fq
         File coverage_out_assembly_contig_coverage_json = GenerateCoverageStats.contig_coverage_json
         File coverage_out_assembly_contig_coverage_summary_csv = GenerateCoverageStats.contig_coverage_summary_csv
         File refined_taxon_count_out_assembly_refined_taxon_counts_with_dcr_json = CombineTaxonCounts.refined_taxon_counts_with_dcr_json
