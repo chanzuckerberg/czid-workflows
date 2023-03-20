@@ -7,7 +7,8 @@
 # Arguments:
 #   1: path to the fastq file
 #   2: a prefix for the output files such as (sample_validated)
-#   3: a message to display to the user if all reads are filtered out at this step
+#   3 (optional): a message to display to the user if all reads are filtered out at this step
+#     if this is omitted an error is not raised for insufficient reads
 
 set -euo pipefail
 
@@ -27,6 +28,6 @@ BASES=$(expr $CHARS - $LINES)
 echo "{ \"$2_reads\": \"$LINES\" }" > $2_reads.count
 echo "{ \"$2_bases\": \"$BASES\" }" > $2_bases.count
 
-if [[ $LINES == 0 ]]; then
+if [[ $LINES == 0 && -n $3 ]]; then
     raise_error InsufficientReadsError $3
 fi
