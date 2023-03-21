@@ -234,18 +234,6 @@ workflow consensus_genome {
             docker_image_id = docker_image_id
     }
 
-    # TODO: generalize VADR to run on any coronavirus reference or any viral reference with a VADR model available
-    if (ref_accession_id == None) {
-        call Vadr {
-            input:
-                prefix = prefix,
-                assembly = select_first([MakeConsensus.consensus_fa, RunMinion.consensus_fa]),
-                vadr_options = vadr_options,
-                vadr_model = vadr_model,
-                docker_image_id = docker_image_id
-        }
-    }
-
     call ZipOutputs {
         input:
             prefix = prefix,
@@ -272,9 +260,6 @@ workflow consensus_genome {
                     RunMinion.vcf,
                     RealignConsensus.muscle_output,
                     RunMinion.muscle_output,
-                    Vadr.vadr_quality,                 # Optional (VADR only runs on default (coronavirus) reference)
-                    Vadr.vadr_alerts,                  # Optional (VADR only runs on default (coronavirus) reference)
-                    Vadr.vadr_errors                   # Optional (only present if VADR ran and exited with an error)
                 ])
             ])),
             docker_image_id = docker_image_id
@@ -296,9 +281,6 @@ workflow consensus_genome {
         File? compute_stats_out_depths_fig = ComputeStats.depths_fig
         File? compute_stats_out_output_stats = ComputeStats.output_stats
         File? compute_stats_out_sam_depths = ComputeStats.sam_depths
-        File? vadr_quality_out = Vadr.vadr_quality  # Optional (VADR only runs on default (coronavirus) reference)
-        File? vadr_alerts_out = Vadr.vadr_alerts    # Optional (VADR only runs on default (coronavirus) reference)
-        File? vadr_errors = Vadr.vadr_errors        # Optional (only present if VADR ran and exited with an error)
         File? minion_log = RunMinion.log
         File zip_outputs_out_output_zip = ZipOutputs.output_zip
     }
