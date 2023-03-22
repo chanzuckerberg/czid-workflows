@@ -3,6 +3,7 @@
 ## OPTIONAL VARIABLES
 WORKFLOW?=short-read-mngs # default needed to build dag-test
 VERSION?=latest
+DOCKER_IMAGE_ID?=
 
 .PHONY: help
 help: 
@@ -27,10 +28,10 @@ release:
 	scripts/release.sh
 
 test-%: ## run miniwdl step tests eg. make test-short-read-mngs
-	DOCKER_IMAGE_ID=czid-$* pytest -v -n `python3 -c 'import multiprocessing as mp; print(max(1,mp.cpu_count()-1))'` --durations=0 --tb=short --log-cli-level=11 workflows/$*/test
+	pytest -v -n `python3 -c 'import multiprocessing as mp; print(max(1,mp.cpu_count()-1))'` --durations=0 --tb=short --log-cli-level=11 workflows/$*/test
 
 integration-test-%: ## run miniwdl integration tests eg. make integration-test-short-read-mngs
-	DOCKER_IMAGE_ID=czid-$* pytest -v -n `python3 -c 'import multiprocessing as mp; print(max(1,mp.cpu_count()-1))'` --durations=0 --tb=short --log-cli-level=11 workflows/$*/integration_test
+	pytest -v -n `python3 -c 'import multiprocessing as mp; print(max(1,mp.cpu_count()-1))'` --durations=0 --tb=short --log-cli-level=11 workflows/$*/integration_test
 	
 .PHONY: test
 test: ## run miniwdl step tests for all workflows eg. make test
