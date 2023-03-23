@@ -40,10 +40,10 @@ def summarize_hits(
 
         if db_type.lower() == "nt":
             m8_writer = BlastnOutput6NTRerankedWriter(m8_out_f)
+            m8_read_hit_writer = BlastnOutput6NTRerankedWriter(m8_read_hits_f)
         else:
             m8_writer = BlastnOutput6Writer(m8_out_f)
-
-        m8_read_hit_writer = BlastnOutput6Writer(m8_read_hits_f)
+            m8_read_hit_writer = BlastnOutput6Writer(m8_read_hits_f)
 
         hitsummary_writer = HitSummaryMergedWriter(hitsummary_out_f)
 
