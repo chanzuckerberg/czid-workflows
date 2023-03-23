@@ -634,7 +634,7 @@ task RunNRAlignment {
 # TODO: (tmorse) fuse me
 task FindTopHitsNT {
     input {
-        File nt_deduped_m8
+        File nt_m8
         String docker_image_id
     }
 
@@ -643,7 +643,7 @@ task FindTopHitsNT {
         python3 <<CODE
         from idseq_dag.steps.blast_contigs import get_top_m8_nt
 
-        get_top_m8_nt("~{nt_deduped_m8}", "gsnap.blast.top.m8")
+        get_top_m8_nt("~{nt_m8}", "gsnap.blast.top.m8")
         CODE
 
         python3 - << 'EOF'
@@ -670,7 +670,7 @@ task FindTopHitsNT {
 # TODO: (tmorse) fuse me
 task FindTopHitsNR {
     input {
-        File nr_deduped_m8
+        File nr_m8
         String docker_image_id
     }
 
@@ -679,7 +679,7 @@ task FindTopHitsNR {
         python3 <<CODE
         from idseq_dag.steps.blast_contigs import get_top_m8_nr
 
-        get_top_m8_nr("~{nr_deduped_m8}", "rapsearch2.blast.top.m8")
+        get_top_m8_nr("~{nr_m8}", "rapsearch2.blast.top.m8")
         CODE
 
         python3 - << 'EOF'
@@ -1394,13 +1394,13 @@ workflow czid_long_read_mngs {
 
     call FindTopHitsNT {
         input:
-            nt_deduped_m8 = RunNTAlignment.nt_m8,
+            nt_m8 = RunNTAlignment.nt_m8,
             docker_image_id = docker_image_id,
     }
 
     call FindTopHitsNR {
         input:
-            nr_deduped_m8 = RunNRAlignment.nr_m8,
+            nr_m8 = RunNRAlignment.nr_m8,
             docker_image_id = docker_image_id,
     }
 
