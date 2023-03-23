@@ -67,7 +67,7 @@ def summarize_hits(
             if not should_keep(lineage):
                 continue
 
-            if prev_hit := hit_by_qseqid.get(hit_by_qseqid, False):
+            if prev_hit := hit_by_qseqid.get(qseqid, False):
                 # take the weighted mean
                 prev_hit["pident"] = (prev_hit["pident"] * prev_hit["length"] + hit["pident"] * row["length"]) / (prev_hit["length"] + hit["length"])
                 prev_hit["evalue"] = (prev_hit["evalue"] * prev_hit["length"] + hit["evalue"] * row["length"]) / (prev_hit["length"] + hit["length"])
