@@ -69,8 +69,8 @@ def summarize_hits(
 
             if prev_hit := hit_by_qseqid.get(qseqid, False):
                 # take the weighted mean
-                prev_hit["pident"] = (prev_hit["pident"] * prev_hit["length"] + hit["pident"] * row["length"]) / (prev_hit["length"] + hit["length"])
-                prev_hit["evalue"] = (prev_hit["evalue"] * prev_hit["length"] + hit["evalue"] * row["length"]) / (prev_hit["length"] + hit["length"])
+                prev_hit["pident"] = (prev_hit["pident"] * prev_hit["length"] + hit["pident"] * hit["length"]) / (prev_hit["length"] + hit["length"])
+                prev_hit["evalue"] = (prev_hit["evalue"] * prev_hit["length"] + hit["evalue"] * hit["length"]) / (prev_hit["length"] + hit["length"])
 
                 # take the sum for these values
                 prev_hit["mismatch"] += hit["mismatch"]
@@ -87,6 +87,11 @@ def summarize_hits(
                 hit_by_qseqid[qseqid] = hit
 
         for hit in hit_by_qseqid.values():
+            qseqid = hit["qseqid"]
+            accession = hit["sseqid"]
+            taxid = accession_to_taxid.get(accession.split(".")[0], "NA")
+            lineage = taxid_to_lineage.get(str(taxid), NULL_LINEAGE)
+            species_taxid, genus_taxid, family_taxid = lineage
             if qseqid not in contig_to_reads:
                 m8_writer.writerow(hit)
                 m8_read_hit_writer.writerow(hit)
