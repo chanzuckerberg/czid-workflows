@@ -784,7 +784,7 @@ task SummarizeHitsNR {
             "~{accession2taxid_db}",
             ~{min_alignment_length},
             "m8_reassigned_nr.tab",
-            "m8_read_hits_nt.tab",
+            "m8_read_hits_nr.tab",
             "rapsearch2.hitsummary2.tab",
         )
         CODE
