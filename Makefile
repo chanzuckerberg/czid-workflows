@@ -1,7 +1,6 @@
 # Makefile for czid-workflows
 
 ## OPTIONAL VARIABLES
-<<<<<<< HEAD
 WORKFLOW?=${WORKFLOW:-short-read-mngs}# default needed to build dag-test
 VERSION?=latest
 EXTRA_INPUTS?=
@@ -16,17 +15,6 @@ endif
 TASK_CMD := $(if $(TASK), --task $(TASK),)
 
 
-=======
-WORKFLOW?=short-read-mngs# default needed to build dag-test
-VERSION?=latest
-EXTRA_INPUTS?=
-ifeq ($(WORKFLOW),short-read-mngs)
-    MINIWDL_INPUT?=-i workflows/$(WORKFLOW)/test/local_test_viral.yml
-else
-    MINIWDL_INPUT?=-i workflows/$(WORKFLOW)/test/local_test.yml
-endif
-
->>>>>>> 1a2a1a1effb89d7240df22856f63c5f427c21759
 .PHONY: help
 help: 
 	@grep -E '^[a-zA-Z_-]+%?:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
@@ -76,11 +64,7 @@ dag-test: build ## run tests for idseq-dag
 	docker run -it -v ${PWD}/lib/idseq-dag:/work -w /work czid-$(WORKFLOW) pytest -s
 
 .PHONY: python-dependencies
-<<<<<<< HEAD
 python-dependencies: .python_dependencies_installed # install python dependencies
-=======
-python-dependencies: .python_dependencies_installed
->>>>>>> 1a2a1a1effb89d7240df22856f63c5f427c21759
 
 .python_dependencies_installed: 
 	virtualenv -p python3 .venv
@@ -89,17 +73,12 @@ python-dependencies: .python_dependencies_installed
 	touch .python_dependencies_installed
 
 .PHONY: run
-<<<<<<< HEAD
 run: build python-dependencies ## run a miniwdl workflow. eg. make run WORKFLOW=consensus-genome. args: WORKFLOW,EXTRA_INPUT,INPUT,TASK_CMD
-=======
-run: build python-dependencies 
->>>>>>> 1a2a1a1effb89d7240df22856f63c5f427c21759
 	if [ "$(WORKFLOW)" = "short-read-mngs" ]; then \
 		RUNFILE="local_driver.wdl"; \
 	else \
 		RUNFILE="run.wdl"; \
 	fi; \
-<<<<<<< HEAD
 	.venv/bin/miniwdl run workflows/$(WORKFLOW)/$$RUNFILE docker_image_id=czid-$(WORKFLOW) $(EXTRA_INPUTS) $(INPUT) $(TASK_CMD)
 
 .PHONY: miniwdl-explore
@@ -110,6 +89,3 @@ miniwdl-explore: ## !ADVANCED! explore a previous miniwdl workflow run in the cl
 .PHONY: ls
 ls: ## list workflows
 	@ls -1 workflows/
-=======
-	.venv/bin/miniwdl run workflows/$(WORKFLOW)/$$RUNFILE docker_image_id=czid-$(WORKFLOW) $(EXTRA_INPUTS) $(MINIWDL_INPUT)
->>>>>>> 1a2a1a1effb89d7240df22856f63c5f427c21759
