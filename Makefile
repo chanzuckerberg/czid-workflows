@@ -1,14 +1,19 @@
 # Makefile for czid-workflows
 
 ## OPTIONAL VARIABLES
-WORKFLOW?=short-read-mngs# default needed to build dag-test
+WORKFLOW?=${WORKFLOW:-short-read-mngs}# default needed to build dag-test
 VERSION?=latest
 EXTRA_INPUTS?=
+TASK?=
+
 ifeq ($(WORKFLOW),short-read-mngs)
-    MINIWDL_INPUT?=-i workflows/$(WORKFLOW)/test/local_test_viral.yml
+    INPUT?=-i workflows/$(WORKFLOW)/test/local_test_viral.yml
 else
-    MINIWDL_INPUT?=-i workflows/$(WORKFLOW)/test/local_test.yml
+    INPUT?=-i workflows/$(WORKFLOW)/test/local_test.yml
 endif
+
+TASK_CMD := $(if $(TASK), --task $(TASK),)
+
 
 .PHONY: help
 help: 
@@ -59,7 +64,7 @@ dag-test: build ## run tests for idseq-dag
 	docker run -it -v ${PWD}/lib/idseq-dag:/work -w /work czid-$(WORKFLOW) pytest -s
 
 .PHONY: python-dependencies
-python-dependencies: .python_dependencies_installed
+python-dependencies: .python_dependencies_installed # install python dependencies
 
 .python_dependencies_installed: 
 	virtualenv -p python3 .venv
@@ -68,10 +73,19 @@ python-dependencies: .python_dependencies_installed
 	touch .python_dependencies_installed
 
 .PHONY: run
-run: build python-dependencies 
+run: build python-dependencies ## run a miniwdl workflow. eg. make run WORKFLOW=consensus-genome. args: WORKFLOW,EXTRA_INPUT,INPUT,TASK_CMD
 	if [ "$(WORKFLOW)" = "short-read-mngs" ]; then \
 		RUNFILE="local_driver.wdl"; \
 	else \
 		RUNFILE="run.wdl"; \
 	fi; \
-	.venv/bin/miniwdl run workflows/$(WORKFLOW)/$$RUNFILE docker_image_id=czid-$(WORKFLOW) $(EXTRA_INPUTS) $(MINIWDL_INPUT)
+	.venv/bin/miniwdl run workflows/$(WORKFLOW)/$$RUNFILE docker_image_id=czid-$(WORKFLOW) $(EXTRA_INPUTS) $(INPUT) $(TASK_CMD)
+
+.PHONY: miniwdl-explore
+miniwdl-explore: ## !ADVANCED! explore a previous miniwdl workflow run in the cli. eg. make miniwdl-explore OUTPATH='/mnt/path/to/output/'
+	cat $(OUTPATH)/inputs.json | jq ' [values[]] | flatten | .[] | tostring | select(startswith("s3") or startswith("/"))' | xargs -I {} s3parcp {} $(OUTPATH)/work/_miniwdl_inputs/0/
+	docker run -it --entrypoint bash -w /mnt/miniwdl_task_container/work -v$(OUTPATH):/mnt/miniwdl_task_container czid-$(WORKFLOW)
+
+.PHONY: ls
+ls: ## list workflows
+	@ls -1 workflows/
