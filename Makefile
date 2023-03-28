@@ -1,21 +1,43 @@
 # Makefile for czid-workflows
 
 ## OPTIONAL VARIABLES
-WORKFLOW?=short-read-mngs # default needed to build dag-test
+WORKFLOW?=short-read-mngs# default needed to build dag-test
 VERSION?=latest
-DOCKER_IMAGE_ID?=
+EXTRA_INPUTS?=
+TASK?=
+
+ifeq ($(WORKFLOW),short-read-mngs)
+    INPUT?=-i workflows/$(WORKFLOW)/test/local_test_viral.yml
+else
+    INPUT?=-i workflows/$(WORKFLOW)/test/local_test.yml
+endif
+
+TASK_CMD := $(if $(TASK), --task $(TASK),)
+
 
 .PHONY: help
 help: 
 	@grep -E '^[a-zA-Z_-]+%?:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
+
 .PHONY: build
-build: ## Build docker images for a given workflow. eg. make build WORKFLOW=short-read-mngs
-	./scripts/docker-build.sh workflows/$(WORKFLOW) -t czid-$(WORKFLOW)
+build: .build-$(WORKFLOW) ## Build docker images for a given workflow. eg. make build WORKFLOW=short-read-mngs
+
+.build-%:
+	./scripts/docker-build.sh workflows/$* -t czid-$*
+	touch .build-$*
+	
+.PHONY: rebuild
+rebuild: 
+	rm .build-$(WORKFLOW) | true
+	$(MAKE) build WORKFLOW=$(WORKFLOW)
 
 .PHONY: pull
-pull: ## Pull docker image from public github repository. Faster than build. Defaults to latest eg. make pull WORKFLOW=long-read-mngs
+pull: .pull-$(WORKFLOW) ## Pull docker image from public github repository. Faster than build. Possibly less accurate. Defaults to latest eg. make pull WORKFLOW=long-read-mngs
+
+.pull-%: 
 	docker pull ghcr.io/chanzuckerberg/czid-workflows/czid-$(WORKFLOW)-public:$(VERSION)
 	docker tag ghcr.io/chanzuckerberg/czid-workflows/czid-$(WORKFLOW)-public:$(VERSION) czid-$(WORKFLOW)
+	touch .build-$*
 
 .PHONY: lint
 lint: ## lint files
@@ -39,4 +61,31 @@ test: ## run miniwdl step tests for all workflows eg. make test
 
 .PHONY: dag-test
 dag-test: build ## run tests for idseq-dag
-	docker run -it -v ${PWD}/lib/idseq-dag:/work -w /work czid-$(WORKFLOWS) pytest -s
+	docker run -it -v ${PWD}/lib/idseq-dag:/work -w /work czid-$(WORKFLOW) pytest -s
+
+.PHONY: python-dependencies
+python-dependencies: .python_dependencies_installed # install python dependencies
+
+.python_dependencies_installed: 
+	virtualenv -p python3 .venv
+	.venv/bin/pip install -r requirements-dev.txt
+	echo "Run: source .venv/bin/activate"
+	touch .python_dependencies_installed
+
+.PHONY: run
+run: build python-dependencies ## run a miniwdl workflow. eg. make run WORKFLOW=consensus-genome. args: WORKFLOW,EXTRA_INPUT,INPUT,TASK_CMD
+	if [ "$(WORKFLOW)" = "short-read-mngs" ]; then \
+		RUNFILE="local_driver.wdl"; \
+	else \
+		RUNFILE="run.wdl"; \
+	fi; \
+	.venv/bin/miniwdl run workflows/$(WORKFLOW)/$$RUNFILE docker_image_id=czid-$(WORKFLOW) $(EXTRA_INPUTS) $(INPUT) $(TASK_CMD)
+
+.PHONY: miniwdl-explore
+miniwdl-explore: ## !ADVANCED! explore a previous miniwdl workflow run in the cli. eg. make miniwdl-explore OUTPATH='/mnt/path/to/output/'
+	cat $(OUTPATH)/inputs.json | jq ' [values[]] | flatten | .[] | tostring | select(startswith("s3") or startswith("/"))' | xargs -I {} s3parcp {} $(OUTPATH)/work/_miniwdl_inputs/0/
+	docker run -it --entrypoint bash -w /mnt/miniwdl_task_container/work -v$(OUTPATH):/mnt/miniwdl_task_container czid-$(WORKFLOW)
+
+.PHONY: ls
+ls: ## list workflows
+	@ls -1 workflows/
