@@ -1,4 +1,4 @@
-# local_test_viral.yml
+# local_test.yml
 # Boilerplate local_driver.wdl input YAML for use with `miniwdl run` so that this file,
 # docker_image_id, fastqs_0, and fastqs_1 are the only inputs required on the command line.
 # Note: this YAML file doesn't show all possible optional inputs to the workflow, only ones that
@@ -13,9 +13,17 @@ host_filter.gsnap_genome: s3://czid-public-references/host_filter/human/2018-02-
 host_filter.human_star_genome: s3://czid-public-references/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/human_STAR_genome.tar
 host_filter.human_bowtie2_genome: s3://czid-public-references/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/human_bowtie2_genome.tar
 host_filter.adapter_fasta: https://raw.githubusercontent.com/broadinstitute/viral-pipelines/master/test/input/clipDb.fasta
-host_filter.max_input_fragments: 9000
-host_filter.max_subsample_fragments: 9000
+host_filter.max_input_fragments: 150000000
+host_filter.max_subsample_fragments: 2000000
+non_host_alignment.accession2taxid_db: s3://czid-public-references/ncbi-indexes-prod/2021-01-22/index-generation-2/accession2taxid.marisa
+minimap2_local_db_path: s3://czid-public-references/ncbi-indexes-prod/2021-01-22/index-generation-2/nt
+diamond_local_db_path: s3://czid-public-references/ncbi-indexes-prod/2021-01-22/index-generation-2/nr
+diamond_args: "mid-sensitive"
 postprocess.output_results_csv: true
-non_host_rapsearch2_index: s3://czid-public-references/alignment_indexes/2020-04-20/nr.tar.gz
-non_host_gsnap_index: s3://czid-public-references/alignment_indexes/2020-04-20/nt.tar.gz
-non_host_gsnap_genome_name: nt_k16
+postprocess.nt_db: s3://czid-public-references/ncbi-indexes-prod/2021-01-22/index-generation-2/nt
+postprocess.nt_loc_db: s3://czid-public-references/ncbi-indexes-prod/2021-01-22/index-generation-2/nt_loc.marisa
+postprocess.nr_db: s3://czid-public-references/ncbi-indexes-prod/2021-01-22/index-generation-2/nr
+postprocess.nr_loc_db: s3://czid-public-references/ncbi-indexes-prod/2021-01-22/index-generation-2/nr_loc.marisa
+experimental.nt_db: s3://czid-public-references/ncbi-indexes-prod/2021-01-22/index-generation-2/nt
+experimental.nt_loc_db: s3://czid-public-references/ncbi-indexes-prod/2021-01-22/index-generation-2/nt_loc.marisa
+experimental.nt_info_db: s3://czid-public-references/ncbi-indexes-prod/2021-01-22/index-generation-2/nt_info.marisa

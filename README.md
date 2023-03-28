@@ -11,6 +11,15 @@ data.
 CZ ID is a collaborative open project of [Chan Zuckerberg Initiative](https://www.chanzuckerberg.com/) and
 [Chan Zuckerberg Biohub](https://czbiohub.org).
 
+## Workflows
+Currently we have 5 main workflows. The details of each pipeline are in a README in each of the workflow folders. 
+
+* [short-read-mngs](workflows/short-read-mngs/README.md) 
+* [consensus-genome](workflows/consensus-genome/README.md)
+* [phylotree-ng](workflows/phylotree-ng/README.md)
+* long-read-mngs (Beta)
+* amr (Beta)
+
 ## Running these workflows
 This repository contains [WDL](https://openwdl.org/) workflows that the [CZ ID](https://czid.org) platform uses in
 production. See [Running WDL workflows locally](https://github.com/chanzuckerberg/czid-workflows/wiki/Running-WDL-workflows-locally)
