@@ -5,7 +5,7 @@ from test_util import WDLTestCase
 class TestIndexGeneration(WDLTestCase):
     """Tests the RunValidateInput function"""
 
-    wdl = os.path.join(os.path.dirname(__file__), "..", "host_genome_generation.wdl")
+    wdl = os.path.join(os.path.dirname(__file__), "..", "run.wdl")
     common_inputs = {
         "input_fasta": os.path.join(os.path.dirname(__file__), "fixtures/input.fasta"),
         "host_name": "test",
