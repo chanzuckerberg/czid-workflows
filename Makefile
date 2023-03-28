@@ -1,7 +1,7 @@
 # Makefile for czid-workflows
 
 ## OPTIONAL VARIABLES
-WORKFLOW?=${WORKFLOW:-short-read-mngs}# default needed to build dag-test
+WORKFLOW?=short-read-mngs# default needed to build dag-test
 VERSION?=latest
 EXTRA_INPUTS?=
 TASK?=
