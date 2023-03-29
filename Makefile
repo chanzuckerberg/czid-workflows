@@ -50,7 +50,7 @@ release:
 	scripts/release.sh
 
 test-%: ## run miniwdl step tests eg. make test-short-read-mngs
-	pytest -v -n `python3 -c 'import multiprocessing as mp; print(max(1,mp.cpu_count()-1))'` --durations=0 --tb=short --log-cli-level=11 workflows/$*/test
+	pytest -v -n $(( $(nproc) - 1)) --durations=0 --tb=short --log-cli-level=11 workflows/$*/test
 
 integration-test-%: ## run miniwdl integration tests eg. make integration-test-short-read-mngs
 	pytest -v -n `python3 -c 'import multiprocessing as mp; print(max(1,mp.cpu_count()-1))'` --durations=0 --tb=short --log-cli-level=11 workflows/$*/integration_test
