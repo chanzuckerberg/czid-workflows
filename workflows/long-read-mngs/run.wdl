@@ -22,9 +22,13 @@ task RunValidateInput {
 
         python3 <<CODE
         from Bio import SeqIO
-
-        for record in SeqIO.parse("sample_validated.fastq", "fastq"):
-            pass
+        import json
+        
+        try: 
+            for record in SeqIO.parse("sample_validated.fastq", "fastq"):
+                pass
+        except ValueError as e:
+            exit(json.dumps(dict(wdl_error_message=True, error="InvalidInputFileError", cause=str(e))))
         CODE
 
         filter_count sample_validated.fastq validated "No reads remaining after input validation"
