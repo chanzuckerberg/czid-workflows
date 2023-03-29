@@ -313,7 +313,7 @@ class TestHitSummaryMergedReader(unittest.TestCase):
         ]
         rows = list(HitSummaryMergedReader(hit_summary_input))
         self.assertEqual(len(rows), 2)
-        self.assertEqual(rows[0]["contig_species_taxid"], 60)
+        self.assertEqual(rows[0]["contig_species_taxid"], '60')
         self.assertEqual(rows[1]["accession_id"], "")
 
     def test_read_error_empty_line(self):
@@ -330,7 +330,7 @@ class TestHitSummaryMergedReader(unittest.TestCase):
     
     def test_read_error_wrong_data_type(self):
         hit_summary_input = [
-            "read_id_1	10	not_num	accession_id_1	30	40	50	contig_id_1	contig_accession_id_1	60	70	80	from_assembly	souce_count_type",
+            "read_id_1	not_num	20	accession_id_1	30	40	50	contig_id_1	contig_accession_id_1	60	70	80	from_assembly	souce_count_type",
         ]
         with self.assertRaises(Exception):
             next(HitSummaryMergedReader(hit_summary_input))

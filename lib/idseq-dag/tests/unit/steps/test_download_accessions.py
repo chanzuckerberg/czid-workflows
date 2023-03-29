@@ -71,7 +71,8 @@ class TestDownloadAccessions(unittest.TestCase):
 
         for test_name, accession_data, expected_result in parameterized_tests:
             with self.subTest(test_name):
-                result = self.step._fix_ncbi_record(accession_data)
+                lines = accession_data.split("\n")
+                result = "\n".join(self.step._fix_headers(line) for line in lines)
 
                 self.assertEqual(result, expected_result)
         

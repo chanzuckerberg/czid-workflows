@@ -13,9 +13,9 @@ TMP_PARENT_FOLDER = TMP_FOLDER
 TMP_SRC_FOLDER = f'{TMP_PARENT_FOLDER}/command_test_tmp_src'
 TMP_DEST_FOLDER = f'{TMP_PARENT_FOLDER}/command_test_tmp_dst'
 TMP_SOURCE_FILE_PATH = os.path.join(TMP_SRC_FOLDER, TMP_FILE_NAME)
-TESTFILE_ABC_TXT = relative_file_path(__file__, "dummy testfile abc.txt")
-TESTFILE_BCD_TXT = relative_file_path(__file__, "dummy testfile bcd.txt")
-TESTSCRIPT_HAPPY_PY = relative_file_path(__file__, "dummy testscript happy.py")
+TESTFILE_ABC_TXT = relative_file_path(__file__, "util/dummy testfile abc.txt")
+TESTFILE_BCD_TXT = relative_file_path(__file__, "util/dummy testfile bcd.txt")
+TESTSCRIPT_HAPPY_PY = relative_file_path(__file__, "util/dummy testscript happy.py")
 
 
 class CommandModuleMethodsExecuteCommands(unittest.TestCase):
