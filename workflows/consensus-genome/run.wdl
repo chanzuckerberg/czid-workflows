@@ -72,6 +72,11 @@ workflow consensus_genome {
         File nt_loc_db
         String nr_s3_path
         File nr_loc_db
+        
+        String nt_s3_path_update = "s3://czid-public-references/ncbi-indexes-prod/2022-06-02/index-generation-2/nt"
+        File nt_loc_db_update = "s3://czid-public-references/ncbi-indexes-prod/2022-06-02/index-generation-2/nt_loc.marisa"
+        String nr_s3_path_update = "s3://czid-public-references/ncbi-indexes-prod/2022-06-02/index-generation-2/nr"
+        File nr_loc_db_update = "s3://czid-public-references/ncbi-indexes-prod/2022-06-02/index-generation-2/nr_loc.marisa"
 
         # Dummy values - required by SFN interface
         String s3_wd_uri = ""
@@ -90,10 +95,10 @@ workflow consensus_genome {
         call FetchSequenceByAccessionId {
             input:
                 accession_id = select_first([ref_accession_id]),
-                nt_s3_path = nt_s3_path,
-                nt_loc_db = nt_loc_db,
-                nr_s3_path = nr_s3_path,
-                nr_loc_db = nr_loc_db,
+                nt_s3_path = nt_s3_path_update,
+                nt_loc_db = nt_loc_db_update,
+                nr_s3_path = nr_s3_path_update,
+                nr_loc_db = nr_loc_db_update,
                 docker_image_id = docker_image_id
         }
     }
