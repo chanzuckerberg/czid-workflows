@@ -55,6 +55,7 @@ RUN apt-get -q install -y \
         liblz4-tool \
         lbzip2 \
         docker.io \
+        python3-dev \
         python3-pip \
         python3-setuptools \
         python3-wheel \
@@ -69,7 +70,8 @@ RUN apt-get -q install -y \
         seqtk \
         bedtools \
         dh-autoreconf \
-        nasm
+        nasm \
+        build-essential 
 
 # The following packages pull in python2.7
 RUN apt-get -q install -y \
@@ -77,7 +79,7 @@ RUN apt-get -q install -y \
         spades \
         ncbi-blast+
 
-RUN pip3 install boto3==1.23.10 marisa-trie==0.7.7
+RUN pip3 install boto3==1.23.10 marisa-trie==0.7.7 pytest
 RUN pip3 install miniwdl==${MINIWDL_VERSION} miniwdl-s3parcp==0.0.5 miniwdl-s3upload==0.0.4
 RUN pip3 install https://github.com/chanzuckerberg/miniwdl-plugins/archive/f0465b0.zip#subdirectory=sfn-wdl
 RUN pip3 install https://github.com/chanzuckerberg/s3mi/archive/v0.8.0.tar.gz

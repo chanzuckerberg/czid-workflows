@@ -1,5 +1,4 @@
 import unittest
-
 from .idseq_step_setup import IdseqStepSetup
 from idseq_dag.steps.run_star import PipelineStepRunStar
 

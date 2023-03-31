@@ -234,18 +234,6 @@ workflow consensus_genome {
             docker_image_id = docker_image_id
     }
 
-    # TODO: generalize VADR to run on any coronavirus reference or any viral reference with a VADR model available
-    if (ref_accession_id == None) {
-        call Vadr {
-            input:
-                prefix = prefix,
-                assembly = select_first([MakeConsensus.consensus_fa, RunMinion.consensus_fa]),
-                vadr_options = vadr_options,
-                vadr_model = vadr_model,
-                docker_image_id = docker_image_id
-        }
-    }
-
     call ZipOutputs {
         input:
             prefix = prefix,
@@ -272,9 +260,6 @@ workflow consensus_genome {
                     RunMinion.vcf,
                     RealignConsensus.muscle_output,
                     RunMinion.muscle_output,
-                    Vadr.vadr_quality,                 # Optional (VADR only runs on default (coronavirus) reference)
-                    Vadr.vadr_alerts,                  # Optional (VADR only runs on default (coronavirus) reference)
-                    Vadr.vadr_errors                   # Optional (only present if VADR ran and exited with an error)
                 ])
             ])),
             docker_image_id = docker_image_id
@@ -296,9 +281,6 @@ workflow consensus_genome {
         File? compute_stats_out_depths_fig = ComputeStats.depths_fig
         File? compute_stats_out_output_stats = ComputeStats.output_stats
         File? compute_stats_out_sam_depths = ComputeStats.sam_depths
-        File? vadr_quality_out = Vadr.vadr_quality  # Optional (VADR only runs on default (coronavirus) reference)
-        File? vadr_alerts_out = Vadr.vadr_alerts    # Optional (VADR only runs on default (coronavirus) reference)
-        File? vadr_errors = Vadr.vadr_errors        # Optional (only present if VADR ran and exited with an error)
         File? minion_log = RunMinion.log
         File zip_outputs_out_output_zip = ZipOutputs.output_zip
     }
@@ -1084,50 +1066,6 @@ task ComputeStats {
         File sam_stats = "~{prefix}samtools_stats.txt"
         File depths_fig = "~{prefix}depths.png"
         File output_stats = "~{prefix}stats.json"
-    }
-
-    runtime {
-        docker: docker_image_id
-    }
-}
-
-# NOTE: if we add this step, we need to make it conditional on whether or not the pipeline is running for SARS-CoV-2.
-# Expanding to other viruses will require downloading the full set of VADR models
-task Vadr {
-    # Based on original work at https://github.com/AndrewLangvt/genomic_analyses/blob/v0.4.5/tasks/task_ncbi.wdl
-    # Requires coronavirus VADR models from https://ftp.ncbi.nlm.nih.gov/pub/nawrocki/vadr-models/coronaviridae/CURRENT/
-    input {
-        String prefix
-        File assembly
-        String vadr_options
-        File vadr_model
-        String docker_image_id
-    }
-
-    command <<<
-        set -e
-        source /etc/profile
-        mkdir -p /usr/local/share/vadr/models
-        tar xzvf "~{vadr_model}" -C /usr/local/share/vadr/models --strip-components 1
-        # find available RAM
-        RAM_MB=$(free -m | head -2 | tail -1 | awk '{print $2}')
-        
-        {
-            # run VADR
-            v-annotate.pl ~{vadr_options} --mxsize $RAM_MB "~{assembly}" "vadr-output"        
-        } || {
-            # in validation, some samples fail with errors: 
-            # ... ERROR in cmalign_run(), cmalign failed in a bad way...
-            # ... ERROR, at least one sequence name exceeds the maximum GenBank allowed length of 50...
-            # we want to capture VADR errors in outputs but these should not cause the workflow to fail entirely
-            grep "ERROR" vadr-output/vadr-output.vadr.log > vadr_error.txt
-        }
-    >>>
-
-    output {
-        File? vadr_errors = "vadr_error.txt"
-        File? vadr_quality = "vadr-output/vadr-output.vadr.sqc"
-        File? vadr_alerts = "vadr-output/vadr-output.vadr.alt.list"
     }
 
     runtime {

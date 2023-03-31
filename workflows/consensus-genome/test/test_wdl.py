@@ -27,42 +27,6 @@ class TestConsensusGenomes(WDLTestCase):
         common_inputs = yaml.safe_load(fh)
     sc2_ref_fasta = "s3://czid-public-references/consensus-genome/MN908947.3.fa"
 
-    def test_vadr_error_caught(self):
-        # use the long filename error as a proxy for testing VADR error handling
-        consensus = os.path.join(
-            os.path.dirname(__file__), "vadr_input", "really-long-name-consensus.fa"
-        )
-        vadr_opts_string = (
-            "-s -r --nomisc --mkey NC_045512 --lowsim5term 2 --lowsim3term 2 --fstlowthr 0.0 "
-            "--alt_fail lowscore,fsthicnf,fstlocnf"
-        )
-        args = [
-            "vadr_model=s3://czid-public-references/consensus-genome/vadr-models-sarscov2-1.2-2.tar.gz",
-            f"vadr_options={vadr_opts_string}",
-            f"assembly={consensus}",
-        ]
-        res = self.run_miniwdl(args=args, task="Vadr", task_input={"prefix": ""})
-        self.assertIsNotNone(res["outputs"]["Vadr.vadr_errors"])
-        self.assertEqual(res["outputs"]["Vadr.vadr_alerts"], None)
-        self.assertEqual(res["outputs"]["Vadr.vadr_quality"], None)
-
-    def test_vadr_flag_works(self):
-        consensus = os.path.join(
-            os.path.dirname(__file__), "vadr_input", "really-long-name-consensus.fa"
-        )
-        vadr_opts_string = (
-            "-s -r --nomisc --mkey sarscov2 --lowsim5term 2 --lowsim3term 2 "
-            "--fstlowthr 0.0 --alt_fail lowscore,fsthicnf,fstlocnf --noseqnamemax"
-        )
-        args = [
-            "vadr_model=s3://czid-public-references/consensus-genome/vadr-models-sarscov2-1.2-2.tar.gz",
-            f"vadr_options={vadr_opts_string}",
-            f"assembly={consensus}",
-        ]
-        res = self.run_miniwdl(args=args, task="Vadr", task_input={"prefix": ""})
-        self.assertIsNotNone(res["outputs"]["Vadr.vadr_alerts"])
-        self.assertIsNone(res["outputs"]["Vadr.vadr_errors"])
-
     # test the depths associated with SNAP ivar trim -x 5
     def test_sars_cov2_illumina_cg_snap(self):
         aligned_reads = os.path.join(
