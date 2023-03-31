@@ -312,7 +312,7 @@ task star_generate {
         pigz -dc '~{transcripts_gtf_gz}' > "$transcripts_gtf"
       fi 
       if [[ -n '~{ERCC_fasta_gtf}' ]]; then
-        pigz -dc '~{ERCC_fasta_gtf}' >> "$transcripts_gtf"
+        cat '~{ERCC_fasta_gtf}' >> "$transcripts_gtf"
       fi 
     fi
 
