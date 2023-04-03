@@ -528,9 +528,11 @@ task ZipOutputs {
         counter=1
         for fastx in ~{sep= ' ' nonHostReads}; do 
             cp $fastx ${TMPDIR}/outputs/non_host_reads_R$counter."${fastx#*.}"
+            cp $fastx non_host_reads_R$counter."${fastx#*.}"
             ((counter++))
         done
         cp ~{sep=' ' outputFiles} ${TMPDIR}/outputs/
+        cp ~{sep=' ' outputFiles} .
         cp ~{sep=' ' mainReports} ${TMPDIR}/outputs/final_reports
         cp ~{sep=' ' rawReports} ${TMPDIR}/outputs/raw_reports
         cp ~{sep=' ' intermediateFiles} ${TMPDIR}/outputs/intermediate_files
@@ -539,6 +541,8 @@ task ZipOutputs {
     >>>
 
     output {
+        Array[File] non_host_reads = glob("non_host_reads*")
+        File contigs = "contigs.fasta"
         File output_zip = "outputs.zip"
     }
 
