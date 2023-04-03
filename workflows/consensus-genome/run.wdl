@@ -260,6 +260,8 @@ workflow consensus_genome {
                     RunMinion.vcf,
                     RealignConsensus.muscle_output,
                     RunMinion.muscle_output,
+                    primer_bed,
+                    ref_fasta if ref_fasta is not None else "",  # only return the refernce file if one was provided (general viral WGS case)
                 ])
             ])),
             docker_image_id = docker_image_id
