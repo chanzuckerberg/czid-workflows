@@ -431,7 +431,10 @@ task RunReadsToContigs {
     command <<<
         set -euxo pipefail
         # use minimap2 to align reads back to contigs
-        minimap2 -ax map-ont "~{assembled_reads}" "~{input_fastq}" -o sample.reads_to_contigs.sam -t 15 --secondary=no
+        minimap2 -ax map-ont "~{assembled_reads}" "~{input_fastq}" -o sample.reads_to_contigs_all.sam -t 15 --secondary=no
+
+        # filter out contigs with too much clipping
+        python3 /usr/local/bin/filter_clipped_alignments.py sample.reads_to_contigs_all.sam sample.reads_to_contigs.sam -m 50
         samtools view -b sample.reads_to_contigs.sam | samtools sort > sample.reads_to_contigs.bam
         samtools index sample.reads_to_contigs.bam sample.reads_to_contigs.bam.bai
 
