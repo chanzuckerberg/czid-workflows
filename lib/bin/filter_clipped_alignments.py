@@ -29,8 +29,14 @@ def main(reads_to_contig_sam, output_file, max_percent):
     with open(reads_to_contig_sam, "r") as csv_file, open(
         output_file, mode="w", newline=""
     ) as output_file:
-        csv_reader = csv.reader(csv_file, delimiter="\t", )
-        output = csv.writer(output_file, delimiter="\t", lineterminator='\n', quotechar='\t', quoting=csv.QUOTE_NONE)
+        csv_reader = csv.reader(csv_file, delimiter="\t")
+        output = csv.writer(
+            output_file,
+            delimiter="\t",
+            lineterminator="\n",
+            quotechar="\t",
+            quoting=csv.QUOTE_NONE,
+        )
 
         # Loop through each row in the CSV file
         for row in csv_reader:
