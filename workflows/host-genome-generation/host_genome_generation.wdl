@@ -23,6 +23,7 @@ workflow host_filter_indexing {
 
     # ERCC sequences to spike in to the genome and transcript indexes
     File ERCC_fasta_gz
+    File? ERCC_fasta_gtf
 
     # Additional FASTA file(s) to spike into the Bowtie2 & HISAT2 indexes (e.g. EBV, phiX)
     # Sequence names must be unique among all FASTAs!
@@ -86,6 +87,7 @@ workflow host_filter_indexing {
   call star_generate {
     input:
     fasta = concatenate_and_unzip_fastas.fasta,
+    ERCC_fasta_gtf, 
     transcripts_gtf_gz,
     genome_name,
     docker_image_id,
@@ -289,6 +291,7 @@ task minimap2_index {
 task star_generate {
   input {
     File fasta
+    File? ERCC_fasta_gtf
     File? transcripts_gtf_gz
     String genome_name
 
@@ -302,10 +305,15 @@ task star_generate {
     TMPDIR=${TMPDIR:-/tmp}
 
     gtf_flag=""
-    if [[ -n '~{transcripts_gtf_gz}' ]]; then
+    if [[ -n '~{transcripts_gtf_gz}' || -n '~{ERCC_fasta_gtf}' ]]; then
       transcripts_gtf="$TMPDIR/transcripts.gtf"
-      pigz -dc '~{transcripts_gtf_gz}' > "$transcripts_gtf"
       gtf_flag="--sjdbGTFfile \"$transcripts_gtf\""
+      if [[ -n '~{transcripts_gtf_gz}' ]]; then
+        pigz -dc '~{transcripts_gtf_gz}' > "$transcripts_gtf"
+      fi 
+      if [[ -n '~{ERCC_fasta_gtf}' ]]; then
+        cat '~{ERCC_fasta_gtf}' >> "$transcripts_gtf"
+      fi 
     fi
 
     # Make directory for STAR genome
