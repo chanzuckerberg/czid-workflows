@@ -19,6 +19,7 @@ workflow consensus_genome {
         File ercc_fasta = "s3://czid-public-references/consensus-genome/ercc_sequences.fasta"
         File kraken2_db_tar_gz  # TODO: make this optional; only required if filter_reads == true, even for Illumina
         File primer_bed = "s3://czid-public-references/consensus-genome/artic_v3_primers.bed" # Only required for Illumina
+        Boolean output_primer = false
 
         File? ref_fasta # Only required for Illumina (ONT SC2 reference is built into ARTIC); takes precedence over ref_accession_id
         String? ref_accession_id # Only required for Illumina; has no effect if ref_fasta is set
@@ -240,6 +241,7 @@ workflow consensus_genome {
             outputFiles = select_all(flatten([
                 RemoveHost.host_removed_fastqs,
                 select_all([
+                    if output_primer then "~{primer_bed}" else None, 
                     MakeConsensus.consensus_fa,
                     RunMinion.consensus_fa,
                     ComputeStats.depths_fig,
