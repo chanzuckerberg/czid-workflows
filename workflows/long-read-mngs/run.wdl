@@ -432,9 +432,12 @@ task RunReadsToContigs {
         set -euxo pipefail
         # use minimap2 to align reads back to contigs
         minimap2 -ax map-ont "~{assembled_reads}" "~{input_fastq}" -o sample.reads_to_contigs_all.sam -t 15 --secondary=no
+        # filter only primary contigs
+        samtools view -h -F 0x900 sample.reads_to_contigs_all.sam > sample.reads_to_contigs_primary.sam
 
         # filter out contigs with too much clipping
-        python3 /usr/local/bin/filter_clipped_alignments.py sample.reads_to_contigs_all.sam sample.reads_to_contigs.sam -m 50
+        python3 /usr/local/bin/filter_clipped_alignments.py sample.reads_to_contigs_primary.sam sample.reads_to_contigs.sam -m 50
+        awk '{ print $1 "\t" $3 "\t" length($10)}' sample.reads_to_contigs.sam > reads_to_contigs.tsv
         samtools view -b sample.reads_to_contigs.sam | samtools sort > sample.reads_to_contigs.bam
         samtools index sample.reads_to_contigs.bam sample.reads_to_contigs.bam.bai
 
@@ -443,7 +446,6 @@ task RunReadsToContigs {
 
         # convert non-contigs.fastq file to .fasta file
         seqtk seq -a sample.non_contigs.fastq > sample.non_contigs.fasta
-        samtools view -F 0x900 sample.reads_to_contigs.sam | awk '{ print $1 "\t" $3 "\t" length($10)}' > reads_to_contigs.tsv
 
         python3 - << 'EOF'
         import textwrap
