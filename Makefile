@@ -81,7 +81,7 @@ python-dependencies: .python_dependencies_installed # install python dependencie
 # TODO: Break this up into 2 functions, one to resolve the RUNFILE and one to run the workflow
 .PHONY: run
 run: build python-dependencies ## run a miniwdl workflow. eg. make run WORKFLOW=consensus-genome. args: WORKFLOW,EXTRA_INPUT,INPUT,TASK_CMD
-	if [ "$(WORKFLOW)" = "short-read-mngs" ]; then \ 
+	if [ "$(WORKFLOW)" = "short-read-mngs" ]; then \
 		RUNFILE="local_driver.wdl"; \
 	elif [ -f "workflows/$(WORKFLOW)/$(WORKFLOW).wdl" ]; then \
 		RUNFILE="$(WORKFLOW).wdl"; \
