@@ -1,0 +1,4 @@
+nt_s3_path: "s3://czid-public-references/ncbi-indexes-prod/2021-01-22/index-generation-2/nt"
+nt_loc_db: "s3://czid-public-references/ncbi-indexes-prod/2021-01-22/index-generation-2/nt_loc.marisa"
+nr_s3_path: "s3://czid-public-references/ncbi-indexes-prod/2021-01-22/index-generation-2/nr"
+nr_loc_db: "s3://czid-public-references/ncbi-indexes-prod/2021-01-22/index-generation-2/nr_loc.marisa"
