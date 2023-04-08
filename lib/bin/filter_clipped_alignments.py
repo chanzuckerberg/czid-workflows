@@ -29,7 +29,7 @@ def main(reads_to_contig_sam, output_file, max_percent):
     with open(reads_to_contig_sam, "r") as csv_file, open(
         output_file, mode="w", newline=""
     ) as output_file:
-        csv_reader = csv.reader(csv_file, delimiter="\t")
+        csv_reader = csv.reader(csv_file, delimiter="\t", quotechar="\t")
         output = csv.writer(
             output_file,
             delimiter="\t",
