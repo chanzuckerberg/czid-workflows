@@ -94,6 +94,14 @@ workflow amr {
         docker_image_id = docker_image_id,
         sample_name = sample_name
     }
+    
+    call tsvToSam { 
+        input: 
+        contigs = select_first([contigs, RunSpades.contigs]),
+        comprehensive_AMR_metrics = RunResultsPerSample.final_summary,
+        docker_image_id = docker_image_id
+    }
+
     call ZipOutputs {
         input:
         nonHostReads = select_first([
@@ -601,4 +609,64 @@ task MakeGeneCoverage {
     runtime {
         docker: docker_image_id
     } 
+}
+
+task tsvToSam {
+    input {
+        File contigs
+        File comprehensive_AMR_metrics
+        String docker_image_id
+    }
+    command <<<
+        set -euxo pipefail
+        PATH_OUTPUT_SAM="test.sam"
+        PATH_OUTPUT_BAM="test.bam"
+
+        # Create index to enable querying fasta file
+        samtools faidx "~{contigs}"
+
+        # Create SAM header with mock sequence sizes
+        echo -e "@HD\tVN:1.0\tSO:unsorted" > $PATH_OUTPUT_SAM
+        awk -F "\t" -v OFS="\t" '{
+            contigName = $2
+            geneId = $36
+
+            # Ignore header, and lines with no info
+            if(NR == 1 || contigName == "" || geneId == "")
+                next;
+
+            print "@SQ", "SN:"geneId, "LN:100"
+        }' "~{comprehensive_AMR_metrics}" | sort | uniq >> $PATH_OUTPUT_SAM
+
+        # Go through each line of the TSV and output a SAM record
+        awk -F "\t" -v OFS="\t" -v PATH_CONTIGS="~{contigs}" '{
+            contigName = $2
+            geneId = $36
+
+            # Ignore header, and lines with no info
+            if(NR == 1 || contigName == "" || geneId == "")
+                next;
+
+            # Contig names here have an additional "_" followed by a number at the end,
+            # but the contig name in contigs.fasta does not, so remove it.
+            gsub(/_[^_]*$/, "", contigName);
+
+            # Fetch contig sequence
+            "samtools faidx -n 0 " PATH_CONTIGS " \"" contigName "\" | tail -n 1" | getline contigSequence
+
+            print contigName, 0, geneId, "1", 255, "*", "*", 0, 0, contigSequence, "*"
+        }' "~{comprehensive_AMR_metrics}" >> $PATH_OUTPUT_SAM
+
+        # Convert SAM to BAM and index (ignore warning about no CIGAR string; we don't need those)
+        samtools sort -o $PATH_OUTPUT_BAM $PATH_OUTPUT_SAM 2>/dev/null
+        samtools index $PATH_OUTPUT_BAM
+    >>>
+
+    output {
+        File output_bam = "test.bam"
+    }
+
+    runtime {
+        docker: docker_image_id
+    }
 }
