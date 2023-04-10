@@ -98,7 +98,7 @@ workflow amr {
     call tsvToSam { 
         input: 
         contigs = select_first([contigs, RunSpades.contigs]),
-        comprehensive_AMR_metrics = RunResultsPerSample.final_summary,
+        final_summary = RunResultsPerSample.final_summary,
         docker_image_id = docker_image_id
     }
 
@@ -614,13 +614,13 @@ task MakeGeneCoverage {
 task tsvToSam {
     input {
         File contigs
-        File comprehensive_AMR_metrics
+        File final_summary
         String docker_image_id
     }
     command <<<
         set -euxo pipefail
-        PATH_OUTPUT_SAM="test.sam"
-        PATH_OUTPUT_BAM="test.bam"
+        PATH_OUTPUT_SAM="contig_amr_report.sam"
+        PATH_OUTPUT_BAM="contig_amr_report.sorted.bam"
 
         # Create index to enable querying fasta file
         samtools faidx "~{contigs}"
@@ -636,7 +636,7 @@ task tsvToSam {
                 next;
 
             print "@SQ", "SN:"geneId, "LN:100"
-        }' "~{comprehensive_AMR_metrics}" | sort | uniq >> $PATH_OUTPUT_SAM
+        }' "~{final_summary}" | sort | uniq >> $PATH_OUTPUT_SAM
 
         # Go through each line of the TSV and output a SAM record
         awk -F "\t" -v OFS="\t" -v PATH_CONTIGS="~{contigs}" '{
@@ -652,10 +652,11 @@ task tsvToSam {
             gsub(/_[^_]*$/, "", contigName);
 
             # Fetch contig sequence
-            "samtools faidx -n 0 " PATH_CONTIGS " \"" contigName "\" | tail -n 1" | getline contigSequence
+            command = "samtools faidx -n 0 contigs.fasta \""contigName"\" | tail -n 1"
+            command | getline contigSequence
 
             print contigName, 0, geneId, "1", 255, "*", "*", 0, 0, contigSequence, "*"
-        }' "~{comprehensive_AMR_metrics}" >> $PATH_OUTPUT_SAM
+        }' "~{final_summary}" >> $PATH_OUTPUT_SAM
 
         # Convert SAM to BAM and index (ignore warning about no CIGAR string; we don't need those)
         samtools sort -o $PATH_OUTPUT_BAM $PATH_OUTPUT_SAM 2>/dev/null
@@ -663,7 +664,8 @@ task tsvToSam {
     >>>
 
     output {
-        File output_bam = "test.bam"
+        File output_sorted = "contig_amr_report.sorted.bam"
+        File output_sorted_bai = "contig_amr_report.sorted.bam.bai"
     }
 
     runtime {
