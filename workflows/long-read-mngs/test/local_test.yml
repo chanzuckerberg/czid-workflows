@@ -1,0 +1,10 @@
+# Example inputs for running locally
+minimap_host_db: "s3://czid-public-references/host_filter/ercc/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/ERCC.fasta"
+minimap_human_db: "s3://czid-public-references/host_filter/ercc/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/ERCC.fasta"
+minimap2_local_db_path: "s3://czid-public-references/test/viral-alignment-indexes/viral_nt"
+diamond_local_db_path: "s3://czid-public-references/test/viral-alignment-indexes/viral_nr"
+accession2taxid_db: "s3://czid-public-references/mini-database/alignment_indexes/2020-08-20-viral/viral_accessions2taxid.marisa"
+lineage_db: "s3://czid-public-references/taxonomy/2021-01-22/taxid-lineages.db"
+taxon_blacklist: "s3://czid-public-references/taxonomy/2021-01-22/taxon_blacklist.txt"
+deuterostome_db: "s3://czid-public-references/taxonomy/2021-01-22/deuterostome_taxids.txt"
+nt_info_db: "s3://czid-public-references/test/viral-alignment-indexes/viral_nt_info.marisa"

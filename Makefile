@@ -7,9 +7,15 @@ EXTRA_INPUTS?=
 TASK?=
 
 ifeq ($(WORKFLOW),short-read-mngs)
-    INPUT?=-i workflows/$(WORKFLOW)/test/local_test_viral.yml
+    TEST_FILE?=workflows/$(WORKFLOW)/test/local_test_viral.yml
 else
-    INPUT?=-i workflows/$(WORKFLOW)/test/local_test.yml
+    TEST_FILE?=workflows/$(WORKFLOW)/test/local_test.yml
+endif
+
+ifeq ($(TASK),)
+ifneq ($(wildcard $(TEST_FILE)), )
+	INPUT?=-i $(TEST_FILE)
+endif
 endif
 
 TASK_CMD := $(if $(TASK), --task $(TASK),)
@@ -27,7 +33,7 @@ build: .build-$(WORKFLOW) ## Build docker images for a given workflow. eg. make 
 	touch .build-$*
 	
 .PHONY: rebuild
-rebuild: 
+rebuild: ## Rebuild docker images for a given workflow. If you change anything in the lib/ directory you will likely need to rebuild. 
 	rm .build-$(WORKFLOW) | true
 	$(MAKE) build WORKFLOW=$(WORKFLOW)
 
@@ -72,10 +78,13 @@ python-dependencies: .python_dependencies_installed # install python dependencie
 	echo "Run: source .venv/bin/activate"
 	touch .python_dependencies_installed
 
+# TODO: Break this up into 2 functions, one to resolve the RUNFILE and one to run the workflow
 .PHONY: run
 run: build python-dependencies ## run a miniwdl workflow. eg. make run WORKFLOW=consensus-genome. args: WORKFLOW,EXTRA_INPUT,INPUT,TASK_CMD
 	if [ "$(WORKFLOW)" = "short-read-mngs" ]; then \
 		RUNFILE="local_driver.wdl"; \
+	elif [ -f "workflows/$(WORKFLOW)/$(WORKFLOW).wdl" ]; then \
+		RUNFILE="$(WORKFLOW).wdl"; \
 	else \
 		RUNFILE="run.wdl"; \
 	fi; \
@@ -89,3 +98,14 @@ miniwdl-explore: ## !ADVANCED! explore a previous miniwdl workflow run in the cl
 .PHONY: ls
 ls: ## list workflows
 	@ls -1 workflows/
+
+.PHONY: check
+check: python-dependencies ## run miniwdl check on the given workflow
+	if [ "$(WORKFLOW)" = "short-read-mngs" ]; then \
+                RUNFILE="local_driver.wdl"; \
+	elif [ -f "workflows/$(WORKFLOW)/$(WORKFLOW).wdl" ]; then \
+		RUNFILE="$(WORKFLOW).wdl"; \
+	else \
+			RUNFILE="run.wdl"; \
+	fi; \
+	.venv/bin/miniwdl check workflows/$(WORKFLOW)/$$RUNFILE
