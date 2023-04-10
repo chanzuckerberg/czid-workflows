@@ -1,6 +1,7 @@
 #!/bin/bash
 
-# TODO: Figure out where contigs.fasta is depending on whether ran mNGS?
+set -euxo pipefail
+
 PATH_CONTIGS="contigs.fasta"
 PATH_COMPREHENSIVE_REPORT="final_reports/comprehensive_AMR_metrics.tsv"
 PATH_OUTPUT_SAM="test.sam"
@@ -36,7 +37,8 @@ awk -F "\t" -v OFS="\t" -v PATH_CONTIGS="$PATH_CONTIGS" '{
   gsub(/_[^_]*$/, "", contigName);
 
   # Fetch contig sequence
-  "samtools faidx -n 0 " PATH_CONTIGS " \"" contigName "\" | tail -n 1" | getline contigSequence
+  command = "samtools faidx -n 0 contigs.fasta \""contigName"\" | tail -n 1"
+  command | getline contigSequence
 
   print contigName, 0, geneId, "1", 255, "*", "*", 0, 0, contigSequence, "*"
 }' $PATH_COMPREHENSIVE_REPORT >> $PATH_OUTPUT_SAM
