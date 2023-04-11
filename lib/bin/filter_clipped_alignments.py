@@ -25,6 +25,21 @@ def get_clipping(cigar, alength, pattern):
     return clipping, alength
 
 
+UNMAPPED_READ = [
+    "read_id",  # QNAME
+    "4",  # FLAG
+    "*",  # RNAME
+    "0",  # POS
+    "0",  # MAPQ
+    "*",  # CIGAR
+    "*",  # MRNM
+    "0",  # MPOS
+    "0",  # ISIZE
+    "AAAA",  # SEQ
+    "????",  # QUAL
+]
+
+
 def main(reads_to_contig_sam, output_file, max_percent):
     with open(reads_to_contig_sam, "r") as csv_file, open(
         output_file, mode="w", newline=""
@@ -50,6 +65,14 @@ def main(reads_to_contig_sam, output_file, max_percent):
                 percent_clipped = ((front_clipping + end_clipping) / alength) * 100
                 if percent_clipped < max_percent:
                     output.writerow(row)
+                else:
+                    unmapped_read = UNMAPPED_READ.copy()
+                    unmapped_read[0], unmapped_read[9], unmapped_read[10] = (
+                        row[0],
+                        row[9],
+                        row[10],
+                    )
+                    output.writerow(unmapped_read)
             else:
                 output.writerow(row)
 
