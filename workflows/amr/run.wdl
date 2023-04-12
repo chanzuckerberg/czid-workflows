@@ -617,50 +617,47 @@ task tsvToSam {
         File final_summary
         String docker_image_id
     }
+
     command <<<
         set -euxo pipefail
-        PATH_OUTPUT_SAM="contig_amr_report.sam"
-        PATH_OUTPUT_BAM="contig_amr_report.sorted.bam"
+        python3 <<CODE
+        import pandas as pd
+        import pysam
+
+        COLUMN_GENE_ID = "Reference Sequence_kma_amr"
+        COLUMN_CONTIG_NAME = "Contig_contig_amr"
+        OUTPUT_BAM = "contig_amr_report.sorted.bam"
 
         # Create index to enable querying fasta file
-        samtools faidx "~{contigs}"
+        pysam.faidx("~{contigs}")
+        contigs_fasta = pysam.Fastafile("~{contigs}")
 
-        # Create SAM header with mock sequence sizes
-        echo -e "@HD\tVN:1.0\tSO:unsorted" > $PATH_OUTPUT_SAM
-        awk -F "\t" -v OFS="\t" '{
-            contigName = $2
-            geneId = $36
+        # Load columns of interest from CSV and drop rows with at least one NaN
+        df = pd.read_csv("~{final_summary}", sep="\t", usecols=[COLUMN_GENE_ID, COLUMN_CONTIG_NAME]).dropna()
+        gene_ids = df[COLUMN_GENE_ID].unique().tolist()
+        # Remove extraneous _* at the end of contig names
+        df[COLUMN_CONTIG_NAME] = df[COLUMN_CONTIG_NAME].apply(lambda x: x[:x.rindex("_")])
 
-            # Ignore header, and lines with no info
-            if(NR == 1 || contigName == "" || geneId == "")
-                next;
+        # Create BAM file using mock reference lengths for the header
+        output_bam = pysam.AlignmentFile(OUTPUT_BAM, "wb", reference_names=gene_ids, reference_lengths=[100] * len(gene_ids))
 
-            print "@SQ", "SN:"geneId, "LN:100"
-        }' "~{final_summary}" | sort | uniq >> $PATH_OUTPUT_SAM
+        # Go through each line of the TSV and create a SAM record (https://wckdouglas.github.io/2021/12/pytest-with-pysam)
+        for index, row in df.iterrows():
+            gene_id = row[COLUMN_GENE_ID]
+            contig_name = row[COLUMN_CONTIG_NAME]
+            contig_sequence = contigs_fasta.fetch(contig_name)
 
-        # Go through each line of the TSV and output a SAM record
-        awk -F "\t" -v OFS="\t" -v PATH_CONTIGS="~{contigs}" '{
-            contigName = $2
-            geneId = $36
+            # Create new alignment
+            alignment = pysam.AlignedSegment(output_bam.header)
+            alignment.reference_name = gene_id
+            alignment.query_name = contig_name
+            alignment.query_sequence = contig_sequence
+            alignment.reference_start = 1
+            output_bam.write(alignment)
 
-            # Ignore header, and lines with no info
-            if(NR == 1 || contigName == "" || geneId == "")
-                next;
-
-            # Contig names here have an additional "_" followed by a number at the end,
-            # but the contig name in contigs.fasta does not, so remove it.
-            gsub(/_[^_]*$/, "", contigName);
-
-            # Fetch contig sequence
-            command = "samtools faidx -n 0 contigs.fasta \""contigName"\" | tail -n 1"
-            command | getline contigSequence
-
-            print contigName, 0, geneId, "1", 255, "*", "*", 0, 0, contigSequence, "*"
-        }' "~{final_summary}" >> $PATH_OUTPUT_SAM
-
-        # Convert SAM to BAM and index (ignore warning about no CIGAR string; we don't need those)
-        samtools sort -o $PATH_OUTPUT_BAM $PATH_OUTPUT_SAM 2>/dev/null
-        samtools index $PATH_OUTPUT_BAM
+        output_bam.close()
+        pysam.index(OUTPUT_BAM)
+        CODE
     >>>
 
     output {
