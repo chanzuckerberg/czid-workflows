@@ -10,7 +10,7 @@
 #   3 (optional): a message to display to the user if all reads are filtered out at this step
 #     if this is omitted an error is not raised for insufficient reads
 
-set -euo pipefail
+set -eo pipefail
 
 if [[ $1 == *gz ]]; then
     # gzip -t checks the whole file so might be a bit slow. 
