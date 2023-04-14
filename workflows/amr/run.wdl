@@ -94,6 +94,14 @@ workflow amr {
         docker_image_id = docker_image_id,
         sample_name = sample_name
     }
+    
+    call tsvToSam { 
+        input: 
+        contigs = select_first([contigs, RunSpades.contigs]),
+        final_summary = RunResultsPerSample.final_summary,
+        docker_image_id = docker_image_id
+    }
+
     call ZipOutputs {
         input:
         contigs_in = select_first([contigs, RunSpades.contigs]),
@@ -600,4 +608,64 @@ task MakeGeneCoverage {
     runtime {
         docker: docker_image_id
     } 
+}
+
+task tsvToSam {
+    input {
+        File contigs
+        File final_summary
+        String docker_image_id
+    }
+
+    command <<<
+        set -euxo pipefail
+        python3 <<CODE
+        import pandas as pd
+        import pysam
+
+        COLUMN_GENE_ID = "Reference Sequence_kma_amr"
+        COLUMN_CONTIG_NAME = "Contig_contig_amr"
+        OUTPUT_BAM = "contig_amr_report.sorted.bam"
+
+        # Create index to enable querying fasta file
+        pysam.faidx("~{contigs}")
+        contigs_fasta = pysam.Fastafile("~{contigs}")
+
+        # Load columns of interest from CSV and drop rows with at least one NaN
+        df = pd.read_csv("~{final_summary}", sep="\t", usecols=[COLUMN_GENE_ID, COLUMN_CONTIG_NAME]).dropna()
+
+        # Remove extraneous _* at the end of contig names
+        df[COLUMN_CONTIG_NAME] = df[COLUMN_CONTIG_NAME].apply(lambda x: x[:x.rindex("_")])
+
+        # Create BAM file using mock reference lengths for the header
+        gene_ids = df[COLUMN_GENE_ID].unique().tolist()
+        output_bam = pysam.AlignmentFile(OUTPUT_BAM, "wb", reference_names=gene_ids, reference_lengths=[100] * len(gene_ids))
+
+        # Go through each line of the TSV and create a SAM record (https://wckdouglas.github.io/2021/12/pytest-with-pysam)
+        for index, row in df.iterrows():
+            gene_id = row[COLUMN_GENE_ID]
+            contig_name = row[COLUMN_CONTIG_NAME]
+            contig_sequence = contigs_fasta.fetch(contig_name)
+
+            # Create new alignment
+            alignment = pysam.AlignedSegment(output_bam.header)
+            alignment.reference_name = gene_id
+            alignment.query_name = contig_name
+            alignment.query_sequence = contig_sequence
+            alignment.reference_start = 1
+            output_bam.write(alignment)
+
+        output_bam.close()
+        pysam.index(OUTPUT_BAM)
+        CODE
+    >>>
+
+    output {
+        File output_sorted = "contig_amr_report.sorted.bam"
+        File output_sorted_bai = "contig_amr_report.sorted.bam.bai"
+    }
+
+    runtime {
+        docker: docker_image_id
+    }
 }
