@@ -96,6 +96,7 @@ workflow amr {
     }
     call ZipOutputs {
         input:
+        contigs_in = select_first([contigs, RunSpades.contigs]),
         nonHostReads = select_first([
                            non_host_reads,
                            select_all(
@@ -105,11 +106,6 @@ workflow amr {
                                ]
                            )
                        ]),
-        outputFiles = select_all(
-            [
-                select_first([contigs, RunSpades.contigs]),
-            ]
-        ),
         mainReports = select_all(
             [
                 RunResultsPerSample.final_summary,
@@ -507,8 +503,8 @@ task RunSpades {
 }
 task ZipOutputs {
     input {
+        File contigs_in
         Array[File] nonHostReads
-        Array[File] outputFiles
         Array[File] mainReports
         Array[File] rawReports
         Array[File] intermediateFiles
@@ -525,12 +521,10 @@ task ZipOutputs {
         mkdir ${TMPDIR}/outputs/raw_reports
         mkdir ${TMPDIR}/outputs/intermediate_files
 
-        counter=1
-        for fastx in ~{sep= ' ' nonHostReads}; do 
-            cp $fastx ${TMPDIR}/outputs/non_host_reads_R$counter."${fastx#*.}"
-            ((counter++))
-        done
-        cp ~{sep=' ' outputFiles} ${TMPDIR}/outputs/
+        # copy contigs and interleave non_host_reads
+        cp ~{contigs_in} contigs.fasta
+        seqfu ilv -1 ~{sep=" -2 " nonHostReads} | gzip > non_host_reads.fasta.gz
+
         cp ~{sep=' ' mainReports} ${TMPDIR}/outputs/final_reports
         cp ~{sep=' ' rawReports} ${TMPDIR}/outputs/raw_reports
         cp ~{sep=' ' intermediateFiles} ${TMPDIR}/outputs/intermediate_files
@@ -539,6 +533,8 @@ task ZipOutputs {
     >>>
 
     output {
+        File non_host_reads = "non_host_reads.fasta.gz"
+        File contigs = "contigs.fasta"
         File output_zip = "outputs.zip"
     }
 
