@@ -94,6 +94,14 @@ workflow amr {
         docker_image_id = docker_image_id,
         sample_name = sample_name
     }
+    
+    call tsvToSam { 
+        input: 
+        contigs = select_first([contigs, RunSpades.contigs]),
+        final_summary = RunResultsPerSample.final_summary,
+        docker_image_id = docker_image_id
+    }
+
     call ZipOutputs {
         input:
         contigs_in = select_first([contigs, RunSpades.contigs]),
@@ -296,6 +304,9 @@ task RunResultsPerSample {
             
             nr = remove_na(set(sub_df['All Mapped Reads_kma_amr']))
             result['num_reads'] = max(nr) if len(nr) > 0 else None
+
+            read_gi = remove_na(set(sub_df["Reference Sequence_kma_amr"]))
+            result["read_gene_id"] = ";".join(read_gi) if len(read_gi) > 0 else None
             
             pid = remove_na(set(sub_df['Best_Identities_contig_amr']))
             result['contig_percent_id'] = sum(pid) / len(pid) if len(pid) > 0 else None
@@ -330,7 +341,7 @@ task RunResultsPerSample {
         final_df = pd.DataFrame.from_dict(result_df)
         final_df = final_df.transpose()
         final_df = final_df[["sample_name", "gene_family", "drug_class", "resistance_mechanism", "model_type", "num_contigs", 
-                             "cutoff", "contig_coverage_breadth", "contig_percent_id", "contig_species", "num_reads", "read_coverage_breadth", "read_coverage_depth", "read_species"]]
+                             "cutoff", "contig_coverage_breadth", "contig_percent_id", "contig_species", "num_reads", "read_gene_id", "read_coverage_breadth", "read_coverage_depth", "read_species"]]
         final_df.sort_index(inplace=True)
         final_df.dropna(subset=['drug_class'], inplace=True)
         final_df.to_csv("primary_AMR_report.tsv", sep='\t', index_label="gene_name")
@@ -597,4 +608,64 @@ task MakeGeneCoverage {
     runtime {
         docker: docker_image_id
     } 
+}
+
+task tsvToSam {
+    input {
+        File contigs
+        File final_summary
+        String docker_image_id
+    }
+
+    command <<<
+        set -euxo pipefail
+        python3 <<CODE
+        import pandas as pd
+        import pysam
+
+        COLUMN_GENE_ID = "Reference Sequence_kma_amr"
+        COLUMN_CONTIG_NAME = "Contig_contig_amr"
+        OUTPUT_BAM = "contig_amr_report.sorted.bam"
+
+        # Create index to enable querying fasta file
+        pysam.faidx("~{contigs}")
+        contigs_fasta = pysam.Fastafile("~{contigs}")
+
+        # Load columns of interest from CSV and drop rows with at least one NaN
+        df = pd.read_csv("~{final_summary}", sep="\t", usecols=[COLUMN_GENE_ID, COLUMN_CONTIG_NAME]).dropna()
+
+        # Remove extraneous _* at the end of contig names
+        df[COLUMN_CONTIG_NAME] = df[COLUMN_CONTIG_NAME].apply(lambda x: x[:x.rindex("_")])
+
+        # Create BAM file using mock reference lengths for the header
+        gene_ids = df[COLUMN_GENE_ID].unique().tolist()
+        output_bam = pysam.AlignmentFile(OUTPUT_BAM, "wb", reference_names=gene_ids, reference_lengths=[100] * len(gene_ids))
+
+        # Go through each line of the TSV and create a SAM record (https://wckdouglas.github.io/2021/12/pytest-with-pysam)
+        for index, row in df.iterrows():
+            gene_id = row[COLUMN_GENE_ID]
+            contig_name = row[COLUMN_CONTIG_NAME]
+            contig_sequence = contigs_fasta.fetch(contig_name)
+
+            # Create new alignment
+            alignment = pysam.AlignedSegment(output_bam.header)
+            alignment.reference_name = gene_id
+            alignment.query_name = contig_name
+            alignment.query_sequence = contig_sequence
+            alignment.reference_start = 1
+            output_bam.write(alignment)
+
+        output_bam.close()
+        pysam.index(OUTPUT_BAM)
+        CODE
+    >>>
+
+    output {
+        File output_sorted = "contig_amr_report.sorted.bam"
+        File output_sorted_bai = "contig_amr_report.sorted.bam.bai"
+    }
+
+    runtime {
+        docker: docker_image_id
+    }
 }
