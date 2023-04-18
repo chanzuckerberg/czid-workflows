@@ -194,7 +194,7 @@ RUN cd libdeflate-* && make -j8 && make install
 RUN ldconfig
 RUN git clone https://github.com/mlin/fastp.git && git -C fastp checkout 37edd60
 RUN cd fastp && make -j8 && ./fastp test && cp fastp /usr/local/bin
-WORKDIR /hisat2
+WORKDIR /
 RUN wget -nv -O /tmp/HISAT2.zip https://czid-public-references.s3.us-west-2.amazonaws.com/test/hisat2/hisat2.zip \
         && unzip /tmp/HISAT2.zip && rm /tmp/HISAT2.zip
 RUN curl -L https://github.com/pachterlab/kallisto/releases/download/v0.46.1/kallisto_linux-v0.46.1.tar.gz | tar xz -C /
@@ -202,7 +202,6 @@ RUN pip3 install gtfparse==1.2.1
 
 # Uninstall build only dependencies
 RUN apt-get purge -y g++ libperl4-corelibs-perl make
-WORKDIR /
 
 COPY --from=lib idseq-dag /tmp/idseq-dag
 RUN pip3 install /tmp/idseq-dag && rm -rf /tmp/idseq-dag
