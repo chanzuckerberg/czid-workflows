@@ -535,11 +535,12 @@ task hisat2_filter {
         # ----
         #   13
         samtools fastq -f 13 -1 'hisat2_host_filtered1.fastq' -2 'hisat2_host_filtered2.fastq' -0 /dev/null -s /dev/null /tmp/hisat2.sam
+        count="$(cat hisat2_host_filtered{1,2}.fastq | wc -l)"
     else
         samtools fastq -f 4 /tmp/hisat2.sam > 'hisat2_host_filtered1.fastq'
+        count="$(cat hisat2_host_filtered1.fastq | wc -l)"
     fi
 
-    count="$(cat hisat2_host_filtered{1,2}.fastq | wc -l)"
     count=$((count / 4))
     jq --null-input --arg count "$count" '{"hisat2_host_filtered_out":$count}' > 'hisat2_host_filtered_out.count'
 
@@ -628,11 +629,12 @@ task bowtie2_human_filter {
         # ----
         #   13
         samtools fastq -f 13 -1 'bowtie2_human_filtered1.fastq' -2 'bowtie2_human_filtered2.fastq' -0 /dev/null -s /dev/null /tmp/bowtie2.sam
+        count="$(cat bowtie2_human_filtered{1,2}.fastq | wc -l)"
     else
         samtools fastq -f 4 /tmp/bowtie2.sam > 'bowtie2_human_filtered1.fastq'
+        count="$(cat bowtie2_human_filtered1.fastq | wc -l)"
     fi
 
-    count="$(cat bowtie2_human_filtered{1,2}.fastq | wc -l)"
     count=$((count / 4))
     jq --null-input --arg count "$count" '{"bowtie2_human_filtered_out":$count}' > 'bowtie2_human_filtered_out.count'
 
@@ -702,11 +704,12 @@ task hisat2_human_filter {
         # ----
         #   13
         samtools fastq -f 13 -1 'hisat2_human_filtered1.fastq' -2 'hisat2_human_filtered2.fastq' -0 /dev/null -s /dev/null /tmp/hisat2.sam
+        count="$(cat hisat2_human_filtered{1,2}.fastq | wc -l)"
     else
         samtools fastq -f 4 /tmp/hisat2.sam > 'hisat2_human_filtered1.fastq'
+        count="$(cat hisat2_human_filtered1.fastq | wc -l)"
     fi
 
-    count="$(cat hisat2_human_filtered{1,2}.fastq | wc -l)"
     count=$((count / 4))
     jq --null-input --arg count "$count" '{"hisat2_human_filtered_out":$count}' > 'hisat2_human_filtered_out.count'
 
