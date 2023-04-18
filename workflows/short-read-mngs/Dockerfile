@@ -33,8 +33,7 @@ RUN sed -i s/archive.ubuntu.com/us-west-2.ec2.archive.ubuntu.com/ /etc/apt/sourc
         echo 'APT::Install-Recommends "false";' > /etc/apt/apt.conf.d/98czid; \
         echo 'APT::Install-Suggests "false";' > /etc/apt/apt.conf.d/99czid
 
-RUN apt-get -q update
-RUN apt-get -q install -y \
+RUN apt-get -q update && apt-get -q install -y \
         jq \
         moreutils \
         pigz \
@@ -196,8 +195,8 @@ RUN ldconfig
 RUN git clone https://github.com/mlin/fastp.git && git -C fastp checkout 37edd60
 RUN cd fastp && make -j8 && ./fastp test && cp fastp /usr/local/bin
 WORKDIR /hisat2
-RUN wget -nv -O /tmp/HISAT2.zip https://cloud.biohpc.swmed.edu/index.php/s/oTtGWbWjaxsQ2Ho/download \
-        && unzip /tmp/HISAT2.zip && mv hisat2-*/* . && rm /tmp/HISAT2.zip
+RUN wget -nv -O /tmp/HISAT2.zip https://czid-public-references.s3.us-west-2.amazonaws.com/test/hisat2/hisat2.zip \
+        && unzip /tmp/HISAT2.zip && rm /tmp/HISAT2.zip
 RUN curl -L https://github.com/pachterlab/kallisto/releases/download/v0.46.1/kallisto_linux-v0.46.1.tar.gz | tar xz -C /
 RUN pip3 install gtfparse==1.2.1
 
