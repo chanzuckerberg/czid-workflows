@@ -533,7 +533,7 @@ task hisat2_filter {
 
     ~{hisat2_invocation}
 
-    samtools sort -n -o /tmp/hisat2.bam -@ 8 -T /tmp "/tmp/hisat2.sam"
+    samtools sort -n -o /tmp/hisat2.bam -@ 8 -l 1 -T /tmp "/tmp/hisat2.sam"
 
     # Extract reads [pairs] that did NOT map to the index
     if [[ '~{paired}' == 'true' ]]; then
@@ -702,7 +702,7 @@ task hisat2_human_filter {
 
     ~{hisat2_invocation}
 
-    samtools sort -n -o /tmp/hisat2.bam -@ 8 -T /tmp "/tmp/hisat2.sam"
+    samtools sort -n -o /tmp/hisat2.bam -@ 8 -l 1 -T /tmp "/tmp/hisat2.sam"
 
     # Extract reads [pairs] that did NOT map to the index
     if [[ '~{paired}' == 'true' ]]; then
