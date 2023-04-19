@@ -97,7 +97,6 @@ workflow amr {
 
     call ZipOutputs {
         input:
-        contigs_in = select_first([contigs, RunSpades.contigs]),
         nonHostReads = select_first([
                            non_host_reads,
                            select_all(
@@ -107,6 +106,11 @@ workflow amr {
                                ]
                            )
                        ]),
+        outputFiles = select_all(
+            [
+                select_first([contigs, RunSpades.contigs]),
+            ]
+        ),
         mainReports = select_all(
             [
                 RunResultsPerSample.final_summary,
@@ -297,9 +301,6 @@ task RunResultsPerSample {
             
             nr = remove_na(set(sub_df['All Mapped Reads_kma_amr']))
             result['num_reads'] = max(nr) if len(nr) > 0 else None
-
-            read_gi = remove_na(set(sub_df["Reference Sequence_kma_amr"]))
-            result["read_gene_id"] = ";".join(read_gi) if len(read_gi) > 0 else None
             
             pid = remove_na(set(sub_df['Best_Identities_contig_amr']))
             result['contig_percent_id'] = sum(pid) / len(pid) if len(pid) > 0 else None
@@ -334,7 +335,7 @@ task RunResultsPerSample {
         final_df = pd.DataFrame.from_dict(result_df)
         final_df = final_df.transpose()
         final_df = final_df[["sample_name", "gene_family", "drug_class", "resistance_mechanism", "model_type", "num_contigs", 
-                             "cutoff", "contig_coverage_breadth", "contig_percent_id", "contig_species", "num_reads", "read_gene_id", "read_coverage_breadth", "read_coverage_depth", "read_species"]]
+                             "cutoff", "contig_coverage_breadth", "contig_percent_id", "contig_species", "num_reads", "read_coverage_breadth", "read_coverage_depth", "read_species"]]
         final_df.sort_index(inplace=True)
         final_df.dropna(subset=['drug_class'], inplace=True)
         final_df.to_csv("primary_AMR_report.tsv", sep='\t', index_label="gene_name")
@@ -507,8 +508,8 @@ task RunSpades {
 }
 task ZipOutputs {
     input {
-        File contigs_in
         Array[File] nonHostReads
+        Array[File] outputFiles
         Array[File] mainReports
         Array[File] rawReports
         Array[File] intermediateFiles
@@ -525,10 +526,12 @@ task ZipOutputs {
         mkdir ${TMPDIR}/outputs/raw_reports
         mkdir ${TMPDIR}/outputs/intermediate_files
 
-        # copy contigs and interleave non_host_reads
-        cp ~{contigs_in} contigs.fasta
-        seqfu ilv -1 ~{sep=" -2 " nonHostReads} | gzip > non_host_reads.fasta.gz
-
+        counter=1
+        for fastx in ~{sep= ' ' nonHostReads}; do 
+            cp $fastx ${TMPDIR}/outputs/non_host_reads_R$counter."${fastx#*.}"
+            ((counter++))
+        done
+        cp ~{sep=' ' outputFiles} ${TMPDIR}/outputs/
         cp ~{sep=' ' mainReports} ${TMPDIR}/outputs/final_reports
         cp ~{sep=' ' rawReports} ${TMPDIR}/outputs/raw_reports
         cp ~{sep=' ' intermediateFiles} ${TMPDIR}/outputs/intermediate_files
@@ -537,8 +540,6 @@ task ZipOutputs {
     >>>
 
     output {
-        File non_host_reads = "non_host_reads.fasta.gz"
-        File contigs = "contigs.fasta"
         File output_zip = "outputs.zip"
     }
 
