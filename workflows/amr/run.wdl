@@ -94,13 +94,6 @@ workflow amr {
         docker_image_id = docker_image_id,
         sample_name = sample_name
     }
-    
-    call tsvToSam { 
-        input: 
-        contigs = select_first([contigs, RunSpades.contigs]),
-        final_summary = RunResultsPerSample.final_summary,
-        docker_image_id = docker_image_id
-    }
 
     call ZipOutputs {
         input:
