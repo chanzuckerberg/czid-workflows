@@ -440,7 +440,7 @@ task bowtie2_filter {
     ~{bowtie2_invocation}
 
     # generate sort & compressed BAM file for archival
-    samtools sort -n -o "bowtie2_host.bam" -@ 4 -T /tmp "/tmp/bowtie2.sam" & samtools_pid=$!
+    samtools sort -n -o "bowtie2_host.bam" -@ 8 -T /tmp "/tmp/bowtie2.sam"
 
     # Extract reads [pairs] that did NOT map to the index
     if [[ '~{paired}' == 'true' ]]; then
@@ -449,10 +449,10 @@ task bowtie2_filter {
         # +  8 (mate unmapped)
         # ----
         #   13
-        samtools fastq -f 13 -1 'bowtie2_host_filtered1.fastq' -2 'bowtie2_host_filtered2.fastq' -0 /dev/null -s /dev/null /tmp/bowtie2.sam
+        samtools fastq -f 13 -1 'bowtie2_host_filtered1.fastq' -2 'bowtie2_host_filtered2.fastq' -0 /dev/null -s /dev/null bowtie2_host.bam
         count="$(cat bowtie2_host_filtered{1,2}.fastq | wc -l)"
     else
-        samtools fastq -f 4 /tmp/bowtie2.sam > 'bowtie2_host_filtered1.fastq'
+        samtools fastq -f 4 bowtie2_host.bam > 'bowtie2_host_filtered1.fastq'
         count="$(cat bowtie2_host_filtered1.fastq | wc -l)"
     fi
 
@@ -533,6 +533,8 @@ task hisat2_filter {
 
     ~{hisat2_invocation}
 
+    samtools sort -n -o /tmp/hisat2.bam -@ 8 -T /tmp "/tmp/hisat2.sam"
+
     # Extract reads [pairs] that did NOT map to the index
     if [[ '~{paired}' == 'true' ]]; then
         #    1 (read paired)
@@ -540,10 +542,10 @@ task hisat2_filter {
         # +  8 (mate unmapped)
         # ----
         #   13
-        samtools fastq -f 13 -1 'hisat2_host_filtered1.fastq' -2 'hisat2_host_filtered2.fastq' -0 /dev/null -s /dev/null /tmp/hisat2.sam
+        samtools fastq -f 13 -1 'hisat2_host_filtered1.fastq' -2 'hisat2_host_filtered2.fastq' -0 /dev/null -s /dev/null /tmp/hisat2.bam
         count="$(cat hisat2_host_filtered{1,2}.fastq | wc -l)"
     else
-        samtools fastq -f 4 /tmp/hisat2.sam > 'hisat2_host_filtered1.fastq'
+        samtools fastq -f 4 /tmp/hisat2.bam > 'hisat2_host_filtered1.fastq'
         count="$(cat hisat2_host_filtered1.fastq | wc -l)"
     fi
 
@@ -625,7 +627,7 @@ task bowtie2_human_filter {
     ~{bowtie2_invocation}
 
     # generate sort & compressed BAM file for archival
-    samtools sort -n -o "bowtie2_human.bam" -@ 4 -T /tmp "/tmp/bowtie2.sam" & samtools_pid=$!
+    samtools sort -n -o "bowtie2_human.bam" -@ 8 -T /tmp "/tmp/bowtie2.sam"
 
     # Extract reads [pairs] that did NOT map to the index
     if [[ '~{paired}' == 'true' ]]; then
@@ -634,10 +636,10 @@ task bowtie2_human_filter {
         # +  8 (mate unmapped)
         # ----
         #   13
-        samtools fastq -f 13 -1 'bowtie2_human_filtered1.fastq' -2 'bowtie2_human_filtered2.fastq' -0 /dev/null -s /dev/null /tmp/bowtie2.sam
+        samtools fastq -f 13 -1 'bowtie2_human_filtered1.fastq' -2 'bowtie2_human_filtered2.fastq' -0 /dev/null -s /dev/null bowtie2_human.bam
         count="$(cat bowtie2_human_filtered{1,2}.fastq | wc -l)"
     else
-        samtools fastq -f 4 /tmp/bowtie2.sam > 'bowtie2_human_filtered1.fastq'
+        samtools fastq -f 4 bowtie2_human.bam > 'bowtie2_human_filtered1.fastq'
         count="$(cat bowtie2_human_filtered1.fastq | wc -l)"
     fi
 
@@ -656,8 +658,6 @@ task bowtie2_human_filter {
       to alleviate any potential data privacy concerns.
       """).strip(), file=outfile)
     EOF
-
-    wait $samtools_pid
   >>>
 
   output {
@@ -702,6 +702,8 @@ task hisat2_human_filter {
 
     ~{hisat2_invocation}
 
+    samtools sort -n -o /tmp/hisat2.bam -@ 8 -T /tmp "/tmp/hisat2.sam"
+
     # Extract reads [pairs] that did NOT map to the index
     if [[ '~{paired}' == 'true' ]]; then
         #    1 (read paired)
@@ -709,10 +711,10 @@ task hisat2_human_filter {
         # +  8 (mate unmapped)
         # ----
         #   13
-        samtools fastq -f 13 -1 'hisat2_human_filtered1.fastq' -2 'hisat2_human_filtered2.fastq' -0 /dev/null -s /dev/null /tmp/hisat2.sam
+        samtools fastq -f 13 -1 'hisat2_human_filtered1.fastq' -2 'hisat2_human_filtered2.fastq' -0 /dev/null -s /dev/null /tmp/hisat2.bam
         count="$(cat hisat2_human_filtered{1,2}.fastq | wc -l)"
     else
-        samtools fastq -f 4 /tmp/hisat2.sam > 'hisat2_human_filtered1.fastq'
+        samtools fastq -f 4 /tmp/hisat2.bam > 'hisat2_human_filtered1.fastq'
         count="$(cat hisat2_human_filtered1.fastq | wc -l)"
     fi
 
