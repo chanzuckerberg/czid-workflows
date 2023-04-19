@@ -627,8 +627,10 @@ task tsvToSam {
         # Load columns of interest from CSV and drop rows with at least one NaN
         df = pd.read_csv("~{final_summary}", sep="\t", usecols=[COLUMN_GENE_ID, COLUMN_CONTIG_NAME])
 
-        # Create BAM with mock reference lengths for the header (do this before df.dropna() so we list all gene IDs in the SAM header)
-        gene_ids = df[COLUMN_GENE_ID].dropna().unique().tolist()
+        # Create BAM with mock reference lengths for the header (do this before df.dropna() so we
+        # list all gene IDs in the SAM header). If no gene IDs are found at all, have a mock gene
+        # to make sure we can create the SAM file with no errors (web app will look for that file)
+        gene_ids = df[COLUMN_GENE_ID].dropna().unique().tolist() or ["NoGenes"]
         output_bam = pysam.AlignmentFile(OUTPUT_BAM, "wb", reference_names=gene_ids, reference_lengths=[100] * len(gene_ids))
 
         # Remove extraneous _* at the end of contig names
