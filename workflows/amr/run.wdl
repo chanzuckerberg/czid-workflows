@@ -625,14 +625,15 @@ task tsvToSam {
         contigs_fasta = pysam.Fastafile("~{contigs}")
 
         # Load columns of interest from CSV and drop rows with at least one NaN
-        df = pd.read_csv("~{final_summary}", sep="\t", usecols=[COLUMN_GENE_ID, COLUMN_CONTIG_NAME]).dropna()
+        df = pd.read_csv("~{final_summary}", sep="\t", usecols=[COLUMN_GENE_ID, COLUMN_CONTIG_NAME])
+
+        # Create BAM with mock reference lengths for the header (do this before df.dropna() so we list all gene IDs in the SAM header)
+        gene_ids = df[COLUMN_GENE_ID].dropna().unique().tolist()
+        output_bam = pysam.AlignmentFile(OUTPUT_BAM, "wb", reference_names=gene_ids, reference_lengths=[100] * len(gene_ids))
 
         # Remove extraneous _* at the end of contig names
+        df = df.dropna()
         df[COLUMN_CONTIG_NAME] = df[COLUMN_CONTIG_NAME].apply(lambda x: x[:x.rindex("_")])
-
-        # Create BAM file using mock reference lengths for the header
-        gene_ids = df[COLUMN_GENE_ID].unique().tolist()
-        output_bam = pysam.AlignmentFile(OUTPUT_BAM, "wb", reference_names=gene_ids, reference_lengths=[100] * len(gene_ids))
 
         # Go through each line of the TSV and create a SAM record (https://wckdouglas.github.io/2021/12/pytest-with-pysam)
         for index, row in df.iterrows():
