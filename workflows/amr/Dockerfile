@@ -25,11 +25,6 @@ RUN git clone https://github.com/rzlim08/rgi.git
 RUN mkdir -p rgi/inputs/heatmap_inputs
 RUN cd rgi/ && git checkout 20b22dab2676e6cdfd16245dd15b9af3d266cb1b && python setup.py build && python setup.py test && python setup.py install
 
-# Install seqfu (used for interleaving input files)
-ARG SEQFU_VER="1.16.0"
-RUN curl -LO https://github.com/telatin/seqfu2/releases/download/v${SEQFU_VER}/SeqFu-v${SEQFU_VER}-Linux-x86_64.zip && \
-    unzip SeqFu-v${SEQFU_VER}-Linux-x86_64.zip -d /usr/local/bin/
-
 # load databases
 RUN curl -LO https://czid-public-references.s3.us-west-2.amazonaws.com/test/AMRv2/card.json && \
     rgi card_annotation -i card.json && \
