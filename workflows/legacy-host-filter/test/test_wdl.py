@@ -2,7 +2,6 @@ import os
 import json
 import hashlib
 import yaml
-import csv
 from test_util import WDLTestCase
 from subprocess import CalledProcessError
 
