@@ -510,7 +510,7 @@ task hisat2_filter {
     String hisat2_options = ""
 
     String docker_image_id
-    Int cpu = 16
+    Int cpu = 10
   }
 
   Boolean paired = defined(bowtie2_host_filtered2_fastq)
@@ -580,7 +580,7 @@ task hisat2_filter {
   runtime {
     docker: docker_image_id
     cpu: cpu
-    memory: "~{cpu*2}G"
+    memory: "~{cpu*4}G"
   }
 }
 
