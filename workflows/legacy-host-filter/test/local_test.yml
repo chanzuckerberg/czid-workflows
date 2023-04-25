@@ -1,0 +1,19 @@
+# local_test_viral.yml
+# Boilerplate local_driver.wdl input YAML for use with `miniwdl run` so that this file,
+# docker_image_id, fastqs_0, and fastqs_1 are the only inputs required on the command line.
+# For testing purposes, uses reference databases with only viral sequences, instead of full NR/NT
+# databases, to reduce download and processing burden.
+# Note: this YAML file doesn't show all possible optional inputs to the workflow, only ones that
+# must be set or overridden for the above-mentioned purposes. See the help message printed by
+# `miniwdl run local_driver.wdl` to see them all.
+file_ext: fastq
+nucleotide_type: DNA
+host_genome: human
+star_genome: s3://czid-public-references/host_filter/ercc/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/STAR_genome.tar
+bowtie2_genome: s3://czid-public-references/host_filter/ercc/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/bowtie2_genome.tar
+gsnap_genome: s3://czid-public-references/test/gsnap/ERCC_gsnap2017-11-15_k16.tar
+human_star_genome: s3://czid-public-references/host_filter/ercc/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/STAR_genome.tar
+human_bowtie2_genome: s3://czid-public-references/host_filter/ercc/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/bowtie2_genome.tar
+adapter_fasta: https://raw.githubusercontent.com/broadinstitute/viral-pipelines/master/test/input/clipDb.fasta
+max_input_fragments: 9000
+max_subsample_fragments: 9000
