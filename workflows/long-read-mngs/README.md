@@ -8,7 +8,7 @@ Further documentation on how to use the CZ ID long-read-mngs workflow can be fou
 ​
 ### Changelog
 ​
-**v0.7.0** -- April 21, 2023 -- Algorithmic updates to improve coverage of taxa identified in samples
+**v0.7.0** -- April 25, 2023 -- Algorithmic updates to improve coverage of taxa identified in samples
 ​
  - Updates the Flye version used from `v2.9.0` to `v2.9.2`
  - Increases the stringency of alignment when mapping reads to their respective contigs (in the `RunReadsToContigs` step) by requiring that <20% of the read be clipped. This increases the number of "loose reads" but reduces spurious assignment of reads to contigs.
