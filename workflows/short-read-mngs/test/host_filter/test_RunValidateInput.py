@@ -10,9 +10,8 @@ def test_RunValidateInput_invalid(util, short_read_mngs_bench3_viral_outputs):
         )
     )
     # override fastqs to invalid test article
-    inputs["fastqs"] = [
-        os.path.join(os.path.dirname(__file__), "test_RunValidateInput_invalid.fastq")
-    ]
+    inputs["reads1_fastq"] = os.path.join(os.path.dirname(__file__), "test_RunValidateInput_invalid.fastq")
+    del inputs["reads2_fastq"]
 
     # run the task with the manipulated inputs, expecting an error exit status
     outp = util.miniwdl_run(
