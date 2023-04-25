@@ -549,7 +549,7 @@ task ZipOutputs {
     >>>
 
     output {
-        File non_host_reads = "non_host_reads.fasta.gz"
+        File non_host_reads = "non_host_reads.fasta"
         File contigs = "contigs.fasta"
         File output_zip = "outputs.zip"
     }
