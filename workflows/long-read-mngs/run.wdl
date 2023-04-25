@@ -1460,7 +1460,7 @@ workflow czid_long_read_mngs {
         File nt_info_db
 
         String? minimap2_db
-        String minimap2_args = "-cx asm20 --secondary=yes"
+        String minimap2_args = "-cx map-ont --secondary=yes"
         String minimap2_prefix = "gsnap"
 
         String? diamond_db
