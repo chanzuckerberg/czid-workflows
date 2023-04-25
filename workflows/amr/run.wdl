@@ -536,9 +536,9 @@ task ZipOutputs {
         cp ~{contigs_in} contigs.fasta
 
         if [[ "~{length(nonHostReads)}" == 2 ]]; then
-            seqfu ilv -1 ~{sep=" -2 " nonHostReads} | gzip > non_host_reads.fasta.gz
+            seqfu ilv -1 ~{sep=" -2 " nonHostReads} > non_host_reads.fasta
         else 
-            cat ~{sep=" " nonHostReads} | gzip > non_host_reads.fasta.gz
+            cat ~{sep=" " nonHostReads} > non_host_reads.fasta
         fi
 
         cp ~{sep=' ' mainReports} ${TMPDIR}/outputs/final_reports
