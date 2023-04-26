@@ -441,11 +441,6 @@ task bowtie2_filter {
     # generate sort & compressed BAM file for archival
     samtools sort -n -o "bowtie2_host.bam" -@ 4 -T /tmp "/tmp/bowtie2.sam" & samtools_pid=$!
 
-    # Resort bamfile and index for idxstats
-    samtools sort -o "bowtie2_sorted.bam" "bowtie2_host.bam"
-    samtools index "bowtie2_sorted.bam"
-    samtools idxstats "bowtie2_sorted.bam" | grep ERCC- | awk -F'\t' '{sum = $3 + $4; print $1 "\t" sum}' > bowtie2_ERCC_counts.tsv
-
     # Extract reads [pairs] that did NOT map to the index
     if [[ '~{paired}' == 'true' ]]; then
         #    1 (read paired)
@@ -488,6 +483,7 @@ task bowtie2_filter {
     EOF
 
     wait $samtools_pid
+    samtools view bowtie2_host.bam | cut -f3 | grep ERCC- | sort | uniq -c | awk '{ print $2 "\t" $1}' > 'bowtie2_ERCC_counts.tsv'
   >>>
 
   output {
