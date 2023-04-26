@@ -483,12 +483,17 @@ task bowtie2_filter {
     EOF
 
     wait $samtools_pid
+
+    # Calculate ercc counts for bowtie2
+    samtools view bowtie2_host.bam | cut -f3 |  (grep "ERCC-" || [ "$?" == "1" ])| sort | uniq -c | awk '{ print $2 "\t" $1}' > 'bowtie2_ERCC_counts.tsv'
+
   >>>
 
   output {
     String step_description_md = read_string("bowtie2.description.md")
     File bowtie2_host_filtered1_fastq = "bowtie2_host_filtered1.fastq"
     File? bowtie2_host_filtered2_fastq = "bowtie2_host_filtered2.fastq"
+    File bowtie2_ERCC_counts = "bowtie2_ERCC_counts.tsv"
     File reads_out_count = "bowtie2_host_filtered_out.count"
     File bam = "bowtie2_host.bam"
   }
