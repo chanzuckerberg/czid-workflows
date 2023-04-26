@@ -485,7 +485,7 @@ task bowtie2_filter {
     wait $samtools_pid
 
     # Calculate ercc counts for bowtie2
-    samtools view bowtie2_host.bam | cut -f3 | grep ERCC- | sort | uniq -c | awk '{ print $2 "\t" $1}' > 'bowtie2_ERCC_counts.tsv'
+    samtools view bowtie2_host.bam | cut -f3 |  (grep "ERCC-" || [ "$?" == "1" ])| sort | uniq -c | awk '{ print $2 "\t" $1}' > 'bowtie2_ERCC_counts.tsv'
 
   >>>
 
