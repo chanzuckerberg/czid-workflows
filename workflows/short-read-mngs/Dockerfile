@@ -192,7 +192,7 @@ RUN cd isa-l-* && ./autogen.sh && ./configure && make -j8 && make install
 RUN wget -nv -O - https://github.com/ebiggers/libdeflate/archive/refs/tags/v1.12.tar.gz | tar zx
 RUN cd libdeflate-* && make -j8 && make install
 RUN ldconfig
-RUN git clone https://github.com/mlin/fastp.git && git -C fastp checkout 37edd60
+RUN git clone https://github.com/mlin/fastp.git && git -C fastp checkout c427e57
 RUN cd fastp && make -j8 && ./fastp test && cp fastp /usr/local/bin
 WORKDIR /
 RUN wget -nv -O /tmp/HISAT2.zip https://czid-public-references.s3.us-west-2.amazonaws.com/test/hisat2/hisat2.zip \
