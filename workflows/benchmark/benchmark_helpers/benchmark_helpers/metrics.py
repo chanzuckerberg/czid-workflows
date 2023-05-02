@@ -1,25 +1,30 @@
-def truth_aupr(classified_taxa, truth_taxa, total_reads):
+
+from sklearn.metrics import auc, precision_recall_curve
+import numpy as np
+
+def truth_aupr(classified_taxa, truth_taxa):
     """
     Compute AUPR (and other metrics) of taxon classifications vs. truth data
+    
     """
     missed_taxa = [tax_id for tax_id in truth_taxa if tax_id not in classified_taxa]
     correctness_labels = [1 if tax_id in truth_taxa else 0 for tax_id in classified_taxa]
     correctness_labels += [1] * len(missed_taxa)
     # Using raw abundances as proxies for confidence score per Ye2009 methodology
     # https://www.cell.com/cell/fulltext/S0092-8674(19)30775-5#fig2
-    confidence_scores = [i["reads_dedup"] / total_reads for i in classified_taxa.values()]
+    confidence_scores = list(classified_taxa.values())
     confidence_scores += [0] * len(missed_taxa)
     return adjusted_aupr(correctness_labels, confidence_scores, force_monotonic=False)
 
 
-def truth_l2_norm(classified_taxa, truth_taxa, total_reads):
+def truth_l2_norm(classified_taxa, truth_taxa):
     """
     Measure accuracy of taxa relative abundance (L2 norm of vector difference from truth vector)
     """
     truth_sum = sum(truth_taxa.values())
     relative_abundances_diff = [
         truth_taxa[taxon] / truth_sum
-        - classified_taxa.get(taxon, {}).get("reads_dedup", 1e-100) / total_reads
+        - classified_taxa.get(taxon, 1e-100)
         for taxon in truth_taxa
     ]
     return np.linalg.norm(relative_abundances_diff, ord=2)
@@ -57,11 +62,11 @@ def adjusted_aupr(y_true, y_score, force_monotonic=False):
         for k, v in {
             "aupr": aupr,
             "original_precision": original_precision if force_monotonic else None,
-            "recall": recall,
-            "precision": precision,
+            "recall": list(recall),
+            "precision": list(precision),
             "max_f1_recall": recall[argmax_f1],
             "max_f1_precision": precision[argmax_f1],
-            "thresholds": thresholds,
+            "thresholds": list(thresholds),
         }.items()
         if v is not None
     }
