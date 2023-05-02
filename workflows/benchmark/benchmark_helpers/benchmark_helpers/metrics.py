@@ -1,6 +1,6 @@
-
 from sklearn.metrics import auc, precision_recall_curve
 import numpy as np
+
 
 def truth_aupr(classified_taxa, truth_taxa):
     """
@@ -8,7 +8,9 @@ def truth_aupr(classified_taxa, truth_taxa):
     
     """
     missed_taxa = [tax_id for tax_id in truth_taxa if tax_id not in classified_taxa]
-    correctness_labels = [1 if tax_id in truth_taxa else 0 for tax_id in classified_taxa]
+    correctness_labels = [
+        1 if tax_id in truth_taxa else 0 for tax_id in classified_taxa
+    ]
     correctness_labels += [1] * len(missed_taxa)
     # Using raw abundances as proxies for confidence score per Ye2009 methodology
     # https://www.cell.com/cell/fulltext/S0092-8674(19)30775-5#fig2
@@ -23,17 +25,19 @@ def truth_l2_norm(classified_taxa, truth_taxa):
     """
     truth_sum = sum(truth_taxa.values())
     relative_abundances_diff = [
-        truth_taxa[taxon] / truth_sum
-        - classified_taxa.get(taxon, 1e-100)
+        truth_taxa[taxon] / truth_sum - classified_taxa.get(taxon, 1e-100)
         for taxon in truth_taxa
     ]
     return np.linalg.norm(relative_abundances_diff, ord=2)
+
 
 def adjusted_aupr(y_true, y_score, force_monotonic=False):
     # precision_recall_curve wants nonzero probas_pred, so adjust any zeroes to epsilon
     adjusted_y_score = [(1e-100 if score == 0 else score) for score in y_score]
     # Adapted from https://github.com/yesimon/metax_bakeoff_2019/blob/master/plotting/Metagenomics%20Bench.ipynb
-    original_precision, recall, thresholds = precision_recall_curve(y_true, adjusted_y_score)
+    original_precision, recall, thresholds = precision_recall_curve(
+        y_true, adjusted_y_score
+    )
 
     precision = original_precision
     if force_monotonic:
