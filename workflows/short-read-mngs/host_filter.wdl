@@ -22,6 +22,8 @@ workflow czid_host_filter {
     File human_bowtie2_index_tar
     File human_hisat2_index_tar
 
+    File ercc_index_tar = "s3://czid-public-references/host_filter/ercc/20221031/bowtie2_index_tar/ercc.bowtie2.tar" # default ercc index
+
     Int max_input_fragments
     Int max_subsample_fragments
 
@@ -48,16 +50,16 @@ workflow czid_host_filter {
     input: 
     valid_input1_fastq = RunValidateInput.valid_input1_fastq,
     valid_input2_fastq = RunValidateInput.valid_input2_fastq,
-    ercc_index_tar = bowtie2_index_tar,
+    ercc_index_tar = ercc_index_tar, 
     docker_image_id = docker_image_id,
-    cpu = cpu 
+    cpu = cpu
   }
 
   # Adapter trimming and QC filtering
   call fastp_qc {
     input:
-    valid_input1_fastq = RunValidateInput.valid_input1_fastq,
-    valid_input2_fastq = RunValidateInput.valid_input2_fastq,
+    valid_input1_fastq = ercc_bowtie2_filter.bowtie2_ercc_filtered1_fastq,
+    valid_input2_fastq = ercc_bowtie2_filter.bowtie2_ercc_filtered2_fastq,
     adapter_fasta = adapter_fasta,
     docker_image_id = docker_image_id,
     cpu = cpu
@@ -160,6 +162,8 @@ workflow czid_host_filter {
     File validate_input_out_validate_input_summary_json = RunValidateInput.validate_input_summary_json
     File validate_input_out_count = RunValidateInput.reads_out_count
 
+    File ercc_bowtie2_filter_count = ercc_bowtie2_filter.reads_out_count
+
     File fastp_out_fastp1_fastq = fastp_qc.fastp1_fastq
     File? fastp_out_fastp2_fastq = fastp_qc.fastp2_fastq
     File fastp_out_count = fastp_qc.reads_out_count
@@ -245,7 +249,7 @@ task ercc_bowtie2_filter {
   # Remove reads [pairs] with bowtie2 hits to the given index
   input {
     File valid_input1_fastq
-    File? valid_input1_fastq
+    File? valid_input2_fastq
 
     # GENOME_NAME.bowtie2.tar should contain GENOME_NAME/GENOME_NAME.*.bt*
     File ercc_index_tar
@@ -255,12 +259,12 @@ task ercc_bowtie2_filter {
     Int cpu = 16
   }
 
-  Boolean paired = defined(fastp2_fastq)
+  Boolean paired = defined(valid_input2_fastq)
   String genome_name = "ercc" 
   String bowtie2_invocation =
       "bowtie2 -x '/tmp/${genome_name}/${genome_name}' ${bowtie2_options} -p ${cpu}"
         + (if (paired) then " -1 '${valid_input1_fastq}' -2 '${valid_input1_fastq}'" else " -U '${valid_input1_fastq}'")
-        + " -q -S '/tmp/bowtie2.sam'"
+        + " -q -S '/tmp/bowtie2_ercc.sam'"
 
   command <<<
     set -euxo pipefail
@@ -269,9 +273,6 @@ task ercc_bowtie2_filter {
 
     ~{bowtie2_invocation}
 
-    # generate sort & compressed BAM file for archival
-    samtools sort -n -o "bowtie2_host.bam" -@ 8 -T /tmp "/tmp/bowtie2.sam"
-
     # Extract reads [pairs] that did NOT map to the index
     if [[ '~{paired}' == 'true' ]]; then
         #    1 (read paired)
@@ -279,27 +280,27 @@ task ercc_bowtie2_filter {
         # +  8 (mate unmapped)
         # ----
         #   13
-        samtools fastq -f 13 -1 'bowtie2_host_filtered1.fastq' -2 'bowtie2_host_filtered2.fastq' -0 /dev/null -s /dev/null bowtie2_host.bam
-        count="$(cat bowtie2_host_filtered{1,2}.fastq | wc -l)"
+        samtools fastq -f 13 -1 'bowtie2_ercc_filtered1.fastq' -2 'bowtie2_ercc_filtered2.fastq' -0 /dev/null -s /dev/null /tmp/bowtie2_ercc.sam
+        count="$(cat bowtie2_ercc_filtered{1,2}.fastq | wc -l)"
     else
-        samtools fastq -f 4 bowtie2_host.bam > 'bowtie2_host_filtered1.fastq'
-        count="$(cat bowtie2_host_filtered1.fastq | wc -l)"
+        samtools fastq -f 4 /tmp/bowtie2_ercc.sam > 'bowtie2_ercc_filtered1.fastq'
+        count="$(cat bowtie2_ercc_filtered1.fastq | wc -l)"
     fi
 
     
     count=$((count / 4))
-    jq --null-input --arg count "$count" '{"bowtie2_host_filtered_out":$count}' > 'bowtie2_host_filtered_out.count'
+    jq --null-input --arg count "$count" '{"bowtie2_ercc_filtered_out":$count}' > 'bowtie2_ercc_filtered_out.count'
 
     python3 - << 'EOF'
     import textwrap
     with open("bowtie2.description.md", "w") as outfile:
       print(textwrap.dedent("""
-      **bowtie2 host filtering**
+      **bowtie2 ercc filtering**
 
-      Filters out reads matching the host genome using
+      Filters out reads matching the ercc genome using
       [Bowtie2](https://bowtie-bio.sourceforge.net/bowtie2/index.shtml). Runs
       `bowtie2 ~{bowtie2_options}` using a precomputed index, then uses
-      [samtools](http://www.htslib.org/) to keep reads *not* mapping to the host genome.
+      [samtools](http://www.htslib.org/) to keep reads *not* mapping to the ercc genome.
 
       Bowtie2 is run on the fastp-filtered FASTQ(s):
 
@@ -313,25 +314,18 @@ task ercc_bowtie2_filter {
       """).strip(), file=outfile)
     EOF
 
-    wait $samtools_pid
-
-    # Calculate ercc counts for bowtie2
-    samtools view bowtie2_host.bam | cut -f3 |  (grep "ERCC-" || [ "$?" == "1" ])| sort | uniq -c | awk '{ print $2 "\t" $1}' > 'bowtie2_ERCC_counts.tsv'
-
   >>>
 
   output {
     String step_description_md = read_string("bowtie2.description.md")
-    File bowtie2_host_filtered1_fastq = "bowtie2_host_filtered1.fastq"
-    File? bowtie2_host_filtered2_fastq = "bowtie2_host_filtered2.fastq"
-    File bowtie2_ERCC_counts = "bowtie2_ERCC_counts.tsv"
-    File reads_out_count = "bowtie2_host_filtered_out.count"
-    File bam = "bowtie2_host.bam"
+    File bowtie2_ercc_filtered1_fastq = "bowtie2_ercc_filtered1.fastq"
+    File? bowtie2_ercc_filtered2_fastq = "bowtie2_ercc_filtered2.fastq"
+    File reads_out_count = "bowtie2_ercc_filtered_out.count"
   }
   runtime {
     docker: docker_image_id
     cpu: cpu
-    memory: "~{cpu*2}G"
+    memory: "1G"
   }
 }
 
