@@ -162,6 +162,7 @@ workflow czid_host_filter {
     File validate_input_out_validate_input_summary_json = RunValidateInput.validate_input_summary_json
     File validate_input_out_count = RunValidateInput.reads_out_count
 
+    File bowtie2_ERCC_counts_tsv = ercc_bowtie2_filter.bowtie2_ercc_counts
     File ercc_bowtie2_filter_count = ercc_bowtie2_filter.reads_out_count
 
     File fastp_out_fastp1_fastq = fastp_qc.fastp1_fastq
@@ -178,7 +179,6 @@ workflow czid_host_filter {
     File? bowtie2_host_filtered2_fastq = bowtie2_filter.bowtie2_host_filtered2_fastq
     File bowtie2_host_filtered_out_count = bowtie2_filter.reads_out_count
     File bowtie2_host_filtered_bam = bowtie2_filter.bam
-    File bowtie2_ERCC_counts_tsv = bowtie2_filter.bowtie2_ERCC_counts
     File hisat2_host_filtered1_fastq = hisat2_filter.hisat2_host_filtered1_fastq
     File? hisat2_host_filtered2_fastq = hisat2_filter.hisat2_host_filtered2_fastq
     File hisat2_host_filtered_out_count = hisat2_filter.reads_out_count
@@ -288,6 +288,9 @@ task ercc_bowtie2_filter {
     fi
 
     
+    # Calculate ercc counts for bowtie2
+    samtools view /tmp/bowtie2_ercc.sam | cut -f3 |  (grep "ERCC-" || [ "$?" == "1" ])| sort | uniq -c | awk '{ print $2 "\t" $1}' > 'bowtie2_ERCC_counts.tsv'
+
     count=$((count / 4))
     jq --null-input --arg count "$count" '{"bowtie2_ercc_filtered_out":$count}' > 'bowtie2_ercc_filtered_out.count'
 
@@ -319,6 +322,7 @@ task ercc_bowtie2_filter {
   output {
     String step_description_md = read_string("bowtie2.description.md")
     File bowtie2_ercc_filtered1_fastq = "bowtie2_ercc_filtered1.fastq"
+    File bowtie2_ercc_counts = "bowtie2_ERCC_counts.tsv"
     File? bowtie2_ercc_filtered2_fastq = "bowtie2_ercc_filtered2.fastq"
     File reads_out_count = "bowtie2_ercc_filtered_out.count"
   }
@@ -582,16 +586,12 @@ task bowtie2_filter {
 
     wait $samtools_pid
 
-    # Calculate ercc counts for bowtie2
-    samtools view bowtie2_host.bam | cut -f3 |  (grep "ERCC-" || [ "$?" == "1" ])| sort | uniq -c | awk '{ print $2 "\t" $1}' > 'bowtie2_ERCC_counts.tsv'
-
   >>>
 
   output {
     String step_description_md = read_string("bowtie2.description.md")
     File bowtie2_host_filtered1_fastq = "bowtie2_host_filtered1.fastq"
     File? bowtie2_host_filtered2_fastq = "bowtie2_host_filtered2.fastq"
-    File bowtie2_ERCC_counts = "bowtie2_ERCC_counts.tsv"
     File reads_out_count = "bowtie2_host_filtered_out.count"
     File bam = "bowtie2_host.bam"
   }
