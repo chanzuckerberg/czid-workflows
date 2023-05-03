@@ -1,11 +1,11 @@
 from sklearn.metrics import auc, precision_recall_curve
+from collections import defaultdict
 import numpy as np
 
 
 def truth_aupr(classified_taxa, truth_taxa):
     """
     Compute AUPR (and other metrics) of taxon classifications vs. truth data
-    
     """
     missed_taxa = [tax_id for tax_id in truth_taxa if tax_id not in classified_taxa]
     correctness_labels = [
