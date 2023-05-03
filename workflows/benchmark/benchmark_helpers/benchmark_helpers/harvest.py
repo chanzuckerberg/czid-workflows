@@ -93,7 +93,13 @@ def harvest_sample_taxon_counts(
     """
     # TODO: load in paired, figure out what to use as denominator
     paired = True
-    sample_reads = sum([rslt["unique_count"] for rslt in taxon_counts if rslt["count_type"] == dbtype and rslt["tax_level"] == 1])
+    sample_reads = sum(
+        [
+            rslt["unique_count"]
+            for rslt in taxon_counts
+            if rslt["count_type"] == dbtype and rslt["tax_level"] == 1
+        ]
+    )
     if paired:
         sample_reads *= 2
     # for each species in the taxon counts (excluding genus/family for now)
@@ -118,7 +124,7 @@ def harvest_sample_taxon_counts(
                 "reads": rslt["nonunique_count"],
                 "reads_dedup": rslt["unique_count"],
                 "avg_aln_len": rslt["alignment_length"],
-                "rPM": max(1, round(rslt["unique_count"]*1e6/sample_reads)),
+                "rPM": max(1, round(rslt["unique_count"] * 1e6 / sample_reads)),
             }
             info.update(
                 contigs_stats(contig_lengths, (k for k in rslt_contigs if k != "*"))
