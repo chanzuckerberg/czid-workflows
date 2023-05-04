@@ -71,17 +71,11 @@ def _annotate_fasta_with_accessions(
 def output_clusters(output_unmapped_fasta_f, unique_output_file, read_header, read_sequence, clusters_dict):
     unique_output_file.write(read_header + "\n")
     unique_output_file.write(read_sequence)
-    line = read_header
-    header_suffix = ""
-    if line[-2:-1] == "/":  # /1 or /2
-        line, header_suffix = line[:-2], line[-2:]
-        assert header_suffix in ('/1', '/2')
-        assert len(read_header) == len(line) + len(header_suffix)
 
-    key = line.split(UNMAPPED_HEADER_PREFIX)[1]
+    key = read_header.split(UNMAPPED_HEADER_PREFIX)[1]
     other_keys = clusters_dict[key][1:]  # key should always be present
     for other_key in other_keys:
-        other_header = UNMAPPED_HEADER_PREFIX + other_key + header_suffix
+        other_header = UNMAPPED_HEADER_PREFIX + other_key 
         output_unmapped_fasta_f.write(other_header + "\n")
         output_unmapped_fasta_f.write(read_sequence)  # write duplicate seq
 
