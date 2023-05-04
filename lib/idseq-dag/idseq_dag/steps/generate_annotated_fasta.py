@@ -75,7 +75,7 @@ def output_clusters(output_unmapped_fasta_f, unique_output_file, read_header, re
     key = read_header.split(UNMAPPED_HEADER_PREFIX)[1]
     other_keys = clusters_dict[key][1:]  # key should always be present
     for other_key in other_keys:
-        other_header = UNMAPPED_HEADER_PREFIX + other_key 
+        other_header = UNMAPPED_HEADER_PREFIX + other_key
         output_unmapped_fasta_f.write(other_header + "\n")
         output_unmapped_fasta_f.write(read_sequence)  # write duplicate seq
 
