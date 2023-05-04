@@ -58,7 +58,7 @@ RUN wget https://github.com/shenwei356/seqkit/releases/download/v2.3.0/seqkit_li
     cp seqkit /usr/local/bin
 ENV PATH=$PATH:$(pwd)
 
-ARG FLYE_VER="2.9"
+ARG FLYE_VER="2.9.2"
 RUN wget https://github.com/fenderglass/Flye/archive/${FLYE_VER}.tar.gz && \
     tar -xvf ${FLYE_VER}.tar.gz && \
     rm ${FLYE_VER}.tar.gz && \

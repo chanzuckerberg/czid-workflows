@@ -32,8 +32,8 @@ workflow amr {
             input:
             non_host_reads = select_all(
                 [
-                    host_filter_stage.gsnap_filter_out_gsnap_filter_1_fa,
-                    host_filter_stage.gsnap_filter_out_gsnap_filter_2_fa
+                    host_filter_stage.subsampled_out_subsampled_1_fa,
+                    host_filter_stage.subsampled_out_subsampled_2_fa
                 ]
             ),
             min_contig_length = min_contig_length,
@@ -45,8 +45,8 @@ workflow amr {
         non_host_reads = select_first([non_host_reads, 
             select_all(
                 [
-                    host_filter_stage.gsnap_filter_out_gsnap_filter_1_fa,
-                    host_filter_stage.gsnap_filter_out_gsnap_filter_2_fa
+                    host_filter_stage.subsampled_out_subsampled_1_fa,
+                    host_filter_stage.subsampled_out_subsampled_2_fa
                 ]
             )]),
         card_json = card_json, 
@@ -94,22 +94,26 @@ workflow amr {
         docker_image_id = docker_image_id,
         sample_name = sample_name
     }
+
+    call tsvToSam { 
+        input: 
+        contigs = select_first([contigs, RunSpades.contigs]),
+        final_summary = RunResultsPerSample.final_summary,
+        docker_image_id = docker_image_id
+    }
+
     call ZipOutputs {
         input:
+        contigs_in = select_first([contigs, RunSpades.contigs]),
         nonHostReads = select_first([
                            non_host_reads,
                            select_all(
                                [
-                                   host_filter_stage.gsnap_filter_out_gsnap_filter_1_fa,
-                                   host_filter_stage.gsnap_filter_out_gsnap_filter_2_fa
+                                   host_filter_stage.subsampled_out_subsampled_1_fa,
+                                   host_filter_stage.subsampled_out_subsampled_2_fa
                                ]
                            )
                        ]),
-        outputFiles = select_all(
-            [
-                select_first([contigs, RunSpades.contigs]),
-            ]
-        ),
         mainReports = select_all(
             [
                 RunResultsPerSample.final_summary,
@@ -300,6 +304,9 @@ task RunResultsPerSample {
             
             nr = remove_na(set(sub_df['All Mapped Reads_kma_amr']))
             result['num_reads'] = max(nr) if len(nr) > 0 else None
+
+            read_gi = remove_na(set(sub_df["Reference Sequence_kma_amr"]))
+            result["read_gene_id"] = ";".join(read_gi) if len(read_gi) > 0 else None
             
             pid = remove_na(set(sub_df['Best_Identities_contig_amr']))
             result['contig_percent_id'] = sum(pid) / len(pid) if len(pid) > 0 else None
@@ -334,7 +341,7 @@ task RunResultsPerSample {
         final_df = pd.DataFrame.from_dict(result_df)
         final_df = final_df.transpose()
         final_df = final_df[["sample_name", "gene_family", "drug_class", "resistance_mechanism", "model_type", "num_contigs", 
-                             "cutoff", "contig_coverage_breadth", "contig_percent_id", "contig_species", "num_reads", "read_coverage_breadth", "read_coverage_depth", "read_species"]]
+                             "cutoff", "contig_coverage_breadth", "contig_percent_id", "contig_species", "num_reads", "read_gene_id", "read_coverage_breadth", "read_coverage_depth", "read_species"]]
         final_df.sort_index(inplace=True)
         final_df.dropna(subset=['drug_class'], inplace=True)
         final_df.to_csv("primary_AMR_report.tsv", sep='\t', index_label="gene_name")
@@ -507,8 +514,8 @@ task RunSpades {
 }
 task ZipOutputs {
     input {
+        File contigs_in
         Array[File] nonHostReads
-        Array[File] outputFiles
         Array[File] mainReports
         Array[File] rawReports
         Array[File] intermediateFiles
@@ -525,12 +532,15 @@ task ZipOutputs {
         mkdir ${TMPDIR}/outputs/raw_reports
         mkdir ${TMPDIR}/outputs/intermediate_files
 
-        counter=1
-        for fastx in ~{sep= ' ' nonHostReads}; do 
-            cp $fastx ${TMPDIR}/outputs/non_host_reads_R$counter."${fastx#*.}"
-            ((counter++))
-        done
-        cp ~{sep=' ' outputFiles} ${TMPDIR}/outputs/
+        # copy contigs and interleave non_host_reads
+        cp ~{contigs_in} contigs.fasta
+
+        if [[ "~{length(nonHostReads)}" == 2 ]]; then
+            seqfu ilv -1 ~{sep=" -2 " nonHostReads} > non_host_reads.fasta
+        else 
+            cat ~{sep=" " nonHostReads} > non_host_reads.fasta
+        fi
+
         cp ~{sep=' ' mainReports} ${TMPDIR}/outputs/final_reports
         cp ~{sep=' ' rawReports} ${TMPDIR}/outputs/raw_reports
         cp ~{sep=' ' intermediateFiles} ${TMPDIR}/outputs/intermediate_files
@@ -539,6 +549,8 @@ task ZipOutputs {
     >>>
 
     output {
+        File non_host_reads = "non_host_reads.fasta"
+        File contigs = "contigs.fasta"
         File output_zip = "outputs.zip"
     }
 
@@ -601,4 +613,67 @@ task MakeGeneCoverage {
     runtime {
         docker: docker_image_id
     } 
+}
+
+task tsvToSam {
+    input {
+        File contigs
+        File final_summary
+        String docker_image_id
+    }
+
+    command <<<
+        set -euxo pipefail
+        python3 <<CODE
+        import pandas as pd
+        import pysam
+
+        COLUMN_GENE_ID = "Reference Sequence_kma_amr"
+        COLUMN_CONTIG_NAME = "Contig_contig_amr"
+        OUTPUT_BAM = "contig_amr_report.sorted.bam"
+
+        # Create index to enable querying fasta file
+        pysam.faidx("~{contigs}")
+        contigs_fasta = pysam.Fastafile("~{contigs}")
+
+        # Load columns of interest from CSV and drop rows with at least one NaN
+        df = pd.read_csv("~{final_summary}", sep="\t", usecols=[COLUMN_GENE_ID, COLUMN_CONTIG_NAME])
+
+        # Create BAM with mock reference lengths for the header (do this before df.dropna() so we
+        # list all gene IDs in the SAM header). If no gene IDs are found at all, have a mock gene
+        # to make sure we can create the SAM file with no errors (web app will look for that file)
+        gene_ids = df[COLUMN_GENE_ID].dropna().unique().tolist() or ["NoGenes"]
+        output_bam = pysam.AlignmentFile(OUTPUT_BAM, "wb", reference_names=gene_ids, reference_lengths=[100] * len(gene_ids))
+
+        # Remove extraneous _* at the end of contig names
+        df = df.dropna()
+        df[COLUMN_CONTIG_NAME] = df[COLUMN_CONTIG_NAME].apply(lambda x: x[:x.rindex("_")])
+
+        # Go through each line of the TSV and create a SAM record (https://wckdouglas.github.io/2021/12/pytest-with-pysam)
+        for index, row in df.iterrows():
+            gene_id = row[COLUMN_GENE_ID]
+            contig_name = row[COLUMN_CONTIG_NAME]
+            contig_sequence = contigs_fasta.fetch(contig_name)
+
+            # Create new alignment
+            alignment = pysam.AlignedSegment(output_bam.header)
+            alignment.reference_name = gene_id
+            alignment.query_name = contig_name
+            alignment.query_sequence = contig_sequence
+            alignment.reference_start = 1
+            output_bam.write(alignment)
+
+        output_bam.close()
+        pysam.index(OUTPUT_BAM)
+        CODE
+    >>>
+
+    output {
+        File output_sorted = "contig_amr_report.sorted.bam"
+        File output_sorted_bai = "contig_amr_report.sorted.bam.bai"
+    }
+
+    runtime {
+        docker: docker_image_id
+    }
 }

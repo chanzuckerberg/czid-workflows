@@ -22,9 +22,13 @@ task RunValidateInput {
 
         python3 <<CODE
         from Bio import SeqIO
-
-        for record in SeqIO.parse("sample_validated.fastq", "fastq"):
-            pass
+        import json
+        
+        try: 
+            for record in SeqIO.parse("sample_validated.fastq", "fastq"):
+                pass
+        except ValueError as e:
+            exit(json.dumps(dict(wdl_error_message=True, error="InvalidInputFileError", cause=str(e))))
         CODE
 
         filter_count sample_validated.fastq validated "No reads remaining after input validation"
@@ -427,7 +431,13 @@ task RunReadsToContigs {
     command <<<
         set -euxo pipefail
         # use minimap2 to align reads back to contigs
-        minimap2 -ax map-ont "~{assembled_reads}" "~{input_fastq}" -o sample.reads_to_contigs.sam -t 15 --secondary=no
+        minimap2 -ax map-ont "~{assembled_reads}" "~{input_fastq}" -o sample.reads_to_contigs_all.sam -t 15 --secondary=no
+        # filter only primary contigs
+        samtools view -h -F 0x900 sample.reads_to_contigs_all.sam > sample.reads_to_contigs_primary.sam
+
+        # filter out contigs with too much clipping
+        python3 /usr/local/bin/filter_clipped_alignments.py sample.reads_to_contigs_primary.sam sample.reads_to_contigs.sam -m 20
+        grep -v "^@" sample.reads_to_contigs.sam | awk '{ print $1 "\t" $3 "\t" length($10)}'  > reads_to_contigs.tsv
         samtools view -b sample.reads_to_contigs.sam | samtools sort > sample.reads_to_contigs.bam
         samtools index sample.reads_to_contigs.bam sample.reads_to_contigs.bam.bai
 
@@ -436,7 +446,6 @@ task RunReadsToContigs {
 
         # convert non-contigs.fastq file to .fasta file
         seqtk seq -a sample.non_contigs.fastq > sample.non_contigs.fasta
-        samtools view -F 0x900 sample.reads_to_contigs.sam | awk '{ print $1 "\t" $3 "\t" length($10)}' > reads_to_contigs.tsv
 
         python3 - << 'EOF'
         import textwrap
@@ -1275,7 +1284,7 @@ workflow czid_long_read_mngs {
         File nt_info_db
 
         String? minimap2_db
-        String minimap2_args = "-cx asm20 --secondary=yes"
+        String minimap2_args = "-cx map-ont --secondary=yes"
         String minimap2_prefix = "gsnap"
 
         String? diamond_db
