@@ -313,6 +313,5 @@ class PipelineStepRunValidateInput(PipelineStep):
             return f"The maximum line length was exceeded for the input file {filename}."
         elif re.match("PARSE ERROR: not an ascii file.+", output):
             return output
-        
         else:
             return f"The input file {filename} is invalid."
