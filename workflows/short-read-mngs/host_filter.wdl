@@ -263,7 +263,7 @@ task ercc_bowtie2_filter {
   String genome_name = "ercc" 
   String bowtie2_invocation =
       "bowtie2 -x '/tmp/${genome_name}/${genome_name}' ${bowtie2_options} -p ${cpu}"
-        + (if (paired) then " -1 '${valid_input1_fastq}' -2 '${valid_input1_fastq}'" else " -U '${valid_input1_fastq}'")
+        + (if (paired) then " -1 '${valid_input1_fastq}' -2 '${valid_input2_fastq}'" else " -U '${valid_input1_fastq}'")
         + " -q -S '/tmp/bowtie2_ercc.sam'"
 
   command <<<
@@ -300,7 +300,7 @@ task ercc_bowtie2_filter {
       print(textwrap.dedent("""
       **bowtie2 ercc filtering**
 
-      Filters out reads matching the ercc genome using
+      Filters out reads matching ercc sequences using
       [Bowtie2](https://bowtie-bio.sourceforge.net/bowtie2/index.shtml). Runs
       `bowtie2 ~{bowtie2_options}` using a precomputed index, then uses
       [samtools](http://www.htslib.org/) to keep reads *not* mapping to the ercc genome.
@@ -329,7 +329,7 @@ task ercc_bowtie2_filter {
   runtime {
     docker: docker_image_id
     cpu: cpu
-    memory: "1G"
+    memory: "3G"
   }
 }
 
