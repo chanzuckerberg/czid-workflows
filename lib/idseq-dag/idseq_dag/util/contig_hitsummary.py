@@ -20,7 +20,6 @@ def summarize_hits(
     accession_to_taxid_path: str,
     min_alignment_length: int,
     m8_reassigned_output_path: str,
-    m8_read_hits_output_path: str,
     hitsummary_output_path: str,
 ):
     with open(read_to_contig_tsv_path) as f:
@@ -35,15 +34,12 @@ def summarize_hits(
             open_file_db_by_extension(accession_to_taxid_path, "L") as accession_to_taxid, \
             open_file_db_by_extension(taxid_to_lineage_path, "lll") as taxid_to_lineage, \
             open(m8_reassigned_output_path, 'w') as m8_out_f, \
-            open(m8_read_hits_output_path, 'w') as m8_read_hits_f, \
             open(hitsummary_output_path, 'w') as hitsummary_out_f:
 
         if db_type.lower() == "nt":
             m8_writer = BlastnOutput6NTRerankedWriter(m8_out_f)
-            m8_read_hit_writer = BlastnOutput6NTRerankedWriter(m8_read_hits_f)
         else:
             m8_writer = BlastnOutput6Writer(m8_out_f)
-            m8_read_hit_writer = BlastnOutput6Writer(m8_read_hits_f)
 
         hitsummary_writer = HitSummaryMergedWriter(hitsummary_out_f)
 
@@ -94,7 +90,6 @@ def summarize_hits(
             species_taxid, genus_taxid, family_taxid = lineage
             if qseqid not in contig_to_reads:
                 m8_writer.writerow(hit)
-                m8_read_hit_writer.writerow(hit)
                 hitsummary_writer.writerow({
                     "read_id": qseqid,
                     "level": 1,  # NOTE: this is always 1 regardless of the actual level

@@ -744,7 +744,6 @@ task SummarizeHitsNT {
             "~{accession2taxid_db}",
             ~{min_alignment_length},
             "m8_reassigned_nt.tab",
-            "m8_read_hits_nt.tab",
             "gsnap.hitsummary2.tab",
         )
         CODE
@@ -752,7 +751,6 @@ task SummarizeHitsNT {
 
     output {
         File nt_m8_reassigned = "m8_reassigned_nt.tab"
-        File nt_m8_read_hits = "m8_read_hits_nt.tab"
         File nt_hit_summary = "gsnap.hitsummary2.tab"
     }
 
@@ -793,7 +791,6 @@ task SummarizeHitsNR {
             "~{accession2taxid_db}",
             ~{min_alignment_length},
             "m8_reassigned_nr.tab",
-            "m8_read_hits_nr.tab",
             "rapsearch2.hitsummary2.tab",
         )
         CODE
@@ -801,7 +798,6 @@ task SummarizeHitsNR {
 
     output {
         File nr_m8_reassigned = "m8_reassigned_nr.tab"
-        File nt_m8_read_hits = "m8_read_hits_nr.tab"
         File nr_hit_summary = "rapsearch2.hitsummary2.tab"
     }
 
@@ -1225,7 +1221,6 @@ task GenerateCoverageViz {
         File contig_in_contig_coverage_json
         File contig_in_contig_stats_json
         File contig_in_contigs_fasta
-        File nt_m8_read_hits
         File nt_info_db
         String docker_image_id
     }
@@ -1236,7 +1231,7 @@ task GenerateCoverageViz {
         --step-module idseq_dag.steps.generate_coverage_viz \
         --step-class PipelineStepGenerateCoverageViz \
         --step-name coverage_viz_out \
-        --input-files '[["~{nt_m8_reassigned}", "~{nt_hit_summary}", "~{nt_top_m8}"], ["~{contig_in_contig_coverage_json}", "~{contig_in_contig_stats_json}", "~{contig_in_contigs_fasta}"], ["~{nt_m8_read_hits}"]]' \
+        --input-files '[["~{nt_m8_reassigned}", "~{nt_hit_summary}", "~{nt_top_m8}"], ["~{contig_in_contig_coverage_json}", "~{contig_in_contig_stats_json}", "~{contig_in_contigs_fasta}"], ["~{nt_top_m8}"]]' \
         --output-files '["coverage_viz_summary.json"]' \
         --output-dir-s3 '' \
         --additional-files '{"info_db": "~{nt_info_db}"}' \
@@ -1559,7 +1554,6 @@ workflow czid_long_read_mngs {
             contig_in_contig_coverage_json = GenerateCoverageStats.contig_coverage_json,
             contig_in_contig_stats_json = GenerateContigStats.contig_stats_json,
             contig_in_contigs_fasta = RemoveUnmappedContigs.mapped_contigs_fasta,
-            nt_m8_read_hits = SummarizeHitsNT.nt_m8_read_hits,
             nt_info_db = nt_info_db,
             docker_image_id = docker_image_id,
     }
