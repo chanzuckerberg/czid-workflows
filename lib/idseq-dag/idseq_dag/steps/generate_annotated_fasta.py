@@ -79,11 +79,11 @@ def output_clusters(output_unmapped_fasta_f, unique_output_file, read_header, re
         assert len(read_header) == len(line) + len(header_suffix)
 
     key = line.split(UNMAPPED_HEADER_PREFIX)[1]
-    if key not in clusters_dict: 
+    if key not in clusters_dict:
         key = key + header_suffix
-        header_suffix = "" 
-        
-    other_keys = clusters_dict[key][1:] # key should always be present
+        header_suffix = ""
+
+    other_keys = clusters_dict[key][1:]  # key should always be present
     for other_key in other_keys:
         other_header = UNMAPPED_HEADER_PREFIX + other_key + header_suffix
         output_unmapped_fasta_f.write(other_header + "\n")
