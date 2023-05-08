@@ -185,14 +185,19 @@ task RunResultsPerSample {
 
         main_output = pd.read_csv("~{main_output}", sep="\t")
         clean_aro(main_output, "Best_Hit_ARO")
+        main_output['ARO_contig_amr'] = main_output['ARO_contig_amr'].astype(str)
+
         main_output.sort_values(by='Best_Hit_ARO', inplace=True)
 
         main_species_output = pd.read_csv("~{main_species_output}", sep="\t")
         clean_aro(main_species_output, "Best_Hit_ARO")
+
         main_species_output.sort_values(by = 'Best_Hit_ARO', inplace=True)
 
         kma_output = pd.read_csv("~{kma_output}", sep="\t")
         clean_aro(kma_output, "ARO Term")
+        kma_output['ARO Accession_kma_amr'] = kma_output['ARO Accession_kma_amr'].astype(str)
+
         kma_output.sort_values(by = 'ARO Term', inplace=True)
 
         kma_species_output = pd.read_csv("~{kma_species_output}", sep="\t")
@@ -208,8 +213,8 @@ task RunResultsPerSample {
             lambda x: x.strip()
         )
         # merge the data where Best_Hit_ARO and Contig name must match
-        merge_a = main_output.merge(main_species_output, left_on = ['Best_Hit_ARO_contig_amr', 'Contig_contig_amr'],
-                                                                    right_on = ['Best_Hit_ARO_contig_sp', 'Contig_contig_sp'], 
+        merge_a = main_output.merge(main_species_output, left_on = ['ARO_contig_amr', 'Contig_contig_amr'],
+                                                                    right_on = ['ARO Accession_kma_amr', 'Contig_contig_sp'], 
                                                                     how='outer',
                                                                     suffixes = [None, None])
         merge_a["ARO_contig"] = this_or_that(
