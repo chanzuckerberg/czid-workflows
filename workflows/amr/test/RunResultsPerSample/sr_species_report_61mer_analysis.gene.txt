@@ -1,0 +1,4 @@
+ARO term	Mapped reads with kmer DB hits	CARD*kmer Prediction	Single species (chromosome) reads	Single species (chromosome or plasmid) reads	Single species (plasmid) reads	Single species (no genomic info) reads	Single genus (chromosome) reads	Single genus (chromosome or plasmid) reads	Single genus (plasmid) reads	Single genus (no genomic info) reads	Promiscuous plasmid reads	Unknown taxonomy (chromosome) reads	Unknown taxonomy (chromosome or plasmid) reads	Unknown taxonomy (no genomic info) reads
+baeR	1	Klebsiella pneumoniae (chromosome): 1; 	Klebsiella pneumoniae: 1; 								0	0	0	0
+ArnT	1										0	1	0	0
+Staphylococcus aureus LmrS	0										0	0	0	0

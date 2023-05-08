@@ -185,7 +185,7 @@ task RunResultsPerSample {
 
         main_output = pd.read_csv("~{main_output}", sep="\t")
         clean_aro(main_output, "Best_Hit_ARO")
-        main_output['ARO_contig_amr'] = main_output['ARO_contig_amr'].astype(str)
+        
 
         main_output.sort_values(by='Best_Hit_ARO', inplace=True)
 
@@ -196,7 +196,6 @@ task RunResultsPerSample {
 
         kma_output = pd.read_csv("~{kma_output}", sep="\t")
         clean_aro(kma_output, "ARO Term")
-        kma_output['ARO Accession_kma_amr'] = kma_output['ARO Accession_kma_amr'].astype(str)
 
         kma_output.sort_values(by = 'ARO Term', inplace=True)
 
@@ -213,20 +212,24 @@ task RunResultsPerSample {
             lambda x: x.strip()
         )
         # merge the data where Best_Hit_ARO and Contig name must match
-        merge_a = main_output.merge(main_species_output, left_on = ['ARO_contig_amr', 'Contig_contig_amr'],
-                                                                    right_on = ['ARO Accession_kma_amr', 'Contig_contig_sp'], 
+        merge_a = main_output.merge(main_species_output, left_on = ['Best_Hit_ARO_contig_amr', 'Contig_contig_amr'],
+                                                                    right_on = ['Best_Hit_ARO_contig_sp', 'Contig_contig_sp'], 
                                                                     how='outer',
                                                                     suffixes = [None, None])
         merge_a["ARO_contig"] = this_or_that(
             merge_a, "Best_Hit_ARO_contig_amr", "Best_Hit_ARO_contig_sp"
         )
         merge_a.to_csv("merge_a.tsv", index=None, sep="\t")
+
+        merge_a['ARO_contig_amr'] = merge_a['ARO_contig_amr'].astype(str)
         
         append_suffix_to_colname(kma_output, "_kma_amr")  # ARO Term
         append_suffix_to_colname(kma_species_output, "_kma_sp")  # ARO term
 
         merge_b = kma_output.merge(kma_species_output, left_on = 'ARO Term_kma_amr', right_on = 'ARO term_kma_sp',
                                    how = 'outer', suffixes = [None, None])
+        
+        merge_b['ARO Accession_kma_amr'] = merge_b['ARO Accession_kma_amr'].astype(str)
 
         
         # remove kma results from variant models (because these results are inaccurate)
@@ -238,8 +241,8 @@ task RunResultsPerSample {
         merge_b.to_csv("merge_b.tsv", index=None, sep="\t")
 
         # final merge of MAIN and KMA combined results
-        merge_x = merge_a.merge(merge_b, left_on = 'ARO_contig',
-                                right_on = 'ARO_kma', how='outer',
+        merge_x = merge_a.merge(merge_b, left_on = 'ARO_contig_amr',
+                                right_on = 'ARO Accession_kma_amr', how='outer',
                                 suffixes = [None, None])
 
         merge_x["ARO_overall"] = this_or_that(merge_x, "ARO_contig", "ARO_kma")

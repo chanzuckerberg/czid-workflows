@@ -1,0 +1,1 @@
+ORF_ID	Contig	Cut_Off	Best_Hit_ARO	CARD*kmer Prediction	Taxonomic kmers	Genomic kmers
