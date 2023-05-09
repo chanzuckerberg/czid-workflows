@@ -162,6 +162,8 @@ workflow czid_host_filter {
     File validate_input_out_validate_input_summary_json = RunValidateInput.validate_input_summary_json
     File validate_input_out_count = RunValidateInput.reads_out_count
 
+    File bowtie2_ercc_filtered1_fastq = ercc_bowtie2_filter.bowtie2_ercc_filtered1_fastq
+    File? bowtie2_ercc_filtered2_fastq = ercc_bowtie2_filter.bowtie2_ercc_filtered2_fastq
     File bowtie2_ERCC_counts_tsv = ercc_bowtie2_filter.bowtie2_ercc_counts
     File ercc_bowtie2_filter_count = ercc_bowtie2_filter.reads_out_count
 
