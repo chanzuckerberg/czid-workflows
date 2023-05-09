@@ -163,7 +163,7 @@ task RunResultsPerSample {
         import pandas as pd
         def clean_aro(df, column_name):
             """modifies dataframe inplace to clean the ARO string"""
-            df[column_name] = df[column_name].map(lambda x: x.lower().strip())
+            df[column_name] = df[column_name].map(lambda x: x.strip())
 
 
         def append_suffix_to_colname(df, suffix):
