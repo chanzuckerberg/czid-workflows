@@ -245,6 +245,7 @@ task RunResultsPerSample {
                                 right_on = 'ARO Accession_kma_amr', how='outer',
                                 suffixes = [None, None])
 
+        merge_x["ARO_accession"] = this_or_that(merge_x, "ARO_contig_amr", "ARO Accession_kma_amr")
         merge_x["ARO_overall"] = this_or_that(merge_x, "ARO_contig", "ARO_kma")
         merge_x["Gene_Family_overall"] = this_or_that(
             merge_x, "AMR Gene Family_contig_amr", "AMR Gene Family_kma_amr"
