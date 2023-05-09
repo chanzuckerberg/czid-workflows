@@ -67,10 +67,10 @@ class TestAMR(WDLTestCase):
         self.assertEqual(len(primary_amr_report), 6)
         gene_names = [i.split("\t")[0] for i in primary_amr_report]
         for expected_gene_name in [
-            "arnt",
-            "fosa5",
-            "norc",
-            "smeb",
-            "staphylococcus aureus lmrs",
+            "ArnT",
+            "Staphylococcus aureus LmrS",
+            "fosA5",
+            "norC",
+            "smeB",
         ]:
             self.assertTrue(expected_gene_name in gene_names)
