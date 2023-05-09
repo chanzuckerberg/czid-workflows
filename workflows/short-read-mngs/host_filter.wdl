@@ -58,8 +58,8 @@ workflow czid_host_filter {
   # Adapter trimming and QC filtering
   call fastp_qc {
     input:
-    valid_input1_fastq = ercc_bowtie2_filter.bowtie2_ercc_filtered1_fastq,
-    valid_input2_fastq = ercc_bowtie2_filter.bowtie2_ercc_filtered2_fastq,
+    bowtie2_ercc_filtered1_fastq = ercc_bowtie2_filter.bowtie2_ercc_filtered1_fastq,
+    bowtie2_ercc_filtered2_fastq = ercc_bowtie2_filter.bowtie2_ercc_filtered2_fastq,
     adapter_fasta = adapter_fasta,
     docker_image_id = docker_image_id,
     cpu = cpu
@@ -339,8 +339,8 @@ task fastp_qc {
     # - quality filtering
     # - complexity filtering
   input {
-    File valid_input1_fastq
-    File? valid_input2_fastq
+    File bowtie2_ercc_filtered1_fastq
+    File? bowtie2_ercc_filtered2_fastq
     File adapter_fasta
 
     # These default QC thresholds are loosely based on the pre-2022 pipeline using PriceSeq & LZW
@@ -351,9 +351,9 @@ task fastp_qc {
     String docker_image_id
     Int cpu = 16
   }
-  Boolean paired = defined(valid_input2_fastq)
+  Boolean paired = defined(bowtie2_ercc_filtered2_fastq)
   String fastp_invocation = "fastp"
-        + " -i ${valid_input1_fastq} ${'-I ' + valid_input2_fastq}"
+        + " -i ${bowtie2_ercc_filtered1_fastq} ${'-I ' + bowtie2_ercc_filtered2_fastq}"
         + " -o fastp1.fastq ${if (paired) then '-O fastp2.fastq' else ''}"
         + " -w ${cpu} ${fastp_options}"
         + " --adapter_fasta ${adapter_fasta} ${if (paired) then '--detect_adapter_for_pe' else ''}"
