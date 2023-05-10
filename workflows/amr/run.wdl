@@ -262,7 +262,7 @@ task RunResultsPerSample {
         merge_x.to_csv("comprehensive_AMR_metrics.tsv", index=None, sep='\t')
 
         df = pd.read_csv("comprehensive_AMR_metrics.tsv", sep='\t')
-        big_table = df[['ARO_overall', 'ARO_accession', 'Gene_Family_overall', 'Drug_Class_overall', 'Resistance_Mechanism_overall', 'model_overall', 'All Mapped Reads_kma_amr', 'Percent Coverage_kma_amr','Depth_kma_amr', 'CARD*kmer Prediction_kma_sp', 'Cut_Off_contig_amr', 'Percentage Length of Reference Sequence_contig_amr', 'Best_Identities_contig_amr', 'CARD*kmer Prediction_contig_sp']]
+        big_table = df[['ARO_overall', 'Gene_Family_overall', 'Drug_Class_overall', 'Resistance_Mechanism_overall', 'model_overall', 'All Mapped Reads_kma_amr', 'Percent Coverage_kma_amr','Depth_kma_amr', 'CARD*kmer Prediction_kma_sp', 'Cut_Off_contig_amr', 'Percentage Length of Reference Sequence_contig_amr', 'Best_Identities_contig_amr', 'CARD*kmer Prediction_contig_sp']]
         big_table.sort_values(by='Gene_Family_overall', inplace=True)
 
         big_table.to_csv("bigtable_report.tsv", sep='\t', index=None)
@@ -284,8 +284,6 @@ task RunResultsPerSample {
             gf = remove_na(set(sub_df['AMR Gene Family_contig_amr']).union(set(sub_df['AMR Gene Family_kma_amr'])))
             result['sample_name'] = "~{sample_name}"
             result['gene_family'] = ';'.join(gf) if len(gf) > 0 else None
-
-            result['aro_accession'] = ";".join(set(sub_df['ARO_accession'].astype(str)))
         
             dc = remove_na(set(sub_df['Drug Class_contig_amr']).union(set(sub_df['Drug Class_kma_amr'])))
             result['drug_class'] = ';'.join(dc) if len(dc) > 0 else None
@@ -352,8 +350,7 @@ task RunResultsPerSample {
         final_df = pd.DataFrame.from_dict(result_df)
         final_df = final_df.transpose()
         final_df = final_df[["sample_name", "gene_family", "drug_class", "resistance_mechanism", "model_type", "num_contigs", 
-                             "cutoff", "contig_coverage_breadth", "contig_percent_id", "contig_species", "num_reads", "read_gene_id",
-                             "read_coverage_breadth", "read_coverage_depth", "read_species", "aro_accession"]]
+                             "cutoff", "contig_coverage_breadth", "contig_percent_id", "contig_species", "num_reads", "read_gene_id", "read_coverage_breadth", "read_coverage_depth", "read_species"]]
         final_df.sort_index(inplace=True)
         final_df.dropna(subset=['drug_class'], inplace=True)
         final_df.to_csv("primary_AMR_report.tsv", sep='\t', index_label="gene_name")
