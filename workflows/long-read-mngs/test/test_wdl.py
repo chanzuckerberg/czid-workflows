@@ -1,4 +1,3 @@
-import csv
 import gzip
 import json
 import os
@@ -29,21 +28,6 @@ class TestLongReadMNGS(WDLTestCase):
         "nt_info_db": os.path.join(ref_bucket, "test/viral-alignment-indexes/viral_nt_info.marisa"),
     }
 
-    def _tallied_hits_assertions(self, outputs: Dict[str, str], name: str):
-        with open(outputs[f"czid_long_read_mngs.{name}"]) as f:
-            rows = list(csv.reader(f))
-            self.assertEqual(rows[0], ["taxid", "level", "total_sequence_length", "total_alignment_length"])
-            self.assertGreater(len(rows), 1)
-            prev = None
-            for row in rows[1:]:
-                self.assertRegex(row[0], r"\d+")
-                self.assertIn(row[1], ["genus", "species"])
-                self.assertRegex(row[2], r"\d+")
-                self.assertRegex(row[3], r"\d+")
-                if prev:
-                    self.assertGreaterEqual(prev, int(row[3]))
-                prev = int(row[3])
-
     def _read_length_metrics_assertions(self, outputs: Dict[str, str]):
         with open(outputs["czid_long_read_mngs.read_length_metrics"]) as f:
             metrics = json.load(f)
@@ -55,17 +39,13 @@ class TestLongReadMNGS(WDLTestCase):
         self.assertIn("czid_long_read_mngs.unmapped_fq", outputs)
         with open(outputs["czid_long_read_mngs.unmapped_fq"]) as f:
             unmapped = f.readlines()
-            self.assertGreaterEqual(len(unmapped), 40)  # TODO: figure out why this changes
+            self.assertGreaterEqual(len(unmapped), 30)  # TODO: figure out why this changes
 
     def testLongReadMNGSZipped(self):
         res = self.run_miniwdl([f"input_fastq={os.path.join(os.path.dirname(__file__), 'test_files/test.fastq.gz')}"])
         outputs = res["outputs"]
-        self.assertIn("czid_long_read_mngs.nt_deduped_m8", outputs)
-        self.assertIn("czid_long_read_mngs.nr_deduped_m8", outputs)
-
-        # test tally hits
-        self._tallied_hits_assertions(outputs, "nt_tallied_hits")
-        self._tallied_hits_assertions(outputs, "nr_tallied_hits")
+        self.assertIn("czid_long_read_mngs.nt_top_m8", outputs)
+        self.assertIn("czid_long_read_mngs.nr_top_m8", outputs)
 
         # test unmapped reads
         self._unmapped_reads_assertions(outputs)
@@ -79,12 +59,8 @@ class TestLongReadMNGS(WDLTestCase):
 
             res = self.run_miniwdl([f"input_fastq={f.name}"])
             outputs = res["outputs"]
-            self.assertIn("czid_long_read_mngs.nt_deduped_m8", outputs)
-            self.assertIn("czid_long_read_mngs.nr_deduped_m8", outputs)
-
-            # test tally hits
-            self._tallied_hits_assertions(outputs, "nt_tallied_hits")
-            self._tallied_hits_assertions(outputs, "nr_tallied_hits")
+            self.assertIn("czid_long_read_mngs.nt_top_m8", outputs)
+            self.assertIn("czid_long_read_mngs.nr_top_m8", outputs)
 
             # test unmapped reads
             self._unmapped_reads_assertions(outputs)

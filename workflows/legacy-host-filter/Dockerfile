@@ -1,28 +1,4 @@
 # syntax=docker/dockerfile:1.4
-FROM ubuntu:18.04 AS s3quilt
-
-RUN apt-get update && apt-get install -y curl python3-pip
-
-ARG GO_VERSION=1.19.2
-RUN curl -Lo go${GO_VERSION}.linux-amd64.tar.gz https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz
-RUN tar -C . -xzf go${GO_VERSION}.linux-amd64.tar.gz && rm go${GO_VERSION}.linux-amd64.tar.gz
-ENV GOPATH /go
-ENV PATH $GOPATH/bin:$PATH
-RUN /go/bin/go version
-WORKDIR /go/src/s3quilt
-COPY --from=lib s3quilt/go.mod s3quilt/go.sum s3quilt/s3quilt.go ./
-
-RUN go get golang.org/x/tools/cmd/goimports
-RUN go install golang.org/x/tools/cmd/goimports
-RUN go get github.com/go-python/gopy
-RUN go install github.com/go-python/gopy
-
-RUN pip3 install pybindgen setuptools wheel
-
-RUN gopy build -vm=python3 --output s3quilt .
-COPY --from=lib s3quilt/__init__.py s3quilt/
-RUN cp -r s3quilt/ /usr/lib/python3/dist-packages/
-
 FROM ubuntu:18.04
 ARG DEBIAN_FRONTEND=noninteractive
 ARG MINIWDL_VERSION=1.1.5
@@ -119,11 +95,6 @@ RUN curl -Ls https://github.com/chanzuckerberg/s3parcp/releases/download/v0.2.0-
 # FIXME: check if use of pandas, pysam is necessary
 RUN pip3 install pysam==0.14.1 pandas==1.1.5
 
-# Workaround for srst2 refusing to work with upstream bowtie2 and samtools
-# FIXME: replace srst2 with a more appropriate tool
-RUN apt-get -q install -y srst2
-RUN sed -i '/Incorrect version/ s/\w.*/return "1.7"/' /usr/bin/srst2
-
 # Picard for average fragment size https://github.com/broadinstitute/picard
 # r-base is a dependency of collecting input size metrics https://github.com/bioconda/bioconda-recipes/pull/16398
 RUN apt-get install -y r-base
@@ -137,49 +108,8 @@ RUN curl -L https://github.com/alexdobin/STAR/archive/2.5.3a.tar.gz | tar xz
 RUN mv STAR-2.5.3a/bin/Linux_x86_64_static/* /usr/local/bin
 RUN rm -rf STAR-2.5.3a
 
-# install gsnap and rapsearch2 for local alignment
-RUN apt-get install -y \
-        g++ \
-        libperl4-corelibs-perl \
-        make \
-        # Runtime dependencies
-        # On versions higher than 1.62 compilation errors because of an overloading ambiguity with the `advance` method
-        libboost1.62-all-dev
-
-
-# install gsnap, we are using a pinned version for alignment
-#  we are also using a different version for host filtering so we append -208-10-26 to each binary.
-WORKDIR /gmap-gsnap-2018-10-26
-RUN curl -L  https://idseq-gsnap-prerelease.s3-us-west-2.amazonaws.com/gmap-2018-10-26.tar.gz | tar xz -C /gmap-gsnap-2018-10-26 --strip-components 1
-RUN ./configure --prefix=/gmap-gsnap-2018-10-26 --with-simd-level=avx2 && make -j 8 && make install
-RUN ls bin | xargs -I % mv bin/% bin/%-2018-10-26
-ENV PATH="${PATH}:/gmap-gsnap-2018-10-26/bin/"
-
-WORKDIR /rapsearch2/Src
-RUN curl -L  https://idseq-rapsearch2.s3-us-west-2.amazonaws.com/RAPSearch2.24_64bits.tar.gz  | tar xz -C /rapsearch2 --strip-components 1
-# Use the version of boost we installed
-RUN sed -i -e 's|^INC.*|INC := -I /usr/include/boost|' -e 's|^LIB.*|LIB :=|' Makefile
-RUN make
-ENV PATH="${PATH}:/rapsearch2/Src/"
 
 RUN apt-get -y update && apt-get install -y build-essential libz-dev git python3-pip cmake
-
-WORKDIR /tmp
-RUN git clone --recursive https://github.com/mlin/minimap2-scatter.git
-WORKDIR /tmp/minimap2-scatter
-RUN make minimap2
-RUN mv /tmp/minimap2-scatter/minimap2/minimap2 /usr/local/bin/minimap2-scatter
-
-WORKDIR /tmp
-RUN git clone https://github.com/morsecodist/diamond
-WORKDIR /tmp/diamond
-RUN git checkout minimal-mods
-WORKDIR /tmp/diamond/build
-RUN cmake -DCMAKE_BUILD_TYPE=Release ..
-RUN make -j6
-RUN mv diamond /usr/local/bin
-
-RUN curl -Ls https://github.com/chanzuckerberg/s3parcp/releases/download/v0.2.0-alpha/s3parcp_0.2.0-alpha_Linux_x86_64.tar.gz | tar -C /usr/bin -xz s3parcp
 
 # Host filtering (2022 version) dependencies
 # fastp (libdeflate libisal (dh-autoreconf nasm))
@@ -192,7 +122,7 @@ RUN cd isa-l-* && ./autogen.sh && ./configure && make -j8 && make install
 RUN wget -nv -O - https://github.com/ebiggers/libdeflate/archive/refs/tags/v1.12.tar.gz | tar zx
 RUN cd libdeflate-* && make -j8 && make install
 RUN ldconfig
-RUN git clone https://github.com/mlin/fastp.git && git -C fastp checkout c427e57
+RUN git clone https://github.com/mlin/fastp.git && git -C fastp checkout 37edd60
 RUN cd fastp && make -j8 && ./fastp test && cp fastp /usr/local/bin
 WORKDIR /
 RUN wget -nv -O /tmp/HISAT2.zip https://czid-public-references.s3.us-west-2.amazonaws.com/test/hisat2/hisat2.zip \
@@ -209,4 +139,3 @@ RUN pip3 install /tmp/idseq-dag && rm -rf /tmp/idseq-dag
 COPY --from=lib idseq_utils /tmp/idseq_utils
 RUN pip3 install /tmp/idseq_utils && rm -rf /tmp/idseq_utils
 
-COPY --from=s3quilt /usr/lib/python3/dist-packages/s3quilt/ /usr/lib/python3/dist-packages/s3quilt/
