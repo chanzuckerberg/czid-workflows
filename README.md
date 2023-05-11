@@ -34,26 +34,34 @@ The system requirements differs for each workflow and depending on the database 
 * virtualenv
 * requirements-dev.txt - to automatically install this run `make python-dependencies`
 
-### Setup
+### Quick Setup
 To get setup, first set the workflow you want to run with 
+
 ```export WORKFLOW=<workflow-name>``` e.g.
+
 ```export WORKFLOW=amr```
 
 You can see available workflows with `make ls`
 
 Either `build` or `pull` the workflow docker image with 
-```make pull  ## The much faster option``` or 
+
+```make pull  ## The faster option``` or 
+
 ```make build ## The slower option, but necessary if you're modifying the docker container```
 
 ### Running a workflow
 Run a workflow with 
+
 ```make run```
+
 Which simply runs the ```miniwdl run path_to_wdl.wdl``` command with some defaults
 
 Each workflow has a number of required and optional inputs, and all require at least an input file (usually a fastq). Default inputs are set from the `workflows/<workflow-name>/test/local_test.yml` file. These may or may not be accurate for every analysis. You can override these defaults and add your own with:
+
 ```make run INPUT='-i your_file_here.yml'```
 
 If you're happy with the defaults, you can add arguments to the `miniwdl` command using 
+
 ```make run EXTRA_INPUTS='input_fastq=/path/to/input.fastq' ```
 
 ### An example
@@ -68,7 +76,6 @@ make run EXTRA_INPUTS='fastqs_0=workflows/consensus-genome/test/sample_sars-cov-
         fastqs_1=workflows/consensus-genome/test/sample_sars-cov-2_paired_r2.fastq.gz \
         technology="Illumina" \
         sample="my_sample_name"'
-
 ```
 ## CI/CD
 
