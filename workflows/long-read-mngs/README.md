@@ -8,6 +8,9 @@ Further documentation on how to use the CZ ID long-read-mngs workflow can be fou
 ​
 ### Changelog
 ​
+**0.7.2** -- May 10th, 2023 -- Stitch together HSPs
+- Stitches together multiple hits from the same read or contig to the same accession into longer hits. These longer hits are not used for the coverage visualization.
+​
 **v0.7.0** -- April 25, 2023 -- Algorithmic updates to improve coverage of taxa identified in samples
 ​
  - Updates the Flye version used from `v2.9.0` to `v2.9.2`
