@@ -636,19 +636,20 @@ task tsvToSam {
         python3 <<CODE
         import pandas as pd
         import pysam
+        import sys
 
         COLUMN_GENE_ID = "Reference Sequence_kma_amr"
         COLUMN_CONTIG_NAME = "Contig_contig_amr"
         OUTPUT_BAM = "contig_amr_report.sorted.bam"
 
-        # Create an empty BAM file if the SPADES assembly failed
+        # Create an empty BAM/BAI file if the SPADES assembly failed, then exit
         with open("~{contigs}") as f:
             first_line = f.readline()
             if first_line == ";ASSEMBLY FAILED\n":
                 output_bam = pysam.AlignmentFile(OUTPUT_BAM, "wb", reference_names=["NoGenes"], reference_lengths=[100])
                 output_bam.close()
                 pysam.index(OUTPUT_BAM)
-                return
+                sys.exit()
 
         # Create index to enable querying fasta file
         pysam.faidx("~{contigs}")
