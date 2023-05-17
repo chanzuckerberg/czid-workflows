@@ -289,11 +289,8 @@ task RunResultsPerSample {
             result['drug_class'] = ';'.join(dc) if len(dc) > 0 else None
             rm = remove_na(set(sub_df['Resistance Mechanism_contig_amr']).union(set(sub_df['Resistance Mechanism_kma_amr'])))
             result['resistance_mechanism'] = ';'.join(rm) if len(rm) > 0 else None
-            
-            # 2. When generating the merged reports do some logic to convert “cutoff” column to “Loose” 
-            # (or, “nudged”) when “nudged” column = True.
-            # Nudged is the column in contig_amr_report.txt file
-            # If nudged is true, then cutoff is "nudged"
+
+            # If nudged is True, then set cutoff as "Nudged"
             co = remove_na(set(sub_df['Cut_Off_contig_amr']))
             nudged = remove_na(set(sub_df['Nudged_contig_amr']))
             
