@@ -290,6 +290,9 @@ task RunResultsPerSample {
             rm = remove_na(set(sub_df['Resistance Mechanism_contig_amr']).union(set(sub_df['Resistance Mechanism_kma_amr'])))
             result['resistance_mechanism'] = ';'.join(rm) if len(rm) > 0 else None
             
+            # 2. When generating the merged reports do some logic to convert “cutoff” column to “Loose” (or, “nudged”) when “nudged” column = True. This logic would be done in the pipeline WDL
+            # Nudged is the column in contig_amr_report.txt file
+            # If nudged is true, then cutoff is "nudged"
             co = remove_na(set(sub_df['Cut_Off_contig_amr']))
             result['cutoff'] = ';'.join(co) if len(co) > 0 else None
             
@@ -448,7 +451,7 @@ task RunRgiMain {
             echo "{}" > contig_amr_report.json
             cp /tmp/empty-main-header.txt contig_amr_report.txt
         else
-            rgi main -i "~{contigs}" -o contig_amr_report -t contig -a BLAST --clean 
+            rgi main -i "~{contigs}" -o contig_amr_report -t contig -a BLAST --include_nudge --clean
         fi
     >>>
     output {
