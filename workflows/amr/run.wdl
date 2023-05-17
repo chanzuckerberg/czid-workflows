@@ -296,14 +296,9 @@ task RunResultsPerSample {
             # If nudged is true, then cutoff is "nudged"
             co = remove_na(set(sub_df['Cut_Off_contig_amr']))
             nudged = remove_na(set(sub_df['Nudged_contig_amr']))
-            print("sub_df['Nudged_contig_amr']", sub_df['Nudged_contig_amr'])
-            print("set(sub_df['Nudged_contig_amr'])", set(sub_df['Nudged_contig_amr']))
-            print("remove_na(set(sub_df['Nudged_contig_amr']))", remove_na(set(sub_df['Nudged_contig_amr'])))
-            print("NUDGED_VALUE: ", nudged)
             
-            if len(nudged) > 0 and nudged[0] == "TRUE":
+            if len(nudged) > 0 and nudged[0] == True:
                 co = ["Nudged"]
-                print("NUDGED VALUE IS TRUE: ", nudged[0])
             result['cutoff'] = ';'.join(co) if len(co) > 0 else None
             
             mt = remove_na(set(sub_df['Model_type_contig_amr']).union(set(sub_df['Reference Model Type_kma_amr'])))
