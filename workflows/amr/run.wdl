@@ -296,7 +296,7 @@ task RunResultsPerSample {
             # If nudged is true, then cutoff is "nudged"
             co = remove_na(set(sub_df['Cut_Off_contig_amr']))
             nudged = remove_na(set(sub_df['Nudged_contig_amr']))
-            if len(nudged) > 0 and nudged[0] == "True":
+            if len(nudged) > 0 and nudged[0] == "TRUE":
                 co = ["Nudged"]
             result['cutoff'] = ';'.join(co) if len(co) > 0 else None
             
