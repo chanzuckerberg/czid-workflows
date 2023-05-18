@@ -290,12 +290,10 @@ task RunResultsPerSample {
             rm = remove_na(set(sub_df['Resistance Mechanism_contig_amr']).union(set(sub_df['Resistance Mechanism_kma_amr'])))
             result['resistance_mechanism'] = ';'.join(rm) if len(rm) > 0 else None
 
-            # If nudged is True, then set cutoff as "Nudged"
-            co = remove_na(set(sub_df['Cut_Off_contig_amr']))
-            nudged = remove_na(set(sub_df['Nudged_contig_amr']))
             
-            if len(nudged) > 0 and nudged[0] == True:
-                co = ["Nudged"]
+            sub_df.loc[(sub_df['Cut_Off_contig_amr'] == 'Strict') & (sub_df['Nudged_contig_amr'] == True), 'Cut_Off_contig_amr'] = "Nudged"
+            co = remove_na(set(sub_df['Cut_Off_contig_amr']))
+
             result['cutoff'] = ';'.join(co) if len(co) > 0 else None
             
             mt = remove_na(set(sub_df['Model_type_contig_amr']).union(set(sub_df['Reference Model Type_kma_amr'])))
