@@ -10,7 +10,7 @@ while True:
     try:
         csv.field_size_limit(_field_size_limit)
         break
-    # if the size limit is two high make it one bit smaller and try again
+    # if the size limit is too high make it one bit smaller and try again
     except OverflowError:
         _field_size_limit = int(_field_size_limit >> 1)
 
