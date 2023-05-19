@@ -9,6 +9,11 @@ Further documentation on how to use the CZ ID long-read-mngs workflow can be fou
 ### Changelog
 ​
 
+**v0.7.3** -- May 19, 2023 -- Fix bug in reads to contigs step that caused it to fail for long contigs
+​
+ - Fix bug in reads to contigs step that caused it to fail for long contigs.
+​
+
 **v0.7.2** -- April 25, 2023 -- Algorithmic updates to improve coverage of taxa identified in samples
 ​
  - Stitches together multiple hits from the same read or contig to the same accession into longer hits. These hits still show up in their original, separate, form in the coverage visualization.
