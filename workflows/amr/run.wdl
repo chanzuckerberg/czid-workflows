@@ -289,8 +289,11 @@ task RunResultsPerSample {
             result['drug_class'] = ';'.join(dc) if len(dc) > 0 else None
             rm = remove_na(set(sub_df['Resistance Mechanism_contig_amr']).union(set(sub_df['Resistance Mechanism_kma_amr'])))
             result['resistance_mechanism'] = ';'.join(rm) if len(rm) > 0 else None
+
             
+            sub_df.loc[(sub_df['Cut_Off_contig_amr'] == 'Strict') & (sub_df['Nudged_contig_amr'] == True), 'Cut_Off_contig_amr'] = "Nudged"
             co = remove_na(set(sub_df['Cut_Off_contig_amr']))
+
             result['cutoff'] = ';'.join(co) if len(co) > 0 else None
             
             mt = remove_na(set(sub_df['Model_type_contig_amr']).union(set(sub_df['Reference Model Type_kma_amr'])))
@@ -448,7 +451,7 @@ task RunRgiMain {
             echo "{}" > contig_amr_report.json
             cp /tmp/empty-main-header.txt contig_amr_report.txt
         else
-            rgi main -i "~{contigs}" -o contig_amr_report -t contig -a BLAST --clean 
+            rgi main -i "~{contigs}" -o contig_amr_report -t contig -a BLAST --include_nudge --clean
         fi
     >>>
     output {
