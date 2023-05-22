@@ -31,10 +31,10 @@ RUN curl -LO https://github.com/telatin/seqfu2/releases/download/v${SEQFU_VER}/S
     unzip SeqFu-v${SEQFU_VER}-Linux-x86_64.zip -d /usr/local/bin/
 
 # load databases
-RUN curl -LO https://czid-public-references.s3.us-west-2.amazonaws.com/test/AMRv2/card.json && \
+RUN curl -LO https://czid-public-references.s3.us-west-2.amazonaws.com/card/2023-05-22/card.json && \
     rgi card_annotation -i card.json && \
     rgi load \
-        --card_annotation card_database_v3.2.3.fasta \
+        --card_annotation card_database_v3.2.6.fasta \
         -i card.json 
 
 COPY empty-main-header.txt /tmp/empty-main-header.txt 
