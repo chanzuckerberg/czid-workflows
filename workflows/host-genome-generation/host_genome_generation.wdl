@@ -177,7 +177,7 @@ task bowtie2_build {
     mkdir -p "$TMPDIR"'/bt2/~{genome_name}'
     >&2 bowtie2-build --seed ~{seed} --threads ~{cpu} "~{fasta}" "$TMPDIR"'/bt2/~{genome_name}/~{genome_name}'
     >&2 ls -lR "$TMPDIR/bt2"
-    ln -s "$TMPDIR"'/bt2/~{genome_name}' "$TMPDIR"'/bt2/~{genome_name}.bowtie2'
+    ln -r -s "$TMPDIR"'/bt2/~{genome_name}' "$TMPDIR"'/bt2/~{genome_name}.bowtie2'
     env -C "$TMPDIR/bt2" tar c . > '~{genome_name}.bowtie2.tar'
   >>>
 
