@@ -23,7 +23,7 @@ For Consensus Genome workflow we can follow a similar workflow to the `short-rea
 We first build a local Docker container image with the consensus genome workflow:
 
 ```bash
-docker build -t czid-consensus-genome czid-workflows/consensus-genome
+./scripts/docker-build.sh workflows/consensus-genome -t czid-consensus-genome
 ```
 
 TIPS: For more detailed setup information

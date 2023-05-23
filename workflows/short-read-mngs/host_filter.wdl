@@ -165,7 +165,7 @@ workflow czid_host_filter {
     File bowtie2_ercc_filtered1_fastq = ercc_bowtie2_filter.bowtie2_ercc_filtered1_fastq
     File? bowtie2_ercc_filtered2_fastq = ercc_bowtie2_filter.bowtie2_ercc_filtered2_fastq
     File bowtie2_ERCC_counts_tsv = ercc_bowtie2_filter.bowtie2_ercc_counts
-    File ercc_bowtie2_filter_count = ercc_bowtie2_filter.reads_out_count
+    File bowtie2_ercc_filtered_out_count = ercc_bowtie2_filter.reads_out_count
 
     File fastp_out_fastp1_fastq = fastp_qc.fastp1_fastq
     File? fastp_out_fastp2_fastq = fastp_qc.fastp2_fastq
