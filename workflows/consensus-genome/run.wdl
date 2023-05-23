@@ -23,7 +23,9 @@ workflow consensus_genome {
         File? ref_fasta # Only required for Illumina (ONT SC2 reference is built into ARTIC); takes precedence over ref_accession_id
         String? ref_accession_id # Only required for Illumina; has no effect if ref_fasta is set
 
-        Boolean output_ref_and_primer = false
+        # WGS specific, users will want to download bed and refseq files if they were added on upload
+        Boolean output_refseq = false
+        Boolean output_bed = false
 
         File ref_host
         String technology # Input sequencing technology ("Illumina" or "ONT"); ONT only works with SC2 samples (SC2 reference is built into ARTIC)
@@ -242,8 +244,8 @@ workflow consensus_genome {
             outputFiles = select_all(flatten([
                 RemoveHost.host_removed_fastqs,
                 select_all([
-                    if output_ref_and_primer then "~{primer_bed}" else None, 
-                    if output_ref_and_primer then "~{ref_fasta}" else None,
+                    if output_bed then "~{primer_bed}" else None,
+                    if output_refseq then "~{ref_fasta}" else None,
                     MakeConsensus.consensus_fa,
                     RunMinion.consensus_fa,
                     ComputeStats.depths_fig,

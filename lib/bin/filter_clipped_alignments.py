@@ -1,6 +1,18 @@
 import csv
 import re
 import argparse
+import sys
+
+# the SAM file input has the full sequence which can be very long
+#   increase the csv field size limit to ensure they will fit
+_field_size_limit = sys.maxsize
+while True:
+    try:
+        csv.field_size_limit(_field_size_limit)
+        break
+    # if the size limit is too high make it one bit smaller and try again
+    except OverflowError:
+        _field_size_limit = int(_field_size_limit >> 1)
 
 front_pattern = re.compile(r"^\d+[SH]")
 end_pattern = re.compile(r"\d+[SH]$")

@@ -307,7 +307,7 @@ class PipelineStepRunValidateInput(PipelineStep):
 
     @staticmethod
     def get_bash_error_output(output: str, filename: str = "") -> str:
-        if re.match("gzip.+not in gzip format", output):
+        if re.match("gzip.+not in gzip format", output) or re.match("zlib.+invalid distance too far back", output):
             return f"There was an error unzipping the input file {filename}.  Please verify that this file is a proper .gz file"
         elif re.match("PARSE ERROR: invalid line length.+max line length of 10000.", output):
             return f"The maximum line length was exceeded for the input file {filename}."
