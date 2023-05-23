@@ -10,4 +10,4 @@ v1.2.3 -- May 24, 2023 -- Initial pipeline release
 
 Filename | Provenance 
 ---------|-----------
-s3://czid-public-references/test/AMRv2/* | All files downloaded from https://card.mcmaster.ca/download on July 24, 2022. CARD version: 3.2.3 Wildcard version: 3.1.0
+s3://czid-public-references/card/2023-05-22/* | All files downloaded from https://card.mcmaster.ca/download on May 23, 2023. CARD version: 3.2.6 Wildcard version: 4.0.0

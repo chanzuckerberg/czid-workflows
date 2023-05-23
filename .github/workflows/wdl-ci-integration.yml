@@ -10,14 +10,14 @@ env:
 
 jobs:
   cancel-previous:
-    runs-on: self-hosted
+    runs-on: [self-hosted, idseq-dev]
     steps:
       - uses: styfle/cancel-workflow-action@0.9.0
         with:
           access_token: ${{ github.token }}
 
   list-workflow-dirs:
-    runs-on: self-hosted
+    runs-on: [self-hosted, idseq-dev]
     outputs:
       matrix: ${{steps.list_dirs.outputs.matrix}}
     steps:
@@ -29,7 +29,7 @@ jobs:
         run: echo "matrix=$(./scripts/diff-workflows.sh |jq -cnR '[inputs|select(length>0)]')" >> $GITHUB_OUTPUT
 
   wdl-ci:
-    runs-on: self-hosted
+    runs-on: [self-hosted, idseq-dev]
     needs: list-workflow-dirs
     if: ${{ needs['list-workflow-dirs'].outputs.matrix != '[]' && needs['list-workflow-dirs'].outputs.matrix != '' }}
     strategy:
