@@ -70,7 +70,7 @@ workflow short_read_mngs_benchmark  {
 
     ## Read in step count files 
 
-    if (defined(step_counts_run_1) || defined(step_counts_run_2)) {
+    if (defined(step_counts_run_1) && defined(step_counts_run_2)) {
         call read_step_counts as read_step_counts_run_1 {
             input:
                 sc = select_first([step_counts_run_1]),
