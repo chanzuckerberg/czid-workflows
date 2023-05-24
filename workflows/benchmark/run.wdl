@@ -9,9 +9,13 @@ workflow benchmark {
         File? contig_summary_run_1
         File? contig_fasta_run_1
 
+        Array[File]? step_counts_run_1 
+
         File? taxon_counts_run_2
         File? contig_summary_run_2
         File? contig_fasta_run_2
+
+        Array[File]? step_counts_run_2
 
         File? ground_truth
 
@@ -26,6 +30,11 @@ workflow benchmark {
                 taxon_counts_run_1 = select_first([taxon_counts_run_1]),
                 contig_summary_run_1 = select_first([contig_summary_run_1]),
                 contig_fasta_run_1 = select_first([contig_fasta_run_1]),
+                taxon_counts_run_2,
+                contig_summary_run_2,
+                contig_fasta_run_2,
+                step_counts_run_1,
+                step_counts_run_2,
                 ground_truth = ground_truth,
                 docker_image_id 
         }

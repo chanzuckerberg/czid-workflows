@@ -1,2 +1,4 @@
 taxadb
 scikit-learn
+jinja2==2.11.0
+markupsafe==2.0.1
