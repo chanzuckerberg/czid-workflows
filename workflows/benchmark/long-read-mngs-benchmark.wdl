@@ -1,7 +1,7 @@
 version 1.1
 
 
-workflow short_read_mngs_benchmark  {
+workflow long_read_mngs_benchmark  {
     input { 
         File taxon_counts_run_1
         File contig_summary_run_1
@@ -221,7 +221,8 @@ task preprocess_taxa {
             "~{contig_summary}", 
             "~{contig_fasta}", 
             "~{dbtype}", 
-            taxadb
+            taxadb, 
+            calculate_bPM=True
             )
 
         with open("preprocessed_taxa.json", "w") as f:
@@ -274,13 +275,13 @@ task notebook {
     fi
     
     # TODO: handle empty NR or NT or both output
-    cp /home/jovyan/notebooks/short-read-mngs-benchmarks.ipynb short-read-mngs-benchmarks.ipynb
-    jupyter nbconvert --to notebook --execute --inplace short-read-mngs-benchmarks.ipynb
+    cp /home/jovyan/notebooks/long-read-mngs-benchmarks.ipynb long-read-mngs-benchmarks.ipynb
+    jupyter nbconvert --to notebook --execute --inplace long-read-mngs-benchmarks.ipynb
 
     >>>
     output { 
         File combined = "combined_taxa.json"
-        File benchmark_notebook = "short-read-mngs-benchmarks.ipynb"
+        File benchmark_notebook = "long-read-mngs-benchmarks.ipynb"
     }
     runtime { 
         docker: docker_image_id 

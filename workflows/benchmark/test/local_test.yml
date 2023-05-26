@@ -1,15 +1,15 @@
-taxon_counts_run_1: /mnt/test-short-read-mngs/20230428_235342_czid_short_read_mngs/out/postprocess.refined_taxon_count_out_assembly_refined_taxon_counts_with_dcr_json/refined_taxon_counts_with_dcr.json
-contig_summary_run_1: /mnt/test-short-read-mngs/20230428_235342_czid_short_read_mngs/out/postprocess.contig_summary_out_assembly_combined_contig_summary_json/combined_contig_summary.json
-contig_fasta_run_1: /mnt/test-short-read-mngs/20230428_235342_czid_short_read_mngs/out/postprocess.assembly_out_assembly_contigs_fasta/contigs.fasta
+taxon_counts_run_1: s3://idseq-samples-staging/samples/933/26167/30968/short-read-mngs-8/refined_taxon_counts_with_dcr.json
+contig_summary_run_1: s3://idseq-samples-staging/samples/933/26167/30968/short-read-mngs-8/combined_contig_summary.json
+contig_fasta_run_1: s3://idseq-samples-staging/samples/933/26167/30968/short-read-mngs-8/contigs.fasta
 
 step_counts_run_1: 
-  - /mnt/test-short-read-mngs/20230428_235342_czid_short_read_mngs/call-host_filter/out/bowtie2_host_filtered_out_count/bowtie2_host_filtered_out.count
-  - /mnt/test-short-read-mngs/20230428_235342_czid_short_read_mngs/call-host_filter/out/czid_dedup_out_count/czid_dedup_out.count
-  - /mnt/test-short-read-mngs/20230428_235342_czid_short_read_mngs/call-host_filter/out/fastp_out_count/fastp_out.count
-  - /mnt/test-short-read-mngs/20230428_235342_czid_short_read_mngs/call-host_filter/out/hisat2_host_filtered_out_count/hisat2_host_filtered_out.count
-  - /mnt/test-short-read-mngs/20230428_235342_czid_short_read_mngs/call-host_filter/out/input_read_count/fastqs.count
-  - /mnt/test-short-read-mngs/20230428_235342_czid_short_read_mngs/call-host_filter/out/subsampled_out_count/subsampled_out.count
-  - /mnt/test-short-read-mngs/20230428_235342_czid_short_read_mngs/call-host_filter/out/validate_input_out_count/validate_input_out.count
+  - s3://idseq-samples-staging/samples/933/26167/30968/short-read-mngs-8/bowtie2_host_filtered_out.count
+  - s3://idseq-samples-staging/samples/933/26167/30968/short-read-mngs-8/czid_dedup_out.count
+  - s3://idseq-samples-staging/samples/933/26167/30968/short-read-mngs-8/fastp_out.count
+  - s3://idseq-samples-staging/samples/933/26167/30968/short-read-mngs-8/hisat2_host_filtered_out.count
+  - s3://idseq-samples-staging/samples/933/26167/30968/short-read-mngs-8/fastqs.count
+  - s3://idseq-samples-staging/samples/933/26167/30968/short-read-mngs-8/subsampled_out.count
+  - s3://idseq-samples-staging/samples/933/26167/30968/short-read-mngs-8/validate_input_out.count
 
 step_counts_run_2:
   - s3://idseq-samples-staging/samples/963/25857/30729/short-read-mngs-8/bowtie2_host_filtered_out.count
