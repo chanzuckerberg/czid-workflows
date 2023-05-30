@@ -11,11 +11,11 @@ workflow amr {
         String docker_image_id
         String sample_name
         String host_filtering_docker_image_id = "czid-short-read-mngs" # default local value
-        File card_json = "s3://czid-public-references/test/AMRv2/card.json"
-        File kmer_db = "s3://czid-public-references/test/AMRv2/61_kmer_db.json"
-        File amr_kmer_db = "s3://czid-public-references/test/AMRv2/all_amr_61mers.txt"
-        File wildcard_data = "s3://czid-public-references/test/AMRv2/wildcard_database_v3.1.0.fasta"
-        File wildcard_index = "s3://czid-public-references/test/AMRv2/index-for-model-sequences.txt"
+        File card_json = "s3://czid-public-references/card/2023-05-22/card.json"
+        File kmer_db = "s3://czid-public-references/card/2023-05-22/61_kmer_db.json"
+        File amr_kmer_db = "s3://czid-public-references/card/2023-05-22/all_amr_61mers.txt"
+        File wildcard_data = "s3://czid-public-references/card/2023-05-22/wildcard_database_v4.0.0.fasta"
+        File wildcard_index = "s3://czid-public-references/card/2023-05-22/index-for-model-sequences.txt"
         Int min_contig_length = 100
         # Dummy values - required by SFN interface
         String s3_wd_uri = ""
@@ -388,7 +388,7 @@ task RunRgiKmerMain {
         time rgi load \
             -i "~{card_json}" \
             --wildcard_annotation "~{wildcard_data}" \
-            --wildcard_version 3.1.0 \
+            --wildcard_version 4.0.0 \
             --wildcard_index "~{wildcard_index}" \
             --kmer_database "~{kmer_db}" \
             --amr_kmers "~{amr_kmer_db}" \
@@ -421,7 +421,7 @@ task RunRgiKmerBwt {
         time rgi load \
             -i "~{card_json}" \
             --wildcard_annotation "~{wildcard_data}" \
-            --wildcard_version 3.1.0 \
+            --wildcard_version 4.0.0 \
             --wildcard_index "~{wildcard_index}" \
             --kmer_database "~{kmer_db}" \
             --amr_kmers "~{amr_kmer_db}" \
