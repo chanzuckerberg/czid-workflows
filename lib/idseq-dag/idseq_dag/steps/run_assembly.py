@@ -187,7 +187,7 @@ class PipelineStepRunAssembly(PipelineStep):
             command.write_text_to_file(';ASSEMBLY FAILED', assembled_contig_all)
             command.write_text_to_file(';ASSEMBLY FAILED', assembled_scaffold)
             command.write_text_to_file('@NO INFO', bowtie_sam)
-            command.write_text_to_file('{}', assembled_dir)
+            command.write_text_to_file('{}', contig_stats)
             traceback.print_exc()
 
     @staticmethod
