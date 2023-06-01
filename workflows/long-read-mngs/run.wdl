@@ -58,7 +58,7 @@ task RunQualityFilter {
             + " --disable_adapter_trimming"
             + " -i ${input_fastq}"
             + " --qualified_quality_phred 9"
-            + " --length_required 100"
+            + " --length_required 300"
             + " --low_complexity_filter --complexity_threshold 30"
             + " --dont_eval_duplication"
             + " -o sample_quality_filtered.fastq"
