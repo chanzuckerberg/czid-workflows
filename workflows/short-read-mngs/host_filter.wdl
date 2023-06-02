@@ -295,6 +295,10 @@ task ercc_bowtie2_filter {
 
     count=$((count / 4))
     jq --null-input --arg count "$count" '{"bowtie2_ercc_filtered_out":$count}' > 'bowtie2_ercc_filtered_out.count'
+    
+    if [[ "$count" -eq "0" ]]; then 
+      raise_error InsufficientReadsError "There was an insufficient number of reads in the sample after the host and quality filtering steps."
+    fi
 
     python3 - << 'EOF'
     import textwrap
