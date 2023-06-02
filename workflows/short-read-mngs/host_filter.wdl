@@ -419,7 +419,10 @@ task kallisto {
     File? fastp2_fastq
     File kallisto_idx
     File? gtf_gz
-    String kallisto_options = ""
+
+    # Run kallisto single-threaded with a fixed seed.
+    # This will ensure non-random reproducibility between runs.
+    String kallisto_options = "--threads=1 --seed=42"
 
     String docker_image_id
     Int cpu = 16
@@ -427,7 +430,7 @@ task kallisto {
   Boolean paired = defined(fastp2_fastq)
   # TODO: input fragment length parameters for non-paired-end (l = average, s = std dev)
   String kallisto_invocation = "/kallisto/kallisto quant"
-      + " -i '${kallisto_idx}' -o $(pwd) --plaintext ${if (paired) then '' else '--single -l 200 -s 20'} ${kallisto_options} -t ${cpu}"
+      + " -i '${kallisto_idx}' -o $(pwd) --plaintext ${if (paired) then '' else '--single -l 200 -s 20'} ${kallisto_options}"
       + " '~{fastp1_fastq}'" + if (defined(fastp2_fastq)) then " '~{fastp2_fastq}'" else ""
 
   command <<<
