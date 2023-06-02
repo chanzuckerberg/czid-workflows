@@ -51,6 +51,7 @@ workflow czid_host_filter {
     valid_input1_fastq = RunValidateInput.valid_input1_fastq,
     valid_input2_fastq = RunValidateInput.valid_input2_fastq,
     ercc_index_tar = ercc_index_tar, 
+    file_ext = file_ext,
     docker_image_id = docker_image_id,
     cpu = cpu
   }
@@ -257,6 +258,7 @@ task ercc_bowtie2_filter {
     File ercc_index_tar
     String bowtie2_options = "--very-sensitive-local"
 
+    String file_ext
     String docker_image_id
     Int cpu = 16
   }
@@ -266,7 +268,8 @@ task ercc_bowtie2_filter {
   String bowtie2_invocation =
       "bowtie2 -x '/tmp/${genome_name}/${genome_name}' ${bowtie2_options} -p ${cpu}"
         + (if (paired) then " -1 '${valid_input1_fastq}' -2 '${valid_input2_fastq}'" else " -U '${valid_input1_fastq}'")
-        + " -q -S '/tmp/bowtie2_ercc.sam'"
+        + (if (file_ext == "fastq") then " -q " else " -f ")
+        + "-S '/tmp/bowtie2_ercc.sam'"
 
   command <<<
     set -euxo pipefail
