@@ -57,6 +57,7 @@ RUN apt-get update && \
         pigz \
         python3-pip \
         mysql-client \
+        kraken2 \
         jq
 
 COPY --from=builder /diamond/build/diamond /usr/local/bin

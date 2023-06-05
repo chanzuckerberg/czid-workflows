@@ -2,13 +2,13 @@ version development
 
 workflow index_generation {
     input {
-        String index_name
+        # String index_name
         String ncbi_server = "https://ftp.ncbi.nih.gov"
-        Boolean write_to_db = false
-        String? environ
+        # Boolean write_to_db = false
+        # String? environ
         # TODO: (alignment_config) remove after alignment config table is removed
-        String? s3_dir
-        File? previous_lineages
+        # String? s3_dir
+        # File? previous_lineages
         String docker_image_id
     }
 
@@ -30,11 +30,11 @@ workflow index_generation {
         docker_image_id = docker_image_id
     }
 
-    call DownloadTaxdump {
-        input:
-        ncbi_server = ncbi_server,
-        docker_image_id = docker_image_id
-    }
+    # call DownloadTaxdump {
+    #     input:
+    #     ncbi_server = ncbi_server,
+    #     docker_image_id = docker_image_id
+    # }
 
     call GenerateIndexAccessions {
         input:
@@ -44,63 +44,70 @@ workflow index_generation {
         docker_image_id = docker_image_id
     }
 
-    call GenerateNTDB {
+    call CompressNT {
         input:
         nt = DownloadNT.nt,
+        accession2taxid = GenerateIndexAccessions.accession2taxid_db,
         docker_image_id = docker_image_id
     }
 
-    call GenerateNRDB {
+    call GenerateNTDB {
         input:
-        nr = DownloadNR.nr,
+        nt = CompressNT.nt_compressed,
         docker_image_id = docker_image_id
     }
 
-    call GenerateIndexDiamond {
-        input:
-        nr = DownloadNR.nr,
-        docker_image_id = docker_image_id
-    }
+    # call GenerateNRDB {
+    #     input:
+    #     nr = DownloadNR.nr,
+    #     docker_image_id = docker_image_id
+    # }
 
-    call GenerateIndexLineages {
-        input:
-        taxdump = DownloadTaxdump.taxdump,
-        index_name = index_name,
-        previous_lineages = previous_lineages,
-        docker_image_id = docker_image_id
-    }
+    # call GenerateIndexDiamond {
+    #     input:
+    #     nr = DownloadNR.nr,
+    #     docker_image_id = docker_image_id
+    # }
+
+    # call GenerateIndexLineages {
+    #     input:
+    #     taxdump = DownloadTaxdump.taxdump,
+    #     index_name = index_name,
+    #     previous_lineages = previous_lineages,
+    #     docker_image_id = docker_image_id
+    # }
     
     call GenerateIndexMinimap2 {
         input:
-        nt = DownloadNT.nt,
+        nt = CompressNT.nt_compressed,
         docker_image_id = docker_image_id
     }
 
 
-    if (write_to_db && defined(environ) && defined(s3_dir)) {
-        call LoadTaxonLineages {
-            input:
-            environ = environ,
-            index_name = index_name,
-            s3_dir = s3_dir,
-            versioned_taxid_lineages_csv = GenerateIndexLineages.versioned_taxid_lineages_csv,
-            docker_image_id = docker_image_id
-        } 
-    }
+    # if (write_to_db && defined(environ) && defined(s3_dir)) {
+    #     call LoadTaxonLineages {
+    #         input:
+    #         environ = environ,
+    #         index_name = index_name,
+    #         s3_dir = s3_dir,
+    #         versioned_taxid_lineages_csv = GenerateIndexLineages.versioned_taxid_lineages_csv,
+    #         docker_image_id = docker_image_id
+    #     } 
+    # }
 
 
     output {
         File nr = DownloadNR.nr
-        File nt = DownloadNT.nt
+        File nt = CompressNT.nt_compressed
         File accession2taxid_db = GenerateIndexAccessions.accession2taxid_db
         File nt_loc_db = GenerateNTDB.nt_loc_db
         File nt_info_db = GenerateNTDB.nt_info_db
-        File nr_loc_db = GenerateNRDB.nr_loc_db
-        Directory diamond_index = GenerateIndexDiamond.diamond_index
-        File taxid_lineages_db = GenerateIndexLineages.taxid_lineages_db
-        File versioned_taxid_lineages_csv = GenerateIndexLineages.versioned_taxid_lineages_csv
-        File deuterostome_taxids = GenerateIndexLineages.deuterostome_taxids
-        File taxon_ignore_list = GenerateIndexLineages.taxon_ignore_list
+        # File nr_loc_db = GenerateNRDB.nr_loc_db
+        # Directory diamond_index = GenerateIndexDiamond.diamond_index
+        # File taxid_lineages_db = GenerateIndexLineages.taxid_lineages_db
+        # File versioned_taxid_lineages_csv = GenerateIndexLineages.versioned_taxid_lineages_csv
+        # File deuterostome_taxids = GenerateIndexLineages.deuterostome_taxids
+        # File taxon_ignore_list = GenerateIndexLineages.taxon_ignore_list
         Directory minimap2_index = GenerateIndexMinimap2.minimap2_index
     }
 }
@@ -451,6 +458,37 @@ task GenerateIndexMinimap2 {
 
     output {
         Directory minimap2_index = "nt_k~{k}_w~{w}_~{n_chunks}"
+    }
+
+    runtime {
+        docker: docker_image_id
+    }
+}
+
+task CompressNT {
+    input {
+        File nt
+        File accession2taxid
+        Array[String] taxids_to_drop = []
+        Int K = 31
+        Int ST = 100000
+        String docker_image_id
+    }
+
+    command <<< 
+        set -euxo pipefail
+
+        python3  /usr/local/bin/compress_nt.py \
+            --nt-filepath ~{nt} \
+            --accession2taxid-path ~{accession2taxid} \
+            ~{ if length(taxids_to_drop) > 0 then "--taxids-to-drop ~{sep(" ", taxids_to_drop)}" else "" } \
+            --k ~{K} \
+            --st ~{ST} \
+            --compressed-nt-filepath compressed_nt.fasta
+    >>>
+
+    output {
+        File nt_compressed = "compressed_nt.fasta"
     }
 
     runtime {
