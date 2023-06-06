@@ -309,7 +309,7 @@ task ValidateInput{
             raise_error InvalidInputFileError "An Oxford Nanopore pipeline run can only have one input file. Please upload a single file"
         fi 
 
-        for fastq in ~{sep=' ' fastqs}; do 
+        for fastq in "~{sep='" "' fastqs}"; do 
             # limit max # of reads to max_reads
             if [[ $fastq != *.gz ]]; then
                 filename=$(basename $fastq)".gz"
