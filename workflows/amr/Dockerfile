@@ -30,11 +30,15 @@ ARG SEQFU_VER="1.16.0"
 RUN curl -LO https://github.com/telatin/seqfu2/releases/download/v${SEQFU_VER}/SeqFu-v${SEQFU_VER}-Linux-x86_64.zip && \
     unzip SeqFu-v${SEQFU_VER}-Linux-x86_64.zip -d /usr/local/bin/
 
+RUN wget https://github.com/shenwei356/seqkit/releases/download/v2.0.0/seqkit_linux_amd64.tar.gz && tar zxvf seqkit_linux_amd64.tar.gz \
+    && mv seqkit /usr/local/bin/ && rm seqkit_linux_amd64.tar.gz
+
 # load databases
 RUN curl -LO https://czid-public-references.s3.us-west-2.amazonaws.com/card/2023-05-22/card.json && \
     rgi card_annotation -i card.json && \
     rgi load \
         --card_annotation card_database_v3.2.6.fasta \
         -i card.json 
+
 
 COPY empty-main-header.txt /tmp/empty-main-header.txt 
