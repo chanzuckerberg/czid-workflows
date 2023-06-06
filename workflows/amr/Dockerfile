@@ -30,7 +30,7 @@ ARG SEQFU_VER="1.16.0"
 RUN curl -LO https://github.com/telatin/seqfu2/releases/download/v${SEQFU_VER}/SeqFu-v${SEQFU_VER}-Linux-x86_64.zip && \
     unzip SeqFu-v${SEQFU_VER}-Linux-x86_64.zip -d /usr/local/bin/
 
-RUN wget https://github.com/shenwei356/seqkit/releases/download/v2.0.0/seqkit_linux_amd64.tar.gz && tar zxvf seqkit_linux_amd64.tar.gz \
+RUN curl -LO https://github.com/shenwei356/seqkit/releases/download/v2.0.0/seqkit_linux_amd64.tar.gz && tar zxvf seqkit_linux_amd64.tar.gz \
     && mv seqkit /usr/local/bin/ && rm seqkit_linux_amd64.tar.gz
 
 # load databases
