@@ -302,7 +302,7 @@ task RunResultsPerSample {
             rcb = remove_na(set(sub_df['Percent Coverage_kma_amr']))
             result['read_coverage_breadth'] = max(rcb) if len(rcb) > 0 else None
 
-            gene_id = ";".join(remove_na(set(sub_df["ID_contig_amr"].unique())))
+            gene_id = ";".join(remove_na(set(sub_df["ARO_contig_amr"].unique())))
             if gene_id:
                 contig_coverage = gene_coverage[gene_coverage["ID"] == gene_id]["gene_coverage_perc"].iloc[0]
             else:
@@ -583,7 +583,7 @@ task MakeGeneCoverage {
     import pandas as pd
     import numpy as np
     import json
-    df = pd.read_csv("~{main_amr_results}", delimiter="\t").loc[:, ["ORF_ID", "ID", "Model_ID", "Hit_Start", "Hit_End", "Percentage Length of Reference Sequence"]]
+    df = pd.read_csv("~{main_amr_results}", delimiter="\t").loc[:, ["ORF_ID", "ID", "ARO", "Model_ID", "Hit_Start", "Hit_End", "Percentage Length of Reference Sequence"]]
 
     # create seq length reference map
     with open("~{main_output_json}") as json_file:
@@ -592,7 +592,7 @@ task MakeGeneCoverage {
     for ind, row in df.iterrows():
         db_seq_length[row["Model_ID"]] = len(rgi_main_json[row["ORF_ID"]][row["ID"]]["dna_sequence_from_broadstreet"])
 
-    agg_res = df.groupby(["ID", "Model_ID"]).agg(lambda x: list(x))
+    agg_res = df.groupby(["ARO", "Model_ID"]).agg(lambda x: list(x))
 
     gene_coverage = []
     for ind, row, in agg_res.iterrows():
