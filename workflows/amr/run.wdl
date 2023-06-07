@@ -262,6 +262,8 @@ task RunResultsPerSample {
         merge_x.to_csv("comprehensive_AMR_metrics.tsv", index=None, sep='\t')
 
         df = pd.read_csv("comprehensive_AMR_metrics.tsv", sep='\t')
+        df["ARO_contig_amr"] = df["ARO_contig_amr"].apply(lambda x: f'{x:.0f}' if x==x else x)  # Convert non-nan to int float
+        
         big_table = df[['ARO_overall', 'Gene_Family_overall', 'Drug_Class_overall', 'Resistance_Mechanism_overall', 'model_overall', 'All Mapped Reads_kma_amr', 'Percent Coverage_kma_amr','Depth_kma_amr', 'CARD*kmer Prediction_kma_sp', 'Cut_Off_contig_amr', 'Percentage Length of Reference Sequence_contig_amr', 'Best_Identities_contig_amr', 'CARD*kmer Prediction_contig_sp']]
         big_table.sort_values(by='Gene_Family_overall', inplace=True)
 
@@ -304,7 +306,7 @@ task RunResultsPerSample {
 
             gene_id = ";".join(remove_na(set(sub_df["ARO_contig_amr"].unique())))
             if gene_id:
-                contig_coverage = gene_coverage[gene_coverage["ID"] == gene_id]["gene_coverage_perc"].iloc[0]
+                contig_coverage = gene_coverage[gene_coverage["ID"].astype('str') == gene_id]["gene_coverage_perc"].iloc[0]
             else:
                 contig_coverage = None
             result["contig_coverage_breadth"] = contig_coverage
