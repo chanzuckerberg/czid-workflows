@@ -12,15 +12,15 @@
 
 set -eo pipefail
 
-if [[ $1 == *gz ]]; then
+if [[ "$1" == *gz ]]; then
     # gzip -t checks the whole file so might be a bit slow. 
     # a faster but more imperfect method would be to check that the first 2 bytes equal 0x8b1f
-    if ! gzip -t $1 > /dev/null 2>&1; then
-        raise_error InvalidFileFormatError "The file: $(basename $1) is not a proper gzip file"
+    if ! gzip -t "$1" > /dev/null 2>&1; then
+        raise_error InvalidFileFormatError "The file: $(basename "$1") is not a proper gzip file"
     fi
-    WC_OUT=$(gzip -dc $1 | awk 'NR % 4 == 2' | wc)
+    WC_OUT=$(gzip -dc "$1" | awk 'NR % 4 == 2' | wc)
 else
-    WC_OUT=$(cat $1 | awk 'NR % 4 == 2' | wc)
+    WC_OUT=$(cat "$1" | awk 'NR % 4 == 2' | wc)
 fi
 LINES=$(echo $WC_OUT | cut -f 2 -d ' ')
 CHARS=$(echo $WC_OUT | cut -f 3 -d ' ')
