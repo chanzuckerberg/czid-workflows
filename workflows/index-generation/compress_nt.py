@@ -3,7 +3,7 @@ import logging
 import os
 import threading
 from concurrent.futures import ThreadPoolExecutor
-from typing import Dict
+from typing import Dict, Set
 
 
 import marisa_trie
@@ -29,7 +29,7 @@ def compress_nt(
     taxid_locks_lock = threading.Lock()
     taxid_locks: Dict[int, threading.Lock] = {}
 
-    unique_accession_count = accession_count =  0
+    unique_accession_count = accession_count = 0
     hashes_by_taxid: Dict[int, MinHash] = {}
     accession2taxid = marisa_trie.RecordTrie("L").load(accession2taxid_path)
 

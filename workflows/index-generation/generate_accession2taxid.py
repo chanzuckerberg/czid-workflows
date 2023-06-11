@@ -10,7 +10,6 @@ to map accessions to taxonomic IDs.
 """
 import argparse
 import logging
-import os
 from typing import List
 import subprocess
 
