@@ -58,7 +58,7 @@ def accession_id_to_taxid(mapping_files: List[str], accessions_trie):
                     accession_count += 1
                     yield (accession.decode(), (int(fields[2]),))
 
-                if accession_count % 1_000_000 == 0:
+                if accession_count % 1_000_000 == 0 and accession_count > 0:
                     logger.info(f"\t\t{accession_count // 1_000_000}M accessions mapped")
     logger.info(f"mapped {accession_count} accessions")
 
