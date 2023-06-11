@@ -9,6 +9,10 @@ workflow index_generation {
         # TODO: (alignment_config) remove after alignment config table is removed
         # String? s3_dir
         # File? previous_lineages
+        Array[String] taxids_to_drop = ["9606"] # human
+        Int nt_compression_k = 31
+        Int nt_compression_scaled = 100000
+        Float nt_compression_similarity_threshold = 0.9
         String docker_image_id
     }
 
@@ -48,7 +52,12 @@ workflow index_generation {
         input:
         nt = DownloadNT.nt,
         accession2taxid = GenerateIndexAccessions.accession2taxid_db,
-        docker_image_id = docker_image_id
+        taxids_to_drop = taxids_to_drop,
+        k = nt_compression_k,
+        scaled = nt_compression_scaled,
+        similarity_threshold = nt_compression_similarity_threshold,
+        docker_image_id = docker_image_id,
+        cpu = 64
     }
 
     call GenerateNTDB {
@@ -469,10 +478,12 @@ task CompressNT {
     input {
         File nt
         File accession2taxid
-        Array[String] taxids_to_drop = []
-        Int K = 31
-        Int ST = 100000
+        Array[String] taxids_to_drop
+        Int k
+        Int scaled
+        Float similarity_threshold
         String docker_image_id
+        Int cpu
     }
 
     command <<< 
@@ -481,9 +492,11 @@ task CompressNT {
         python3  /usr/local/bin/compress_nt.py \
             --nt-filepath ~{nt} \
             --accession2taxid-path ~{accession2taxid} \
+            --k ~{k} \
+            --scaled ~{scaled} \
+            --similarity-threshold ~{similarity_threshold} \
             ~{ if length(taxids_to_drop) > 0 then "--taxids-to-drop ~{sep(" ", taxids_to_drop)}" else "" } \
-            --k ~{K} \
-            --st ~{ST} \
+            --parallelism ~{cpu} \
             --compressed-nt-filepath compressed_nt.fasta
     >>>
 
@@ -493,5 +506,6 @@ task CompressNT {
 
     runtime {
         docker: docker_image_id
+        cpu: cpu
     }
 }

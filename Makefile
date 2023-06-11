@@ -83,12 +83,15 @@ python-dependencies: .python_dependencies_installed # install python dependencie
 run: build python-dependencies ## run a miniwdl workflow. eg. make run WORKFLOW=consensus-genome. args: WORKFLOW,EXTRA_INPUT,INPUT,TASK_CMD
 	if [ "$(WORKFLOW)" = "short-read-mngs" ]; then \
 		RUNFILE="local_driver.wdl"; \
+	elif [ $$(ls workflows/$(WORKFLOW)/*.wdl | wc -l) -eq 1 ]; then \
+		RUNFILE=$$(ls workflows/$(WORKFLOW)/*.wdl); \
+		RUNFILE=$$(basename $$RUNFILE); \
 	elif [ -f "workflows/$(WORKFLOW)/$(WORKFLOW).wdl" ]; then \
 		RUNFILE="$(WORKFLOW).wdl"; \
 	else \
 		RUNFILE="run.wdl"; \
 	fi; \
-	.venv/bin/miniwdl run workflows/$(WORKFLOW)/$$RUNFILE docker_image_id=czid-$(WORKFLOW) $(EXTRA_INPUTS) $(INPUT) $(TASK_CMD)
+	.venv/bin/miniwdl run workflows/$(WORKFLOW)/$$RUNFILE docker_image_id=czid-$(WORKFLOW) $(INPUT) $(EXTRA_INPUTS) $(TASK_CMD)
 
 .PHONY: miniwdl-explore
 miniwdl-explore: ## !ADVANCED! explore a previous miniwdl workflow run in the cli. eg. make miniwdl-explore OUTPATH='/mnt/path/to/output/'
