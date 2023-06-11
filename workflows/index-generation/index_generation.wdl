@@ -205,7 +205,6 @@ task GenerateIndexAccessions {
     input {
         File nr
         File nt
-        Int parallelism = 1
         Directory accession2taxid
         String docker_image_id
     }
@@ -219,7 +218,6 @@ task GenerateIndexAccessions {
             ~{accession2taxid}/nucl_gb.accession2taxid \
             ~{accession2taxid}/pdb.accession2taxid \
             ~{accession2taxid}/prot.accession2taxid.FULL \
-            --parallelism ~{parallelism} \
             --nt_file ~{nt} \
             --nr_file ~{nr} \
             --accession2taxid_db accession2taxid.marisa \
