@@ -56,7 +56,8 @@ workflow index_generation {
         k = nt_compression_k,
         scaled = nt_compression_scaled,
         similarity_threshold = nt_compression_similarity_threshold,
-        docker_image_id = docker_image_id
+        docker_image_id = docker_image_id,
+        cpu = 32
     }
 
     call GenerateNTDB {
@@ -480,13 +481,21 @@ task CompressNT {
         Int scaled
         Float similarity_threshold
         String docker_image_id
+        Int cpu
     }
 
     command <<< 
         set -euxo pipefail
 
+        # Sort NT by length with the longer sequences first
+        #   This is needed because the compression algorithm iterates through NT in order only emitting
+        #   sequences if they are not contained by what it has already seen. If a shorter sequence is
+        #   contained by a longer sequence, and the shorter sequence were to come first, it would be emitted
+        #   even though it is redundant to the longer sequence.
+        seqkit sort --reverse --by-length --two-pass --threads ~{cpu} ~{nt} -o nt_sorted
+
         python3  /usr/local/bin/compress_nt.py \
-            --nt-filepath ~{nt} \
+            --nt-filepath nt_sorted \
             --accession2taxid-path ~{accession2taxid} \
             --k ~{k} \
             --scaled ~{scaled} \
@@ -501,5 +510,6 @@ task CompressNT {
 
     runtime {
         docker: docker_image_id
+        cpu: cpu
     }
 }

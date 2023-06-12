@@ -41,7 +41,7 @@ def compress_nt(
             min_hash.add_sequence(str(record.seq), force=True)
 
             if taxid in taxids_to_drop:
-                return i
+                continue
 
             if i % 100_000 == 0:
                 logger.info(f"\t{i / 1_000_000}M accessions processed ({unique_accession_count} unique)")
