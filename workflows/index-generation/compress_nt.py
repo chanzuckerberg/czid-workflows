@@ -1,9 +1,11 @@
 import argparse
 import logging
 import os
+import random
 import threading
-from concurrent.futures import ThreadPoolExecutor
-from typing import Dict, Set
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Dict, Generator, Iterable, List, Set, TypeVar
 
 
 import marisa_trie
@@ -13,6 +15,38 @@ from sourmash import MinHash
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s')
+
+
+taxid_lock = threading.Lock()
+locked_taxids: Set[int] = set()
+
+class TaxidLock:
+    def __init__(self, taxid: int):
+        self.taxid = taxid
+
+    def __enter__(self):
+        while True:
+            with taxid_lock:
+                if self.taxid not in locked_taxids:
+                    locked_taxids.add(self.taxid)
+                    return
+            time.sleep(random.random() * 0.1 + 0.05)
+
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        with taxid_lock:
+            locked_taxids.remove(self.taxid)
+
+
+
+T = TypeVar('T')
+def chunked(iterable: Iterable[T], n: int) -> Generator[List[T], None, None]:
+    chunk = []
+    for item in iterable:
+        chunk.append(item)
+        if len(chunk) == n:
+            yield chunk
+            chunk = []
 
 
 def compress_nt(
@@ -26,64 +60,62 @@ def compress_nt(
     compressed_nt_filepath: str,
 ):
     file_lock = threading.Lock()
-    taxid_locks_lock = threading.Lock()
-    taxid_locks: Dict[int, threading.Lock] = {}
 
-    unique_accession_count = accession_count = 0
+    unique_accession_count = 0
     hashes_by_taxid: Dict[int, MinHash] = {}
     accession2taxid = marisa_trie.RecordTrie("L").load(accession2taxid_path)
 
     with open(compressed_nt_filepath, "w") as f:
         writer = SeqIO.FastaIO.FastaWriter(f)
 
-        def process_record(record: SeqIO.SeqRecord):
+        def process_record(i: int, record: SeqIO.SeqRecord) -> int:
             # The heavy operations here are executed by sourmash in rust, so we don't need to worry about the GIL
-            nonlocal unique_accession_count, accession_count
+            nonlocal unique_accession_count
 
             non_versioned_accession_id = record.id.split(".", 1)[0]
             if non_versioned_accession_id not in accession2taxid:
-                return
+                return i
             taxid = accession2taxid[non_versioned_accession_id][0][0]
             min_hash = MinHash(n=0, ksize=k, scaled=scaled)
             # NR/NT have some invalid characters in their sequences, force treats k-mers with invalid characters as 0
             min_hash.add_sequence(str(record.seq), force=True)
 
-            with taxid_locks_lock:
-                accession_count += 1
-                if taxid in taxids_to_drop:
-                    return
-                if taxid not in taxid_locks:
-                    taxid_locks[taxid] = threading.Lock()
+            if taxid in taxids_to_drop:
+                return i
 
-            if accession_count % 1_000_000 == 0:
-                logger.info(f"\t{accession_count // 1_000_000}M accessions processed ({unique_accession_count} unique)")
+            if i % 100_000 == 0:
+                logger.info(f"\t{i / 1_000_000}M accessions processed ({unique_accession_count} unique)")
 
-            with taxid_locks[taxid]:
+            with TaxidLock(taxid):
                 if taxid not in hashes_by_taxid:
                     hashes_by_taxid[taxid] = min_hash
                     with file_lock:
                         unique_accession_count += 1
                         writer.write_record(record)
-                    return
+                    return i
 
                 total_hash = hashes_by_taxid[taxid]
                 # potentially heavy operation
                 if min_hash.contained_by(total_hash) > similarity_threshold:
-                    return
+                    return i
 
                 # potentially heavy operation
                 total_hash.merge(min_hash)
 
-                with file_lock:
-                    unique_accession_count += 1
-                    writer.write_record(record)
+            with file_lock:
+                unique_accession_count += 1
+                writer.write_record(record)
 
+            return i
+
+        accession_count = 0
         with ThreadPoolExecutor(max_workers=parallelism) as executor:
-            futures = {executor.submit(process_record, item) for item in SeqIO.parse(nt_filepath, 'fasta')}
-
-            # Wait for all tasks to complete
-            for future in futures:
-                future.result()
+            chunks = chunked(enumerate(SeqIO.parse(nt_filepath, 'fasta')), parallelism)
+            future_chunks = ({ executor.submit(process_record, i, item) for i, item in chunk} for chunk in chunks)
+            # break down into chunks of 1000 to avoid memory issues using itertools chunking
+            for futures in future_chunks:
+                for future in as_completed(futures):
+                    accession_count = max(accession_count, future.result())
 
     logger.info(f"compressed {accession_count} down to {unique_accession_count} unique accessions")
 
