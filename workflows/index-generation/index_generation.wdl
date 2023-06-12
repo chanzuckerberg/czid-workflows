@@ -56,8 +56,7 @@ workflow index_generation {
         k = nt_compression_k,
         scaled = nt_compression_scaled,
         similarity_threshold = nt_compression_similarity_threshold,
-        docker_image_id = docker_image_id,
-        cpu = 64
+        docker_image_id = docker_image_id
     }
 
     call GenerateNTDB {
@@ -481,7 +480,6 @@ task CompressNT {
         Int scaled
         Float similarity_threshold
         String docker_image_id
-        Int cpu
     }
 
     command <<< 
@@ -494,7 +492,6 @@ task CompressNT {
             --scaled ~{scaled} \
             --similarity-threshold ~{similarity_threshold} \
             ~{ if length(taxids_to_drop) > 0 then "--taxids-to-drop ~{sep(" ", taxids_to_drop)}" else "" } \
-            --parallelism ~{cpu} \
             --compressed-nt-filepath compressed_nt.fasta
     >>>
 
@@ -504,6 +501,5 @@ task CompressNT {
 
     runtime {
         docker: docker_image_id
-        cpu: cpu
     }
 }
