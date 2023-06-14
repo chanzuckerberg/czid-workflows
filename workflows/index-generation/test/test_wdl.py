@@ -15,7 +15,8 @@ class TestIndexGeneration(WDLTestCase):
     }
 
     def testIndexGeneration(self):
-        res = self.run_miniwdl(["index_name=2020-04-20"])
+        # res = self.run_miniwdl(["index_name=2020-04-20"])
+        res = self.run_miniwdl()
         outputs = res["outputs"]
         with gzip.open(outputs["index_generation.versioned_taxid_lineages_csv"], "rt") as f:
             for row in csv.DictReader(f):
