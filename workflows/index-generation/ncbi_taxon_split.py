@@ -18,16 +18,16 @@ class TaxidWriteBuffer:
         self.bytes_by_taxid: DefaultDict[int, bytes] = defaultdict(bytes)
         self.size = 0
 
-    def write(self, taxid: int, bytes: bytes) -> None:
-        if self.size + len(bytes) > self.max_size:
+    def write(self, taxid: int, data: bytes) -> None:
+        if self.size + len(data) > self.max_size:
             self.flush()
-        self.bytes_by_taxid[taxid] += bytes
-        self.size += len(bytes)
+        self.bytes_by_taxid[taxid] += data
+        self.size += len(data)
 
     def flush(self) -> None:
-        for taxid, bytes in self.bytes_by_taxid.items():
+        for taxid, data in self.bytes_by_taxid.items():
             with open(f"{self.output_dir}/{taxid}.fasta", "ab") as f:
-                f.write(bytes)
+                f.write(data)
         self.bytes_by_taxid = defaultdict(bytes)
         self.size = 0
 
