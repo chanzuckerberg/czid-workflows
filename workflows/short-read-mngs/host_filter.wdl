@@ -275,6 +275,8 @@ task ercc_bowtie2_filter {
 
     ~{bowtie2_invocation}
 
+    samtools sort -n -o "bowtie2_ercc_host.bam" -@ 8 -T /tmp "/tmp/bowtie2_ercc.sam"
+    
     # Extract reads [pairs] that did NOT map to the index
     if [[ '~{paired}' == 'true' ]]; then
         #    1 (read paired)
@@ -282,10 +284,10 @@ task ercc_bowtie2_filter {
         # +  8 (mate unmapped)
         # ----
         #   13
-        samtools fastq -f 13 -1 'bowtie2_ercc_filtered1.fastq' -2 'bowtie2_ercc_filtered2.fastq' -0 /dev/null -s /dev/null /tmp/bowtie2_ercc.sam
+        samtools fastq -f 13 -1 'bowtie2_ercc_filtered1.fastq' -2 'bowtie2_ercc_filtered2.fastq' -0 /dev/null -s /dev/null "bowtie2_ercc_host.bam"
         count="$(cat bowtie2_ercc_filtered{1,2}.fastq | wc -l)"
     else
-        samtools fastq -f 4 /tmp/bowtie2_ercc.sam > 'bowtie2_ercc_filtered1.fastq'
+        samtools fastq -f 4 "bowtie2_ercc_host.bam" > 'bowtie2_ercc_filtered1.fastq'
         count="$(cat bowtie2_ercc_filtered1.fastq | wc -l)"
     fi
 
