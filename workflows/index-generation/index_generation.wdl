@@ -2,17 +2,17 @@ version development
 
 workflow index_generation {
     input {
-        # String index_name
+        String index_name
         String ncbi_server = "https://ftp.ncbi.nih.gov"
-        # Boolean write_to_db = false
-        # String? environ
-        # TODO: (alignment_config) remove after alignment config table is removed
-        # String? s3_dir
-        # File? previous_lineages
+        Boolean write_to_db = false
+        String? environ
+        TODO: (alignment_config) remove after alignment config table is removed
+        String? s3_dir
+        File? previous_lineages
         Array[String] taxids_to_drop = ["9606"] # human
         Int nt_compression_k = 31
         Int nt_compression_scaled = 100000
-        Float nt_compression_similarity_threshold = 0.9
+        Float nt_compression_similarity_threshold = 0.6
         String docker_image_id
     }
 
@@ -494,14 +494,26 @@ task CompressNT {
         #   even though it is redundant to the longer sequence.
         seqkit sort --reverse --by-length --two-pass --threads ~{cpu} ~{nt} -o nt_sorted
 
-        python3  /usr/local/bin/compress_nt.py \
+        python3  /usr/local/bin/ncbi_taxon_split.py \
             --nt-filepath nt_sorted \
             --accession2taxid-path ~{accession2taxid} \
-            --k ~{k} \
-            --scaled ~{scaled} \
-            --similarity-threshold ~{similarity_threshold} \
             ~{ if length(taxids_to_drop) > 0 then "--taxids-to-drop ~{sep(" ", taxids_to_drop)}" else "" } \
-            --compressed-nt-filepath compressed_nt.fasta
+            --output-dir nt_by_taxid
+
+        for i in nt_by_taxid/*
+        do
+            echo "Compressing $i"
+            ncbi-compress \
+                --input-fasta $i \
+                --output-fasta "${i}.compressed"
+                --k ~{k} \
+                --scaled ~{scaled} \
+                --similarity-threshold ~{similarity_threshold} \
+            rm $i
+        done
+
+        # Concatenate all the compressed files
+        cat nt_by_taxid/*.compressed > compressed_nt.fasta
     >>>
 
     output {
