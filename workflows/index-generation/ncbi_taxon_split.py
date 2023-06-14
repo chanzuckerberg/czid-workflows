@@ -1,5 +1,6 @@
 import argparse
 import logging
+import os
 from typing import DefaultDict, Set
 from collections import defaultdict
 
@@ -43,6 +44,7 @@ def ncbi_taxon_split(
         taxon_count = accession_count = 0
         accession2taxid = marisa_trie.RecordTrie("L").load(accession2taxid_path)
         write_buffer = TaxidWriteBuffer(output_dir, max_size=buffer_size)
+        os.makedirs(output_dir, exist_ok=True)
         taxid = None
         for line in f:
             if line.startswith(b">"):
