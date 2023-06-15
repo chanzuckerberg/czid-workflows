@@ -41,7 +41,7 @@ def ncbi_taxon_split(
     buffer_size: int,
 ):
     with open(nt_filepath, "rb") as f:
-        taxon_count = accession_count = 0
+        accession_count = 0
         accession2taxid = marisa_trie.RecordTrie("L").load(accession2taxid_path)
         write_buffer = TaxidWriteBuffer(output_dir, max_size=buffer_size)
         os.makedirs(output_dir, exist_ok=True)
@@ -50,9 +50,9 @@ def ncbi_taxon_split(
             if line.startswith(b">"):
                 accession_count += 1
                 if accession_count % 1_000_000 == 0:
-                    logger.info(f"\t{taxon_count / 1_000_000}M accessions processed")
+                    logger.info(f"{accession_count / 1_000_000}M accessions processed")
 
-                non_versioned_accession_id = line.split(b".", 1)[0].decode()
+                non_versioned_accession_id = line[1:].split(b".", 1)[0].decode()
                 if non_versioned_accession_id not in accession2taxid:
                     taxid = None
                     continue
