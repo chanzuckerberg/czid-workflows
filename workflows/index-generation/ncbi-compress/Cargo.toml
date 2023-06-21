@@ -9,6 +9,7 @@ edition = "2021"
 bio = "1.2.0"
 chrono = "0.4.26"
 clap = { version = "4.3.3", features = ["derive"] }
+csv = "1.2.2"
 env_logger = "0.10.0"
 log = "0.4.19"
 rayon = "1.7.0"

@@ -494,30 +494,24 @@ task CompressNT {
         #   even though it is redundant to the longer sequence.
         seqkit sort --reverse --by-length --two-pass --threads ~{cpu} ~{nt} -o nt_sorted
 
-        python3  /usr/local/bin/ncbi_taxon_split.py \
-            --nt-filepath nt_sorted \
+        # Rust can't read marisa tries so we need to convert to csv
+        python3  /usr/local/bin/accession2taxid_csv.py \
             --accession2taxid-path ~{accession2taxid} \
             ~{ if length(taxids_to_drop) > 0 then "--taxids-to-drop ~{sep(" ", taxids_to_drop)}" else "" } \
-            --output-dir nt_by_taxid
+            --csv-filepath accession2taxid.csv
 
-        for i in nt_by_taxid/*
-        do
-            echo "Compressing $i"
-            ncbi-compress \
-                --input-fasta $i \
-                --output-fasta "${i}.compressed"
-                --k ~{k} \
-                --scaled ~{scaled} \
-                --similarity-threshold ~{similarity_threshold} \
-            rm $i
-        done
-
-        # Concatenate all the compressed files
-        cat nt_by_taxid/*.compressed > compressed_nt.fasta
+        ncbi-compress \
+            --input-fasta $i \
+            --accession-to-taxid-csv accession2taxid.csv \
+            --output-fasta nt_compressed.fa \
+            --k ~{k} \
+            --scaled ~{scaled} \
+            --similarity-threshold ~{similarity_threshold} \
+            --accession2taxid-csv accession2taxid.csv
     >>>
 
     output {
-        File nt_compressed = "compressed_nt.fasta"
+        File nt_compressed = "nt_compressed.fa"
     }
 
     runtime {

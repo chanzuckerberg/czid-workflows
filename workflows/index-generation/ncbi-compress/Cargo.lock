@@ -782,6 +782,7 @@ dependencies = [
  "bio",
  "chrono",
  "clap",
+ "csv",
  "env_logger",
  "log",
  "rayon",

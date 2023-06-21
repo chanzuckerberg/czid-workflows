@@ -1,4 +1,5 @@
 use std::borrow::BorrowMut;
+use std::collections::HashMap;
 use std::io::Write;
 use std::path::Path;
 
@@ -61,7 +62,7 @@ impl MinHashTree {
             .merge(&right[0].children_aggregate)
     }
 
-    fn insert(&mut self, hash: KmerMinHash) -> Result<(), SourmashError> {
+    pub fn insert(&mut self, hash: KmerMinHash) -> Result<(), SourmashError> {
         let node = MinHashTreeNode {
             own: hash.clone(),
             children_aggregate: hash.clone(),
@@ -81,7 +82,7 @@ impl MinHashTree {
         Ok(())
     }
 
-    fn contains(
+    pub fn contains(
         &self,
         hash: &KmerMinHash,
         similarity_threshold: f64,
@@ -118,8 +119,42 @@ impl MinHashTree {
     }
 }
 
+struct TaxidTrees {
+    trees: HashMap<u64, MinHashTree>,
+    branch_factor: usize,
+}
+
+impl TaxidTrees {
+    pub fn new(branch_factor: usize) -> Self {
+        TaxidTrees {
+            trees: HashMap::new(),
+            branch_factor,
+        }
+    }
+
+    pub fn contains(&self, taxid: u64, hash: &KmerMinHash, similarity_threshold: f64) -> Result<bool, SourmashError> {
+        if let Some(tree) = self.trees.get(&taxid) {
+            tree.contains(hash, similarity_threshold)
+        } else {
+            Ok(false)
+        }
+    }
+
+    pub fn insert(&mut self, taxid: u64, hash: KmerMinHash) -> Result<(), SourmashError> {
+        if let Some(tree) = self.trees.get_mut(&taxid) {
+            tree.insert(hash)
+        } else {
+            let mut tree = MinHashTree::new(self.branch_factor);
+            tree.insert(hash)?;
+            self.trees.insert(taxid, tree);
+            Ok(())
+        }
+    }
+}
+
 fn fasta_compress<P: AsRef<Path> + std::fmt::Debug>(
     input_fasta_path: P,
+    accession_to_taxid_csv_path: P,
     output_fasta_path: P,
     scaled: u64,
     k: u32,
@@ -129,9 +164,18 @@ fn fasta_compress<P: AsRef<Path> + std::fmt::Debug>(
     branch_factor: usize,
 ) {
     let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
+
+    let mut csv_reader = csv::Reader::from_path(accession_to_taxid_csv_path).unwrap();
+    let accession_to_taxid = csv_reader.records().map(|result| {
+        let record = result.unwrap();
+        let taxid = record[0].parse::<u64>().unwrap();
+        let accession = record[1].to_string();
+        (accession, taxid)
+    }).collect::<HashMap<_, _>>();
+
     let mut writer = fasta::Writer::to_file(output_fasta_path).unwrap();
 
-    let mut tree = MinHashTree::new(branch_factor);
+    let mut trees = TaxidTrees::new(branch_factor);
     let mut unique_accessions: i64 = 0;
 
     let mut records_iter = reader.records().enumerate();
@@ -144,28 +188,30 @@ fn fasta_compress<P: AsRef<Path> + std::fmt::Debug>(
             .par_iter()
             .filter_map(|(i, r)| {
                 let record = r.as_ref().unwrap();
+                let accession_id = record.id().split_whitespace().next().unwrap();
+                let taxid = accession_to_taxid.get(accession_id)?;
                 let mut hash =
                     KmerMinHash::new(scaled, k, HashFunctions::murmur64_DNA, seed, false, 0);
                 hash.add_sequence(record.seq(), true).unwrap();
                 // Run an initial similarity check here against the full tree, this is slow so we can parallelize it
-                if tree.contains(&hash, similarity_threshold).unwrap() {
+                if trees.contains(*taxid, &hash, similarity_threshold).unwrap() {
                     None
                 } else {
-                    Some((*i, record, hash))
+                    Some((*i, *taxid, record, hash))
                 }
             })
             .collect::<Vec<_>>();
 
         let mut tmp = Vec::with_capacity(chunk_signatures.len() / 2);
-        for (i, record, hash) in chunk_signatures {
+        for (i, taxid, record, hash) in chunk_signatures {
             // Perform a faster similarity check over just this chunk because we may have similarities within a chunk
             let similar = tmp
                 .par_iter()
-                .any(|other| containment(&hash, other).unwrap() >= similarity_threshold);
+                .any(|(_, other)| containment(&hash, other).unwrap() >= similarity_threshold);
 
             if !similar {
                 unique_accessions += 1;
-                tmp.push(hash);
+                tmp.push((taxid, hash));
                 writer.write_record(record).unwrap();
 
                 if unique_accessions % 10_000 == 0 {
@@ -177,8 +223,8 @@ fn fasta_compress<P: AsRef<Path> + std::fmt::Debug>(
                 }
             }
         }
-        for hash in tmp {
-            tree.insert(hash).unwrap();
+        for (taxid, hash) in tmp {
+            trees.insert(taxid, hash).unwrap();
         }
         chunk = records_iter
             .borrow_mut()
@@ -197,6 +243,10 @@ struct Args {
     /// Path to the output fasta file
     #[arg(short, long)]
     output_fasta: String,
+
+    /// Path to the accession to taxid csv file
+    #[arg(short, long)]
+    accession_to_taxid_csv: String,
 
     /// Scaled value for the minhash
     /// (default: 1000)
@@ -248,6 +298,7 @@ fn main() {
 
     fasta_compress(
         args.input_fasta,
+        args.accession_to_taxid_csv,
         args.output_fasta,
         args.scaled,
         args.k,
