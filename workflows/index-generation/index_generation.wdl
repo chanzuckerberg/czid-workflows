@@ -501,7 +501,7 @@ task CompressNT {
             --csv-filepath accession2taxid.csv
 
         ncbi-compress \
-            --input-fasta $i \
+            --input-fasta nt_sorted \
             --accession-to-taxid-csv accession2taxid.csv \
             --output-fasta nt_compressed.fa \
             --k ~{k} \
