@@ -507,7 +507,6 @@ task CompressNT {
             --k ~{k} \
             --scaled ~{scaled} \
             --similarity-threshold ~{similarity_threshold} \
-            --accession2taxid-csv accession2taxid.csv
     >>>
 
     output {
