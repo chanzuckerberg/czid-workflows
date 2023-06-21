@@ -6,7 +6,7 @@ import marisa_trie
 
 
 def marisa_to_csv(accession2taxid_path: str, taxids_to_drop: Set[int], csv_path: str):
-    with open(csv_path, "r") as f:
+    with open(csv_path, "w") as f:
         trie = marisa_trie.RecordTrie("L").load(accession2taxid_path)
         writer = csv.writer(f)
         writer.writerows([accession, taxid] for accession, (taxid,) in trie.items() if taxid not in taxids_to_drop)
