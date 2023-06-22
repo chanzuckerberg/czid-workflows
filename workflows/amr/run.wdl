@@ -550,7 +550,8 @@ task ZipOutputs {
         cp ~{contigs_in} contigs.fasta
 
         if [[ "~{length(nonHostReads)}" == 2 ]]; then
-            seqfu ilv -1 ~{sep=" -2 " nonHostReads} > non_host_reads.fasta
+            seqfu ilv -1 ~{sep=" -2 " nonHostReads} > non_host_reads_ilv.fasta
+            seqkit rename -1 -s "/" non_host_reads_ilv.fasta -o non_host_reads.fasta
         else 
             cat ~{sep=" " nonHostReads} > non_host_reads.fasta
         fi
