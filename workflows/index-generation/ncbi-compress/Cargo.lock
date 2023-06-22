@@ -477,6 +477,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "835a3dc7d1ec9e75e2b5fb4ba75396837112d2060b03f7d43bc1897c7f7211da"
 
 [[package]]
+name = "fid-rs"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6c28658c0c3420305705adde833a0d2d614207507d013a5f25707553fb2ae2cd"
+dependencies = [
+ "rayon",
+]
+
+[[package]]
 name = "fixedbitset"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -683,6 +692,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b06a4cde4c0f271a446782e3eff8de789548ce57dbc8eca9292c27f4a42004b4"
 
 [[package]]
+name = "louds-rs"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e16a91fb20f74b6d9a758a0103a2884af525a2fa34fbfe19f4b3c5482a4a54e9"
+dependencies = [
+ "fid-rs",
+]
+
+[[package]]
 name = "matrixmultiply"
 version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -787,6 +805,7 @@ dependencies = [
  "log",
  "rayon",
  "sourmash",
+ "trie-rs",
 ]
 
 [[package]]
@@ -1304,6 +1323,15 @@ dependencies = [
  "libc",
  "wasi 0.10.0+wasi-snapshot-preview1",
  "winapi",
+]
+
+[[package]]
+name = "trie-rs"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5096c019d49566aff57593a06e401c7f588da84e9a575d0ed2ac0913f51928c0"
+dependencies = [
+ "louds-rs",
 ]
 
 [[package]]

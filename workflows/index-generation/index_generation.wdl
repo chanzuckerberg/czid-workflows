@@ -40,24 +40,25 @@ workflow index_generation {
     #     docker_image_id = docker_image_id
     # }
 
-    call GenerateIndexAccessions {
-        input:
-        nr = DownloadNR.nr,
-        nt = DownloadNT.nt,
-        accession2taxid = DownloadAccession2Taxid.accession2taxid,
-        docker_image_id = docker_image_id
-    }
-
     call CompressNT {
         input:
         nt = DownloadNT.nt,
-        accession2taxid = GenerateIndexAccessions.accession2taxid_db,
+        accession2taxid = DownloadAccession2Taxid.accession2taxid,
         taxids_to_drop = taxids_to_drop,
         k = nt_compression_k,
         scaled = nt_compression_scaled,
         similarity_threshold = nt_compression_similarity_threshold,
         docker_image_id = docker_image_id,
         cpu = 32
+    }
+
+
+    call GenerateIndexAccessions {
+        input:
+        nr = DownloadNR.nr,
+        nt = CompressNT.nt_compressed,
+        accession2taxid = DownloadAccession2Taxid.accession2taxid,
+        docker_image_id = docker_image_id
     }
 
     call GenerateNTDB {
@@ -475,7 +476,7 @@ task GenerateIndexMinimap2 {
 task CompressNT {
     input {
         File nt
-        File accession2taxid
+        Directory accession2taxid
         Array[String] taxids_to_drop
         Int k
         Int scaled
@@ -493,12 +494,6 @@ task CompressNT {
         #   contained by a longer sequence, and the shorter sequence were to come first, it would be emitted
         #   even though it is redundant to the longer sequence.
         seqkit sort --reverse --by-length --two-pass --threads ~{cpu} ~{nt} -o nt_sorted
-
-        # Rust can't read marisa tries so we need to convert to csv
-        python3  /usr/local/bin/accession2taxid_csv.py \
-            --accession2taxid-path ~{accession2taxid} \
-            ~{ if length(taxids_to_drop) > 0 then "--taxids-to-drop ~{sep(" ", taxids_to_drop)}" else "" } \
-            --csv-filepath accession2taxid.csv
 
         ncbi-compress \
             --input-fasta nt_sorted \

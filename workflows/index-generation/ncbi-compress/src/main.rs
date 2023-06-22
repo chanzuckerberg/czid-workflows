@@ -13,6 +13,48 @@ use sourmash::encodings::HashFunctions;
 use sourmash::errors::SourmashError;
 use sourmash::signature::SigsTrait;
 use sourmash::sketch::minhash::KmerMinHash;
+use trie_rs::{Trie, TrieBuilder};
+
+/// A trie that stores u64 values
+struct TrieStore {
+    trie: Trie<u8>,
+}
+
+impl TrieStore {
+    pub fn get(&self, key: &str) -> Option<u64> {
+        self.trie
+            .common_prefix_search(key.as_bytes())
+            .first()
+            .map(|bytes| {
+                let mut bytes = bytes.to_vec();
+                let value_bytes = bytes.split_off(bytes.len() - 8);
+                u64::from_be_bytes(value_bytes.try_into().unwrap())
+            })
+    }
+}
+
+struct TrieStoreBuilder {
+    builder: TrieBuilder<u8>,
+}
+
+impl TrieStoreBuilder {
+    pub fn new() -> Self {
+        TrieStoreBuilder {
+            builder: TrieBuilder::new(),
+        }
+    }
+
+    pub fn push(&mut self, key: &str, value: u64) {
+        let mut key = key.as_bytes().to_vec();
+        key.extend_from_slice(&value.to_be_bytes());
+        self.builder.push(key);
+    }
+
+    pub fn build(self) -> TrieStore {
+        let trie = self.builder.build();
+        TrieStore { trie }
+    }
+}
 
 fn containment(needle: &KmerMinHash, haystack: &KmerMinHash) -> Result<f64, SourmashError> {
     let (intersect_size, _) = needle.intersection_size(haystack)?;
@@ -132,7 +174,12 @@ impl TaxidTrees {
         }
     }
 
-    pub fn contains(&self, taxid: u64, hash: &KmerMinHash, similarity_threshold: f64) -> Result<bool, SourmashError> {
+    pub fn contains(
+        &self,
+        taxid: u64,
+        hash: &KmerMinHash,
+        similarity_threshold: f64,
+    ) -> Result<bool, SourmashError> {
         if let Some(tree) = self.trees.get(&taxid) {
             tree.contains(hash, similarity_threshold)
         } else {
@@ -152,9 +199,65 @@ impl TaxidTrees {
     }
 }
 
+fn accessions_to_taxid_trie<P: AsRef<Path> + std::fmt::Debug, Q: AsRef<Path> + std::fmt::Debug>(
+    input_fasta_path: P,
+    mapping_file_path: Vec<Q>,
+) -> TrieStore {
+    let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
+    let mut builder = TrieBuilder::new();
+    reader.records().enumerate().for_each(|(i, result)| {
+        let record = result.unwrap();
+        let accession_id = record.id().split_whitespace().next().unwrap();
+        builder.push(accession_id);
+        if i % 10_000 == 0 {
+            log::info!("  Processed {} accessions", i);
+        }
+    });
+    log::info!(" Started building accession trie");
+    let accessions_trie = builder.build();
+    log::info!(" Finished building accession trie");
+
+    let mut builder = TrieStoreBuilder::new();
+    mapping_file_path.iter().for_each(|mapping_file_path| {
+        log::info!(" Processing mapping file {:?}", mapping_file_path);
+        let reader = csv::ReaderBuilder::new()
+            .delimiter(b'\t')
+            .from_path(mapping_file_path)
+            .unwrap();
+        reader.into_records().enumerate().for_each(|(i, result)| {
+            let record = result.unwrap();
+            let accession = record[0].as_bytes();
+            let accession_no_version = accession.splitn(2, |b| *b == b'.').next().unwrap();
+
+            // Only output mappings if the accession is in the source files
+
+            // If using the prot.accession2taxid.FULL file
+            if record.len() < 3 && accessions_trie.exact_match(accession_no_version) {
+                // Remove the version number and the taxid will be at index 1
+                builder.push(
+                    std::str::from_utf8(accession_no_version).unwrap(),
+                    record[1].parse::<u64>().unwrap(),
+                );
+            } else if accessions_trie.exact_match(accession) {
+                // Otherwise there is a versionless accession ID at index 0 and the taxid is at index 2
+                builder.push(
+                    std::str::from_utf8(accession).unwrap(),
+                    record[2].parse::<u64>().unwrap(),
+                );
+            }
+
+            if i % 10_000 == 0 {
+                log::info!("  Processed {} mappings", i);
+            }
+        });
+    });
+    log::info!(" Started building accession to taxid trie");
+    builder.build()
+}
+
 fn fasta_compress<P: AsRef<Path> + std::fmt::Debug>(
     input_fasta_path: P,
-    accession_to_taxid_csv_path: P,
+    accession_mapping_files: Vec<P>,
     output_fasta_path: P,
     scaled: u64,
     k: u32,
@@ -163,15 +266,11 @@ fn fasta_compress<P: AsRef<Path> + std::fmt::Debug>(
     chunk_size: usize,
     branch_factor: usize,
 ) {
-    let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
+    log::info!("Creating accession to taxid mapping");
+    let accession_to_taxid = accessions_to_taxid_trie(&input_fasta_path, accession_mapping_files);
+    log::info!("Finished building accession to taxid trie");
 
-    let mut csv_reader = csv::Reader::from_path(accession_to_taxid_csv_path).unwrap();
-    let accession_to_taxid = csv_reader.records().map(|result| {
-        let record = result.unwrap();
-        let taxid = record[0].parse::<u64>().unwrap();
-        let accession = record[1].to_string();
-        (accession, taxid)
-    }).collect::<HashMap<_, _>>();
+    let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
 
     let mut writer = fasta::Writer::to_file(output_fasta_path).unwrap();
 
@@ -194,10 +293,10 @@ fn fasta_compress<P: AsRef<Path> + std::fmt::Debug>(
                     KmerMinHash::new(scaled, k, HashFunctions::murmur64_DNA, seed, false, 0);
                 hash.add_sequence(record.seq(), true).unwrap();
                 // Run an initial similarity check here against the full tree, this is slow so we can parallelize it
-                if trees.contains(*taxid, &hash, similarity_threshold).unwrap() {
+                if trees.contains(taxid, &hash, similarity_threshold).unwrap() {
                     None
                 } else {
-                    Some((*i, *taxid, record, hash))
+                    Some((*i, taxid, record, hash))
                 }
             })
             .collect::<Vec<_>>();
@@ -245,8 +344,9 @@ struct Args {
     output_fasta: String,
 
     /// Path to the accession to taxid csv file
-    #[arg(short, long)]
-    accession_to_taxid_csv: String,
+    /// At least one required
+    #[arg(short, long, required = true)]
+    accession_mapping_files: Vec<String>,
 
     /// Scaled value for the minhash
     /// (default: 1000)
@@ -260,13 +360,13 @@ struct Args {
 
     /// Seed for the minhash
     /// (default: 42)
-    #[arg(short, long, default_value = "42")]
+    #[arg(long, default_value = "42")]
     seed: u64,
 
     /// Similarity threshold for the minhash
     /// (default: 0.6)
     /// (must be between 0 and 1)
-    #[arg(short, long, default_value = "0.6")]
+    #[arg(short = 't', long, default_value = "0.6")]
     similarity_threshold: f64,
 
     /// Chunk size for the parallelization
@@ -298,7 +398,7 @@ fn main() {
 
     fasta_compress(
         args.input_fasta,
-        args.accession_to_taxid_csv,
+        args.accession_mapping_files,
         args.output_fasta,
         args.scaled,
         args.k,
