@@ -820,6 +820,7 @@ task hisat2_human_filter {
     else
         samtools fastq -f 4 /tmp/hisat2.bam > 'hisat2_human_filtered1.fastq'
         count="$(cat hisat2_human_filtered1.fastq | wc -l)"
+
     fi
 
     count=$((count / 4))
