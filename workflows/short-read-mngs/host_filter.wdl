@@ -860,7 +860,7 @@ task collect_insert_size_metrics {
 
   command <<<
     samtools sort -o "bowtie2_coordinate_sorted.bam" -@ 8 -T /tmp "~{bam}"
-    picard CollectInsertSizeMetrics 'I=bowtie2_coordinate_sorted.bam' O=picard_insert_metrics.txt H=insert_size_histogram.pdf
+    picard CollectInsertSizeMetrics I=bowtie2_coordinate_sorted.bam O=picard_insert_metrics.txt H=insert_size_histogram.pdf
     python3 - << 'EOF'
     import textwrap
     with open("collect_insert_size_metrics.description.md", "w") as outfile:
@@ -873,7 +873,7 @@ task collect_insert_size_metrics {
       Picard is run on the output BAM file obtained from running Bowtie2 on the host genome:
 
       ```
-      picard CollectInsertSizeMetrics 'I=bowtie2_coordinate_sorted.bam' O=picard_insert_metrics.txt H=insert_size_histogram.pdf
+      picard CollectInsertSizeMetrics I=bowtie2_coordinate_sorted.bam O=picard_insert_metrics.txt H=insert_size_histogram.pdf
       ```
 
       Picard documentation can be found [here](https://gatk.broadinstitute.org/hc/en-us/articles/360037055772-CollectInsertSizeMetrics-Picard-)
