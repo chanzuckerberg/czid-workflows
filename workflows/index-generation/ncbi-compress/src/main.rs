@@ -1,7 +1,7 @@
-use std::borrow::BorrowMut;
 use std::collections::HashMap;
 use std::io::Write;
 use std::path::Path;
+use std::borrow::BorrowMut;
 
 use bio::io::fasta;
 use chrono::Local;
@@ -202,6 +202,7 @@ impl TaxidTrees {
 fn accessions_to_taxid_trie<P: AsRef<Path> + std::fmt::Debug, Q: AsRef<Path> + std::fmt::Debug>(
     input_fasta_path: P,
     mapping_file_path: Vec<Q>,
+    taxids_to_drop: &Vec<u64>,
 ) -> TrieStore {
     let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
     let mut builder = TrieBuilder::new();
@@ -232,18 +233,25 @@ fn accessions_to_taxid_trie<P: AsRef<Path> + std::fmt::Debug, Q: AsRef<Path> + s
             // Only output mappings if the accession is in the source files
 
             // If using the prot.accession2taxid.FULL file
-            if record.len() < 3 && accessions_trie.exact_match(accession_no_version) {
-                // Remove the version number and the taxid will be at index 1
-                builder.push(
-                    std::str::from_utf8(accession_no_version).unwrap(),
-                    record[1].parse::<u64>().unwrap(),
-                );
-            } else if accessions_trie.exact_match(accession) {
-                // Otherwise there is a versionless accession ID at index 0 and the taxid is at index 2
-                builder.push(
-                    std::str::from_utf8(accession).unwrap(),
-                    record[2].parse::<u64>().unwrap(),
-                );
+            let (accession, taxid) =
+                if record.len() < 3 && accessions_trie.exact_match(accession_no_version) {
+                    // Remove the version number and the taxid will be at index 1
+                    (
+                        std::str::from_utf8(accession_no_version).unwrap(),
+                        record[1].parse::<u64>().unwrap(),
+                    )
+                } else if accessions_trie.exact_match(accession) {
+                    // Otherwise there is a versionless accession ID at index 0 and the taxid is at index 2
+                    (
+                        std::str::from_utf8(accession).unwrap(),
+                        record[2].parse::<u64>().unwrap(),
+                    )
+                } else {
+                    return;
+                };
+
+            if !taxids_to_drop.contains(&taxid) {
+                builder.push(accession, taxid);
             }
 
             if i % 10_000 == 0 {
@@ -259,6 +267,7 @@ fn fasta_compress<P: AsRef<Path> + std::fmt::Debug>(
     input_fasta_path: P,
     accession_mapping_files: Vec<P>,
     output_fasta_path: P,
+    taxids_to_drop: Vec<u64>,
     scaled: u64,
     k: u32,
     seed: u64,
@@ -267,7 +276,8 @@ fn fasta_compress<P: AsRef<Path> + std::fmt::Debug>(
     branch_factor: usize,
 ) {
     log::info!("Creating accession to taxid mapping");
-    let accession_to_taxid = accessions_to_taxid_trie(&input_fasta_path, accession_mapping_files);
+    let accession_to_taxid =
+        accessions_to_taxid_trie(&input_fasta_path, accession_mapping_files, &taxids_to_drop);
     log::info!("Finished building accession to taxid trie");
 
     let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
@@ -348,6 +358,10 @@ struct Args {
     #[arg(short, long, required = true)]
     accession_mapping_files: Vec<String>,
 
+    /// Taxids to drop from the output
+    #[arg(long)]
+    taxids_to_drop: Vec<u64>,
+
     /// Scaled value for the minhash
     /// (default: 1000)
     #[arg(short, long, default_value = "1000")]
@@ -400,6 +414,7 @@ fn main() {
         args.input_fasta,
         args.accession_mapping_files,
         args.output_fasta,
+        args.taxids_to_drop,
         args.scaled,
         args.k,
         args.seed,
