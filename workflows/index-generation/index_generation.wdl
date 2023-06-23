@@ -499,8 +499,6 @@ task CompressNT {
             --input-fasta nt_sorted \
             --accession-mapping-files ~{accession2taxid}/nucl_wgs.accession2taxid \
             --accession-mapping-files ~{accession2taxid}/nucl_gb.accession2taxid \
-            --accession-mapping-files ~{accession2taxid}/pdb.accession2taxid \
-            --accession-mapping-files ~{accession2taxid}/prot.accession2taxid.FULL \
             ~{ if length(taxids_to_drop) > 0 then "--taxids-to-drop ~{sep(" --taxids-to-drop ", taxids_to_drop)}" else "" } \
             --output-fasta nt_compressed.fa \
             --k ~{k} \
