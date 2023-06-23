@@ -1,7 +1,7 @@
+use std::borrow::BorrowMut;
 use std::collections::HashMap;
 use std::io::Write;
 use std::path::Path;
-use std::borrow::BorrowMut;
 
 use bio::io::fasta;
 use chrono::Local;
@@ -225,7 +225,12 @@ fn accessions_to_taxid_trie<P: AsRef<Path> + std::fmt::Debug, Q: AsRef<Path> + s
             .delimiter(b'\t')
             .from_path(mapping_file_path)
             .unwrap();
+        let mut added = 0;
         reader.into_records().enumerate().for_each(|(i, result)| {
+            if i % 10_000 == 0 {
+                log::info!("  Processed {} mappings, added {}", i, added);
+            }
+
             let record = result.unwrap();
             let accession = record[0].as_bytes();
             let accession_no_version = accession.splitn(2, |b| *b == b'.').next().unwrap();
@@ -251,13 +256,15 @@ fn accessions_to_taxid_trie<P: AsRef<Path> + std::fmt::Debug, Q: AsRef<Path> + s
                 };
 
             if !taxids_to_drop.contains(&taxid) {
+                added += 1;
                 builder.push(accession, taxid);
             }
-
-            if i % 10_000 == 0 {
-                log::info!("  Processed {} mappings", i);
-            }
         });
+        log::info!(
+            " Finished Processing mapping file {:?}, added {} mappings",
+            mapping_file_path,
+            added
+        );
     });
     log::info!(" Started building accession to taxid trie");
     builder.build()
