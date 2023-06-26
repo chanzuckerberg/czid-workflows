@@ -216,11 +216,13 @@ task notebook {
     # TODO: handle empty NR or NT or both output
     cp /home/jovyan/notebooks/long-read-mngs-benchmarks.ipynb long-read-mngs-benchmarks.ipynb
     jupyter nbconvert --to notebook --execute --inplace long-read-mngs-benchmarks.ipynb
+    jupyter nbconvert --to html --no-input long-read-mngs-benchmarks.ipynb
 
     >>>
     output { 
         File combined = "combined_taxa.json"
         File benchmark_notebook = "long-read-mngs-benchmarks.ipynb"
+        File benchmark_html = "long-read-mngs-benchmarks.html"
     }
     runtime { 
         docker: docker_image_id 

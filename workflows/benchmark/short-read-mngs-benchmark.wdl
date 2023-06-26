@@ -130,6 +130,7 @@ workflow short_read_mngs_benchmark  {
         File preprocessed_nt = preprocess_taxa_nt.preprocessed_taxa
         File preprocessed_nr = preprocess_taxa_nr.preprocessed_taxa
         File benchmark_notebook = test_notebook.benchmark_notebook
+        File benchmark_html = test_notebook.benchmark_html
         File? step_counts_run_1_json = read_step_counts_run_1.step_counts
         File? step_counts_run_2_json = read_step_counts_run_2.step_counts
         File? step_count_tsv = merge_step_counts.step_count_tsv
@@ -217,11 +218,13 @@ task notebook {
     # TODO: handle empty NR or NT or both output
     cp /home/jovyan/notebooks/short-read-mngs-benchmarks.ipynb short-read-mngs-benchmarks.ipynb
     jupyter nbconvert --to notebook --execute --inplace short-read-mngs-benchmarks.ipynb
+    jupyter nbconvert --to html --no-input short-read-mngs-benchmarks.ipynb
 
     >>>
     output { 
         File combined = "combined_taxa.json"
         File benchmark_notebook = "short-read-mngs-benchmarks.ipynb"
+        File benchmark_html = "short-read-mngs-benchmarks.html"
     }
     runtime { 
         docker: docker_image_id 
