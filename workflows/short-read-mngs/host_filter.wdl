@@ -295,6 +295,10 @@ task ercc_bowtie2_filter {
 
     count=$((count / 4))
     jq --null-input --arg count "$count" '{"bowtie2_ercc_filtered_out":$count}' > 'bowtie2_ercc_filtered_out.count'
+    
+    if [[ "$count" -eq "0" ]]; then 
+      raise_error InsufficientReadsError "There was an insufficient number of reads in the sample after the host and quality filtering steps."
+    fi
 
     python3 - << 'EOF'
     import textwrap
@@ -415,7 +419,10 @@ task kallisto {
     File? fastp2_fastq
     File kallisto_idx
     File? gtf_gz
-    String kallisto_options = ""
+
+    # Run kallisto single-threaded with a fixed seed.
+    # This will ensure non-random reproducibility between runs.
+    String kallisto_options = "--threads=1 --seed=42"
 
     String docker_image_id
     Int cpu = 16
@@ -423,7 +430,7 @@ task kallisto {
   Boolean paired = defined(fastp2_fastq)
   # TODO: input fragment length parameters for non-paired-end (l = average, s = std dev)
   String kallisto_invocation = "/kallisto/kallisto quant"
-      + " -i '${kallisto_idx}' -o $(pwd) --plaintext ${if (paired) then '' else '--single -l 200 -s 20'} ${kallisto_options} -t ${cpu}"
+      + " -i '${kallisto_idx}' -o $(pwd) --plaintext ${if (paired) then '' else '--single -l 200 -s 20'} ${kallisto_options}"
       + " '~{fastp1_fastq}'" + if (defined(fastp2_fastq)) then " '~{fastp2_fastq}'" else ""
 
   command <<<
@@ -852,7 +859,8 @@ task collect_insert_size_metrics {
   }
 
   command <<<
-    picard CollectInsertSizeMetrics 'I=~{bam}' O=picard_insert_metrics.txt H=insert_size_histogram.pdf
+    samtools sort -o "bowtie2_coordinate_sorted.bam" -@ 8 -T /tmp "~{bam}"
+    picard CollectInsertSizeMetrics I=bowtie2_coordinate_sorted.bam O=picard_insert_metrics.txt H=insert_size_histogram.pdf
     python3 - << 'EOF'
     import textwrap
     with open("collect_insert_size_metrics.description.md", "w") as outfile:
@@ -865,7 +873,7 @@ task collect_insert_size_metrics {
       Picard is run on the output BAM file obtained from running Bowtie2 on the host genome:
 
       ```
-      picard CollectInsertSizeMetrics 'I=~{bam}' O=picard_insert_metrics.txt H=insert_size_histogram.pdf
+      picard CollectInsertSizeMetrics I=bowtie2_coordinate_sorted.bam O=picard_insert_metrics.txt H=insert_size_histogram.pdf
       ```
 
       Picard documentation can be found [here](https://gatk.broadinstitute.org/hc/en-us/articles/360037055772-CollectInsertSizeMetrics-Picard-)
