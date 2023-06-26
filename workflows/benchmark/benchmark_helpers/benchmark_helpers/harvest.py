@@ -71,7 +71,12 @@ def load_contig_lengths(contig_fasta):
 
 
 def harvest_sample_taxon_counts(
-    taxon_counts_json, contig_summary_json, contig_fasta, dbtype, taxadb, calculate_bPM=False
+    taxon_counts_json,
+    contig_summary_json,
+    contig_fasta,
+    dbtype,
+    taxadb,
+    calculate_bPM=False,
 ):
     assert dbtype in ("NR", "NT")
 
@@ -101,7 +106,9 @@ def harvest_sample_taxon_counts(
     if calculate_bPM:
         sample_bases = sum(
             [
-                rslt["base_count"] for rslt in taxon_counts if rslt["count_type"] == dbtype and rslt["tax_level"] == 1
+                rslt["base_count"]
+                for rslt in taxon_counts
+                if rslt["count_type"] == dbtype and rslt["tax_level"] == 1
             ]
         )
     # for each species in the taxon counts (excluding genus/family for now)
@@ -127,12 +134,11 @@ def harvest_sample_taxon_counts(
                 "reads_dedup": rslt["unique_count"],
                 "avg_aln_len": rslt["alignment_length"],
                 "rPM": max(1, round(rslt["unique_count"] * 1e6 / sample_reads)),
-                
             }
-            
+
             if calculate_bPM:
                 info["bPM"] = max(1, round(rslt["base_count"] * 1e6 / sample_bases))
-                
+
             info.update(
                 contigs_stats(contig_lengths, (k for k in rslt_contigs if k != "*"))
             )
