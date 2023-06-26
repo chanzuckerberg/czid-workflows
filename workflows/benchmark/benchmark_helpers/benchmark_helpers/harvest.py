@@ -91,8 +91,6 @@ def harvest_sample_taxon_counts(
     for key, value in contigs_stats(contig_lengths, contigs_mapped).items():
         ans["mapped_" + key] = value
     """
-    # TODO: load in paired, figure out what to use as denominator
-    paired = True
     sample_reads = sum(
         [
             rslt["unique_count"]
@@ -106,8 +104,6 @@ def harvest_sample_taxon_counts(
                 rslt["base_count"] for rslt in taxon_counts if rslt["count_type"] == dbtype and rslt["tax_level"] == 1
             ]
         )
-    if paired:
-        sample_reads *= 2
     # for each species in the taxon counts (excluding genus/family for now)
     ans = {}
     for rslt in taxon_counts:
