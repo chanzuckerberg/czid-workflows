@@ -1,7 +1,10 @@
 version 1.1
+import "./mngs-benchmark-tasks.wdl" as mbt
 
 
 workflow short_read_mngs_benchmark  {
+    # TODO: fix coloration potentially
+    # TODO: output html file  
     input { 
         File taxon_counts_run_1
         File contig_summary_run_1
@@ -22,7 +25,7 @@ workflow short_read_mngs_benchmark  {
 
         String docker_image_id
     }
-    call make_taxadb {
+    call mbt.make_taxadb as make_taxadb {
         input: 
             docker_image_id
     }
@@ -52,14 +55,14 @@ workflow short_read_mngs_benchmark  {
 
     if (defined(ground_truth)) { 
 
-        call truth_benchmark as truth_benchmark_nt {
+        call mbt.truth_benchmark as truth_benchmark_nt {
             input: 
                 preprocessed_taxa = preprocess_taxa_nt.preprocessed_taxa,
                 ground_truth = select_first([ground_truth]),
                 dbtype = "NT",
                 docker_image_id
         }
-        call truth_benchmark as truth_benchmark_nr {
+        call mbt.truth_benchmark as truth_benchmark_nr {
             input: 
                 preprocessed_taxa = preprocess_taxa_nr.preprocessed_taxa,
                 ground_truth = select_first([ground_truth]),
@@ -71,18 +74,18 @@ workflow short_read_mngs_benchmark  {
     ## Read in step count files 
 
     if (defined(step_counts_run_1) && defined(step_counts_run_2)) {
-        call read_step_counts as read_step_counts_run_1 {
+        call mbt.read_step_counts as read_step_counts_run_1 {
             input:
                 sc = select_first([step_counts_run_1]),
                 docker_image_id,
         }
         
-        call read_step_counts as read_step_counts_run_2 {
+        call mbt.read_step_counts as read_step_counts_run_2 {
             input:
                 sc = select_first([step_counts_run_2]),
                 docker_image_id,
         }
-        call merge_step_counts {
+        call mbt.merge_step_counts {
             input:
                 step_counts = select_all([read_step_counts_run_1.step_counts, read_step_counts_run_2.step_counts]),
                 docker_image_id,
@@ -132,68 +135,6 @@ workflow short_read_mngs_benchmark  {
         File? step_count_tsv = merge_step_counts.step_count_tsv
         File? truth_nt = truth_benchmark_nt.ground_truth_output
         File? truth_nr = truth_benchmark_nr.ground_truth_output
-    }
-}
-
-task merge_step_counts {
-    input {
-        Array[File] step_counts
-        String docker_image_id
-    }
-    command <<<
-        set -euxo pipefail
-        python3 <<CODE
-        import pandas as pd
-        import json 
-
-        df_run_1 = pd.read_json("~{step_counts[0]}", orient="values", typ="series")
-        df_run_1.name = "run_1_step_counts"
-
-        df_run_2 = pd.read_json("~{step_counts[1]}", orient="values", typ="series")
-        df_run_2.name = "ref_step_counts"
-
-        df = pd.merge(df_run_1, df_run_2, left_index=True, right_index=True, how='outer').sort_values(by="run_1_step_counts", ascending=False)
-        df.to_csv("step_count.tsv", sep="\t")
-        CODE
-    >>>
-    output {
-        File step_count_tsv = "step_count.tsv"
-    }
-    runtime {
-        docker: docker_image_id
-    }
-}
-
-task read_step_counts {
-    input {
-        Array[File] sc
-        String docker_image_id
-    }
-    command <<<
-        jq -s 'add | walk(if type == "string" then tonumber else . end)' ~{sep=' ' sc} > step_counts.json
-    >>>
-    output {
-        File step_counts = "step_counts.json"
-    }
-    runtime {
-        docker: docker_image_id
-    }
-}
-
-task make_taxadb { 
-    input {
-        String docker_image_id
-    }
-    command <<<
-    taxadb download -o taxadb --type taxa
-    taxadb create -i taxadb --dbname taxadb.sqlite || true
-    >>>
-
-    output {
-        File? taxadb_sqlite = "taxadb.sqlite"
-    }
-    runtime {
-        docker: docker_image_id
     }
 }
 
@@ -287,41 +228,3 @@ task notebook {
     }
 }
 
-task truth_benchmark { 
-    input{
-        File preprocessed_taxa
-        File ground_truth
-        String dbtype
-        String docker_image_id 
-    }
-    command <<<
-        set -euxo pipefail
-        python3 <<CODE
-
-        from benchmark_helpers import harvest, metrics
-        from taxadb.taxid import TaxID
-        import json
-
-        with open("~{preprocessed_taxa}", "r") as f:
-            tc = json.load(f) 
-
-        truth = harvest.read_truth_file("~{ground_truth}")
-
-        # TODO: figure out how to determine if data is paired or not
-        total_reads = sum([i["reads_dedup"] for i in tc.values()])*2 #TODO: review
-        relative_abundance_nt = {k: v["reads_dedup"]/total_reads for k, v in tc.items()}
-        ground_truth = {
-            "aupr": metrics.truth_aupr(relative_abundance_nt, truth),
-            "l2_norm": metrics.truth_l2_norm(relative_abundance_nt, truth)
-        }
-        with open("ground_truth_~{dbtype}.json", "w") as f:
-            json.dump(ground_truth, f)
-        CODE
-    >>>
-    output { 
-        File ground_truth_output = "ground_truth_~{dbtype}.json"
-    }
-    runtime {
-        docker: docker_image_id
-    }
-}
