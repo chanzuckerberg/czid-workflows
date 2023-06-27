@@ -240,7 +240,12 @@ fn split_accessions_by_taxid<P: AsRef<Path> + std::fmt::Debug, Q: AsRef<Path> + 
     for (i, record) in reader.records().enumerate() {
         let record = record.unwrap();
         let accession_id = record.id().split_whitespace().next().unwrap();
-        let taxid = accession_to_taxid.get(accession_id).unwrap();
+        let taxid = if let Some(taxid) = accession_to_taxid.get(accession_id) {
+            taxid
+        } else {
+            continue;
+        };
+
         let file_path = taxid_dir.path().join(format!("{}.fasta", taxid));
         let file = fs::OpenOptions::new()
             .create(true)
