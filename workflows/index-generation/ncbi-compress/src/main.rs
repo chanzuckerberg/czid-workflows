@@ -1,7 +1,7 @@
-use std::borrow::BorrowMut;
-use std::collections::HashMap;
 use std::io::Write;
+use std::ops::AddAssign;
 use std::path::Path;
+use std::{borrow::BorrowMut, fs};
 
 use bio::io::fasta;
 use chrono::Local;
@@ -13,6 +13,7 @@ use sourmash::encodings::HashFunctions;
 use sourmash::errors::SourmashError;
 use sourmash::signature::SigsTrait;
 use sourmash::sketch::minhash::KmerMinHash;
+use tempdir::TempDir;
 use trie_rs::{Trie, TrieBuilder};
 
 /// A trie that stores u64 values
@@ -161,49 +162,13 @@ impl MinHashTree {
     }
 }
 
-struct TaxidTrees {
-    trees: HashMap<u64, MinHashTree>,
-    branch_factor: usize,
-}
-
-impl TaxidTrees {
-    pub fn new(branch_factor: usize) -> Self {
-        TaxidTrees {
-            trees: HashMap::new(),
-            branch_factor,
-        }
-    }
-
-    pub fn contains(
-        &self,
-        taxid: u64,
-        hash: &KmerMinHash,
-        similarity_threshold: f64,
-    ) -> Result<bool, SourmashError> {
-        if let Some(tree) = self.trees.get(&taxid) {
-            tree.contains(hash, similarity_threshold)
-        } else {
-            Ok(false)
-        }
-    }
-
-    pub fn insert(&mut self, taxid: u64, hash: KmerMinHash) -> Result<(), SourmashError> {
-        if let Some(tree) = self.trees.get_mut(&taxid) {
-            tree.insert(hash)
-        } else {
-            let mut tree = MinHashTree::new(self.branch_factor);
-            tree.insert(hash)?;
-            self.trees.insert(taxid, tree);
-            Ok(())
-        }
-    }
-}
-
-fn accessions_to_taxid_trie<P: AsRef<Path> + std::fmt::Debug, Q: AsRef<Path> + std::fmt::Debug>(
+fn split_accessions_by_taxid<P: AsRef<Path> + std::fmt::Debug, Q: AsRef<Path> + std::fmt::Debug>(
     input_fasta_path: P,
     mapping_file_path: Vec<Q>,
     taxids_to_drop: &Vec<u64>,
-) -> TrieStore {
+) -> TempDir {
+    log::info!("Creating accession to taxid mapping");
+    let taxid_dir = TempDir::new("accessions_by_taxid").unwrap();
     let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
     let mut builder = TrieBuilder::new();
     reader.records().enumerate().for_each(|(i, result)| {
@@ -267,7 +232,100 @@ fn accessions_to_taxid_trie<P: AsRef<Path> + std::fmt::Debug, Q: AsRef<Path> + s
         );
     });
     log::info!(" Started building accession to taxid trie");
-    builder.build()
+    let accession_to_taxid = builder.build();
+    log::info!("Finished building accession to taxid trie");
+
+    log::info!("Splitting accessions by taxid");
+    let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
+    for (i, record) in reader.records().enumerate() {
+        let record = record.unwrap();
+        let accession_id = record.id().split_whitespace().next().unwrap();
+        let taxid = accession_to_taxid.get(accession_id).unwrap();
+        let file_path = taxid_dir.path().join(format!("{}.fasta", taxid));
+        let file = fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(file_path)
+            .unwrap();
+        let mut writer = fasta::Writer::new(file);
+        writer.write_record(&record).unwrap();
+
+        if i % 10_000 == 0 {
+            log::info!("  Split {} accessions", i);
+        }
+    }
+    log::info!("Finished splitting accessions by taxid");
+
+    taxid_dir
+}
+
+fn fasta_compress_taxid<P: AsRef<Path> + std::fmt::Debug>(
+    input_fasta_path: P,
+    writer: &mut fasta::Writer<std::fs::File>,
+    scaled: u64,
+    k: u32,
+    seed: u64,
+    similarity_threshold: f64,
+    chunk_size: usize,
+    branch_factor: usize,
+    accession_count: &mut u64,
+    unique_accession_count: &mut u64,
+) {
+    let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
+    let mut tree = MinHashTree::new(branch_factor);
+
+    let mut records_iter = reader.records();
+    let mut chunk = records_iter
+        .borrow_mut()
+        .take(chunk_size)
+        .collect::<Vec<_>>();
+    while chunk.len() > 0 {
+        let chunk_signatures = chunk
+            .par_iter()
+            .filter_map(|r| {
+                let record = r.as_ref().unwrap();
+                let mut hash =
+                    KmerMinHash::new(scaled, k, HashFunctions::murmur64_DNA, seed, false, 0);
+                hash.add_sequence(record.seq(), true).unwrap();
+                // Run an initial similarity check here against the full tree, this is slow so we can parallelize it
+                if tree.contains(&hash, similarity_threshold).unwrap() {
+                    None
+                } else {
+                    Some((record, hash))
+                }
+            })
+            .collect::<Vec<_>>();
+
+        let mut tmp = Vec::with_capacity(chunk_signatures.len() / 2);
+        for (record, hash) in chunk_signatures {
+            accession_count.add_assign(1);
+            // Perform a faster similarity check over just this chunk because we may have similarities within a chunk
+            let similar = tmp
+                .par_iter()
+                .any(|other| containment(&hash, other).unwrap() >= similarity_threshold);
+
+            if !similar {
+                unique_accession_count.add_assign(1);
+                tmp.push(hash);
+                writer.write_record(record).unwrap();
+
+                if *unique_accession_count % 10_000 == 0 {
+                    log::info!(
+                        "Processed {} accessions, {} unique",
+                        accession_count,
+                        unique_accession_count
+                    );
+                }
+            }
+        }
+        for hash in tmp {
+            tree.insert(hash).unwrap();
+        }
+        chunk = records_iter
+            .borrow_mut()
+            .take(chunk_size)
+            .collect::<Vec<_>>();
+    }
 }
 
 fn fasta_compress<P: AsRef<Path> + std::fmt::Debug>(
@@ -282,71 +340,48 @@ fn fasta_compress<P: AsRef<Path> + std::fmt::Debug>(
     chunk_size: usize,
     branch_factor: usize,
 ) {
-    log::info!("Creating accession to taxid mapping");
-    let accession_to_taxid =
-        accessions_to_taxid_trie(&input_fasta_path, accession_mapping_files, &taxids_to_drop);
-    log::info!("Finished building accession to taxid trie");
-
-    let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
-
+    log::info!("Splitting accessions by taxid");
+    let taxid_dir =
+        split_accessions_by_taxid(&input_fasta_path, accession_mapping_files, &taxids_to_drop);
+    log::info!("Finished splitting accessions by taxid");
     let mut writer = fasta::Writer::to_file(output_fasta_path).unwrap();
 
-    let mut trees = TaxidTrees::new(branch_factor);
-    let mut unique_accessions: i64 = 0;
+    log::info!("Starting compression by taxid");
+    let mut accession_count = 0;
+    let mut unique_accession_count = 0;
+    for (i, entry) in fs::read_dir(taxid_dir.path()).unwrap().enumerate() {
+        let entry = entry.unwrap();
+        let path = entry.path();
+        let input_fasta_path = path.to_str().unwrap();
+        fasta_compress_taxid(
+            input_fasta_path,
+            &mut writer,
+            scaled,
+            k,
+            seed,
+            similarity_threshold,
+            chunk_size,
+            branch_factor,
+            &mut accession_count,
+            &mut unique_accession_count,
+        );
 
-    let mut records_iter = reader.records().enumerate();
-    let mut chunk = records_iter
-        .borrow_mut()
-        .take(chunk_size)
-        .collect::<Vec<_>>();
-    while chunk.len() > 0 {
-        let chunk_signatures = chunk
-            .par_iter()
-            .filter_map(|(i, r)| {
-                let record = r.as_ref().unwrap();
-                let accession_id = record.id().split_whitespace().next().unwrap();
-                let taxid = accession_to_taxid.get(accession_id)?;
-                let mut hash =
-                    KmerMinHash::new(scaled, k, HashFunctions::murmur64_DNA, seed, false, 0);
-                hash.add_sequence(record.seq(), true).unwrap();
-                // Run an initial similarity check here against the full tree, this is slow so we can parallelize it
-                if trees.contains(taxid, &hash, similarity_threshold).unwrap() {
-                    None
-                } else {
-                    Some((*i, taxid, record, hash))
-                }
-            })
-            .collect::<Vec<_>>();
-
-        let mut tmp = Vec::with_capacity(chunk_signatures.len() / 2);
-        for (i, taxid, record, hash) in chunk_signatures {
-            // Perform a faster similarity check over just this chunk because we may have similarities within a chunk
-            let similar = tmp
-                .par_iter()
-                .any(|(_, other)| containment(&hash, other).unwrap() >= similarity_threshold);
-
-            if !similar {
-                unique_accessions += 1;
-                tmp.push((taxid, hash));
-                writer.write_record(record).unwrap();
-
-                if unique_accessions % 10_000 == 0 {
-                    log::info!(
-                        "Processed {} accessions, {} unique",
-                        i + 1,
-                        unique_accessions
-                    );
-                }
-            }
+        if i % 10_000 == 0 {
+            log::info!(
+                "  Compressed {} taxids, {} accessions, {} uniqe accessions",
+                i,
+                accession_count,
+                unique_accession_count
+            );
         }
-        for (taxid, hash) in tmp {
-            trees.insert(taxid, hash).unwrap();
-        }
-        chunk = records_iter
-            .borrow_mut()
-            .take(chunk_size)
-            .collect::<Vec<_>>();
     }
+
+    taxid_dir.close().unwrap();
+    log::info!(
+        "Finished compression by taxid, {} accessions, {} uniqe accessions",
+        accession_count,
+        unique_accession_count
+    );
 }
 
 #[derive(Parser, Debug)]
