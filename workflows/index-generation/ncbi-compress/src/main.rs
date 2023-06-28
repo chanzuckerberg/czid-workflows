@@ -24,7 +24,7 @@ struct TrieStore {
 impl TrieStore {
     pub fn get(&self, key: &str) -> Option<u64> {
         self.trie
-            .common_prefix_search(key.as_bytes())
+            .predictive_search(key.as_bytes())
             .first()
             .map(|bytes| {
                 let mut bytes = bytes.to_vec();
@@ -162,6 +162,10 @@ impl MinHashTree {
     }
 }
 
+fn remove_accesion_version(accession: &str) -> &str {
+    accession.splitn(2, |c| c == '.').next().unwrap()
+}
+
 fn split_accessions_by_taxid<P: AsRef<Path> + std::fmt::Debug, Q: AsRef<Path> + std::fmt::Debug>(
     input_fasta_path: P,
     mapping_file_path: Vec<Q>,
@@ -174,7 +178,8 @@ fn split_accessions_by_taxid<P: AsRef<Path> + std::fmt::Debug, Q: AsRef<Path> + 
     reader.records().enumerate().for_each(|(i, result)| {
         let record = result.unwrap();
         let accession_id = record.id().split_whitespace().next().unwrap();
-        builder.push(accession_id);
+        let accession_no_version = remove_accesion_version(accession_id);
+        builder.push(accession_no_version);
         if i % 10_000 == 0 {
             log::info!("  Processed {} accessions", i);
         }
@@ -197,32 +202,26 @@ fn split_accessions_by_taxid<P: AsRef<Path> + std::fmt::Debug, Q: AsRef<Path> + 
             }
 
             let record = result.unwrap();
-            let accession = record[0].as_bytes();
-            let accession_no_version = accession.splitn(2, |b| *b == b'.').next().unwrap();
+            let accession = &record[0];
+            let accession_no_version = remove_accesion_version(accession);
 
             // Only output mappings if the accession is in the source files
+            if !accessions_trie.exact_match(accession_no_version) {
+                return;
+            }
 
             // If using the prot.accession2taxid.FULL file
-            let (accession, taxid) =
-                if record.len() < 3 && accessions_trie.exact_match(accession_no_version) {
-                    // Remove the version number and the taxid will be at index 1
-                    (
-                        std::str::from_utf8(accession_no_version).unwrap(),
-                        record[1].parse::<u64>().unwrap(),
-                    )
-                } else if accessions_trie.exact_match(accession) {
-                    // Otherwise there is a versionless accession ID at index 0 and the taxid is at index 2
-                    (
-                        std::str::from_utf8(accession).unwrap(),
-                        record[2].parse::<u64>().unwrap(),
-                    )
-                } else {
-                    return;
-                };
+            let taxid = if record.len() < 3 {
+                // The taxid will be at index 1
+                record[1].parse::<u64>().unwrap()
+            } else {
+                // Otherwise there is a versionless accession ID at index 0 and the taxid is at index 2
+                record[2].parse::<u64>().unwrap()
+            };
 
             if !taxids_to_drop.contains(&taxid) {
                 added += 1;
-                builder.push(accession, taxid);
+                builder.push(accession_no_version, taxid);
             }
         });
         log::info!(
@@ -238,9 +237,13 @@ fn split_accessions_by_taxid<P: AsRef<Path> + std::fmt::Debug, Q: AsRef<Path> + 
     log::info!("Splitting accessions by taxid");
     let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
     for (i, record) in reader.records().enumerate() {
+        if i % 10_000 == 0 {
+            log::info!("  Split {} accessions", i);
+        }
         let record = record.unwrap();
         let accession_id = record.id().split_whitespace().next().unwrap();
-        let taxid = if let Some(taxid) = accession_to_taxid.get(accession_id) {
+        let acccession_no_version = remove_accesion_version(accession_id);
+        let taxid = if let Some(taxid) = accession_to_taxid.get(acccession_no_version) {
             taxid
         } else {
             continue;
@@ -254,10 +257,6 @@ fn split_accessions_by_taxid<P: AsRef<Path> + std::fmt::Debug, Q: AsRef<Path> + 
             .unwrap();
         let mut writer = fasta::Writer::new(file);
         writer.write_record(&record).unwrap();
-
-        if i % 10_000 == 0 {
-            log::info!("  Split {} accessions", i);
-        }
     }
     log::info!("Finished splitting accessions by taxid");
 
