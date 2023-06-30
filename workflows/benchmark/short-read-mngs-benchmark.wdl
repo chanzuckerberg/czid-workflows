@@ -4,7 +4,6 @@ import "./mngs-benchmark-tasks.wdl" as mbt
 
 workflow short_read_mngs_benchmark  {
     # TODO: fix coloration potentially
-    # TODO: output html file  
     input { 
         File taxon_counts_run_1
         File contig_summary_run_1
