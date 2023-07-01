@@ -34,50 +34,63 @@ RUN sed -i s/archive.ubuntu.com/us-west-2.ec2.archive.ubuntu.com/ /etc/apt/sourc
         echo 'APT::Install-Suggests "false";' > /etc/apt/apt.conf.d/99czid
 
 RUN apt-get -q update && apt-get -q install -y \
+        apt-utils \
+        aria2 \
+        bedtools \
+        bowtie2 \
+        build-essential \
+        cmake \
+        curl \
+        dh-autoreconf \
+        fastx-toolkit \
+        g++ \
+        git \
+        httpie \
         jq \
+        lbzip2 \
+        libarchive-tools \
+        # Runtime dependencies
+        # On versions higher than 1.62 compilation errors because of an overloading ambiguity with the `advance` method
+        libboost1.62-all-dev \
+        libbz2-dev \
+        liblz4-tool \
+        liblzma-dev \
+        libperl4-corelibs-perl \
+        libz-dev \
+        make \
         moreutils \
+        nasm \
+        ncbi-blast+ \
         pigz \
         pixz \
-        aria2 \
-        httpie \
-        curl \
-        wget \
-        zip \
-        unzip \
-        zlib1g-dev \
         pkg-config \
-        apt-utils \
-        libbz2-dev \
-        liblzma-dev \
-        software-properties-common \
-        libarchive-tools \
-        liblz4-tool \
-        lbzip2 \
+        python3-cutadapt \
+        python3-dateutil \
         python3-dev \
         python3-pip \
+        python3-psutil \
+        python3-requests \
+        python3-scipy \
         python3-setuptools \
         python3-wheel \
-        python3-requests \
         python3-yaml \
-        python3-dateutil \
-        python3-psutil \
-        python3-cutadapt \
-        python3-scipy \
         samtools \
-        fastx-toolkit \
         seqtk \
-        bedtools \
-        dh-autoreconf \
-        nasm \
-        build-essential 
-
-# The following packages pull in python2.7
-RUN apt-get -q install -y \
-        bowtie2 \
+        software-properties-common \
         spades \
-        ncbi-blast+
+        unzip \
+        wget \
+        zip \
+        zlib1g-dev 
 
-RUN pip3 install boto3==1.23.10 marisa-trie==0.7.7 pytest
+RUN pip3 install \
+    boto3==1.23.10 \
+    marisa-trie==0.7.7 \
+    gtfparse==1.2.1 \
+    pysam==0.14.1 \
+    pandas==1.1.5 \
+    pytest
+
 RUN pip3 install miniwdl==${MINIWDL_VERSION} miniwdl-s3parcp==0.0.5 miniwdl-s3upload==0.0.4
 RUN pip3 install https://github.com/chanzuckerberg/miniwdl-plugins/archive/f0465b0.zip#subdirectory=sfn-wdl
 RUN pip3 install https://github.com/chanzuckerberg/s3mi/archive/v0.8.0.tar.gz
@@ -88,9 +101,6 @@ RUN chmod +x /usr/local/bin/clean_download_cache.sh
 RUN curl -L -o /usr/bin/czid-dedup https://github.com/chanzuckerberg/czid-dedup/releases/download/v0.1.2/czid-dedup-Linux; chmod +x /usr/bin/czid-dedup
 
 RUN curl -Ls https://github.com/chanzuckerberg/s3parcp/releases/download/v0.2.0-alpha/s3parcp_0.2.0-alpha_Linux_x86_64.tar.gz | tar -C /usr/bin -xz s3parcp
-
-# FIXME: check if use of pandas, pysam is necessary
-RUN pip3 install pysam==0.14.1 pandas==1.1.5
 
 # Workaround for srst2 refusing to work with upstream bowtie2 and samtools
 # FIXME: replace srst2 with a more appropriate tool
@@ -104,18 +114,6 @@ RUN curl -L -o /usr/local/bin/picard.jar https://github.com/broadinstitute/picar
 # Create a single executable so we can use SingleCommand
 RUN printf '#!/bin/bash\njava -jar /usr/local/bin/picard.jar "$@"\n' > /usr/local/bin/picard
 RUN chmod +x /usr/local/bin/picard
-
-# install gsnap and rapsearch2 for local alignment
-RUN apt-get install -y \
-        g++ \
-        libperl4-corelibs-perl \
-        make \
-        # Runtime dependencies
-        # On versions higher than 1.62 compilation errors because of an overloading ambiguity with the `advance` method
-        libboost1.62-all-dev
-
-
-RUN apt-get -y update && apt-get install -y libz-dev git python3-pip cmake
 
 WORKDIR /tmp
 RUN git clone --recursive https://github.com/mlin/minimap2-scatter.git
@@ -140,16 +138,19 @@ RUN mv diamond /usr/local/bin
 WORKDIR /tmp
 RUN wget -nv -O - https://github.com/intel/isa-l/archive/refs/tags/v2.30.0.tar.gz | tar zx
 RUN cd isa-l-* && ./autogen.sh && ./configure && make -j8 && make install
+
 RUN wget -nv -O - https://github.com/ebiggers/libdeflate/archive/refs/tags/v1.12.tar.gz | tar zx
 RUN cd libdeflate-* && make -j8 && make install
+
 RUN ldconfig
 RUN git clone https://github.com/mlin/fastp.git && git -C fastp checkout c427e57
 RUN cd fastp && make -j8 && ./fastp test && cp fastp /usr/local/bin
+
 WORKDIR /
 RUN wget -nv -O /tmp/HISAT2.zip https://czid-public-references.s3.us-west-2.amazonaws.com/test/hisat2/hisat2.zip \
         && unzip /tmp/HISAT2.zip && rm /tmp/HISAT2.zip
 RUN curl -L https://github.com/pachterlab/kallisto/releases/download/v0.46.1/kallisto_linux-v0.46.1.tar.gz | tar xz -C /
-RUN pip3 install gtfparse==1.2.1
+RUN pip3 install 
 
 COPY --from=lib idseq-dag /tmp/idseq-dag
 RUN pip3 install /tmp/idseq-dag && rm -rf /tmp/idseq-dag
