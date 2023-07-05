@@ -70,7 +70,6 @@ RUN apt-get -q update && apt-get -q install -y \
         python3-pip \
         python3-psutil \
         python3-requests \
-        python3-scipy \
         python3-setuptools \
         python3-wheel \
         python3-yaml \
@@ -150,7 +149,6 @@ WORKDIR /
 RUN wget -nv -O /tmp/HISAT2.zip https://czid-public-references.s3.us-west-2.amazonaws.com/test/hisat2/hisat2.zip \
         && unzip /tmp/HISAT2.zip && rm /tmp/HISAT2.zip
 RUN curl -L https://github.com/pachterlab/kallisto/releases/download/v0.46.1/kallisto_linux-v0.46.1.tar.gz | tar xz -C /
-RUN pip3 install 
 
 COPY --from=lib idseq-dag /tmp/idseq-dag
 RUN pip3 install /tmp/idseq-dag && rm -rf /tmp/idseq-dag
