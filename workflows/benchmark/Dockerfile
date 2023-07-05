@@ -19,5 +19,4 @@ RUN pip3 install -r requirements.txt
 COPY benchmark_helpers benchmark_helpers
 RUN pip3 install benchmark_helpers/
 
-RUN echo "ai"
 COPY notebooks notebooks/
