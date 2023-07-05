@@ -28,6 +28,7 @@ task RunAssembly {
     File assembly_scaffolds_fasta = "assembly/scaffolds.fasta"
     File assembly_read_contig_sam = "assembly/read-contig.sam"
     File assembly_contig_stats_json = "assembly/contig_stats.json"
+    File? assembly_spades_output_log = "assembly/spades/spades.log"
     File? output_read_count = "assembly_out.count"
     File? version = "assembly_version.txt"
   }
@@ -669,6 +670,7 @@ workflow czid_postprocess {
     File assembly_out_assembly_scaffolds_fasta = RunAssembly.assembly_scaffolds_fasta
     File assembly_out_assembly_read_contig_sam = RunAssembly.assembly_read_contig_sam
     File assembly_out_assembly_contig_stats_json = RunAssembly.assembly_contig_stats_json
+    File? assembly_out_assembly_spades_output_log = RunAssembly.assembly_spades_output_log
     File? spades_version = RunAssembly.version
     File? assembly_out_count = RunAssembly.output_read_count
     File coverage_out_assembly_contig_coverage_json = GenerateCoverageStats.assembly_contig_coverage_json
