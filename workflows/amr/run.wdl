@@ -12,6 +12,7 @@ workflow amr {
         String sample_name
         String host_filtering_docker_image_id = "czid-short-read-mngs" # default local value
         File card_json = "s3://czid-public-references/card/2023-05-22/card.json"
+        File card_ontology = "s3://idseq-developers/lvreynoso/amr_v2/ontology/2023-06-13/ontology.json"
         File kmer_db = "s3://czid-public-references/card/2023-05-22/61_kmer_db.json"
         File amr_kmer_db = "s3://czid-public-references/card/2023-05-22/all_amr_61mers.txt"
         File wildcard_data = "s3://czid-public-references/card/2023-05-22/wildcard_database_v4.0.0.fasta"
@@ -91,6 +92,7 @@ workflow amr {
         kma_output = RunRgiBwtKma.kma_amr_results,
         kma_species_output = RunRgiKmerBwt.kma_species_calling,
         gene_coverage = MakeGeneCoverage.output_gene_coverage,
+        card_ontology = card_ontology,
         docker_image_id = docker_image_id,
         sample_name = sample_name
     }
@@ -153,6 +155,7 @@ task RunResultsPerSample {
         File kma_output
         File kma_species_output
         File gene_coverage
+        File card_ontology
         String docker_image_id
         String sample_name
     }
@@ -160,6 +163,7 @@ task RunResultsPerSample {
         set -euxo pipefail
 
         python3 <<CODE
+        import json
         import pandas as pd
         def clean_aro(df, column_name):
             """modifies dataframe inplace to clean the ARO string"""
@@ -278,6 +282,12 @@ task RunResultsPerSample {
             set_list = list(input_set)
             return([i for i in set_list if i == i])
 
+        ontology = json.load(open("~{card_ontology}"))
+        def get_high_level_classes(gene_name):
+            if gene_name not in ontology:
+                return []
+            return ontology[gene_name]['highLevelDrugClasses']
+
         this_list = list(set(df['ARO_overall']))
         result_df = {}
         for index in this_list:#[0:1]:
@@ -289,6 +299,10 @@ task RunResultsPerSample {
         
             dc = remove_na(set(sub_df['Drug Class_contig_amr']).union(set(sub_df['Drug Class_kma_amr'])))
             result['drug_class'] = ';'.join(dc) if len(dc) > 0 else None
+
+            hldc = get_high_level_classes(index)
+            result['high_level_drug_class'] = ';'.join(hldc) if len(hldc) > 0 else None
+
             rm = remove_na(set(sub_df['Resistance Mechanism_contig_amr']).union(set(sub_df['Resistance Mechanism_kma_amr'])))
             result['resistance_mechanism'] = ';'.join(rm) if len(rm) > 0 else None
 
@@ -354,10 +368,10 @@ task RunResultsPerSample {
             result_df[index] = result
         final_df = pd.DataFrame.from_dict(result_df)
         final_df = final_df.transpose()
-        final_df = final_df[["sample_name", "gene_family", "drug_class", "resistance_mechanism", "model_type", "num_contigs", 
+        final_df = final_df[["sample_name", "gene_family", "drug_class", "high_level_drug_class", "resistance_mechanism", "model_type", "num_contigs",
                              "cutoff", "contig_coverage_breadth", "contig_percent_id", "contig_species", "num_reads", "read_gene_id", "read_coverage_breadth", "read_coverage_depth", "read_species"]]
         final_df.sort_index(inplace=True)
-        final_df.dropna(subset=['drug_class'], inplace=True)
+        final_df.dropna(subset=['drug_class', 'high_level_drug_class'], inplace=True)
         final_df.to_csv("primary_AMR_report.tsv", sep='\t', index_label="gene_name")
 
 
