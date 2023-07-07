@@ -1,0 +1,148 @@
+{
+    "ArnT":
+    {
+        "label": "ArnT",
+        "accession": "3005053",
+        "description": "ArnT is involved in Cell Wall Biosynthesis, specifically 4-amino-4-deoxy-L-arabinose (Ara4N). It confers resistance to peptide antibiotics.",
+        "parentAccessions":
+        [
+            "3004269",
+            "3000622",
+            "3000624"
+        ],
+        "childrenAccessions":
+        [
+            "3005065"
+        ],
+        "highLevelDrugClasses":
+        [
+            "peptide antibiotic"
+        ],
+        "synonyms":
+        [
+            "ArnT"
+        ],
+        "dnaAccession": "FO834906.1",
+        "proteinAccession": "CDO12042.1",
+        "geneFamily": "pmr phosphoethanolamine transferase",
+        "drugClass": "peptide antibiotic"
+    },
+    "Staphylococcus aureus LmrS":
+    {
+        "label": "Staphylococcus aureus LmrS",
+        "accession": "3004572",
+        "description": "MFS transporters are secondary active transporters with single-polypeptide chains containing 400-600 amino acids that transport small solutes across the membrane by using electrochemical gradients. LmrS has 14 transmembrane helices and, when expressed in E. coli, is capable of extruding a variety of antibiotics inclinding linezolid, trimethoprim, florfenicol, chlorampheniocol, erythromycin, streptomycin, kanamycin, and fusidic acid.",
+        "parentAccessions":
+        [
+            "0010002",
+            "0000006",
+            "0000040",
+            "0000049",
+            "0000072",
+            "3000188",
+            "3000385",
+            "3000461"
+        ],
+        "childrenAccessions":
+        [],
+        "highLevelDrugClasses":
+        [
+            "macrolide antibiotic",
+            "aminoglycoside antibiotic",
+            "oxazolidinone antibiotic",
+            "diaminopyrimidine antibiotic",
+            "phenicol antibiotic"
+        ],
+        "synonyms":
+        [
+            "A0A3M7YRP9",
+            "A0A3P0BBR7",
+            "F6MF49",
+            "Saur_LmrS"
+        ],
+        "dnaAccession": "CP000046.1",
+        "proteinAccession": "AAW38464.1",
+        "geneFamily": "major facilitator superfamily (MFS) antibiotic efflux pump",
+        "drugClass": "aminoglycoside antibiotic;diaminopyrimidine antibiotic;macrolide antibiotic;oxazolidinone antibiotic;phenicol antibiotic"
+    },
+    "fosA5":
+    {
+        "label": "fosA5",
+        "accession": "3003209",
+        "description": "fosA5 is a fosfomycin resistance gene isolated from clinical strain of Escherichia coli E265. It is susceptible to amikacin, tetracycline and imipenem, and resistant to sulphonamide, cephalosporins, gentamicin, ciprofloxacin, chloramphenicol and streptomycin.",
+        "parentAccessions":
+        [
+            "3000133",
+            "0000036",
+            "3007382"
+        ],
+        "childrenAccessions":
+        [],
+        "highLevelDrugClasses":
+        [
+            "fluoroquinolone antibiotic",
+            "aminoglycoside antibiotic",
+            "phosphonic acid antibiotic"
+        ],
+        "synonyms":
+        [
+            "fosA5"
+        ],
+        "dnaAccession": "KP143090.1",
+        "proteinAccession": "AJE60855.1",
+        "geneFamily": "fosfomycin thiol transferase",
+        "drugClass": "aminoglycoside antibiotic;fluoroquinolone antibiotic;phosphonic acid antibiotic"
+    },
+    "norC":
+    {
+        "label": "norC",
+        "accession": "3007010",
+        "description": "NorC is a multidrug efflux pump in Staphylococcus aureus that confers resistance to fluoroquinolones and other structurally unrelated antibiotics like tetracycline. It shares 61% similarity with NorB, and is a structural homolog of Blt of Bacillus subtilis. Like NorA and NorB, NorC is regulated by mgrA, also known as NorR.",
+        "parentAccessions":
+        [
+            "0010002",
+            "3000391"
+        ],
+        "childrenAccessions":
+        [],
+        "highLevelDrugClasses":
+        [
+            "fluoroquinolone antibiotic",
+            "disinfecting agents and antiseptics"
+        ],
+        "synonyms":
+        [
+            "norC"
+        ],
+        "dnaAccession": "CP005288.1",
+        "proteinAccession": "AGP27106.1",
+        "geneFamily": "major facilitator superfamily (MFS) antibiotic efflux pump",
+        "drugClass": "disinfecting agents and antiseptics;fluoroquinolone antibiotic"
+    },
+    "smeB":
+    {
+        "label": "smeB",
+        "accession": "3003052",
+        "description": "smeB is the inner membrane multidrug exporter of the efflux complex smeABC in Stenotrophomonas maltophilia.",
+        "parentAccessions":
+        [
+            "3000748",
+            "3003050"
+        ],
+        "childrenAccessions":
+        [],
+        "highLevelDrugClasses":
+        [
+            "aminoglycoside antibiotic",
+            "beta-lactam antibiotic"
+        ],
+        "synonyms":
+        [
+            "smeB"
+        ],
+        "dnaAccession": "AF173226.1",
+        "proteinAccession": "AAD51345.1",
+        "geneFamily": "resistance-nodulation-cell division (RND) antibiotic efflux pump",
+        "drugClass": "aminoglycoside antibiotic;cephalosporin;cephamycin;penam"
+    }
+}
