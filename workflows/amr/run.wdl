@@ -301,7 +301,8 @@ task RunResultsPerSample {
             result['drug_class'] = ';'.join(dc) if len(dc) > 0 else None
 
             hldc = get_high_level_classes(index)
-            result['high_level_drug_class'] = ';'.join(hldc) if len(hldc) > 0 else None
+            # Join classes with a semicolon and a space since we have a python list instead of a nice pandas union
+            result['high_level_drug_class'] = '; '.join(hldc) if len(hldc) > 0 else None
 
             rm = remove_na(set(sub_df['Resistance Mechanism_contig_amr']).union(set(sub_df['Resistance Mechanism_kma_amr'])))
             result['resistance_mechanism'] = ';'.join(rm) if len(rm) > 0 else None
