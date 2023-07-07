@@ -12,7 +12,7 @@ workflow amr {
         String sample_name
         String host_filtering_docker_image_id = "czid-short-read-mngs" # default local value
         File card_json = "s3://czid-public-references/card/2023-05-22/card.json"
-        File card_ontology = "s3://idseq-developers/lvreynoso/amr_v2/ontology/2023-06-13/ontology.json"
+        File card_ontology = "s3://czid-public-references/amr_v2/ontology/initial/ontology.json"
         File kmer_db = "s3://czid-public-references/card/2023-05-22/61_kmer_db.json"
         File amr_kmer_db = "s3://czid-public-references/card/2023-05-22/all_amr_61mers.txt"
         File wildcard_data = "s3://czid-public-references/card/2023-05-22/wildcard_database_v4.0.0.fasta"
