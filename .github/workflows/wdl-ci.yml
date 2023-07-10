@@ -66,8 +66,6 @@ jobs:
           TAG=$(git describe --long --tags --always --dirty)
           IMAGE_NAME=czid-${{ matrix.workflow_dir }}-public
           IMAGE_URI="ghcr.io/${GITHUB_REPOSITORY}/${IMAGE_NAME}"
-
-          CACHE_FROM=""; docker pull "$IMAGE_URI" && CACHE_FROM="--cache-from $IMAGE_URI"
           ./scripts/docker-build.sh \
             "workflows/${{ matrix.workflow_dir }}" \
             --tag "${IMAGE_URI}:${TAG}" \
@@ -75,7 +73,6 @@ jobs:
             --cache-to=type=registry,ref="${IMAGE_URI}:${TAG}" \
             --progress plain \
             --push .
-          docker push "${IMAGE_URI}:${TAG}"
           if [[ ${GITHUB_REF##*/} == "main" ]]; then
             docker tag "${IMAGE_URI}:${TAG}" "${IMAGE_URI}:latest"
             docker push "${IMAGE_URI}:latest"
