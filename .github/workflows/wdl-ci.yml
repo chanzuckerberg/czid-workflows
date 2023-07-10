@@ -13,10 +13,6 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/cache@v1
-        with:
-          path: ~/.cache
-          key: ${{runner.os}}-cache
       - name: dependencies
         run: |
           source /etc/profile
@@ -72,8 +68,13 @@ jobs:
           IMAGE_URI="ghcr.io/${GITHUB_REPOSITORY}/${IMAGE_NAME}"
 
           CACHE_FROM=""; docker pull "$IMAGE_URI" && CACHE_FROM="--cache-from $IMAGE_URI"
-          ./scripts/docker-build.sh "workflows/${{ matrix.workflow_dir }}" --tag "${IMAGE_URI}:${TAG}" $CACHE_FROM \
-            || ./scripts/docker-build.sh "workflows/${{ matrix.workflow_dir }}" --tag "${IMAGE_URI}:${TAG}"
+          ./scripts/docker-build.sh \
+            "workflows/${{ matrix.workflow_dir }}" \
+            --tag "${IMAGE_URI}:${TAG}" \
+            --cache-from=type=registry,ref="${IMAGE_URI}:latest" \
+            --cache-to=type=registry,ref="${IMAGE_URI}:${TAG}" \
+            --progress plain \
+            --push .
           docker push "${IMAGE_URI}:${TAG}"
           if [[ ${GITHUB_REF##*/} == "main" ]]; then
             docker tag "${IMAGE_URI}:${TAG}" "${IMAGE_URI}:latest"
