@@ -286,6 +286,8 @@ task RunResultsPerSample {
         def get_high_level_classes(gene_name):
             if gene_name not in ontology:
                 return []
+            if 'highLevelDrugClasses' not in ontology[gene_name]:
+                return []
             return ontology[gene_name]['highLevelDrugClasses']
 
         this_list = list(set(df['ARO_overall']))

@@ -105,7 +105,7 @@
         ],
         "childrenAccessions":
         [],
-        "highLevelDrugClasses":
+        "highLevelDrugClasses is somehow missing from this entry":
         [
             "fluoroquinolone antibiotic",
             "disinfecting agents and antiseptics"
@@ -119,7 +119,7 @@
         "geneFamily": "major facilitator superfamily (MFS) antibiotic efflux pump",
         "drugClass": "disinfecting agents and antiseptics;fluoroquinolone antibiotic"
     },
-    "smeB":
+    "smeB should not be found":
     {
         "label": "smeB",
         "accession": "3003052",
