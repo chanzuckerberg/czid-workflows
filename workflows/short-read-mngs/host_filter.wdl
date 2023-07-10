@@ -12,7 +12,6 @@ workflow czid_host_filter {
     String nucleotide_type = "DNA"
 
     File adapter_fasta
-    
     String host_genome
     File bowtie2_index_tar
     File hisat2_index_tar

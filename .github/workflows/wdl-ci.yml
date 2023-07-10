@@ -67,12 +67,12 @@ jobs:
           IMAGE_NAME=czid-${{ matrix.workflow_dir }}-public
           IMAGE_URI="ghcr.io/${GITHUB_REPOSITORY}/${IMAGE_NAME}"
           ./scripts/docker-build.sh \
-            "workflows/${{ matrix.workflow_dir }}" \
             --tag "${IMAGE_URI}:${TAG}" \
             --cache-from=type=registry,ref="${IMAGE_URI}:latest" \
             --cache-to=type=registry,ref="${IMAGE_URI}:${TAG}" \
             --progress plain \
-            --push .
+            --push \
+            "workflows/${{ matrix.workflow_dir }}"
           if [[ ${GITHUB_REF##*/} == "main" ]]; then
             docker tag "${IMAGE_URI}:${TAG}" "${IMAGE_URI}:latest"
             docker push "${IMAGE_URI}:latest"
