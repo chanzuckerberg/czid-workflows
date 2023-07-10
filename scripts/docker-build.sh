@@ -2,4 +2,4 @@
 
 set -euxo pipefail
 
-docker buildx build --build-context lib=lib "$@"
+docker buildx build --platform linux/amd64 --build-context lib=lib "$@"
