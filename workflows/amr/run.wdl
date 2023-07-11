@@ -286,6 +286,8 @@ task RunResultsPerSample {
         def get_high_level_classes(gene_name):
             if gene_name not in ontology:
                 return []
+            if 'highLevelDrugClasses' not in ontology[gene_name]:
+                return []
             return ontology[gene_name]['highLevelDrugClasses']
 
         this_list = list(set(df['ARO_overall']))
@@ -372,7 +374,7 @@ task RunResultsPerSample {
         final_df = final_df[["sample_name", "gene_family", "drug_class", "high_level_drug_class", "resistance_mechanism", "model_type", "num_contigs",
                              "cutoff", "contig_coverage_breadth", "contig_percent_id", "contig_species", "num_reads", "read_gene_id", "read_coverage_breadth", "read_coverage_depth", "read_species"]]
         final_df.sort_index(inplace=True)
-        final_df.dropna(subset=['drug_class', 'high_level_drug_class'], inplace=True)
+        final_df.dropna(subset=['drug_class'], inplace=True)
         final_df.to_csv("primary_AMR_report.tsv", sep='\t', index_label="gene_name")
 
 
