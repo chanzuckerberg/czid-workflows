@@ -299,7 +299,7 @@ task RunResultsPerSample {
             result['sample_name'] = "~{sample_name}"
             result['gene_family'] = ';'.join(gf) if len(gf) > 0 else None
 
-            accession = remove_na(set(sub_df['ARO_accession'].apply(lambda x: f'ARO:{int(x)}')))
+            accession = list(set(sub_df['ARO_accession'].dropna().apply(lambda x: f'ARO:{int(x)}')))
             result['aro_accession'] = ';'.join(accession) if len(accession) > 0 else None
         
             dc = remove_na(set(sub_df['Drug Class_contig_amr']).union(set(sub_df['Drug Class_kma_amr'])))
