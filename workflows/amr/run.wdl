@@ -661,7 +661,12 @@ task tsvToSam {
         import pysam
         import sys
 
-        COLUMN_GENE_ID = "Reference Sequence_kma_amr"
+        # NOTE: Contigs are indexed by ARO accession, not gene_id. This is because contigs and reads
+        # come from different sources, so not every contig will have a corresponding gene_id,
+        # even if you join the two datasets on the ARO accession. Thus indexing on gene_id is not
+        # possible.
+
+        COLUMN_ARO_CONTIG = "ARO_contig_amr"
         COLUMN_CONTIG_NAME = "Contig_contig_amr"
         OUTPUT_BAM = "contig_amr_report.sorted.bam"
 
@@ -679,27 +684,27 @@ task tsvToSam {
         contigs_fasta = pysam.Fastafile("~{contigs}")
 
         # Load columns of interest from CSV and drop rows with at least one NaN
-        df = pd.read_csv("~{final_summary}", sep="\t", usecols=[COLUMN_GENE_ID, COLUMN_CONTIG_NAME])
+        df = pd.read_csv("~{final_summary}", sep="\t", usecols=[COLUMN_ARO_CONTIG, COLUMN_CONTIG_NAME])
+        df = df.dropna(subset=COLUMN_CONTIG_NAME)
 
-        # Create BAM with mock reference lengths for the header (do this before df.dropna() so we
-        # list all gene IDs in the SAM header). If no gene IDs are found at all, have a mock gene
-        # to make sure we can create the SAM file with no errors (web app will look for that file)
-        gene_ids = df[COLUMN_GENE_ID].dropna().unique().tolist() or ["NoGenes"]
-        output_bam = pysam.AlignmentFile(OUTPUT_BAM, "wb", reference_names=gene_ids, reference_lengths=[100] * len(gene_ids))
-
-        # Remove extraneous _* at the end of contig names
-        df = df.dropna()
+        # Format accessions to follow the pattern 'ARO:3000000'; Remove extraneous _* at the end of contig names
+        df[COLUMN_ARO_CONTIG] = df[COLUMN_ARO_CONTIG].apply(lambda x: f'ARO:{int(x)}')
         df[COLUMN_CONTIG_NAME] = df[COLUMN_CONTIG_NAME].apply(lambda x: x[:x.rindex("_")])
+
+        # Create BAM with mock reference lengths for the header. If contigss are found at all, have a mock accession
+        # to make sure we can create the SAM file with no errors (web app will look for that file)
+        contig_aros = df[COLUMN_ARO_CONTIG].dropna().unique().tolist() or ["NoGenes"]
+        output_bam = pysam.AlignmentFile(OUTPUT_BAM, "wb", reference_names=contig_aros, reference_lengths=[100] * len(contig_aros))
 
         # Go through each line of the TSV and create a SAM record (https://wckdouglas.github.io/2021/12/pytest-with-pysam)
         for index, row in df.iterrows():
-            gene_id = row[COLUMN_GENE_ID]
+            contig_aro = row[COLUMN_ARO_CONTIG]
             contig_name = row[COLUMN_CONTIG_NAME]
             contig_sequence = contigs_fasta.fetch(contig_name)
 
             # Create new alignment
             alignment = pysam.AlignedSegment(output_bam.header)
-            alignment.reference_name = gene_id
+            alignment.reference_name = contig_aro
             alignment.query_name = contig_name
             alignment.query_sequence = contig_sequence
             alignment.reference_start = 1
