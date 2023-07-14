@@ -28,6 +28,7 @@ to get started with them.
 ### System Requirements 
 The system requirements differs for each workflow and depending on the database being used. For example running the short-read-mngs workflow with the full NT and NR databases would require an instance with >1TB of disk space and >100GB of memory. Running other workflows (e.g. consensus-genome, amr) requires much less space. 
 
+If using an ARM Mac try following [these](RunningCZIDWorkflowsOnARMMacs.md) setup instructions
 ### Software requirements
 * docker with buildx support (version >= 19.03)
 * python3 
