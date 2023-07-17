@@ -27,6 +27,24 @@
         "geneFamily": "pmr phosphoethanolamine transferase",
         "drugClass": "peptide antibiotic"
     },
+    "peptide antibiotic":
+    {
+        "label": "peptide antibiotic",
+        "accession": "3000053",
+        "description": "Peptide antibiotics have a wide range of antibacterial mechanisms, depending on the amino acids that make up the antibiotic, although most act to disrupt the cell membrane in some manner. Subclasses of peptide antibiotics can include additional sidechains of other types, such as lipids in the case of the lipopeptide antibiotics.",
+        "parentAccessions":
+        [
+            "1000003"
+        ],
+        "childrenAccessions":
+        [
+            "dummy"
+        ],
+        "highLevelDrugClasses":
+        [],
+        "synonyms":
+        []
+    },
     "Staphylococcus aureus LmrS":
     {
         "label": "Staphylococcus aureus LmrS",
@@ -65,6 +83,105 @@
         "geneFamily": "major facilitator superfamily (MFS) antibiotic efflux pump",
         "drugClass": "aminoglycoside antibiotic;diaminopyrimidine antibiotic;macrolide antibiotic;oxazolidinone antibiotic;phenicol antibiotic"
     },
+    "phenicol antibiotic":
+    {
+        "label": "phenicol antibiotic",
+        "accession": "3000387",
+        "description": "Phenicols are broad spectrum bacteriostatic antibiotics acting on bacterial protein synthesis. More specifically, the phenicols block peptide elongation by binding to the peptidyltansferase centre of the 70S ribosome.",
+        "parentAccessions":
+        [
+            "1000003"
+        ],
+        "childrenAccessions":
+        [
+            ""
+        ],
+        "highLevelDrugClasses":
+        [],
+        "synonyms":
+        [
+            "phenicol"
+        ]
+    },
+    "oxazolidinone antibiotic":
+    {
+        "label": "oxazolidinone antibiotic",
+        "accession": "3000079",
+        "description": "Oxazolidinones are a class of synthetic antibiotics discovered the the 1980s.  They inhibit protein synthesis by binding to domain V of the 23S rRNA of the 50S subunit of bacterial ribosomes.  Linezolid is the only member of this class currently in clinical use.",
+        "parentAccessions":
+        [
+            "1000003"
+        ],
+        "childrenAccessions":
+        [
+            "dummy"
+        ],
+        "highLevelDrugClasses":
+        [],
+        "synonyms":
+        []
+    },
+    "macrolide antibiotic":
+    {
+        "label": "macrolide antibiotic",
+        "accession": "0000000",
+        "description": "Macrolides are a group of drugs (typically antibiotics) that have a large macrocyclic lactone ring of 12-16 carbons to which one or more deoxy sugars, usually cladinose and desosamine, may be attached. Macrolides bind to the 50S-subunit of bacterial ribosomes, inhibiting the synthesis of vital proteins.",
+        "parentAccessions":
+        [
+            "1000003"
+        ],
+        "childrenAccessions":
+        [
+            "dummy"
+        ],
+        "highLevelDrugClasses":
+        [],
+        "synonyms":
+        []
+    },
+    "aminoglycoside antibiotic":
+    {
+        "label": "aminoglycoside antibiotic",
+        "accession": "0000016",
+        "description": "Aminoglycosides are a group of antibiotics that are mostly effective against Gram-negative bacteria. These molecules consist of aminated sugars attached to a dibasic cyclitol. Aminoglycosides work by binding to the bacterial 30S ribosomal subunit (some work by binding to the 50S subunit), inhibiting the translocation of the peptidyl-tRNA from the A-site to the P-site and also causing misreading of mRNA, leaving the bacterium unable to synthesize proteins vital to its growth.",
+        "parentAccessions":
+        [
+            "1000003"
+        ],
+        "childrenAccessions":
+        [
+            "dummy"
+        ],
+        "highLevelDrugClasses":
+        [],
+        "synonyms":
+        []
+    },
+    "diaminopyrimidine antibiotic":
+    {
+        "label": "diaminopyrimidine antibiotic",
+        "accession": "3000171",
+        "description": "Diaminopyrimidines are a class of organic compounds containing a pyrimidine ring substituted by two amine groups.  They are inhibitors of dihydrofolate reductase, an enzyme critical for DNA synthesis.",
+        "parentAccessions":
+        [
+            "1000003"
+        ],
+        "childrenAccessions":
+        [
+            "3000188",
+            "3000269",
+            "3000284",
+            "3000337",
+            "3000745",
+            "3001218"
+        ],
+        "highLevelDrugClasses":
+        [],
+        "synonyms":
+        [
+            "diaminopyrimidine"
+        ]
+    },
     "fosA5":
     {
         "label": "fosA5",
@@ -93,6 +210,45 @@
         "geneFamily": "fosfomycin thiol transferase",
         "drugClass": "aminoglycoside antibiotic;fluoroquinolone antibiotic;phosphonic acid antibiotic"
     },
+    "fluoroquinolone antibiotic":
+    {
+        "label": "fluoroquinolone antibiotic",
+        "accession": "0000001",
+        "description": "The fluoroquinolones are a family of synthetic broad-spectrum antibiotics that are 4-quinolone-3-carboxylates. These compounds interact with topoisomerase II (DNA gyrase) to disrupt bacterial DNA replication, damage DNA, and cause cell death.",
+        "parentAccessions":
+        [
+            "1000003"
+        ],
+        "childrenAccessions":
+        [
+            "dummy"
+        ],
+        "highLevelDrugClasses":
+        [],
+        "synonyms":
+        [
+            "fluoroquinolone",
+            "quinolone"
+        ]
+    },
+    "phosphonic acid antibiotic":
+    {
+        "label": "phosphonic acid antibiotic",
+        "accession": "3007149",
+        "description": "A group of antibiotics derived from phosphonic acids.",
+        "parentAccessions":
+        [
+            "1000003"
+        ],
+        "childrenAccessions":
+        [
+            "dummy"
+        ],
+        "highLevelDrugClasses":
+        [],
+        "synonyms":
+        []
+    },
     "norC":
     {
         "label": "norC",
@@ -119,7 +275,7 @@
         "geneFamily": "major facilitator superfamily (MFS) antibiotic efflux pump",
         "drugClass": "disinfecting agents and antiseptics;fluoroquinolone antibiotic"
     },
-    "smeB should not be found":
+    "smeB":
     {
         "label": "smeB",
         "accession": "3003052",
@@ -144,5 +300,65 @@
         "proteinAccession": "AAD51345.1",
         "geneFamily": "resistance-nodulation-cell division (RND) antibiotic efflux pump",
         "drugClass": "aminoglycoside antibiotic;cephalosporin;cephamycin;penam"
+    },
+    "cephalosporin":
+    {
+        "label": "cephalosporin",
+        "accession": "0000032",
+        "description": "Cephalosporins are a class of beta-lactam antibiotics, containing the beta-lactam ring fused with a dihydrothiazolidine ring. Together with cephamycins they belong to a sub-group called cephems. Cephalosporin are bactericidal, and act by inhibiting the synthesis of the peptidoglycan layer of bacterial cell walls. The peptidoglycan layer is important for cell wall structural integrity, especially in Gram-positive organisms.",
+        "parentAccessions":
+        [
+            "3000276"
+        ],
+        "childrenAccessions":
+        [
+            "dummy"
+        ],
+        "highLevelDrugClasses":
+        [
+            "beta-lactam antibiotic"
+        ],
+        "synonyms":
+        []
+    },
+    "cephamycin":
+    {
+        "label": "cephamycin",
+        "accession": "0000044",
+        "description": "Cephamycins are a group of beta-lactam antibiotics, very similar to cephalosporins. Together with cephalosporins, they form a sub-group of antibiotics known as cephems. Cephamycins are bactericidal, and act by inhibiting the synthesis of the peptidoglycan layer of bacterial cell walls. The peptidoglycan layer is important for cell wall structural integrity, especially in Gram-positive organisms. The 7-alpha-methoxy group increases resistance to beta-lactamases.",
+        "parentAccessions":
+        [
+            "3000276"
+        ],
+        "childrenAccessions":
+        [
+            "dummy"
+        ],
+        "highLevelDrugClasses":
+        [
+            "beta-lactam antibiotic"
+        ],
+        "synonyms":
+        []
+    },
+    "penam is missing for some reason":
+    {
+        "label": "penam",
+        "accession": "3000008",
+        "description": "Penams are a group of antibiotics derived from Penicillium fungi that share a skeleton beta-lactam moiety fused with a thiazolidine ring. This is the most defining feature of penicillins. Penicillin antibiotics are historically significant because they are the first drugs that were effective against many previously serious diseases such as syphilis and Staphylococcus infections. Penicillins are still widely used today, though many types of bacteria are now resistant. All penicillins are beta-lactam antibiotics in the penam sub-group, and are used in the treatment of bacterial infections caused by susceptible, usually Gram-positive, organisms.",
+        "parentAccessions":
+        [
+            "3000007"
+        ],
+        "childrenAccessions":
+        [
+            "dummy"
+        ],
+        "highLevelDrugClasses":
+        [
+            "beta-lactam antibiotic"
+        ],
+        "synonyms":
+        []
     }
 }
