@@ -283,7 +283,7 @@ task RunResultsPerSample {
             return([i for i in set_list if i == i])
 
         ontology = json.load(open("~{card_ontology}"))
-        def get_high_level_classes(drug_classes: list[str]):
+        def get_high_level_classes(drug_classes):
             high_level_classes = []
             for drug_class in drug_classes:
                 if drug_class in ontology:
