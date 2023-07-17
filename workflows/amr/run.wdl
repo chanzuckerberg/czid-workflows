@@ -662,6 +662,7 @@ task tsvToSam {
         python3 <<CODE
         import pandas as pd
         import pysam
+        import re
         import sys
 
         # NOTE: Contigs are indexed by ARO accession, not gene_id. This is because contigs and reads
@@ -692,7 +693,7 @@ task tsvToSam {
 
         # Format accessions to follow the pattern 'ARO:3000000'; Remove extraneous _* at the end of contig names
         df[COLUMN_ARO_CONTIG] = df[COLUMN_ARO_CONTIG].apply(lambda x: f'ARO:{int(x)}')
-        df[COLUMN_CONTIG_NAME] = df[COLUMN_CONTIG_NAME].apply(lambda x: x[:x.rindex("_")])
+        df[COLUMN_CONTIG_NAME] = df[COLUMN_CONTIG_NAME].apply(lambda x: re.sub(r'_\d*$', '', x))
 
         # Create BAM with mock reference lengths for the header. If contigss are found at all, have a mock accession
         # to make sure we can create the SAM file with no errors (web app will look for that file)
