@@ -283,12 +283,15 @@ task RunResultsPerSample {
             return([i for i in set_list if i == i])
 
         ontology = json.load(open("~{card_ontology}"))
-        def get_high_level_classes(gene_name):
-            if gene_name not in ontology:
-                return []
-            if 'highLevelDrugClasses' not in ontology[gene_name]:
-                return []
-            return ontology[gene_name]['highLevelDrugClasses']
+        def get_high_level_classes(drug_class_string_list):
+            drug_classes = set()
+            for drug_class_string in drug_class_string_list:
+                drug_classes |= set(drug_class_string.split('; '))
+            high_level_classes = set()
+            for drug_class in drug_classes:
+                if drug_class in ontology:
+                    high_level_classes |= set(ontology[drug_class].get('highLevelDrugClasses', []))
+            return high_level_classes
 
         this_list = list(set(df['ARO_overall']))
         result_df = {}
@@ -305,7 +308,7 @@ task RunResultsPerSample {
             dc = remove_na(set(sub_df['Drug Class_contig_amr']).union(set(sub_df['Drug Class_kma_amr'])))
             result['drug_class'] = ';'.join(dc) if len(dc) > 0 else None
 
-            hldc = get_high_level_classes(index)
+            hldc = get_high_level_classes(dc)
             # Join classes with a semicolon and a space since we have a python list instead of a nice pandas union
             result['high_level_drug_class'] = '; '.join(hldc) if len(hldc) > 0 else None
 
