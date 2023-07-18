@@ -283,9 +283,9 @@ task RunResultsPerSample {
             return([i for i in set_list if i == i])
 
         ontology = json.load(open("~{card_ontology}"))
-        def get_high_level_classes(drug_classes_union):
+        def get_high_level_classes(drug_class_string_list):
             drug_classes = set()
-            for drug_class_string in drug_classes_union:
+            for drug_class_string in drug_class_string_list:
                 drug_classes |= set(drug_class_string.split('; '))
             high_level_classes = set()
             for drug_class in drug_classes:
