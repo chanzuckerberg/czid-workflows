@@ -10,18 +10,24 @@ workflow index_generation {
         String? s3_dir
         File? previous_lineages
         String docker_image_id
+        File? nt_in
+        File? nr_in
     }
 
-    call DownloadNR {
-        input:
-        ncbi_server = ncbi_server,
-        docker_image_id = docker_image_id
-    }
+    if (!defined(nr_in)) {
+        call DownloadNR {
+            input:
+            ncbi_server = ncbi_server,
+            docker_image_id = docker_image_id
+        }
 
-    call DownloadNT {
-        input:
-        ncbi_server = ncbi_server,
-        docker_image_id = docker_image_id
+    }
+    if (!defined(nt_in)) {
+        call DownloadNT {
+            input:
+            ncbi_server = ncbi_server,
+            docker_image_id = docker_image_id
+        }
     }
 
     call DownloadAccession2Taxid {
@@ -38,27 +44,27 @@ workflow index_generation {
 
     call GenerateIndexAccessions {
         input:
-        nr = DownloadNR.nr,
-        nt = DownloadNT.nt,
+        nr = select_first([nr_in, DownloadNR.nr]),
+        nt = select_first([nt_in, DownloadNT.nt]),
         accession2taxid = DownloadAccession2Taxid.accession2taxid,
         docker_image_id = docker_image_id
     }
 
     call GenerateNTDB {
         input:
-        nt = DownloadNT.nt,
+        nt = select_first([nt_in, DownloadNT.nt]),
         docker_image_id = docker_image_id
     }
 
     call GenerateNRDB {
         input:
-        nr = DownloadNR.nr,
+        nr = select_first([nr_in, DownloadNR.nr]),
         docker_image_id = docker_image_id
     }
 
     call GenerateIndexDiamond {
         input:
-        nr = DownloadNR.nr,
+        nr = select_first([nr_in, DownloadNR.nr]),
         docker_image_id = docker_image_id
     }
 
@@ -72,7 +78,7 @@ workflow index_generation {
     
     call GenerateIndexMinimap2 {
         input:
-        nt = DownloadNT.nt,
+        nt = select_first([nt_in, DownloadNT.nt]),
         docker_image_id = docker_image_id
     }
 
@@ -90,8 +96,8 @@ workflow index_generation {
 
 
     output {
-        File nr = DownloadNR.nr
-        File nt = DownloadNT.nt
+        File? nr = DownloadNR.nr
+        File? nt = DownloadNT.nt
         File accession2taxid_db = GenerateIndexAccessions.accession2taxid_db
         File nt_loc_db = GenerateNTDB.nt_loc_db
         File nt_info_db = GenerateNTDB.nt_info_db
