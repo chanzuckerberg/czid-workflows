@@ -290,7 +290,7 @@ task RunResultsPerSample {
             high_level_classes = set()
             for drug_class in drug_classes:
                 if drug_class in ontology:
-                    high_level_classes |= set(ontology[drug_class]['highLevelDrugClasses'])
+                    high_level_classes |= set(ontology[drug_class].get('highLevelDrugClasses', []))
             return high_level_classes
 
         this_list = list(set(df['ARO_overall']))
