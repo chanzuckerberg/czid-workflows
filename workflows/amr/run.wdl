@@ -621,21 +621,25 @@ task MakeGeneCoverage {
     agg_res = df.groupby(["ARO", "Model_ID"]).agg(lambda x: list(x))
 
     gene_coverage = []
+    # We are measuring gene coverage by keeping track of the coordinate ranges
+    # of the reference genome that are covered by the contigs.
+    # Here, ind is a tuple: (ARO, Model_ID)
     for ind, row, in agg_res.iterrows():
-      max_end = -1
-      gene_coverage_bps = 0
-      for start, end, in sorted(zip(row["Hit_Start"], row["Hit_End"]), key=lambda x: x[0]):
-        gene_coverage_bps += max(0, # if end-max(max_end, start) is negative
-                      # segment is contained in a previous segment, so don't add
-                     end - max(max_end, start) # if max_end > start, don't double count the already added portion of the gene
-                    )
-        max_end = max(max_end, end)
-      gene_coverage.append({
-        "ID": ind[0],
-        "gene_coverage_bps": gene_coverage_bps,
-        "db_seq_length": db_seq_length[ind[1]],
-        "gene_coverage_perc": np.round((gene_coverage_bps/db_seq_length[ind[1]])*100, 4)
-      })
+        covered_coords = set()
+        for start, end in zip(row["Hit_Start"], row["Hit_End"]):
+            contig_length = end - start
+            # Get a positive (1) or negative (-1) step for our range, depending on if
+            # we have a forward or reverse contig.
+            sign = int(contig_length / abs(contig_length))
+            covered_coords = covered_coords.union(range(start, end, sign))
+        gene_coverage_bps = len(covered_coords)
+        gene_coverage.append({
+            "ID": ind[0],
+            "gene_coverage_bps": gene_coverage_bps,
+            "db_seq_length": db_seq_length[ind[1]],
+            "gene_coverage_perc": np.round((gene_coverage_bps/db_seq_length[ind[1]])*100, 4)
+        })
+
     if gene_coverage:
         gene_coverage_df = pd.DataFrame(gene_coverage)
         gene_coverage_df.to_csv("gene_coverage.tsv", index=None, sep="\t")
