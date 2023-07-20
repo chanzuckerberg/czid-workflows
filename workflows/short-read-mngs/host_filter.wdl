@@ -516,7 +516,7 @@ task kallisto {
       **kallisto RNA quantification**
 
       Quantifies host transcripts using [kallisto](https://pachterlab.github.io/kallisto/about).
-      The host transcript sequences are sourced from Ensembl, along with
+      The host transcript sequences are sourced from GENCODE, along with
       [ERCC control sequences](https://www.nist.gov/programs-projects/external-rna-controls-consortium).
       Not all CZ ID host species have transcripts indexed; for those without, kallisto is run using ERCC
       sequences only.
