@@ -16,7 +16,7 @@ fn test_fasta_compress() {
             Path::new("tests/test_data/accession2taxid/pdb.accession2taxid.subset"),
         ];
 
-        let sorted_seq = format!("tests/test_data/simulated_seqs/all_simulated_seqs_{}_sorted.fasta", pathogen);
+        let sorted_seq = format!("tests/test_data/simulated_seqs/all_simulated_seqs_{}_sorted_subsample.fasta", pathogen);
         let expected_compressed = format!("tests/test_data/expected_compression_results/nt_compressed_0.6_{}.fa", pathogen);
 
         fasta_compress(
@@ -31,6 +31,7 @@ fn test_fasta_compress() {
             1000,
             1000
         );
+
         assert!(util::are_files_equal("tests/test_data/test_output.fasta", &expected_compressed));
     }
 

@@ -17,7 +17,7 @@ fn test_split_accessions_by_taxis() {
             Path::new("tests/test_data/accession2taxid/nucl_wgs.accession2taxid.subset"),
             Path::new("tests/test_data/accession2taxid/pdb.accession2taxid.subset"),
         ];
-        let sorted_seq = format!("tests/test_data/simulated_seqs/all_simulated_seqs_{}_sorted.fasta", pathogen);
+        let sorted_seq = format!("tests/test_data/simulated_seqs/all_simulated_seqs_{}_sorted_subsample.fasta", pathogen);
         let taxids_to_drop: Vec<u64> = vec![9606];
         let taxid_dir = ncbi_compress::split_accessions_by_taxid(
             sorted_seq,
@@ -29,6 +29,7 @@ fn test_split_accessions_by_taxis() {
             let path = entry.path();
             let input_fasta_path = path.to_str().unwrap();
             let expected = format!("tests/test_data/expected_split_accessions_by_taxid/test_file_{}_{}.txt", i, pathogen);
+            // util::read_and_write_to_file(path.to_str().unwrap(), &expected)
             assert!(util::are_files_equal(input_fasta_path, &expected))
         }
     }
