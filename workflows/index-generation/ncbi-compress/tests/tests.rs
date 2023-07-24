@@ -29,7 +29,6 @@ fn test_split_accessions_by_taxis() {
             let path = entry.path();
             let input_fasta_path = path.to_str().unwrap();
             let expected = format!("tests/test_data/expected_split_accessions_by_taxid/test_file_{}_{}.txt", i, pathogen);
-            // util::read_and_write_to_file(path.to_str().unwrap(), &expected)
             assert!(util::are_files_equal(input_fasta_path, &expected))
         }
     }
