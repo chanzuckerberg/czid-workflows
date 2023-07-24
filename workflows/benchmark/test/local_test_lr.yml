@@ -1,0 +1,26 @@
+taxon_counts_run_1: s3://idseq-samples-staging/samples/921/26097/30918/long-read-mngs-0/refined_taxon_counts_with_dcr.json
+contig_summary_run_1: s3://idseq-samples-staging/samples/921/26097/30918/long-read-mngs-0/combined_contig_summary.json
+contig_fasta_run_1: s3://idseq-samples-staging/samples/921/26097/30918/long-read-mngs-0/contigs.fasta
+step_counts_run_1: 
+  - s3://idseq-samples-staging/samples/921/26097/30918/long-read-mngs-0/original_reads.count
+  - s3://idseq-samples-staging/samples/921/26097/30918/long-read-mngs-0/host_filtered_reads.count
+  - s3://idseq-samples-staging/samples/921/26097/30918/long-read-mngs-0/human_filtered_reads.count
+  - s3://idseq-samples-staging/samples/921/26097/30918/long-read-mngs-0/quality_filtered_reads.count
+  - s3://idseq-samples-staging/samples/921/26097/30918/long-read-mngs-0/validated_reads.count
+  - s3://idseq-samples-staging/samples/921/26097/30918/long-read-mngs-0/unmapped_reads.count
+  - s3://idseq-samples-staging/samples/921/26097/30918/long-read-mngs-0/subsampled_reads.count
+
+
+taxon_counts_run_2: s3://idseq-samples-staging/samples/965/26022/30877/long-read-mngs-0/refined_taxon_counts_with_dcr.json
+contig_summary_run_2: s3://idseq-samples-staging/samples/965/26022/30877/long-read-mngs-0/combined_contig_summary.json
+contig_fasta_run_2: s3://idseq-samples-staging/samples/965/26022/30877/long-read-mngs-0/contigs.fasta
+step_counts_run_2: 
+  - s3://idseq-samples-staging/samples/965/26022/30877/long-read-mngs-0/original_reads.count
+  - s3://idseq-samples-staging/samples/965/26022/30877/long-read-mngs-0/host_filtered_reads.count
+  - s3://idseq-samples-staging/samples/965/26022/30877/long-read-mngs-0/human_filtered_reads.count
+  - s3://idseq-samples-staging/samples/965/26022/30877/long-read-mngs-0/quality_filtered_reads.count
+  - s3://idseq-samples-staging/samples/965/26022/30877/long-read-mngs-0/validated_reads.count
+  - s3://idseq-samples-staging/samples/965/26022/30877/long-read-mngs-0/unmapped_reads.count
+  - s3://idseq-samples-staging/samples/965/26022/30877/long-read-mngs-0/subsampled_reads.count
+
+workflow_type: long-read-mngs
