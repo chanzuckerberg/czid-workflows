@@ -428,7 +428,10 @@ task kallisto {
     Int cpu = 16
   }
   Boolean paired = defined(fastp2_fastq)
-  # TODO: input fragment length parameters for non-paired-end (l = average, s = std dev)
+  # TODO: It would be better to have fragment length params for non-paired-end
+  # (l = average, s = std dev) get set dynamically based on the input data.
+  # See this GitHub comment for more background info:
+  # https://github.com/chanzuckerberg/czid-workflows/pull/282#issuecomment-1647494061
   String kallisto_invocation = "/kallisto/kallisto quant"
       + " -i '${kallisto_idx}' -o $(pwd) --plaintext ${if (paired) then '' else '--single -l 200 -s 20'} ${kallisto_options}"
       + " '~{fastp1_fastq}'" + if (defined(fastp2_fastq)) then " '~{fastp2_fastq}'" else ""
