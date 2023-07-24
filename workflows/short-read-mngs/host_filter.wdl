@@ -428,7 +428,10 @@ task kallisto {
     Int cpu = 16
   }
   Boolean paired = defined(fastp2_fastq)
-  # TODO: input fragment length parameters for non-paired-end (l = average, s = std dev)
+  # TODO: It would be better to have fragment length params for non-paired-end
+  # (l = average, s = std dev) get set dynamically based on the input data.
+  # See this GitHub comment for more background info:
+  # https://github.com/chanzuckerberg/czid-workflows/pull/282#issuecomment-1647494061
   String kallisto_invocation = "/kallisto/kallisto quant"
       + " -i '${kallisto_idx}' -o $(pwd) --plaintext ${if (paired) then '' else '--single -l 200 -s 20'} ${kallisto_options}"
       + " '~{fastp1_fastq}'" + if (defined(fastp2_fastq)) then " '~{fastp2_fastq}'" else ""
@@ -450,36 +453,62 @@ task kallisto {
 
     # If we've been provided the GTF, then roll up the transcript abundance estimates by gene.
     if [[ -n '~{gtf_gz}' ]]; then
-      python3 - reads_per_transcript.kallisto.tsv '~{gtf_gz}' << 'EOF'
-    # Given kallisto output tsv based on index of Ensembl transcripts FASTA, and matching
-    # Ensembl GTF, report the total est_counts and tpm for each gene (sum over all transcripts
-    # of each gene).
+      >&2 python3 - reads_per_transcript.kallisto.tsv '~{gtf_gz}' << 'EOF'
+    # Given kallisto output tsv based on index of GENCODE transcripts FASTA, and matching
+    # GENCODE GTF, report the total est_counts and tpm for each gene (sum over all transcripts
+    # of each gene). Also outputs reads for some rRNA, although no summing for that.
     import sys
+    import re
     import pandas as pd
     import gtfparse
 
+    # We match kallisto reads to the GTF file via ENST ids. IDs from kallisto
+    # output have many IDs per row, concatenated by pipe chars. ENST seems to
+    # always be at start, but might show anywhere? Regex here will extract ENST.
+    ENST_ID_PATTERN = re.compile(r"(^|\|)(ENST.*?)(\||$)")  # group 2 is ENST id
+    # ERCC also shows up too, we do not worry about extracting ENST ids from those.
+    ERCC_PREFIX = "ERCC"
+    # We also have rRNA with id U13369.1. Possible we might add more later on,
+    # so we recognize by pattern instead of just doing an exact match.
+    RRNA_ID_PATTERN = r"^U\d+"
+    def extract_enst_id(target_id):
+        enst_match = ENST_ID_PATTERN.search(target_id)
+        try:
+            return enst_match.group(2)
+        except AttributeError:  # no match found, so no ENST id
+            # If it is another known id pattern, no need to warn about it.
+            if not target_id.startswith(ERCC_PREFIX) and not re.match(RRNA_ID_PATTERN, target_id):
+                print(f"Format of ID not recognized! target_id: {target_id}")
+            return "MISSING_ENST_ID"  # we do not use this; just for dev debugging
+
     kallisto_df = pd.read_csv(sys.argv[1], sep="\t")
+    kallisto_df["enst_id"] = kallisto_df["target_id"].apply(extract_enst_id)
 
     gtf_df = gtfparse.read_gtf(sys.argv[2])
+    # When GTF `feature` is "transcript", `transcript_id` are all ENST ids.
     tx_df = gtf_df[gtf_df["feature"] == "transcript"][
-        ["transcript_id", "transcript_version", "gene_id"]
+        ["transcript_id", "gene_id"]
     ]
-    # kallisto target_id is a versioned transcript ID e.g. "ENST00000390446.3", while the GTF
-    # breaks out: transcript_id "ENST00000390446"; transcript_version "3";
-    # synthesize a column with the versioned transcript ID for merging.
-    tx_df = tx_df.assign(
-        transcript_id_version=tx_df["transcript_id"] + "." + tx_df["transcript_version"]
-    )
 
     merged_df = pd.merge(
-        kallisto_df[["target_id", "est_counts", "tpm"]],
-        tx_df[["transcript_id_version", "gene_id"]],
-        left_on="target_id",
-        right_on="transcript_id_version",
+        kallisto_df[["enst_id", "est_counts", "tpm"]],
+        tx_df,
+        left_on="enst_id",
+        right_on="transcript_id",
     )
 
     gene_abundance = merged_df.groupby("gene_id").sum(numeric_only=True)
-    gene_abundance.to_csv("reads_per_gene.kallisto.tsv", sep="\t")
+
+    # For the rRNA counts, they leapfrog the gene rollup and just get written
+    # directly to the end of the output. We have to `set_index` to gene_id
+    # below because the `groupby` above on merged_df made gene_id the index,
+    # so we have to match to that before merging together and outputting.
+    rrna_abundance = kallisto_df[kallisto_df["target_id"].str.match(RRNA_ID_PATTERN)][
+        ["target_id", "est_counts", "tpm"]
+    ].rename(columns={"target_id": "gene_id"}).set_index("gene_id")
+
+    result = pd.concat([gene_abundance, rrna_abundance])
+    result.to_csv("reads_per_gene.kallisto.tsv", sep="\t")
     EOF
     fi
 
@@ -490,7 +519,7 @@ task kallisto {
       **kallisto RNA quantification**
 
       Quantifies host transcripts using [kallisto](https://pachterlab.github.io/kallisto/about).
-      The host transcript sequences are sourced from Ensembl, along with
+      The host transcript sequences are sourced from GENCODE, along with
       [ERCC control sequences](https://www.nist.gov/programs-projects/external-rna-controls-consortium).
       Not all CZ ID host species have transcripts indexed; for those without, kallisto is run using ERCC
       sequences only.
