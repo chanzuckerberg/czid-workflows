@@ -244,7 +244,6 @@ pub mod ncbi_compress {
             } else {
                 continue;
             };
-            println!("taxid: {}", taxid);
 
             let file_path = taxid_dir.path().join(format!("{}.fasta", taxid));
             let file = fs::OpenOptions::new()

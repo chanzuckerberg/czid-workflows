@@ -5,9 +5,7 @@ pub mod util {
 
     pub fn are_files_equal(file_path1: &str, file_path2: &str) -> bool {
         if let Ok(contents1) = fs::read(file_path1) {
-            println!("contents1");
             if let Ok(contents2) = fs::read(file_path2) {
-                println!("contents2");
                 return contents1 == contents2;
             }
         }

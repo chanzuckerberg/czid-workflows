@@ -1,7 +1,6 @@
 use std::path::Path;
 use std::fs;
 
-use bio::io::fasta;
 use tempfile::NamedTempFile;
 
 use ::ncbi_compress::ncbi_compress::ncbi_compress;
