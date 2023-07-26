@@ -1,12 +1,7 @@
-use std::io::Write;
-
-use chrono::Local;
 use clap::Parser;
-use env_logger::Builder;
-use log::LevelFilter;
 
 use ncbi_compress::ncbi_compress::ncbi_compress::fasta_compress;
-// pub mod ncbi_compress;
+use ncbi_compress::logging::logging;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -62,18 +57,8 @@ struct Args {
 
 
 pub fn main() {
-    Builder::new()
-        .format(|buf, record| {
-            writeln!(
-                buf,
-                "{} {}: {}",
-                record.level(),
-                Local::now().format("%Y-%m-%d %H:%M:%S%.3f"),
-                record.args()
-            )
-        })
-        .filter(None, LevelFilter::Info)
-        .init();
+
+    logging::init_stdout_logging();
 
     let args = Args::parse();
 

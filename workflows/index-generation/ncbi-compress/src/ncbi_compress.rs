@@ -12,6 +12,8 @@ pub mod ncbi_compress {
     use tempdir::TempDir;
     use trie_rs::{Trie, TrieBuilder};
 
+    use crate::logging::logging;
+
         /// A trie that stores u64 values
     struct TrieStore {
         trie: Trie<u8>,
@@ -289,6 +291,8 @@ pub mod ncbi_compress {
                     hash.add_sequence(record.seq(), true).unwrap();
                     // Run an initial similarity check here against the full tree, this is slow so we can parallelize it
                     if tree.contains(&hash, similarity_threshold).unwrap() {
+                        logging::write_to_file(format!("record: {}", record));
+                        // log when tree contains hash
                         None
                     } else {
                         Some((record, hash))
@@ -296,14 +300,13 @@ pub mod ncbi_compress {
                 })
                 .collect::<Vec<_>>();
 
-            let mut tmp = Vec::with_capacity(chunk_signatures.len() / 2);
+            let mut tmp = Vec::with_capacity(chunk_signatures.len() / 2); // why is this /2?
             for (record, hash) in chunk_signatures {
-                accession_count.add_assign(1);
+                accession_count.add_assign(1); // += 1, used for logging
                 // Perform a faster similarity check over just this chunk because we may have similarities within a chunk
                 let similar = tmp
                     .par_iter()
                     .any(|other| containment(&hash, other).unwrap() >= similarity_threshold);
-
                 if !similar {
                     unique_accession_count.add_assign(1);
                     tmp.push(hash);
@@ -316,6 +319,8 @@ pub mod ncbi_compress {
                             unique_accession_count
                         );
                     }
+                } else {
+                    logging::write_to_file(format!("Found similar accession record: {}", record));
                 }
             }
             for hash in tmp {
