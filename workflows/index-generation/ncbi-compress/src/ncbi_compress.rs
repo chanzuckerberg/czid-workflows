@@ -129,19 +129,21 @@ pub mod ncbi_compress {
 
             let mut to_visit = vec![0];
             while !to_visit.is_empty() {
+                // Check if any of the nodes in the to_visit list are similar enough
                 let found = to_visit.par_iter().any(|node_idx| {
                     let node = self.nodes.get(*node_idx).unwrap();
                     containment(hash, &node.own).unwrap() >= similarity_threshold
                 });
-
+                // If we found a similar node, we can stop searching
                 if found {
                     return Ok(true);
                 }
-
+                // Otherwise, we need to search the children of the nodes in the to_visit list
                 to_visit = to_visit
                     .par_iter()
                     .flat_map(|node_idx| {
                         let node = self.nodes.get(*node_idx).unwrap();
+                        // If the children are similar enough, we need to search them
                         if containment(hash, &node.children_aggregate).unwrap() >= similarity_threshold
                         {
                             self.child_idxes(*node_idx)
@@ -151,6 +153,7 @@ pub mod ncbi_compress {
                     })
                     .collect();
             }
+            // we didn't find any similar nodes in the tree
             Ok(false)
         }
     }
@@ -169,9 +172,12 @@ pub mod ncbi_compress {
         mapping_file_path: Vec<Q>,
         taxids_to_drop: &Vec<u64>,
     ) -> TempDir {
+        // create a temp dir containing one file per taxid that input fasta accessions are sorted into
+        // based on taxid in the mapping files (input fasta does not have taxid in header)
         log::info!("Creating accession to taxid mapping");
         let taxid_dir = TempDir::new("accessions_by_taxid").unwrap();
         let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
+        // Build a trie of the accessions in the input fasta
         let mut builder = TrieBuilder::new();
         reader.records().enumerate().for_each(|(i, result)| {
             let record = result.unwrap();
@@ -186,6 +192,7 @@ pub mod ncbi_compress {
         let accessions_trie = builder.build();
         log::info!(" Finished building accession trie");
 
+        // Build a trie of the accessions in the mapping files
         let mut builder = TrieStoreBuilder::new();
         mapping_file_path.iter().for_each(|mapping_file_path| {
             log::info!(" Processing mapping file {:?}", mapping_file_path);
@@ -203,7 +210,7 @@ pub mod ncbi_compress {
                 let accession = &record[0];
                 let accession_no_version = remove_accession_version(accession);
 
-                // Only output mappings if the accession is in the source files
+                // Only output mappings if the accession is in the source fasta file
                 if !accessions_trie.exact_match(accession_no_version) {
                     return;
                 }
@@ -234,14 +241,15 @@ pub mod ncbi_compress {
 
         log::info!("Splitting accessions by taxid");
         let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
+        // Split the input fasta accessions into one file per taxid
         for (i, record) in reader.records().enumerate() {
             if i % 10_000 == 0 {
                 log::info!("  Split {} accessions", i);
             }
             let record = record.unwrap();
             let accession_id = record.id().split_whitespace().next().unwrap();
-            let acccession_no_version = remove_accession_version(accession_id);
-            let taxid = if let Some(taxid) = accession_to_taxid.get(acccession_no_version) {
+            let accession_no_version = remove_accession_version(accession_id);
+            let taxid = if let Some(taxid) = accession_to_taxid.get(accession_no_version) {
                 taxid
             } else {
                 continue;
@@ -273,6 +281,7 @@ pub mod ncbi_compress {
         accession_count: &mut u64,
         unique_accession_count: &mut u64,
     ) {
+        // take in a fasta file and output a fasta file with only unique accessions (based on similarity threshold)
         let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
         let mut tree = MinHashTree::new(branch_factor);
 
@@ -291,8 +300,8 @@ pub mod ncbi_compress {
                     hash.add_sequence(record.seq(), true).unwrap();
                     // Run an initial similarity check here against the full tree, this is slow so we can parallelize it
                     if tree.contains(&hash, similarity_threshold).unwrap() {
-                        logging::write_to_file(format!("record: {}", record));
                         // log when tree contains hash
+                        logging::write_to_file(format!("record: {}", record));
                         None
                     } else {
                         Some((record, hash))
