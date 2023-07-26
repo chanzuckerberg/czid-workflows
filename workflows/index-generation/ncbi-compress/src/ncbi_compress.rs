@@ -58,6 +58,7 @@ pub mod ncbi_compress {
     struct MinHashTreeNode {
         own: KmerMinHash,
         children_aggregate: KmerMinHash,
+        accession: String,
     }
 
     struct MinHashTree {
@@ -98,10 +99,11 @@ pub mod ncbi_compress {
                 .merge(&right[0].children_aggregate)
         }
 
-        pub fn insert(&mut self, hash: KmerMinHash) -> Result<(), SourmashError> {
+        pub fn insert(&mut self, hash: KmerMinHash, accession: &str) -> Result<(), SourmashError> {
             let node = MinHashTreeNode {
                 own: hash.clone(),
                 children_aggregate: hash.clone(),
+                accession: accession.to_string(),
             };
             let mut current_idx = self.nodes.len();
             self.nodes.push(node);
@@ -304,21 +306,31 @@ pub mod ncbi_compress {
                         logging::write_to_file(format!("record: {}", record));
                         None
                     } else {
-                        Some((record, hash))
+
+                        Some((hash, record))
                     }
                 })
                 .collect::<Vec<_>>();
 
-            let mut tmp = Vec::with_capacity(chunk_signatures.len() / 2); // why is this /2?
-            for (record, hash) in chunk_signatures {
+            let mut tmp: Vec<(KmerMinHash, &str)> = Vec::with_capacity(chunk_signatures.len() / 2); // why is this /2?
+            for (hash, record) in chunk_signatures {
+                let accession_id = record.id().split_whitespace().next().unwrap();
                 accession_count.add_assign(1); // += 1, used for logging
                 // Perform a faster similarity check over just this chunk because we may have similarities within a chunk
-                let similar = tmp
+                let similar_seqs = tmp
                     .par_iter()
-                    .any(|other| containment(&hash, other).unwrap() >= similarity_threshold);
+                    .filter_map(|(other, accession_id)| {
+                        if containment(&hash, &other).unwrap() >= similarity_threshold {
+                            Some(accession_id.to_string())
+                        } else {
+                            None
+                        }
+                    }).clone().collect::<Vec<_>>();
+
+                let similar = !similar_seqs.is_empty();
                 if !similar {
                     unique_accession_count.add_assign(1);
-                    tmp.push(hash);
+                    tmp.push((hash, accession_id));
                     writer.write_record(record).unwrap();
 
                     if *unique_accession_count % 10_000 == 0 {
@@ -329,11 +341,11 @@ pub mod ncbi_compress {
                         );
                     }
                 } else {
-                    logging::write_to_file(format!("Found similar accession record: {}", record));
+                    logging::write_to_file(format!("accession_id {} is being representing by {} \n",accession_id, similar_seqs.join(", ")));
                 }
             }
-            for hash in tmp {
-                tree.insert(hash).unwrap();
+            for (hash, accession_id) in tmp {
+                tree.insert(hash, accession_id).unwrap();
             }
             chunk = records_iter
                 .borrow_mut()
