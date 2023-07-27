@@ -2,7 +2,7 @@ version 1.1
 
 workflow amr {
     input {
-        File execution_array  # json file with workflow information
+        File backfill_data  # json file with workflow information
         String docker_image_id
         # Dummy values - required by SFN interface
         String s3_wd_uri = ""
@@ -10,20 +10,20 @@ workflow amr {
 
     call backfillContigsBam { 
         input: 
-        execution_array = execution_array
+        backfill_data = backfill_data
         docker_image_id = docker_image_id
     }
 }
 
 task backfillContigsBam {
     input {
-        File execution_array
+        File backfill_data
         String docker_image_id
     }
 
     command <<<
         set -euxo pipefail
-        
+        python3 backfill_contigs_bam.py "~{backfill_data}"
     >>>
 
     output {
