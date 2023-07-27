@@ -1,7 +1,5 @@
 use std::path::Path;
-use std::fs;
 use std::io::Read;
-use std::io::Write;
 
 use tempfile::NamedTempFile;
 
@@ -23,7 +21,7 @@ fn test_fasta_compress() {
 
         let sorted_seq = format!("tests/test_data/simulated_seqs/all_simulated_seqs_{}_sorted_subsample.fasta", pathogen);
         let expected_compressed = format!("tests/test_data/expected_compression_results/nt_compressed_0.6_{}.fa", pathogen);
-        let mut temp_file = NamedTempFile::new().unwrap();
+        let temp_file = NamedTempFile::new().unwrap();
         let temp_file_path = temp_file.path();
 
         fasta_compress(
@@ -44,7 +42,7 @@ fn test_fasta_compress() {
         file.read_to_string(&mut file_content)
             .expect("Failed to read from file");
 
-        let mut expected_contents = util::read_contents(&expected_compressed);
+        let expected_contents = util::read_contents(&expected_compressed);
         assert!(file_content == expected_contents);
     }
 

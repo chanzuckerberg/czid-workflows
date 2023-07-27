@@ -124,21 +124,25 @@ pub mod ncbi_compress {
             &self,
             hash: &KmerMinHash,
             similarity_threshold: f64,
-        ) -> Result<bool, SourmashError> {
+        ) -> Result<Option<Vec<String>>, SourmashError> {
             if self.nodes.is_empty() {
-                return Ok(false);
+                return Ok(None);
             }
 
             let mut to_visit = vec![0];
             while !to_visit.is_empty() {
                 // Check if any of the nodes in the to_visit list are similar enough
-                let found = to_visit.par_iter().any(|node_idx| {
+                let found_accession = to_visit.par_iter().filter_map(|node_idx| {
                     let node = self.nodes.get(*node_idx).unwrap();
-                    containment(hash, &node.own).unwrap() >= similarity_threshold
-                });
+                    if containment(hash, &node.own).unwrap() >= similarity_threshold {
+                        Some(node.accession.clone())
+                    } else {
+                        None
+                    }
+                }).collect::<Vec<_>>();
                 // If we found a similar node, we can stop searching
-                if found {
-                    return Ok(true);
+                if !found_accession.is_empty() {
+                    return Ok(Some(found_accession));
                 }
                 // Otherwise, we need to search the children of the nodes in the to_visit list
                 to_visit = to_visit
@@ -156,7 +160,7 @@ pub mod ncbi_compress {
                     .collect();
             }
             // we didn't find any similar nodes in the tree
-            Ok(false)
+            Ok(None)
         }
     }
 
@@ -301,13 +305,23 @@ pub mod ncbi_compress {
                         KmerMinHash::new(scaled, k, HashFunctions::murmur64_DNA, seed, false, 0);
                     hash.add_sequence(record.seq(), true).unwrap();
                     // Run an initial similarity check here against the full tree, this is slow so we can parallelize it
-                    if tree.contains(&hash, similarity_threshold).unwrap() {
-                        // log when tree contains hash
-                        logging::write_to_file(format!("record: {}", record));
-                        None
-                    } else {
-
-                        Some((hash, record))
+                    let contained_in_tree = tree.contains(&hash, similarity_threshold);
+                    match contained_in_tree {
+                        Ok(None) => {
+                            // If the tree doesn't contain the hash, we need to insert it
+                            Some((hash, record))
+                        }
+                        Ok(Some(found_accessions)) => {
+                            // log when tree already contains hash
+                            let accession_id = record.id().split_whitespace().next().unwrap();
+                            logging::write_to_file(format!("accession_id {} found similar sequence in the tree and is being represented by : {}", accession_id, found_accessions.join(",")));
+                            None
+                        }
+                        Err(e) => {
+                            // If there was an error, we need to log it and continue
+                            log::error!("Error checking similarity: {}", e);
+                            None
+                        }
                     }
                 })
                 .collect::<Vec<_>>();
@@ -325,7 +339,7 @@ pub mod ncbi_compress {
                         } else {
                             None
                         }
-                    }).clone().collect::<Vec<_>>();
+                    }).collect::<Vec<_>>();
 
                 let similar = !similar_seqs.is_empty();
                 if !similar {
@@ -341,7 +355,9 @@ pub mod ncbi_compress {
                         );
                     }
                 } else {
-                    logging::write_to_file(format!("accession_id {} is being representing by {} \n",accession_id, similar_seqs.join(", ")));
+                    logging::write_to_file(
+                        format!("accession_id {} is being representing by {} \n",accession_id, similar_seqs.join(", "))
+                    );
                 }
             }
             for (hash, accession_id) in tmp {

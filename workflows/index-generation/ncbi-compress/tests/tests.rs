@@ -1,7 +1,7 @@
 use std::path::Path;
 use std::fs;
 
-use tempfile::NamedTempFile;
+// use tempfile::NamedTempFile;
 
 use ::ncbi_compress::ncbi_compress::ncbi_compress;
 use ::ncbi_compress::util::util;

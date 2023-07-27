@@ -29,7 +29,7 @@ pub mod util {
     }
 
     pub fn read_and_write_to_file(input_fasta_path: &str, output_fasta_path: &str) -> () {
-            let mut file_content = read_contents(input_fasta_path);
+            let file_content = read_contents(input_fasta_path);
             println!("{}", format!("writing to file: {}", output_fasta_path));
             let _ = write_to_file(&output_fasta_path, &file_content);
     }
