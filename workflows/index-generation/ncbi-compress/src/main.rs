@@ -16,7 +16,7 @@ struct Args {
 
     /// Path to the accession to taxid csv file
     /// At least one required
-    #[arg(short, long, required = true)]
+    #[arg(short, long)]
     accession_mapping_files: Vec<String>,
 
     /// Taxids to drop from the output
@@ -53,6 +53,11 @@ struct Args {
     /// (default: 1000)
     #[arg(short, long, default_value = "1000")]
     branch_factor: usize,
+
+    /// Skip splitting the input fasta by taxid
+    /// (default: false)
+    #[arg(long, default_value = "false")]
+    skip_split_by_taxid: bool,
 }
 
 
@@ -73,5 +78,6 @@ pub fn main() {
         args.similarity_threshold,
         args.chunk_size,
         args.branch_factor,
+        args.skip_split_by_taxid
     );
 }

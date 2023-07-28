@@ -13,6 +13,7 @@ pub mod ncbi_compress {
     use trie_rs::{Trie, TrieBuilder};
 
     use crate::logging::logging;
+    use crate::util::util;
 
         /// A trie that stores u64 values
     struct TrieStore {
@@ -314,7 +315,7 @@ pub mod ncbi_compress {
                         Ok(Some(found_accessions)) => {
                             // log when tree already contains hash
                             let accession_id = record.id().split_whitespace().next().unwrap();
-                            logging::write_to_file(format!("accession_id {} found similar sequence in the tree and is being represented by : {}", accession_id, found_accessions.join(",")));
+                            logging::write_to_file(format!("retained_seq {} discarded_seq : {}", found_accessions.join(","), accession_id));
                             None
                         }
                         Err(e) => {
@@ -356,7 +357,7 @@ pub mod ncbi_compress {
                     }
                 } else {
                     logging::write_to_file(
-                        format!("accession_id {} is being representing by {} \n",accession_id, similar_seqs.join(", "))
+                        format!("retained_seq {} discarded_seq {} \n",similar_seqs.join(", "), accession_id)
                     );
                 }
             }
@@ -381,20 +382,14 @@ pub mod ncbi_compress {
         similarity_threshold: f64,
         chunk_size: usize,
         branch_factor: usize,
+        skip_split_by_taxid: bool,
     ) {
-        log::info!("Splitting accessions by taxid");
-        let taxid_dir =
-            split_accessions_by_taxid(&input_fasta_path, accession_mapping_files, &taxids_to_drop);
-        log::info!("Finished splitting accessions by taxid");
-        let mut writer = fasta::Writer::to_file(output_fasta_path).unwrap();
-
-        log::info!("Starting compression by taxid");
         let mut accession_count = 0;
         let mut unique_accession_count = 0;
-        for (i, entry) in fs::read_dir(taxid_dir.path()).unwrap().enumerate() {
-            let entry = entry.unwrap();
-            let path = entry.path();
-            let input_fasta_path = path.to_str().unwrap();
+        let mut writer = fasta::Writer::to_file(output_fasta_path).unwrap();
+
+        if skip_split_by_taxid {
+            log::info!("Skipping splitting accessions by taxid");
             fasta_compress_taxid(
                 input_fasta_path,
                 &mut writer,
@@ -407,22 +402,50 @@ pub mod ncbi_compress {
                 &mut accession_count,
                 &mut unique_accession_count,
             );
-
-            if i % 10_000 == 0 {
+            if accession_count % 10_000 == 0 {
                 log::info!(
-                    "  Compressed {} taxids, {} accessions, {} uniqe accessions",
-                    i,
+                    "  Compressed {} accessions, {} uniqe accessions",
                     accession_count,
                     unique_accession_count
                 );
             }
+        } else {
+            log::info!("Splitting accessions by taxid");
+            let taxid_dir =
+                split_accessions_by_taxid(&input_fasta_path, accession_mapping_files, &taxids_to_drop);
+            log::info!("Finished splitting accessions by taxid");
+            log::info!("Starting compression by taxid");
+            for (i, entry) in fs::read_dir(taxid_dir.path()).unwrap().enumerate() {
+                let entry = entry.unwrap();
+                let path = entry.path();
+                let input_fasta_path = path.to_str().unwrap();
+                fasta_compress_taxid(
+                    input_fasta_path,
+                    &mut writer,
+                    scaled,
+                    k,
+                    seed,
+                    similarity_threshold,
+                    chunk_size,
+                    branch_factor,
+                    &mut accession_count,
+                    &mut unique_accession_count,
+                );
+                if i % 10_000 == 0 {
+                    log::info!(
+                        "  Compressed {} taxids, {} accessions, {} uniqe accessions",
+                        i,
+                        accession_count,
+                        unique_accession_count
+                    );
+                }
+            }
+            taxid_dir.close().unwrap();
+            log::info!(
+                "Finished compression by taxid, {} accessions, {} uniqe accessions",
+                accession_count,
+                unique_accession_count
+            );
         }
-
-        taxid_dir.close().unwrap();
-        log::info!(
-            "Finished compression by taxid, {} accessions, {} uniqe accessions",
-            accession_count,
-            unique_accession_count
-        );
     }
 }
