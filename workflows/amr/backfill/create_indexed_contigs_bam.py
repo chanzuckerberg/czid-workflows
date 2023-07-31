@@ -14,6 +14,7 @@ COLUMN_CONTIG_NAME = "Contig_contig_amr"
 OUTPUT_BAM = "contig_amr_report.sorted.bam"
 
 
+# pysam does not play nice with file objects, so we have to require file paths as inputs
 @click.command()
 @click.option("contigs_file", "--contigs", type=click.Path(exists=True), required=True)
 @click.option("final_summary", "--final-summary", type=click.Path(exists=True), required=True)
