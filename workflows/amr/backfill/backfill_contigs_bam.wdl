@@ -10,7 +10,7 @@ workflow amr {
 
     call backfillContigsBam { 
         input: 
-        backfill_data = backfill_data
+        backfill_data = backfill_data,
         docker_image_id = docker_image_id
     }
 }

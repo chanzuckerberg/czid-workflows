@@ -13,7 +13,7 @@ import click
 from create_indexed_contigs_bam import cli as index_contigs
 
 
-# execution_array format:
+# backfill_data format:
 # [
 #     {
 #         "final_summary": "s3://bucket/path/tsv",
@@ -31,7 +31,7 @@ BAM_FILE = "sorted_bam"
 BAI_INDEX = "bai_index"
 WORKFLOW_ID = "id"
 
-ParsedS3Url = namedtuple("ParsedS3Url", ["bucket", "key"])
+ParsedS3Url = namedtuple("ParsedS3Url", ["Bucket", "Key"])
 
 SUMMARY_FILE_LOC = "/tmp/final_summary.tsv"
 CONTIGS_FILE_LOC = "/tmp/contigs.fasta"
@@ -39,12 +39,14 @@ CONTIGS_FILE_LOC = "/tmp/contigs.fasta"
 OUTPUT_BAM = "./contig_amr_report.sorted.bam"
 OUTPUT_BAI = "./contig_amr_report.sorted.bam.bai"
 
+OUTPUT_LOG = "backfill_log.tsv"
+
 
 @click.command()
-@click.argument("execution_array", type=click.File("r"), required=True)
+@click.argument("backfill_data", type=click.File("r"), required=True)
 @click.pass_context
-def cli(ctx, execution_array: click.File):
-    workflow_list = json.load(execution_array)
+def cli(ctx, backfill_data: click.File):
+    workflow_list = json.load(backfill_data)
     log = []
 
     s3_client = boto3.client("s3")
@@ -57,24 +59,28 @@ def cli(ctx, execution_array: click.File):
             s3_path_contigs = parse_s3_url(entry[CONTIGS])
 
             # we have to write the files to disk for pysam compatibility
-            s3_client.download_file(s3_path_summary.bucket, s3_path_summary.key, SUMMARY_FILE_LOC)
-            s3_client.download_file(s3_path_contigs.bucket, s3_path_contigs.key, CONTIGS_FILE_LOC)
+            s3_client.download_file(s3_path_summary.Bucket, s3_path_summary.Key, SUMMARY_FILE_LOC)
+            s3_client.download_file(s3_path_contigs.Bucket, s3_path_contigs.Key, CONTIGS_FILE_LOC)
 
             # run the actual script for indexing contigs
-            ctx.invoke(index_contigs, final_summary=SUMMARY_FILE_LOC, contigs=CONTIGS_FILE_LOC)
+            ctx.invoke(index_contigs, contigs_file=CONTIGS_FILE_LOC, final_summary=SUMMARY_FILE_LOC)
 
+            # make backup copies of old files
             # upload newly created BAM and BAI files
             s3_path_bam_file = parse_s3_url(entry[BAM_FILE])
             s3_path_bai_index = parse_s3_url(entry[BAI_INDEX])
 
-            s3_client.upload_file(OUTPUT_BAM, s3_path_bam_file.bucket, s3_path_bam_file.key)
-            s3_client.upload_file(OUTPUT_BAI, s3_path_bai_index.bucket, s3_path_bai_index.key)
+            s3_client.copy(s3_path_bam_file._asdict(), s3_path_bam_file.Bucket, f"{s3_path_bam_file.Key}.pre-1-2-15")
+            s3_client.copy(s3_path_bai_index._asdict(), s3_path_bai_index.Bucket, f"{s3_path_bai_index.Key}.pre-1-2-15")
+
+            s3_client.upload_file(OUTPUT_BAM, s3_path_bam_file.Bucket, s3_path_bam_file.Key)
+            s3_client.upload_file(OUTPUT_BAI, s3_path_bai_index.Bucket, s3_path_bai_index.Key)
 
             log.append({ "workflow_id": workflow_id, "success": True })
         except Exception as e:
             log.append({ "workflow_id": workflow_id, "success": False, "error": str(e)})
             continue
-    with open("log.tsv", "w") as logfile:
+    with open(OUTPUT_LOG, "w") as logfile:
         fieldnames = ["workflow_id", "success", "error"]
         writer = csv.DictWriter(logfile, fieldnames=fieldnames, delimiter="\t")
         writer.writeheader()
@@ -85,7 +91,7 @@ def cli(ctx, execution_array: click.File):
 
 def parse_s3_url(s3_url: str) -> ParsedS3Url:
     parse = urlparse(s3_url, allow_fragments=False)
-    return ParsedS3Url(bucket=parse.netloc, key=parse.path.lstrip("/"))
+    return ParsedS3Url(Bucket=parse.netloc, Key=parse.path.lstrip("/"))
 
 
 if __name__ == '__main__':
