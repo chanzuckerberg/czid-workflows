@@ -58,6 +58,16 @@ struct Args {
     /// (default: false)
     #[arg(long, default_value = "false")]
     skip_split_by_taxid: bool,
+
+    /// Logging file for containment in the tree
+    /// (default: logging_contained_in_tree.tsv)
+    #[arg(long, default_value = "logging_contained_in_tree.tsv")]
+    logging_contained_in_tree_fn: String,
+
+    /// Logging file for containment in the chunk
+    /// (default: logging_contained_in_chunk.tsv)
+    #[arg(long, default_value = "logging_contained_in_chunk.tsv")]
+    logging_contained_in_chunk_fn: String,
 }
 
 
@@ -69,10 +79,8 @@ pub fn main() {
 
     let args = Args::parse();
     // log discarded, retained, containment
-    let logging_contained_in_tree_fn = "logging_contained_in_tree.tsv";
-    let logging_contained_in_chunk_fn = "logging_contained_in_chunk.tsv";
-    logging::initialize_tsv(logging_contained_in_tree_fn, vec!["discarded", "retained", "containment"]);
-    logging::initialize_tsv(logging_contained_in_chunk_fn, vec!["discarded", "retained", "containment"]);
+    logging::initialize_tsv(&args.logging_contained_in_tree_fn, vec!["discarded", "retained", "containment"]);
+    logging::initialize_tsv(&args.logging_contained_in_chunk_fn, vec!["discarded", "retained", "containment"]);
 
     fasta_compress(
         args.input_fasta,
@@ -86,8 +94,8 @@ pub fn main() {
         args.chunk_size,
         args.branch_factor,
         args.skip_split_by_taxid,
-        logging_contained_in_tree_fn,
-        logging_contained_in_chunk_fn,
+        &args.logging_contained_in_tree_fn,
+        &args.logging_contained_in_chunk_fn,
     );
 
 }
