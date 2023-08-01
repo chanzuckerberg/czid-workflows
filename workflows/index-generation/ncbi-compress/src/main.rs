@@ -72,7 +72,7 @@ pub fn main() {
     let logging_contained_in_tree_fn = "logging_contained_in_tree.tsv";
     let logging_contained_in_chunk_fn = "logging_contained_in_chunk.tsv";
     logging::initialize_tsv(logging_contained_in_tree_fn, vec!["discarded", "retained", "containment"]);
-    logging::initialize_tsv(logging_contained_in_chunk_fn, vec!["discarded", "retained"]);
+    logging::initialize_tsv(logging_contained_in_chunk_fn, vec!["discarded", "retained", "containment"]);
 
     fasta_compress(
         args.input_fasta,

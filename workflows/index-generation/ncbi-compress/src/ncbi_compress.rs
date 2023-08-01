@@ -347,7 +347,7 @@ pub mod ncbi_compress {
                     .filter_map(|(other, accession_id)| {
                         let containment_value = containment(&hash, &other).unwrap();
                         if containment_value >= similarity_threshold {
-                            Some(accession_id.to_string())
+                            Some((accession_id.to_string(), containment_value.to_string()))
                         } else {
                             None
                         }
@@ -367,9 +367,11 @@ pub mod ncbi_compress {
                         );
                     }
                 } else {
+                    // log discarded, retained, containment
+                    let similar_accession_ids: Vec<String> = similar_seqs.iter().map(|(accession_id, _)| accession_id.to_string()).collect::<Vec<_>>();
+                    let similar_accession_containments: Vec<String> = similar_seqs.iter().map(|(_, containment)| containment.to_string()).collect::<Vec<_>>();
                     logging::write_to_file(
-                        // log discarded, retained
-                        vec![accession_id, &similar_seqs.join(",")],
+                        vec![accession_id, &similar_accession_ids.join(","), &similar_accession_containments.join(",")],
                         logging_contained_in_chunk_fn,
                     );
                 }
