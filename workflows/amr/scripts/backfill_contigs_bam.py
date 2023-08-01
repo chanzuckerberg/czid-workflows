@@ -17,7 +17,7 @@ from create_indexed_contigs_bam import cli as index_contigs
 # [
 #     {
 #         "final_summary": "s3://bucket/path/tsv",
-#         "contigs_fasta": "s3://bucket/path/contigs.fasta",
+#         "contigs": "s3://bucket/path/contigs.fasta",
 #         "sorted_bam": "s3://bucket/path/sorted.bam",
 #         "bai_index": "s3://bucket/path/sorted.bam.bai",
 #         "id": 42
@@ -26,7 +26,7 @@ from create_indexed_contigs_bam import cli as index_contigs
 # ]
 
 FINAL_SUMMARY = "final_summary"
-CONTIGS = "contigs_fasta"
+CONTIGS = "contigs"
 BAM_FILE = "sorted_bam"
 BAI_INDEX = "bai_index"
 WORKFLOW_ID = "id"
@@ -78,7 +78,7 @@ def cli(ctx, backfill_data: click.File):
 
             log.append({ "workflow_id": workflow_id, "success": True })
         except Exception as e:
-            log.append({ "workflow_id": workflow_id, "success": False, "error": str(e)})
+            log.append({ "workflow_id": workflow_id, "success": False, "error": f"{type(e).__name__}: {str(e)}"})
             continue
     with open(OUTPUT_LOG, "w") as logfile:
         fieldnames = ["workflow_id", "success", "error"]
