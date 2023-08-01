@@ -1,9 +1,6 @@
 from collections import namedtuple
 import csv
 import json
-import re
-import sys
-from typing import Tuple
 from urllib.parse import urlparse
 
 
@@ -52,7 +49,6 @@ def cli(ctx, backfill_data: click.File):
     s3_client = boto3.client("s3")
 
     for entry in workflow_list:
-        success = False
         workflow_id = entry[WORKFLOW_ID]
         try:
             s3_path_summary = parse_s3_url(entry[FINAL_SUMMARY])
@@ -76,9 +72,9 @@ def cli(ctx, backfill_data: click.File):
             s3_client.upload_file(OUTPUT_BAM, s3_path_bam_file.Bucket, s3_path_bam_file.Key)
             s3_client.upload_file(OUTPUT_BAI, s3_path_bai_index.Bucket, s3_path_bai_index.Key)
 
-            log.append({ "workflow_id": workflow_id, "success": True })
+            log.append({"workflow_id": workflow_id, "success": True})
         except Exception as e:
-            log.append({ "workflow_id": workflow_id, "success": False, "error": f"{type(e).__name__}: {str(e)}"})
+            log.append({"workflow_id": workflow_id, "success": False, "error": f"{type(e).__name__}: {str(e)}"})
             continue
     with open(OUTPUT_LOG, "w") as logfile:
         fieldnames = ["workflow_id", "success", "error"]
