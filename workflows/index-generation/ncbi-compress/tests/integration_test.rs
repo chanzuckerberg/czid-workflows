@@ -34,7 +34,8 @@ fn test_fasta_compress() {
             42,
             0.6,
             1000,
-            1000
+            1000,
+            true,
         );
 
         let mut file_content = String::new();

@@ -13,7 +13,6 @@ pub mod ncbi_compress {
     use trie_rs::{Trie, TrieBuilder};
 
     use crate::logging::logging;
-    use crate::util::util;
 
         /// A trie that stores u64 values
     struct TrieStore {
@@ -62,13 +61,13 @@ pub mod ncbi_compress {
         accession: String,
     }
 
-    struct MinHashTree {
+    pub struct MinHashTree {
         branching_factor: usize,
         nodes: Vec<MinHashTreeNode>,
     }
 
     impl MinHashTree {
-        fn new(branching_factor: usize) -> Self {
+        pub fn new(branching_factor: usize) -> Self {
             MinHashTree {
                 branching_factor,
                 nodes: Vec::new(),
@@ -94,7 +93,9 @@ pub mod ncbi_compress {
             parent_idx: usize,
             child_idx: usize,
         ) -> Result<(), SourmashError> {
+
             let (left, right) = self.nodes.split_at_mut(child_idx);
+
             left[parent_idx]
                 .children_aggregate
                 .merge(&right[0].children_aggregate)
@@ -125,18 +126,19 @@ pub mod ncbi_compress {
             &self,
             hash: &KmerMinHash,
             similarity_threshold: f64,
-        ) -> Result<Option<Vec<String>>, SourmashError> {
+        ) -> Result<Option<Vec<(String, String)>>, SourmashError> {
             if self.nodes.is_empty() {
                 return Ok(None);
             }
 
-            let mut to_visit = vec![0];
+            let mut to_visit = vec![self.nodes.len() -1 ]; // was initially zero
             while !to_visit.is_empty() {
                 // Check if any of the nodes in the to_visit list are similar enough
                 let found_accession = to_visit.par_iter().filter_map(|node_idx| {
                     let node = self.nodes.get(*node_idx).unwrap();
-                    if containment(hash, &node.own).unwrap() >= similarity_threshold {
-                        Some(node.accession.clone())
+                    let containment_value = containment(hash, &node.own).unwrap();
+                    if containment_value >= similarity_threshold {
+                        Some((node.accession.clone(), containment_value.to_string()))
                     } else {
                         None
                     }
@@ -165,7 +167,7 @@ pub mod ncbi_compress {
         }
     }
 
-    fn containment(needle: &KmerMinHash, haystack: &KmerMinHash) -> Result<f64, SourmashError> {
+    pub fn containment(needle: &KmerMinHash, haystack: &KmerMinHash) -> Result<f64, SourmashError> {
         let (intersect_size, _) = needle.intersection_size(haystack)?;
         Ok(intersect_size as f64 / needle.mins().len() as f64)
     }
@@ -272,7 +274,6 @@ pub mod ncbi_compress {
             writer.write_record(&record).unwrap();
         }
         log::info!("Finished splitting accessions by taxid");
-
         taxid_dir
     }
 
@@ -287,6 +288,8 @@ pub mod ncbi_compress {
         branch_factor: usize,
         accession_count: &mut u64,
         unique_accession_count: &mut u64,
+        logging_contained_in_tree_fn: &str,
+        logging_contained_in_chunk_fn: &str,
     ) {
         // take in a fasta file and output a fasta file with only unique accessions (based on similarity threshold)
         let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
@@ -315,7 +318,14 @@ pub mod ncbi_compress {
                         Ok(Some(found_accessions)) => {
                             // log when tree already contains hash
                             let accession_id = record.id().split_whitespace().next().unwrap();
-                            logging::write_to_file(format!("retained_seq {} discarded_seq : {}", found_accessions.join(","), accession_id));
+                            let found_accession_ids: Vec<String> = found_accessions.iter().map(|(accession_id, _)| accession_id.to_string()).collect::<Vec<_>>();
+                            let found_accession_containments: Vec<String> = found_accessions.iter().map(|(_, containment)| containment.to_string()).collect::<Vec<_>>();
+                            logging::write_to_file(
+                                // log discarded, retained, containment
+                                vec![accession_id, &found_accession_ids.join(", "), &found_accession_containments.join(", ")],
+                                logging_contained_in_tree_fn,
+                            );
+
                             None
                         }
                         Err(e) => {
@@ -335,7 +345,8 @@ pub mod ncbi_compress {
                 let similar_seqs = tmp
                     .par_iter()
                     .filter_map(|(other, accession_id)| {
-                        if containment(&hash, &other).unwrap() >= similarity_threshold {
+                        let containment_value = containment(&hash, &other).unwrap();
+                        if containment_value >= similarity_threshold {
                             Some(accession_id.to_string())
                         } else {
                             None
@@ -357,7 +368,9 @@ pub mod ncbi_compress {
                     }
                 } else {
                     logging::write_to_file(
-                        format!("retained_seq {} discarded_seq {} \n",similar_seqs.join(", "), accession_id)
+                        // log discarded, retained
+                        vec![accession_id, &similar_seqs.join(",")],
+                        logging_contained_in_chunk_fn,
                     );
                 }
             }
@@ -383,6 +396,9 @@ pub mod ncbi_compress {
         chunk_size: usize,
         branch_factor: usize,
         skip_split_by_taxid: bool,
+        logging_contained_in_tree_fn: &str,
+        logging_contained_in_chunk_fn: &str
+
     ) {
         let mut accession_count = 0;
         let mut unique_accession_count = 0;
@@ -401,6 +417,8 @@ pub mod ncbi_compress {
                 branch_factor,
                 &mut accession_count,
                 &mut unique_accession_count,
+                logging_contained_in_tree_fn,
+                logging_contained_in_chunk_fn,
             );
             if accession_count % 10_000 == 0 {
                 log::info!(
@@ -430,6 +448,8 @@ pub mod ncbi_compress {
                     branch_factor,
                     &mut accession_count,
                     &mut unique_accession_count,
+                    logging_contained_in_tree_fn,
+                    logging_contained_in_chunk_fn,
                 );
                 if i % 10_000 == 0 {
                     log::info!(

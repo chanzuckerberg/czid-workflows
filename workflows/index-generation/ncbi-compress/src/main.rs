@@ -61,11 +61,18 @@ struct Args {
 }
 
 
+
+
 pub fn main() {
 
     logging::init_stdout_logging();
 
     let args = Args::parse();
+    // log discarded, retained, containment
+    let logging_contained_in_tree_fn = "logging_contained_in_tree.tsv";
+    let logging_contained_in_chunk_fn = "logging_contained_in_chunk.tsv";
+    logging::initialize_tsv(logging_contained_in_tree_fn, vec!["discarded", "retained", "containment"]);
+    logging::initialize_tsv(logging_contained_in_chunk_fn, vec!["discarded", "retained"]);
 
     fasta_compress(
         args.input_fasta,
@@ -78,6 +85,9 @@ pub fn main() {
         args.similarity_threshold,
         args.chunk_size,
         args.branch_factor,
-        args.skip_split_by_taxid
+        args.skip_split_by_taxid,
+        logging_contained_in_tree_fn,
+        logging_contained_in_chunk_fn,
     );
+
 }

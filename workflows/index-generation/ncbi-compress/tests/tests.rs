@@ -1,7 +1,9 @@
 use std::path::Path;
 use std::fs;
 
-// use tempfile::NamedTempFile;
+use sourmash::sketch::minhash::KmerMinHash;
+use sourmash::encodings::HashFunctions;
+use sourmash::signature::SigsTrait;
 
 use ::ncbi_compress::ncbi_compress::ncbi_compress;
 use ::ncbi_compress::util::util;
@@ -32,6 +34,58 @@ fn test_split_accessions_by_taxis() {
         }
     }
 }
+
+#[test]
+fn test_containment() {
+    let branch_factor = 1000;
+    let scaled = 1000;
+    let k = 31;
+    let seed = 42;
+    let similarity_threshold = 0.6;
+
+    let mut tree = ncbi_compress::MinHashTree::new(branch_factor);
+    let seqs = vec![
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+    ];
+    let seqs2 = vec![
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABBBBBBBBBBBBBB",
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABBBBBBBBBB",
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABBB",
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+    ];
+
+    let mut hash1 = KmerMinHash::new(scaled, k, HashFunctions::murmur64_DNA, seed, false, 0);
+    hash1.add_sequence(seqs[0].as_bytes(), true).unwrap();
+    let mut hash2 = KmerMinHash::new(scaled, k, HashFunctions::murmur64_DNA, seed, false, 0);
+    hash2.add_sequence(seqs2[3].as_bytes(), true).unwrap();
+    let cont = ncbi_compress::containment(&hash1, &hash2).unwrap();
+    println!("cont: {}", cont);
+    println!("hash1 mins: {:?}", hash1.mins());
+    println!("hash2 mins: {:?}", hash2.mins());
+
+    // create tree of initial sequences
+    for seq in seqs.iter() {
+        let mut hash = KmerMinHash::new(scaled, k, HashFunctions::murmur64_DNA, seed, false, 0);
+        hash.add_sequence(seq.as_bytes(), true).unwrap();
+        tree.insert(hash, seq);
+    }
+
+    for seq in seqs2.iter() {
+        let mut hash = KmerMinHash::new(scaled, k, HashFunctions::murmur64_DNA, seed, false, 0);
+        hash.add_sequence(seq.as_bytes(), true).unwrap();
+        let contains = tree.contains(&hash, similarity_threshold);
+        match contains {
+            Ok(Some(found_accessions)) => println!("{}: {}", seq,  found_accessions.join(",")),
+            Ok(None) => println!("{} Not found", seq),
+            Err(e) => println!("Error: {}", e),
+        }
+
+        // assert!(tree.contains(seq));
+    }
+}
+
+
 
 // #[test]
 // fn test_fasta_compress_taxid() {
