@@ -8,14 +8,14 @@ workflow amr {
         String s3_wd_uri = ""
     }
 
-    call tsvToSam {
+    call backfillContigsBam {
         input: 
         backfill_data = backfill_data,
         docker_image_id = docker_image_id
     }
 }
 
-task tsvToSam {
+task backfillContigsBam {
     input {
         File backfill_data
         String docker_image_id
