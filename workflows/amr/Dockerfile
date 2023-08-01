@@ -40,5 +40,5 @@ RUN curl -LO https://czid-public-references.s3.us-west-2.amazonaws.com/card/2023
         --card_annotation card_database_v3.2.6.fasta \
         -i card.json 
 
-
+COPY scripts/ /scripts/
 COPY empty-main-header.txt /tmp/empty-main-header.txt 

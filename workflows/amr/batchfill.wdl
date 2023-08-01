@@ -2,20 +2,20 @@ version 1.1
 
 workflow amr {
     input {
-        File backfill_data  # json file with workflow information
+        File backfill_data
         String docker_image_id
         # Dummy values - required by SFN interface
         String s3_wd_uri = ""
     }
 
-    call backfillContigsBam { 
+    call tsvToSam {
         input: 
         backfill_data = backfill_data,
         docker_image_id = docker_image_id
     }
 }
 
-task backfillContigsBam {
+task tsvToSam {
     input {
         File backfill_data
         String docker_image_id
@@ -23,11 +23,11 @@ task backfillContigsBam {
 
     command <<<
         set -euxo pipefail
-        python3 backfill_contigs_bam.py "~{backfill_data}"
+        python3 /scripts/backfill_contigs_bam.py "~{backfill_data}"
     >>>
 
     output {
-        File execution_log = "backfill_log.tsv"
+        File output_log = "backfill_log.tsv"
     }
 
     runtime {
