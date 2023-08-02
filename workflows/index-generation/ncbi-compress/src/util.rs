@@ -3,6 +3,8 @@ pub mod util {
     use std::io::Read;
     use std::io::Write;
 
+    // use rand::Rng;
+
     pub fn are_files_equal(file_path1: &str, file_path2: &str) -> bool {
         if let Ok(contents1) = fs::read(file_path1) {
             if let Ok(contents2) = fs::read(file_path2) {
@@ -33,5 +35,16 @@ pub mod util {
             println!("{}", format!("writing to file: {}", output_fasta_path));
             let _ = write_to_file(&output_fasta_path, &file_content);
     }
+
+//     pub fn create_sequence(ksize: usize) -> String {
+//         let letters = ['A', 'C', 'T', 'G'];
+//         let mut rng = rand::thread_rng();
+//         let mut sequence = String::new();
+//         for _ in 0..ksize {
+//             let random_letter = letters[rng.gen_range(0..letters.len())];
+//             sequence.push(random_letter);
+//         }
+//         println!("{}", sequence);
+//     }
 }
 

@@ -131,7 +131,7 @@ pub mod ncbi_compress {
                 return Ok(None);
             }
 
-            let mut to_visit = vec![self.nodes.len() -1 ]; // was initially zero
+            let mut to_visit = vec![1]; // was initially zero
             while !to_visit.is_empty() {
                 // Check if any of the nodes in the to_visit list are similar enough
                 let found_accession = to_visit.par_iter().filter_map(|node_idx| {

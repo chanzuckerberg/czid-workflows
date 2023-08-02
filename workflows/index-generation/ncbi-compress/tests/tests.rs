@@ -39,27 +39,34 @@ fn test_split_accessions_by_taxis() {
 fn test_containment() {
     let branch_factor = 1000;
     let scaled = 1000;
-    let k = 31;
+    let k = 2;
     let seed = 42;
     let similarity_threshold = 0.6;
 
     let mut tree = ncbi_compress::MinHashTree::new(branch_factor);
     let seqs = vec![
-        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
-        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "ACTGACTGACTGACTGACTGACTGACTGACTGACTGACTGACTGACTGACTGACTGACTGACTGACTGACTGACTGACTG",
+        "ACAC",
+        "CCTG",
+        "CCTG"
     ];
     let seqs2 = vec![
-        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABBBBBBBBBBBBBB",
-        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABBBBBBBBBB",
-        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABBB",
-        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "ACTG",
+        "CCCC",
+        "TTTT",
+        "CCTG"
     ];
 
     let mut hash1 = KmerMinHash::new(scaled, k, HashFunctions::murmur64_DNA, seed, false, 0);
     hash1.add_sequence(seqs[0].as_bytes(), true).unwrap();
+    hash1.add_sequence(seqs[0].as_bytes(), true).unwrap();
+    hash1.add_sequence(seqs[1].as_bytes(), true).unwrap();
+    hash1.add_sequence(seqs[2].as_bytes(), true).unwrap();
+    hash1.add_sequence(seqs[3].as_bytes(), true).unwrap();
     let mut hash2 = KmerMinHash::new(scaled, k, HashFunctions::murmur64_DNA, seed, false, 0);
     hash2.add_sequence(seqs2[3].as_bytes(), true).unwrap();
     let cont = ncbi_compress::containment(&hash1, &hash2).unwrap();
+
     println!("cont: {}", cont);
     println!("hash1 mins: {:?}", hash1.mins());
     println!("hash2 mins: {:?}", hash2.mins());
@@ -68,6 +75,7 @@ fn test_containment() {
     for seq in seqs.iter() {
         let mut hash = KmerMinHash::new(scaled, k, HashFunctions::murmur64_DNA, seed, false, 0);
         hash.add_sequence(seq.as_bytes(), true).unwrap();
+        println!("hash mins {:?}", hash.mins());
         tree.insert(hash, seq);
     }
 
@@ -75,9 +83,14 @@ fn test_containment() {
         let mut hash = KmerMinHash::new(scaled, k, HashFunctions::murmur64_DNA, seed, false, 0);
         hash.add_sequence(seq.as_bytes(), true).unwrap();
         let contains = tree.contains(&hash, similarity_threshold);
+        println!("hash mins {:?}", hash.mins());
         match contains {
-            Ok(Some(found_accessions)) => println!("{}: {}", seq,  found_accessions.join(",")),
-            Ok(None) => println!("{} Not found", seq),
+            Ok(Some(found_accessions)) => {
+                let found_accession_ids: Vec<String> = found_accessions.iter().map(|(accession_id, _)| accession_id.to_string()).collect::<Vec<_>>();
+                let found_accession_containments: Vec<String> = found_accessions.iter().map(|(_, containment)| containment.to_string()).collect::<Vec<_>>();
+                println!("{} Found: {:?} Containments: {:?}", seq, found_accession_ids, found_accession_containments);
+            },
+            Ok(None) => println!("{} Not found ", seq),
             Err(e) => println!("Error: {}", e),
         }
 

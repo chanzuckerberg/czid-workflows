@@ -24,6 +24,9 @@ fn test_fasta_compress() {
         let temp_file = NamedTempFile::new().unwrap();
         let temp_file_path = temp_file.path();
 
+        let logging_contained_in_tree_fn = format!("logging_contained_in_tree_{}.tsv", pathogen);
+        let logging_contained_in_chunk_fn = format!("logging_contained_in_chunk_{}.tsv", pathogen);
+
         fasta_compress(
             Path::new(&sorted_seq),
             mapping_files,
@@ -36,6 +39,8 @@ fn test_fasta_compress() {
             1000,
             1000,
             true,
+            &logging_contained_in_tree_fn,
+            &logging_contained_in_chunk_fn,
         );
 
         let mut file_content = String::new();
