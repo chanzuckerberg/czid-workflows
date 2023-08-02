@@ -2,13 +2,17 @@ version development
 
 workflow index_generation {
     input {
-        String index_name
+        # String index_name
         String ncbi_server = "https://ftp.ncbi.nih.gov"
-        Boolean write_to_db = false
-        String? environ
+        # Boolean write_to_db = false
+        # String? environ
         # TODO: (alignment_config) remove after alignment config table is removed
-        String? s3_dir
-        File? previous_lineages
+        # String? s3_dir
+        # File? previous_lineages
+        Array[String] taxids_to_drop = ["9606"] # human
+        Int nt_compression_k = 31
+        Int nt_compression_scaled = 100000
+        Float nt_compression_similarity_threshold = 0.9
         String docker_image_id
     }
 
@@ -30,77 +34,90 @@ workflow index_generation {
         docker_image_id = docker_image_id
     }
 
-    call DownloadTaxdump {
+    # call DownloadTaxdump {
+    #     input:
+    #     ncbi_server = ncbi_server,
+    #     docker_image_id = docker_image_id
+    # }
+
+    call CompressNT {
         input:
-        ncbi_server = ncbi_server,
-        docker_image_id = docker_image_id
+        nt = DownloadNT.nt,
+        accession2taxid = DownloadAccession2Taxid.accession2taxid,
+        taxids_to_drop = taxids_to_drop,
+        k = nt_compression_k,
+        scaled = nt_compression_scaled,
+        similarity_threshold = nt_compression_similarity_threshold,
+        docker_image_id = docker_image_id,
+        cpu = 32
     }
+
 
     call GenerateIndexAccessions {
         input:
         nr = DownloadNR.nr,
-        nt = DownloadNT.nt,
+        nt = CompressNT.nt_compressed,
         accession2taxid = DownloadAccession2Taxid.accession2taxid,
         docker_image_id = docker_image_id
     }
 
     call GenerateNTDB {
         input:
-        nt = DownloadNT.nt,
+        nt = CompressNT.nt_compressed,
         docker_image_id = docker_image_id
     }
 
-    call GenerateNRDB {
-        input:
-        nr = DownloadNR.nr,
-        docker_image_id = docker_image_id
-    }
+    # call GenerateNRDB {
+    #     input:
+    #     nr = DownloadNR.nr,
+    #     docker_image_id = docker_image_id
+    # }
 
-    call GenerateIndexDiamond {
-        input:
-        nr = DownloadNR.nr,
-        docker_image_id = docker_image_id
-    }
+    # call GenerateIndexDiamond {
+    #     input:
+    #     nr = DownloadNR.nr,
+    #     docker_image_id = docker_image_id
+    # }
 
-    call GenerateIndexLineages {
-        input:
-        taxdump = DownloadTaxdump.taxdump,
-        index_name = index_name,
-        previous_lineages = previous_lineages,
-        docker_image_id = docker_image_id
-    }
+    # call GenerateIndexLineages {
+    #     input:
+    #     taxdump = DownloadTaxdump.taxdump,
+    #     index_name = index_name,
+    #     previous_lineages = previous_lineages,
+    #     docker_image_id = docker_image_id
+    # }
     
     call GenerateIndexMinimap2 {
         input:
-        nt = DownloadNT.nt,
+        nt = CompressNT.nt_compressed,
         docker_image_id = docker_image_id
     }
 
 
-    if (write_to_db && defined(environ) && defined(s3_dir)) {
-        call LoadTaxonLineages {
-            input:
-            environ = environ,
-            index_name = index_name,
-            s3_dir = s3_dir,
-            versioned_taxid_lineages_csv = GenerateIndexLineages.versioned_taxid_lineages_csv,
-            docker_image_id = docker_image_id
-        } 
-    }
+    # if (write_to_db && defined(environ) && defined(s3_dir)) {
+    #     call LoadTaxonLineages {
+    #         input:
+    #         environ = environ,
+    #         index_name = index_name,
+    #         s3_dir = s3_dir,
+    #         versioned_taxid_lineages_csv = GenerateIndexLineages.versioned_taxid_lineages_csv,
+    #         docker_image_id = docker_image_id
+    #     } 
+    # }
 
 
     output {
         File nr = DownloadNR.nr
-        File nt = DownloadNT.nt
+        File nt = CompressNT.nt_compressed
         File accession2taxid_db = GenerateIndexAccessions.accession2taxid_db
         File nt_loc_db = GenerateNTDB.nt_loc_db
         File nt_info_db = GenerateNTDB.nt_info_db
-        File nr_loc_db = GenerateNRDB.nr_loc_db
-        Directory diamond_index = GenerateIndexDiamond.diamond_index
-        File taxid_lineages_db = GenerateIndexLineages.taxid_lineages_db
-        File versioned_taxid_lineages_csv = GenerateIndexLineages.versioned_taxid_lineages_csv
-        File deuterostome_taxids = GenerateIndexLineages.deuterostome_taxids
-        File taxon_ignore_list = GenerateIndexLineages.taxon_ignore_list
+        # File nr_loc_db = GenerateNRDB.nr_loc_db
+        # Directory diamond_index = GenerateIndexDiamond.diamond_index
+        # File taxid_lineages_db = GenerateIndexLineages.taxid_lineages_db
+        # File versioned_taxid_lineages_csv = GenerateIndexLineages.versioned_taxid_lineages_csv
+        # File deuterostome_taxids = GenerateIndexLineages.deuterostome_taxids
+        # File taxon_ignore_list = GenerateIndexLineages.taxon_ignore_list
         Directory minimap2_index = GenerateIndexMinimap2.minimap2_index
     }
 }
@@ -189,7 +206,6 @@ task GenerateIndexAccessions {
     input {
         File nr
         File nt
-        Int parallelism = 1
         Directory accession2taxid
         String docker_image_id
     }
@@ -203,7 +219,6 @@ task GenerateIndexAccessions {
             ~{accession2taxid}/nucl_gb.accession2taxid \
             ~{accession2taxid}/pdb.accession2taxid \
             ~{accession2taxid}/prot.accession2taxid.FULL \
-            --parallelism ~{parallelism} \
             --nt_file ~{nt} \
             --nr_file ~{nr} \
             --accession2taxid_db accession2taxid.marisa \
@@ -455,5 +470,49 @@ task GenerateIndexMinimap2 {
 
     runtime {
         docker: docker_image_id
+    }
+}
+
+task CompressNT {
+    input {
+        File nt
+        Directory accession2taxid
+        Array[String] taxids_to_drop
+        Int k
+        Int scaled
+        Float similarity_threshold
+        String docker_image_id
+        Int cpu
+    }
+
+    command <<< 
+        set -euxo pipefail
+
+        # Sort NT by length with the longer sequences first
+        #   This is needed because the compression algorithm iterates through NT in order only emitting
+        #   sequences if they are not contained by what it has already seen. If a shorter sequence is
+        #   contained by a longer sequence, and the shorter sequence were to come first, it would be emitted
+        #   even though it is redundant to the longer sequence.
+        seqkit sort --reverse --by-length --two-pass --threads ~{cpu} ~{nt} -o nt_sorted
+
+        ncbi-compress \
+            --input-fasta nt_sorted \
+            --accession-mapping-files ~{accession2taxid}/nucl_wgs.accession2taxid \
+            --accession-mapping-files ~{accession2taxid}/nucl_gb.accession2taxid \
+            --accession-mapping-files ~{accession2taxid}/pdb.accession2taxid \
+            ~{ if length(taxids_to_drop) > 0 then "--taxids-to-drop ~{sep(" --taxids-to-drop ", taxids_to_drop)}" else "" } \
+            --output-fasta nt_compressed.fa \
+            --k ~{k} \
+            --scaled ~{scaled} \
+            --similarity-threshold ~{similarity_threshold} \
+    >>>
+
+    output {
+        File nt_compressed = "nt_compressed.fa"
+    }
+
+    runtime {
+        docker: docker_image_id
+        cpu: cpu
     }
 }
