@@ -1,3 +1,7 @@
+# The code in this file is taken from the current code (as of 1.2.15) to
+# generate indexed bam/bai files for contigs, which lives in the tsvToSam
+# task of the AMR run.wdl file.
+
 import re
 
 import click
