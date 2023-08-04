@@ -32,7 +32,7 @@
       "contig_in_contig_coverage_json":"coverage_out_assembly_contig_coverage_json",
       "contig_in_contig_stats_json":"assembly_out_assembly_contig_stats_json",
       "contig_in_contigs_fasta":"assembly_out_assembly_contigs_fasta",
-      "nonhost_fasta_refined_taxid_annot_fasta":"refined_taxid_fasta_out_assembly_refined_taxid_annot_fasta",
+      "nonhost_fasta_refined_taxid_annot_with_unmapped_fasta":"refined_taxid_fasta_out_assembly_refined_taxid_annot_with_unmapped_fasta",
       "duplicate_clusters_csv":"czid_dedup_out_duplicate_clusters_csv"
    }
 }

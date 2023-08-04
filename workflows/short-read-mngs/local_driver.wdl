@@ -73,7 +73,7 @@ workflow czid_short_read_mngs {
         contig_in_contigs_fasta = postprocess.assembly_out_assembly_contigs_fasta,
         fastqs_0 = fastqs_0,
         fastqs_1 = fastqs_1,
-        nonhost_fasta_refined_taxid_annot_fasta = postprocess.refined_taxid_fasta_out_assembly_refined_taxid_annot_fasta,
+        nonhost_fasta_refined_taxid_annot_with_unmapped_fasta = postprocess.refined_taxid_fasta_out_assembly_refined_taxid_annot_with_unmapped_fasta,
         duplicate_clusters_csv = host_filter.czid_dedup_out_duplicate_clusters_csv,
         docker_image_id = docker_image_id,
         s3_wd_uri = s3_wd_uri

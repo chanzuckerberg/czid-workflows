@@ -409,7 +409,10 @@ task GenerateTaxidFasta {
   >>>
   output {
     String step_description_md = read_string("refined_taxid_fasta_out.description.md")
+    # mapped reads only: mostly here because some steps can not handle unmapped
     File assembly_refined_taxid_annot_fasta = "assembly/refined_taxid_annot.fasta"
+    # mapped+unmapped reads: Users generally want file with *all* non-host reads
+    File assembly_refined_taxid_annot_with_unmapped_fasta = "assembly/refined_taxid_annot_with_unmapped.fasta"
     File? output_read_count = "refined_taxid_fasta_out.count"
   }
   runtime {
@@ -700,6 +703,7 @@ workflow czid_postprocess {
     File refined_annotated_out_assembly_refined_unidentified_fa = GenerateAnnotatedFasta.assembly_refined_unidentified_fa
     File? refined_annotated_out_count = GenerateAnnotatedFasta.output_read_count
     File refined_taxid_fasta_out_assembly_refined_taxid_annot_fasta = GenerateTaxidFasta.assembly_refined_taxid_annot_fasta
+    File refined_taxid_fasta_out_assembly_refined_taxid_annot_with_unmapped_fasta = GenerateTaxidFasta.assembly_refined_taxid_annot_with_unmapped_fasta
     File? refined_taxid_fasta_out_count = GenerateTaxidFasta.output_read_count
     File refined_taxid_locator_out_assembly_refined_taxid_annot_sorted_nt_fasta = GenerateTaxidLocator.assembly_refined_taxid_annot_sorted_nt_fasta
     File refined_taxid_locator_out_assembly_refined_taxid_locations_nt_json = GenerateTaxidLocator.assembly_refined_taxid_locations_nt_json
