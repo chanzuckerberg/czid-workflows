@@ -1,4 +1,5 @@
 from typing import List
+from shutil import copy as file_copy
 from idseq_dag.util.parsing import HitSummaryMergedReader
 from idseq_dag.engine.pipeline_step import PipelineStep
 import idseq_dag.util.lineage as lineage
@@ -56,18 +57,45 @@ def generate_taxid_fasta(
             output_fa.write(read.sequence + "\n")
 
 
+CONFORMING_PREAMBLE = ">family_nr:-300:family_nt:-300:genus_nr:-200:genus_nt:-200:species_nr:-100:species_nt:-100:"
+def conform_unmapped_read_header(header: str):
+    """docme very, very tightly coupled to GenerateAnnotatedFasta"""
+    return CONFORMING_PREAMBLE + header.lstrip('>')
+
+
+def generate_fasta_with_unmapped_included(
+    mapped_fa_path: str,
+    unmapped_fa_path: str,
+    output_with_unmapped_path: str,
+):
+    """docme"""
+    file_copy(mapped_fa_path, output_with_unmapped_path)
+    with open(output_with_unmapped_path, "a") as output_fa:
+        for read in fasta.iterator(unmapped_fa_path):
+            conformed_header = conform_unmapped_read_header(read.header)
+            output_fa.write(conformed_header + "\n")
+            output_fa.write(read.sequence + "\n")
+
+
 class PipelineStepGenerateTaxidFasta(PipelineStep):
     """Generate taxid FASTA from hit summaries. Intermediate conversion step
     that includes handling of non-specific hits with artificial tax_ids.
     """
 
     def run(self):
+        # VOODOO REMOVE just here to sanity check
+        import sys  # REMOVE
+        print("VOODOOVOODOOHELLO yeah, your code changed", file=sys.stderr)  # REMOVE
+        # END VOODOO REMOVE block
+
         input_fa_name = self.input_files_local[0][0]
-        if len(self.input_files_local) > 1:
+        # We determine if intended for use in `short-read-mngs/postprocess.wdl`
+        # or `short-read-mngs/experimental.wdl` by shape of input files list.
+        is_structured_as_postprocess_call = (len(self.input_files_local) > 1)
+        if is_structured_as_postprocess_call:  # short-read-mngs/postprocess.wdl
             input_fa_name = self.input_files_local[0][0]
             nt_hit_summary_path, nr_hit_summary_path = self.input_files_local[1][2], self.input_files_local[2][2]
-        else:
-            # This is used in `short-read-mngs/experimental.wdl`
+        else:  # short-read-mngs/experimental.wdl
             input_fa_name = self.input_files_local[0][0]
             nt_hit_summary_path, nr_hit_summary_path = self.input_files_local[0][1], self.input_files_local[0][2]
 
@@ -78,3 +106,13 @@ class PipelineStepGenerateTaxidFasta(PipelineStep):
             self.additional_files["lineage_db"],
             self.output_files_local()[0],
         )
+
+        if is_structured_as_postprocess_call:
+            # For short-read-mngs/postprocess.wdl ONLY we generate additional
+            # FASTA that has both the mapped reads we just did and unmappeds.
+            input_unidentified_fa_name = self.input_files_local[0][1]
+            generate_fasta_with_unmapped_included(
+                self.output_files_local()[0],
+                input_unidentified_fa_name,
+                self.output_files_local()[1],
+            )

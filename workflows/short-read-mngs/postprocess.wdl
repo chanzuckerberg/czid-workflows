@@ -402,7 +402,7 @@ task GenerateTaxidFasta {
     --step-class PipelineStepGenerateTaxidFasta \
     --step-name refined_taxid_fasta_out \
     --input-files '[["~{assembly_refined_annotated_merged_fa}", "~{assembly_refined_unidentified_fa}"], ["~{assembly_gsnap_blast_m8}", "~{assembly_gsnap_reassigned_m8}", "~{assembly_gsnap_hitsummary2_tab}", "~{assembly_refined_gsnap_counts_with_dcr_json}", "~{assembly_gsnap_contig_summary_json}"], ["~{assembly_rapsearch2_blast_m8}", "~{assembly_rapsearch2_reassigned_m8}", "~{assembly_rapsearch2_hitsummary2_tab}", "~{assembly_refined_rapsearch2_counts_with_dcr_json}", "~{assembly_rapsearch2_contig_summary_json}", "~{assembly_rapsearch2_blast_top_m8}"]]' \
-    --output-files '["assembly/refined_taxid_annot.fasta"]' \
+    --output-files '["assembly/refined_taxid_annot.fasta", "assembly/refined_taxid_annot_with_unmapped.fasta"]' \
     --output-dir-s3 '~{s3_wd_uri}' \
     --additional-files '{"lineage_db": "~{lineage_db}"}' \
     --additional-attributes '{}'
