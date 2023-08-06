@@ -59,7 +59,17 @@ def generate_taxid_fasta(
 
 CONFORMING_PREAMBLE = ">family_nr:-300:family_nt:-300:genus_nr:-200:genus_nt:-200:species_nr:-100:species_nt:-100:"
 def conform_unmapped_read_header(header: str):
-    """docme very, very tightly coupled to GenerateAnnotatedFasta"""
+    """Converts fasta headers from unmapped reads to match structure of mapped.
+
+    Implementation is very, very tightly coupled with how we output unmapped
+    (AKA, unidentified) reads from GenerateAnnotatedFasta task. This function
+    takes the headers of those unmapped reads and converts them to match the
+    structure we expect for all the mapped reads, eg where `family_nr` etc
+    are all explicitly given. See above `CONFORMING_PREAMBLE` for what that
+    looks like. Result is a header that looks like this:
+    >family_nr:-300:...:species_nt:-100:NR::NT::ORIGINAL_RAW_ID_GOES_HERE
+
+    See `generate_fasta_with_unmapped_included` below for why we do this."""
     return CONFORMING_PREAMBLE + header.lstrip('>')
 
 
@@ -68,7 +78,21 @@ def generate_fasta_with_unmapped_included(
     unmapped_fa_path: str,
     output_with_unmapped_path: str,
 ):
-    """docme"""
+    """Creates additional fasta that has both mapped and unmapped reads.
+
+    This takes an already existing fasta (expected to be the mapped reads with
+    taxids in place), copies it, then appends the unmapped (AKA, unidentified)
+    reads to it while conforming the headers of those unmapped reads so they
+    match up to the same structure used for the taxid+accession mapped reads.
+
+    Intent: while some steps need only the mapped reads to work properly, other
+    steps want to have all the non-host reads, both mapped and unmapped. That
+    is also what our users generally expect when downloading a sample's reads.
+    This provides another fasta that has **all** the non-host reads, but with
+    the headers all in a consistent structure so that any downstream parsing
+    won't blow up because of varying header structures (and so long as those
+    downstream steps aren't very strongly assuming just getting mapped reads).
+    """
     file_copy(mapped_fa_path, output_with_unmapped_path)
     with open(output_with_unmapped_path, "a") as output_fa:
         for read in fasta.iterator(unmapped_fa_path):
@@ -83,11 +107,6 @@ class PipelineStepGenerateTaxidFasta(PipelineStep):
     """
 
     def run(self):
-        # VOODOO REMOVE just here to sanity check
-        import sys  # REMOVE
-        print("VOODOOVOODOOHELLO yeah, your code changed", file=sys.stderr)  # REMOVE
-        # END VOODOO REMOVE block
-
         input_fa_name = self.input_files_local[0][0]
         # We determine if intended for use in `short-read-mngs/postprocess.wdl`
         # or `short-read-mngs/experimental.wdl` by shape of input files list.
