@@ -55,10 +55,16 @@ pub mod ncbi_compress {
         }
     }
 
-    struct MinHashTreeNode {
+    struct LoggingMinHashTreeNode {
+        // save accession to node if we have matches, useful for logging sequence retention
         own: KmerMinHash,
         children_aggregate: KmerMinHash,
         accession: String,
+    }
+
+    struct MinHashTreeNode {
+        own: KmerMinHash,
+        children_aggregate: KmerMinHash,
     }
 
     pub struct MinHashTree {
@@ -66,14 +72,52 @@ pub mod ncbi_compress {
         nodes: Vec<MinHashTreeNode>,
     }
 
-    impl MinHashTree {
-        pub fn new(branching_factor: usize) -> Self {
-            MinHashTree {
-                branching_factor,
-                nodes: Vec::new(),
-            }
-        }
+    pub struct MinHashTreeWithLogging {
+        branching_factor: usize,
+        nodes: Vec<LoggingMinHashTreeNode>, 
+    }
 
+    trait MinHashTreeBase {
+
+
+    }
+    
+    trait MinHashTreeFunctionality {
+        fn new(branching_factor: usize) -> MinHashTree;
+        fn parent_idx(&self, node: usize) -> Option<usize>;
+        fn child_idxes(&self, node: usize) -> Vec<usize>;
+        fn merge_to_parent(
+            &mut self,
+            parent_idx: usize,
+            child_idx: usize,
+        ) -> Result<(), SourmashError>;
+        fn insert(&mut self, hash: KmerMinHash) -> Result<(), SourmashError>;
+        fn contains(
+            &self,
+            hash: &KmerMinHash,
+            similarity_threshold: f64,
+        ) -> Result<bool, SourmashError>;
+    }
+
+    trait MinHashTreeWithLoggingFunctionality {
+        fn new(branching_factor: usize) -> MinHashTreeWithLogging;
+        fn parent_idx(&self, node: usize) -> Option<usize>;
+        fn child_idxes(&self, node: usize) -> Vec<usize>;
+        fn merge_to_parent(
+            &mut self,
+            parent_idx: usize,
+            child_idx: usize,
+        ) -> Result<(), SourmashError>;
+        fn insert(&mut self, hash: KmerMinHash, accession: &str) -> Result<(), SourmashError>;
+        fn contains(
+            &self,
+            hash: &KmerMinHash,
+            similarity_threshold: f64,
+        ) -> Result<Option<Vec<(String, String)>>, SourmashError>;
+    }
+
+
+    impl MinHashTreeFunctionality for MinHashTree {
         fn parent_idx(&self, node: usize) -> Option<usize> {
             if node == 0 {
                 None
@@ -81,10 +125,11 @@ pub mod ncbi_compress {
                 Some((node - 1) / self.branching_factor)
             }
         }
-
+        
         fn child_idxes(&self, node: usize) -> Vec<usize> {
-            let first = self.branching_factor * node + 0 + 1;
-            let last = self.branching_factor * node + self.branching_factor + 1;
+            let branching_factor = self.branching_factor;
+            let first = branching_factor * node + 0 + 1;
+            let last = branching_factor * node + branching_factor + 1;
             (first..last.min(self.nodes.len() - 1)).collect()
         }
 
@@ -101,8 +146,96 @@ pub mod ncbi_compress {
                 .merge(&right[0].children_aggregate)
         }
 
-        pub fn insert(&mut self, hash: KmerMinHash, accession: &str) -> Result<(), SourmashError> {
+        fn new(branching_factor: usize) -> MinHashTree  {
+            MinHashTree {
+                branching_factor,
+                nodes: Vec::new(),
+            }
+        }
+        fn insert(&mut self, hash: KmerMinHash) -> Result<(), SourmashError> {
             let node = MinHashTreeNode {
+                own: hash.clone(),
+                children_aggregate: hash.clone(),
+            };
+            let mut current_idx = self.nodes.len();
+            self.nodes.push(node);
+    
+            while let Some(parent_idx) = self.parent_idx(current_idx) {
+                self.merge_to_parent(parent_idx, current_idx)?;
+                current_idx = parent_idx;
+            }
+            Ok(())
+        }
+        fn contains(
+            &self,
+            hash: &KmerMinHash,
+            similarity_threshold: f64,
+        ) -> Result<bool, SourmashError> {
+            if self.nodes.is_empty() {
+                return Ok(false);
+            }
+    
+            let mut to_visit = vec![0];
+            while !to_visit.is_empty() {
+                let found = to_visit.par_iter().any(|node_idx| {
+                    let node = self.nodes.get(*node_idx).unwrap();
+                    containment(hash, &node.own).unwrap() >= similarity_threshold
+                });
+    
+                if found {
+                    return Ok(true);
+                }
+    
+                to_visit = to_visit
+                    .par_iter()
+                    .flat_map(|node_idx| {
+                        let node = self.nodes.get(*node_idx).unwrap();
+                        if containment(hash, &node.children_aggregate).unwrap() >= similarity_threshold
+                        {
+                            self.child_idxes(*node_idx)
+                        } else {
+                            vec![]
+                        }
+                    })
+                    .collect();
+            }
+            Ok(false)
+        }
+    }
+
+    impl MinHashTreeWithLoggingFunctionality for MinHashTreeWithLogging {
+        fn new(branching_factor: usize) -> MinHashTreeWithLogging {
+            MinHashTreeWithLogging {
+                branching_factor,
+                nodes: Vec::new(),
+            }
+        }
+        fn parent_idx(&self, node: usize) -> Option<usize> {
+            if node == 0 {
+                None
+            } else {
+                Some((node - 1) / self.branching_factor)
+            }
+        }
+        fn child_idxes(&self, node: usize) -> Vec<usize> {
+            let branching_factor = self.branching_factor;
+            let first = branching_factor * node + 0 + 1;
+            let last = branching_factor * node + branching_factor + 1;
+            (first..last.min(self.nodes.len() - 1)).collect()
+        }
+        fn merge_to_parent(
+            &mut self,
+            parent_idx: usize,
+            child_idx: usize,
+        ) -> Result<(), SourmashError> {
+
+            let (left, right) = self.nodes.split_at_mut(child_idx);
+            left[parent_idx]
+                .children_aggregate
+                .merge(&right[0].children_aggregate)
+        }
+        fn insert(&mut self, hash: KmerMinHash, accession: &str) -> Result<(), SourmashError> {
+            let node = LoggingMinHashTreeNode {
                 own: hash.clone(),
                 children_aggregate: hash.clone(),
                 accession: accession.to_string(),
@@ -111,18 +244,12 @@ pub mod ncbi_compress {
             self.nodes.push(node);
 
             while let Some(parent_idx) = self.parent_idx(current_idx) {
-                // no need to aggregate to the root, it would just contain everything thus providing no information
-                if parent_idx == 0 {
-                    break;
-                }
-
                 self.merge_to_parent(parent_idx, current_idx)?;
                 current_idx = parent_idx;
             }
             Ok(())
         }
-
-        pub fn contains(
+        fn contains(
             &self,
             hash: &KmerMinHash,
             similarity_threshold: f64,
@@ -131,7 +258,7 @@ pub mod ncbi_compress {
                 return Ok(None);
             }
 
-            let mut to_visit = vec![1]; // was initially zero
+            let mut to_visit = vec![0]; // was initially zero
             while !to_visit.is_empty() {
                 // Check if any of the nodes in the to_visit list are similar enough
                 let found_accession = to_visit.par_iter().filter_map(|node_idx| {
@@ -277,7 +404,7 @@ pub mod ncbi_compress {
         taxid_dir
     }
 
-    pub fn fasta_compress_taxid<P: AsRef<Path> + std::fmt::Debug>(
+    pub fn fasta_compress_taxid_w_logging<P: AsRef<Path> + std::fmt::Debug>(
         input_fasta_path: P,
         writer: &mut fasta::Writer<std::fs::File>,
         scaled: u64,
@@ -293,7 +420,7 @@ pub mod ncbi_compress {
     ) {
         // take in a fasta file and output a fasta file with only unique accessions (based on similarity threshold)
         let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
-        let mut tree = MinHashTree::new(branch_factor);
+        let mut tree = MinHashTreeWithLogging::new(branch_factor);
 
         let mut records_iter = reader.records();
         let mut chunk = records_iter
@@ -325,7 +452,6 @@ pub mod ncbi_compress {
                                 vec![accession_id, &found_accession_ids.join(", "), &found_accession_containments.join(", ")],
                                 logging_contained_in_tree_fn,
                             );
-
                             None
                         }
                         Err(e) => {
@@ -337,7 +463,7 @@ pub mod ncbi_compress {
                 })
                 .collect::<Vec<_>>();
 
-            let mut tmp: Vec<(KmerMinHash, &str)> = Vec::with_capacity(chunk_signatures.len() / 2); // why is this /2?
+            let mut tmp: Vec<(KmerMinHash, &str)> = Vec::with_capacity(chunk_signatures.len() / 2); // initialize with a guess of what you think the size will be
             for (hash, record) in chunk_signatures {
                 let accession_id = record.id().split_whitespace().next().unwrap();
                 accession_count.add_assign(1); // += 1, used for logging
@@ -367,7 +493,6 @@ pub mod ncbi_compress {
                         );
                     }
                 } else {
-                    // log discarded, retained, containment
                     let similar_accession_ids: Vec<String> = similar_seqs.iter().map(|(accession_id, _)| accession_id.to_string()).collect::<Vec<_>>();
                     let similar_accession_containments: Vec<String> = similar_seqs.iter().map(|(_, containment)| containment.to_string()).collect::<Vec<_>>();
                     logging::write_to_file(
@@ -377,7 +502,78 @@ pub mod ncbi_compress {
                 }
             }
             for (hash, accession_id) in tmp {
+                // only insert accession_id into tree if logging is enabled
+
                 tree.insert(hash, accession_id).unwrap();
+            }
+            chunk = records_iter
+                .borrow_mut()
+                .take(chunk_size)
+                .collect::<Vec<_>>();
+        }
+    }
+
+    fn fasta_compress_taxid<P: AsRef<Path> + std::fmt::Debug>(
+        input_fasta_path: P,
+        writer: &mut fasta::Writer<std::fs::File>,
+        scaled: u64,
+        k: u32,
+        seed: u64,
+        similarity_threshold: f64,
+        chunk_size: usize,
+        branch_factor: usize,
+        accession_count: &mut u64,
+        unique_accession_count: &mut u64,
+    ) {
+        let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
+        let mut tree = MinHashTree::new(branch_factor);
+    
+        let mut records_iter = reader.records();
+        let mut chunk = records_iter
+            .borrow_mut()
+            .take(chunk_size)
+            .collect::<Vec<_>>();
+        while chunk.len() > 0 {
+            let chunk_signatures = chunk
+                .par_iter()
+                .filter_map(|r| {
+                    let record = r.as_ref().unwrap();
+                    let mut hash =
+                        KmerMinHash::new(scaled, k, HashFunctions::murmur64_DNA, seed, false, 0);
+                    hash.add_sequence(record.seq(), true).unwrap();
+                    // Run an initial similarity check here against the full tree, this is slow so we can parallelize it
+                    if tree.contains(&hash, similarity_threshold).unwrap() {
+                        None
+                    } else {
+                        Some((record, hash))
+                    }
+                })
+                .collect::<Vec<_>>();
+    
+            let mut tmp = Vec::with_capacity(chunk_signatures.len() / 2);
+            for (record, hash) in chunk_signatures {
+                accession_count.add_assign(1);
+                // Perform a faster similarity check over just this chunk because we may have similarities within a chunk
+                let similar = tmp
+                    .par_iter()
+                    .any(|other| containment(&hash, other).unwrap() >= similarity_threshold);
+    
+                if !similar {
+                    unique_accession_count.add_assign(1);
+                    tmp.push(hash);
+                    writer.write_record(record).unwrap();
+    
+                    if *unique_accession_count % 10_000 == 0 {
+                        log::info!(
+                            "Processed {} accessions, {} unique",
+                            accession_count,
+                            unique_accession_count
+                        );
+                    }
+                }
+            }
+            for hash in tmp {
+                tree.insert(hash).unwrap();
             }
             chunk = records_iter
                 .borrow_mut()
@@ -398,6 +594,7 @@ pub mod ncbi_compress {
         chunk_size: usize,
         branch_factor: usize,
         skip_split_by_taxid: bool,
+        enable_sequence_retention_logging: bool,
         logging_contained_in_tree_fn: &str,
         logging_contained_in_chunk_fn: &str
 
@@ -408,20 +605,35 @@ pub mod ncbi_compress {
 
         if skip_split_by_taxid {
             log::info!("Skipping splitting accessions by taxid");
-            fasta_compress_taxid(
-                input_fasta_path,
-                &mut writer,
-                scaled,
-                k,
-                seed,
-                similarity_threshold,
-                chunk_size,
-                branch_factor,
-                &mut accession_count,
-                &mut unique_accession_count,
-                logging_contained_in_tree_fn,
-                logging_contained_in_chunk_fn,
-            );
+            if enable_sequence_retention_logging {
+                fasta_compress_taxid_w_logging(
+                    input_fasta_path,
+                    &mut writer,
+                    scaled,
+                    k,
+                    seed,
+                    similarity_threshold,
+                    chunk_size,
+                    branch_factor,
+                    &mut accession_count,
+                    &mut unique_accession_count,
+                    logging_contained_in_tree_fn,
+                    logging_contained_in_chunk_fn,
+                );
+            } else {
+                fasta_compress_taxid(
+                    input_fasta_path,
+                    &mut writer,
+                    scaled,
+                    k,
+                    seed,
+                    similarity_threshold,
+                    chunk_size,
+                    branch_factor,
+                    &mut accession_count,
+                    &mut unique_accession_count,
+                );
+            }
             if accession_count % 10_000 == 0 {
                 log::info!(
                     "  Compressed {} accessions, {} uniqe accessions",
@@ -439,20 +651,35 @@ pub mod ncbi_compress {
                 let entry = entry.unwrap();
                 let path = entry.path();
                 let input_fasta_path = path.to_str().unwrap();
-                fasta_compress_taxid(
-                    input_fasta_path,
-                    &mut writer,
-                    scaled,
-                    k,
-                    seed,
-                    similarity_threshold,
-                    chunk_size,
-                    branch_factor,
-                    &mut accession_count,
-                    &mut unique_accession_count,
-                    logging_contained_in_tree_fn,
-                    logging_contained_in_chunk_fn,
-                );
+                if enable_sequence_retention_logging {
+                    fasta_compress_taxid_w_logging(
+                        input_fasta_path,
+                        &mut writer,
+                        scaled,
+                        k,
+                        seed,
+                        similarity_threshold,
+                        chunk_size,
+                        branch_factor,
+                        &mut accession_count,
+                        &mut unique_accession_count,
+                        logging_contained_in_tree_fn,
+                        logging_contained_in_chunk_fn,
+                    );
+                } else {
+                    fasta_compress_taxid(
+                        input_fasta_path,
+                        &mut writer,
+                        scaled,
+                        k,
+                        seed,
+                        similarity_threshold,
+                        chunk_size,
+                        branch_factor,
+                        &mut accession_count,
+                        &mut unique_accession_count,
+                    );
+                }
                 if i % 10_000 == 0 {
                     log::info!(
                         "  Compressed {} taxids, {} accessions, {} uniqe accessions",

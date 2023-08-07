@@ -827,6 +827,7 @@ dependencies = [
  "csv",
  "env_logger",
  "log",
+ "rand 0.8.5",
  "rayon",
  "sourmash",
  "tempdir",

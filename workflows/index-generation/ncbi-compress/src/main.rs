@@ -7,15 +7,15 @@ use ncbi_compress::logging::logging;
 #[command(author, version, about, long_about = None)]
 struct Args {
     /// Path to the input fasta file
-    #[arg(short, long)]
+    #[arg(short, long, required = true)]
     input_fasta: String,
 
     /// Path to the output fasta file
-    #[arg(short, long)]
+    #[arg(short, long, required = true)]
     output_fasta: String,
 
     /// Path to the accession to taxid csv file
-    /// At least one required
+    /// At least one required if not skipping split by taxid
     #[arg(short, long)]
     accession_mapping_files: Vec<String>,
 
@@ -68,19 +68,23 @@ struct Args {
     /// (default: logging_contained_in_chunk.tsv)
     #[arg(long, default_value = "logging_contained_in_chunk.tsv")]
     logging_contained_in_chunk_fn: String,
+
+    // Enable logging
+    #[arg(long, default_value = "false")]
+    enable_sequence_retention_logging: bool,
 }
-
-
-
 
 pub fn main() {
 
     logging::init_stdout_logging();
 
     let args = Args::parse();
-    // log discarded, retained, containment
-    logging::initialize_tsv(&args.logging_contained_in_tree_fn, vec!["discarded", "retained", "containment"]);
-    logging::initialize_tsv(&args.logging_contained_in_chunk_fn, vec!["discarded", "retained", "containment"]);
+
+    if args.enable_sequence_retention_logging {
+        // log discarded, retained, containment
+        logging::initialize_tsv(&args.logging_contained_in_tree_fn, vec!["discarded", "retained", "containment"]);
+        logging::initialize_tsv(&args.logging_contained_in_chunk_fn, vec!["discarded", "retained", "containment"]);
+    }
 
     fasta_compress(
         args.input_fasta,
@@ -94,6 +98,7 @@ pub fn main() {
         args.chunk_size,
         args.branch_factor,
         args.skip_split_by_taxid,
+        args.enable_sequence_retention_logging,
         &args.logging_contained_in_tree_fn,
         &args.logging_contained_in_chunk_fn,
     );
