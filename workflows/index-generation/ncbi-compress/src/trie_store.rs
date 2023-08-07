@@ -1,4 +1,4 @@
-pub mod TrieStore {
+pub mod trie_store {
     use trie_rs::{Trie, TrieBuilder};
 
     /// A trie that stores u64 values

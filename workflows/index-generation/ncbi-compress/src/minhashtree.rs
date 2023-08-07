@@ -1,8 +1,6 @@
 pub mod minhashtree {
     use rayon::prelude::*;
-    use sourmash::encodings::HashFunctions;
     use sourmash::errors::SourmashError;
-    use sourmash::signature::SigsTrait;
     use sourmash::sketch::minhash::KmerMinHash;
 
     use crate::ncbi_compress::ncbi_compress::containment;

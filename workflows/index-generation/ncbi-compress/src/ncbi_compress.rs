@@ -15,7 +15,7 @@ pub mod ncbi_compress {
     use crate::logging::logging;
     use crate::minhashtree::minhashtree::{MinHashTree, MinHashTreeFunctionality};
     use crate::minhashtree_w_logging::minhashtree_w_logging::{MinHashTreeWithLogging, MinHashTreeWithLoggingFunctionality};
-    use crate::trie_store::TrieStore::{TrieStore, TrieStoreBuilder};
+    use crate::trie_store::trie_store::TrieStoreBuilder;
  
     pub fn containment(needle: &KmerMinHash, haystack: &KmerMinHash) -> Result<f64, SourmashError> {
         let (intersect_size, _) = needle.intersection_size(haystack)?;
