@@ -138,6 +138,7 @@ pub mod ncbi_compress {
         similarity_threshold: f64,
         chunk_size: usize,
         branch_factor: usize,
+        is_protein_fasta: bool,
         accession_count: &mut u64,
         unique_accession_count: &mut u64,
         logging_contained_in_tree_fn: &str,
@@ -157,9 +158,15 @@ pub mod ncbi_compress {
                 .par_iter()
                 .filter_map(|r| {
                     let record = r.as_ref().unwrap();
-                    let mut hash =
+                    let mut hash;
+                    if is_protein_fasta {
+                        hash = KmerMinHash::new(scaled, k, HashFunctions::murmur64_protein, seed, false, 0);
+                        hash.add_protein(record.seq()).unwrap();
+                    } else {
+                        hash =
                         KmerMinHash::new(scaled, k, HashFunctions::murmur64_DNA, seed, false, 0);
-                    hash.add_sequence(record.seq(), true).unwrap();
+                        hash.add_sequence(record.seq(), true).unwrap();
+                    }
                     // Run an initial similarity check here against the full tree, this is slow so we can parallelize it
                     let contained_in_tree = tree.contains(&hash, similarity_threshold);
                     match contained_in_tree {
@@ -247,6 +254,7 @@ pub mod ncbi_compress {
         similarity_threshold: f64,
         chunk_size: usize,
         branch_factor: usize,
+        is_protein_fasta: bool,
         accession_count: &mut u64,
         unique_accession_count: &mut u64,
     ) {
@@ -263,9 +271,16 @@ pub mod ncbi_compress {
                 .par_iter()
                 .filter_map(|r| {
                     let record = r.as_ref().unwrap();
-                    let mut hash =
+                    let mut hash;
+                    if is_protein_fasta {
+                        hash =
+                        KmerMinHash::new(scaled, k, HashFunctions::murmur64_protein, seed, false, 0);
+                        hash.add_protein(record.seq()).unwrap();
+                    } else {
+                        hash =
                         KmerMinHash::new(scaled, k, HashFunctions::murmur64_DNA, seed, false, 0);
-                    hash.add_sequence(record.seq(), true).unwrap();
+                        hash.add_sequence(record.seq(), true).unwrap();
+                    }
                     // Run an initial similarity check here against the full tree, this is slow so we can parallelize it
                     if tree.contains(&hash, similarity_threshold).unwrap() {
                         None
@@ -320,6 +335,7 @@ pub mod ncbi_compress {
         branch_factor: usize,
         temp_file_output_dir: &str,
         skip_split_by_taxid: bool,
+        is_protein_fasta: bool,
         enable_sequence_retention_logging: bool,
         logging_contained_in_tree_fn: &str,
         logging_contained_in_chunk_fn: &str
@@ -341,6 +357,7 @@ pub mod ncbi_compress {
                     similarity_threshold,
                     chunk_size,
                     branch_factor,
+                    is_protein_fasta,
                     &mut accession_count,
                     &mut unique_accession_count,
                     logging_contained_in_tree_fn,
@@ -356,6 +373,7 @@ pub mod ncbi_compress {
                     similarity_threshold,
                     chunk_size,
                     branch_factor,
+                    is_protein_fasta,
                     &mut accession_count,
                     &mut unique_accession_count,
                 );
@@ -392,6 +410,7 @@ pub mod ncbi_compress {
                         similarity_threshold,
                         chunk_size,
                         branch_factor,
+                        is_protein_fasta,
                         &mut accession_count,
                         &mut unique_accession_count,
                         logging_contained_in_tree_fn,
@@ -407,6 +426,7 @@ pub mod ncbi_compress {
                         similarity_threshold,
                         chunk_size,
                         branch_factor,
+                        is_protein_fasta,
                         &mut accession_count,
                         &mut unique_accession_count,
                     );
