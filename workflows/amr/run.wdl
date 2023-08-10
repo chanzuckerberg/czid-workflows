@@ -39,7 +39,8 @@ workflow amr {
                 ]
             ),
             clusters = host_filter_stage.czid_dedup_out_duplicate_clusters_csv,
-            cluster_sizes = host_filter_stage.czid_dedup_out_duplicate_cluster_sizes_tsv
+            cluster_sizes = host_filter_stage.czid_dedup_out_duplicate_cluster_sizes_tsv,
+            docker_image_id = docker_image_id
         }
         call RunSpades {
             input:
