@@ -72,6 +72,10 @@ struct Args {
     // Enable logging
     #[arg(long, default_value = "false")]
     enable_sequence_retention_logging: bool,
+
+    // temp file directory for the split fasta
+    #[arg(long, default_value = "/mnt")]
+    temp_file_output_dir: String,
 }
 
 pub fn main() {
@@ -97,6 +101,7 @@ pub fn main() {
         args.similarity_threshold,
         args.chunk_size,
         args.branch_factor,
+        &args.temp_file_output_dir,
         args.skip_split_by_taxid,
         args.enable_sequence_retention_logging,
         &args.logging_contained_in_tree_fn,

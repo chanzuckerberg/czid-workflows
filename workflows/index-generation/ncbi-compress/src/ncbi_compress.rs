@@ -30,11 +30,13 @@ pub mod ncbi_compress {
         input_fasta_path: P,
         mapping_file_path: Vec<Q>,
         taxids_to_drop: &Vec<u64>,
+        temp_file_output_dir: &str
+
     ) -> TempDir {
         // create a temp dir containing one file per taxid that input fasta accessions are sorted into
         // based on taxid in the mapping files (input fasta does not have taxid in header)
         log::info!("Creating accession to taxid mapping");
-        let taxid_dir = TempDir::new("accessions_by_taxid").unwrap();
+        let taxid_dir = TempDir::new_in(temp_file_output_dir, "accessions_by_taxid").unwrap();
         let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
         // Build a trie of the accessions in the input fasta
         let mut builder = TrieBuilder::new(); // is this supposed to be TrieStoreBuilder?
@@ -316,6 +318,7 @@ pub mod ncbi_compress {
         similarity_threshold: f64,
         chunk_size: usize,
         branch_factor: usize,
+        temp_file_output_dir: &str,
         skip_split_by_taxid: bool,
         enable_sequence_retention_logging: bool,
         logging_contained_in_tree_fn: &str,
@@ -367,7 +370,12 @@ pub mod ncbi_compress {
         } else {
             log::info!("Splitting accessions by taxid");
             let taxid_dir =
-                split_accessions_by_taxid(&input_fasta_path, accession_mapping_files, &taxids_to_drop);
+                split_accessions_by_taxid(
+                    &input_fasta_path,
+                    accession_mapping_files,
+                    &taxids_to_drop,
+                    temp_file_output_dir
+                );
             log::info!("Finished splitting accessions by taxid");
             log::info!("Starting compression by taxid");
             for (i, entry) in fs::read_dir(taxid_dir.path()).unwrap().enumerate() {
