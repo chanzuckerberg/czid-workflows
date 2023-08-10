@@ -163,7 +163,8 @@ task RunRedup {
     command <<<
     >>>
     output {
-
+        File redups1_fa = "redups_1.fa"
+        File? redups2_fa = "redups_2.fa"
     }
     runtime {
         docker: docker_image_id
