@@ -166,6 +166,7 @@ task RunRedup {
         Array[File] non_host_reads
         File clusters
         File cluster_sizes
+        String docker_image_id
     }
     command <<<
         set -euxo pipefail
@@ -193,7 +194,7 @@ task RunRedup {
         fi
 
         counter=1
-        for fasta in ~{sep=' ' priceseq_fa}; do
+        for fasta in ~{sep=' ' fastp_fa}; do
         seqtk subseq $fasta duplicated-pairs.txt > redups_$counter.fa
         ((counter++))
         done
