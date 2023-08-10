@@ -29,6 +29,18 @@ workflow amr {
             docker_image_id = host_filtering_docker_image_id,
             s3_wd_uri = s3_wd_uri
         }
+        call RunRedup {
+            input:
+            fastp_fa = select_all([host_filter_stage.fastp_out_fastp1_fastq, host_filter_stage.fastp_out_fastp2_fastq]),
+            non_host_reads = select_all(
+                [
+                    host_filter_stage.subsampled_out_subsampled_1_fa,
+                    host_filter_stage.subsampled_out_subsampled_2_fa
+                ]
+            ),
+            clusters = host_filter_stage.czid_dedup_out_duplicate_clusters_csv,
+            cluster_sizes = host_filter_stage.czid_dedup_out_duplicate_cluster_sizes_tsv
+        }
         call RunSpades {
             input:
             non_host_reads = select_all(
@@ -150,17 +162,41 @@ workflow amr {
 
 task RunRedup {
     input {
-        fastp_fa = select_all([host_filter_stage.fastp_out_fastp1_fastq, host_filter_stage.fastp_out_fastp2_fastq]),
-        non_host_reads = select_all(
-            [
-                host_filter_stage.subsampled_out_subsampled_1_fa,
-                host_filter_stage.subsampled_out_subsampled_2_fa
-            ]
-        ),
-        clusters = host_filter_stage.czid_dedup_out_duplicate_clusters_csv,
-        cluster_sizes = host_filter_stage.czid_dedup_out_duplicate_cluster_sizes_tsv
+        Array[File] fastp_fa
+        Array[File] non_host_reads
+        File clusters
+        File cluster_sizes
     }
     command <<<
+        set -euxo pipefail
+        grep -v "^1" "~{cluster_sizes}" | cut -f2 > duplicated-reads.txt
+        grep -h ">" ~{sep=' ' non_host_reads} | sed "s/^>//" > passed_filters.txt
+
+        python3 << CODE
+        """ write read headers excluded from deduplicated file """
+        with open("duplicated-pairs.txt", "w+") as f:
+        with open("passed_filters.txt", "r") as pf:
+            passed_filters = set(pf.read().splitlines())
+        with open("duplicated-reads.txt", "r") as dr:
+            duplicate = set(dr.read().splitlines())
+        with open("~{clusters}", "r") as clusters:
+            for line in clusters:
+                key, value = line.strip().split(",")
+                if key in duplicate and key in passed_filters and key != value:
+                    f.write(value)
+                    f.write("\n")
+        CODE
+        if [ ! -s "duplicated-pairs.txt" ]; then
+        # if no duplicated files, create an empty output then exit
+        touch "redups_1.fa"
+        exit 0
+        fi
+
+        counter=1
+        for fasta in ~{sep=' ' priceseq_fa}; do
+        seqtk subseq $fasta duplicated-pairs.txt > redups_$counter.fa
+        ((counter++))
+        done
     >>>
     output {
         File redups1_fa = "redups_1.fa"
