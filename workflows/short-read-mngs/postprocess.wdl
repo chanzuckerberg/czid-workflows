@@ -368,6 +368,7 @@ task GenerateAnnotatedFasta {
     String step_description_md = read_string("refined_annotated_out.description.md")
     File assembly_refined_annotated_merged_fa = "assembly/refined_annotated_merged.fa"
     File assembly_refined_unidentified_fa = "assembly/refined_unidentified.fa"
+    File assembly_unique_refined_unidentified_fa = "assembly/unique_refined_unidentified.fa"
     File? output_read_count = "refined_annotated_out.count"
   }
   runtime {
@@ -644,7 +645,7 @@ workflow czid_postprocess {
       docker_image_id = docker_image_id,
       s3_wd_uri = s3_wd_uri,
       assembly_refined_annotated_merged_fa = GenerateAnnotatedFasta.assembly_refined_annotated_merged_fa,
-      assembly_refined_unidentified_fa = GenerateAnnotatedFasta.assembly_refined_unidentified_fa,
+      assembly_refined_unidentified_fa = GenerateAnnotatedFasta.assembly_unique_refined_unidentified_fa,
       assembly_gsnap_blast_m8 = BlastContigs_refined_gsnap_out.assembly_gsnap_blast_m8,
       assembly_gsnap_reassigned_m8 = BlastContigs_refined_gsnap_out.assembly_gsnap_reassigned_m8,
       assembly_gsnap_hitsummary2_tab = BlastContigs_refined_gsnap_out.assembly_gsnap_hitsummary2_tab,
