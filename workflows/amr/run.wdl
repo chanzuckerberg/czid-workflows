@@ -148,6 +148,28 @@ workflow amr {
 
 }
 
+task RunRedup {
+    input {
+        fastp_fa = select_all([host_filter_stage.fastp_out_fastp1_fastq, host_filter_stage.fastp_out_fastp2_fastq]),
+        non_host_reads = select_all(
+            [
+                host_filter_stage.subsampled_out_subsampled_1_fa,
+                host_filter_stage.subsampled_out_subsampled_2_fa
+            ]
+        ),
+        clusters = host_filter_stage.czid_dedup_out_duplicate_clusters_csv,
+        cluster_sizes = host_filter_stage.czid_dedup_out_duplicate_cluster_sizes_tsv
+    }
+    command <<<
+    >>>
+    output {
+
+    }
+    runtime {
+        docker: docker_image_id
+    }
+}
+
 task RunResultsPerSample {
     input {
         File main_output
