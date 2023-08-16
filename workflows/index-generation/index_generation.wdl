@@ -23,13 +23,15 @@ workflow index_generation {
     call DownloadNR {
         input:
         ncbi_server = ncbi_server,
-        docker_image_id = docker_image_id
+        docker_image_id = docker_image_id,
+        old_nr_s3_path = old_nr_s3_path,
     }
 
     call DownloadNT {
         input:
         ncbi_server = ncbi_server,
-        docker_image_id = docker_image_id
+        docker_image_id = docker_image_id,
+        old_nt_s3_path = old_nt_s3_path,
     }
 
     call DownloadAccession2Taxid {
@@ -108,14 +110,14 @@ workflow index_generation {
 
 
     # if (write_to_db && defined(environ) && defined(s3_dir)) {
-    #     call LoadTaxonLineages {
-    #         input:
-    #         environ = environ,
-    #         index_name = index_name,
-    #         s3_dir = s3_dir,
-    #         versioned_taxid_lineages_csv = GenerateIndexLineages.versioned_taxid_lineages_csv,
-    #         docker_image_id = docker_image_id
-    #     } 
+    call LoadTaxonLineages {
+            input:
+            environ = environ,
+            index_name = index_name,
+            s3_dir = s3_dir,
+            # versioned_taxid_lineages_csv = GenerateIndexLineages.versioned_taxid_lineages_csv,
+            docker_image_id = docker_image_id
+    }
     # }
 
 
@@ -374,7 +376,7 @@ task LoadTaxonLineages {
         String? environ
         String index_name
         String? s3_dir
-        File versioned_taxid_lineages_csv
+        # File versioned_taxid_lineages_csv
         String docker_image_id
     }
 
