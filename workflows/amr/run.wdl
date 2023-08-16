@@ -174,7 +174,7 @@ task RunRedup {
         # exit if no duplicate reads
         if [[ ! $(grep -v "^1\t" "~{cluster_sizes}") ]]; then
             counter=1
-            for fasta in "~{non_host_reads}"; do
+            for fasta in "~{sep=' ' non_host_reads}"; do
                 cp $fasta redups_$counter.fa
                 ((counter++))
             done
@@ -182,7 +182,7 @@ task RunRedup {
         fi
 
         grep -v "^1\t" "~{cluster_sizes}" | cut -f2 > duplicated-reads.txt
-        grep -h ">" "~{non_host_reads}" | sed "s/^>//" > passed_filters.txt
+        grep -h ">" ~{sep=' ' non_host_reads} | sed "s/^>//" > passed_filters.txt
 
         python3 <<CODE
         pair_values = []
@@ -205,7 +205,7 @@ task RunRedup {
         CODE
 
         counter=1
-        for fasta in "~{fastp_fa}"; do
+        for fasta in "~{sep=' ' fastp_fa}"; do
             seqtk subseq $fasta duplicated-pairs.txt | seqtk seq -a > redups_$counter.fa
             ((counter++))
         done
