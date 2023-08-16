@@ -24,14 +24,14 @@ workflow index_generation {
         input:
         ncbi_server = ncbi_server,
         docker_image_id = docker_image_id,
-        old_nr_s3_path = old_nr_s3_path,
+        old_nr_s3_path = old_nr_s3_path
     }
 
     call DownloadNT {
         input:
         ncbi_server = ncbi_server,
         docker_image_id = docker_image_id,
-        old_nt_s3_path = old_nt_s3_path,
+        old_nt_s3_path = old_nt_s3_path
     }
 
     call DownloadAccession2Taxid {
