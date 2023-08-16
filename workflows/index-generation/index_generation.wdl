@@ -5,7 +5,7 @@ workflow index_generation {
         String index_name
         String ncbi_server = "https://ftp.ncbi.nih.gov"
         # Boolean write_to_db = false
-        # String? environ
+        String? environ
         # TODO: (alignment_config) remove after alignment config table is removed
         String? s3_dir
         # File? previous_lineages
@@ -407,7 +407,7 @@ task LoadTaxonLineages {
         get_param "/idseq-~{environ}-web/db_password" >> my.cnf
 
         # don't perform taxon lineage update
-        # gzip -dc ~{versioned_taxid_lineages_csv} > "taxon_lineages_new.csv"
+        # gzip -dc versioned_taxid_lineages_csv > "taxon_lineages_new.csv"
         # COLS=$(head -n 1 "taxon_lineages_new.csv")
         # mysql --defaults-extra-file=my.cnf -D "$DATABASE" -e "CREATE TABLE taxon_lineages_new LIKE taxon_lineages"
         # mysqlimport --defaults-extra-file=my.cnf --verbose --local --columns="$COLS" --fields-terminated-by=',' --fields-optionally-enclosed-by='"' --ignore-lines 1 "$DATABASE" "taxon_lineages_new.csv"
