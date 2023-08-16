@@ -2,18 +2,22 @@ version development
 
 workflow index_generation {
     input {
-        # String index_name
+        String index_name
         String ncbi_server = "https://ftp.ncbi.nih.gov"
         # Boolean write_to_db = false
         # String? environ
         # TODO: (alignment_config) remove after alignment config table is removed
-        # String? s3_dir
+        String? s3_dir
         # File? previous_lineages
-        Array[String] taxids_to_drop = ["9606"] # human
         Int nt_compression_k = 31
-        Int nt_compression_scaled = 100000
-        Float nt_compression_similarity_threshold = 0.9
+        Int nt_compression_scaled = 1000
+        Float nt_compression_similarity_threshold = 0.5
+        Int nr_compression_k = 31
+        Int nr_compression_scaled = 10
+        Float nr_compression_similarity_threshold = 0.5
         String docker_image_id
+        String old_nt_s3_path
+        String old_nr_s3_path
     }
 
     call DownloadNR {
@@ -44,14 +48,23 @@ workflow index_generation {
         input:
         nt = DownloadNT.nt,
         accession2taxid = DownloadAccession2Taxid.accession2taxid,
-        taxids_to_drop = taxids_to_drop,
         k = nt_compression_k,
         scaled = nt_compression_scaled,
         similarity_threshold = nt_compression_similarity_threshold,
         docker_image_id = docker_image_id,
-        cpu = 32
+        cpu = 64
     }
 
+    call CompressNR {
+        input:
+        nr = DownloadNR.nr,
+        accession2taxid = DownloadAccession2Taxid.accession2taxid,
+        k = nr_compression_k,
+        scaled = nr_compression_scaled,
+        similarity_threshold = nr_compression_similarity_threshold,
+        docker_image_id = docker_image_id,
+        cpu = 64
+    }
 
     call GenerateIndexAccessions {
         input:
@@ -67,17 +80,17 @@ workflow index_generation {
         docker_image_id = docker_image_id
     }
 
-    # call GenerateNRDB {
-    #     input:
-    #     nr = DownloadNR.nr,
-    #     docker_image_id = docker_image_id
-    # }
+    call GenerateNRDB {
+        input:
+        nr = CompressNR.nr_compressed,
+        docker_image_id = docker_image_id
+    }
 
-    # call GenerateIndexDiamond {
-    #     input:
-    #     nr = DownloadNR.nr,
-    #     docker_image_id = docker_image_id
-    # }
+    call GenerateIndexDiamond {
+        input:
+        nr = CompressNR.nr_compressed,
+        docker_image_id = docker_image_id
+    }
 
     # call GenerateIndexLineages {
     #     input:
@@ -107,13 +120,13 @@ workflow index_generation {
 
 
     output {
-        File nr = DownloadNR.nr
+        File nr = CompressNR.nr_compressed
         File nt = CompressNT.nt_compressed
         File accession2taxid_db = GenerateIndexAccessions.accession2taxid_db
         File nt_loc_db = GenerateNTDB.nt_loc_db
         File nt_info_db = GenerateNTDB.nt_info_db
-        # File nr_loc_db = GenerateNRDB.nr_loc_db
-        # Directory diamond_index = GenerateIndexDiamond.diamond_index
+        File nr_loc_db = GenerateNRDB.nr_loc_db
+        Directory diamond_index = GenerateIndexDiamond.diamond_index
         # File taxid_lineages_db = GenerateIndexLineages.taxid_lineages_db
         # File versioned_taxid_lineages_csv = GenerateIndexLineages.versioned_taxid_lineages_csv
         # File deuterostome_taxids = GenerateIndexLineages.deuterostome_taxids
@@ -126,10 +139,12 @@ task DownloadNR {
     input {
         String ncbi_server
         String docker_image_id
+        String old_nr_s3_path
     }
 
     command <<<
-        ncbi_download "~{ncbi_server}" blast/db/FASTA/nr.gz
+        # ncbi_download "~{ncbi_server}" blast/db/FASTA/nr.gz
+        aws s3 cp ~{old_nr_s3_path} blast/db/FASTA/nr
     >>>
 
     output {
@@ -145,10 +160,12 @@ task DownloadNT {
     input {
         String ncbi_server
         String docker_image_id
+        String old_nt_s3_path
     }
 
     command <<<
-        ncbi_download "~{ncbi_server}" blast/db/FASTA/nt.gz
+        # ncbi_download "~{ncbi_server}" blast/db/FASTA/nt.gz
+        aws s3 cp ~{old_nt_s3_path} blast/db/FASTA/nt
         
     >>>
 
@@ -387,11 +404,13 @@ task LoadTaxonLineages {
         # Append the password after the =
         get_param "/idseq-~{environ}-web/db_password" >> my.cnf
 
-        gzip -dc ~{versioned_taxid_lineages_csv} > "taxon_lineages_new.csv"
-        COLS=$(head -n 1 "taxon_lineages_new.csv")
-        mysql --defaults-extra-file=my.cnf -D "$DATABASE" -e "CREATE TABLE taxon_lineages_new LIKE taxon_lineages"
-        mysqlimport --defaults-extra-file=my.cnf --verbose --local --columns="$COLS" --fields-terminated-by=',' --fields-optionally-enclosed-by='"' --ignore-lines 1 "$DATABASE" "taxon_lineages_new.csv"
-        mysql --defaults-extra-file=my.cnf -D "$DATABASE" -e "RENAME TABLE taxon_lineages TO taxon_lineages_old, taxon_lineages_new To taxon_lineages"
+        # don't perform taxon lineage update
+        # gzip -dc ~{versioned_taxid_lineages_csv} > "taxon_lineages_new.csv"
+        # COLS=$(head -n 1 "taxon_lineages_new.csv")
+        # mysql --defaults-extra-file=my.cnf -D "$DATABASE" -e "CREATE TABLE taxon_lineages_new LIKE taxon_lineages"
+        # mysqlimport --defaults-extra-file=my.cnf --verbose --local --columns="$COLS" --fields-terminated-by=',' --fields-optionally-enclosed-by='"' --ignore-lines 1 "$DATABASE" "taxon_lineages_new.csv"
+        # mysql --defaults-extra-file=my.cnf -D "$DATABASE" -e "RENAME TABLE taxon_lineages TO taxon_lineages_old, taxon_lineages_new To taxon_lineages"
+
         # TODO: remove old table once we feel safe
         # mysql --defaults-extra-file=my.cnf -D "$DATABASE" -e "DROP TABLE taxon_lineages_old"
         # TODO: (alignment_config) remove after alignment config table is removed
@@ -477,7 +496,6 @@ task CompressNT {
     input {
         File nt
         Directory accession2taxid
-        Array[String] taxids_to_drop
         Int k
         Int scaled
         Float similarity_threshold
@@ -500,7 +518,6 @@ task CompressNT {
             --accession-mapping-files ~{accession2taxid}/nucl_wgs.accession2taxid \
             --accession-mapping-files ~{accession2taxid}/nucl_gb.accession2taxid \
             --accession-mapping-files ~{accession2taxid}/pdb.accession2taxid \
-            ~{ if length(taxids_to_drop) > 0 then "--taxids-to-drop ~{sep(" --taxids-to-drop ", taxids_to_drop)}" else "" } \
             --output-fasta nt_compressed.fa \
             --k ~{k} \
             --scaled ~{scaled} \
@@ -513,6 +530,51 @@ task CompressNT {
 
     runtime {
         docker: docker_image_id
-        cpu: cpu
+        cpu: 64
+        memory: "488G"
+    }
+}
+
+task CompressNR {
+    input {
+        File nr
+        Directory accession2taxid
+        Int k
+        Int scaled
+        Float similarity_threshold
+        String docker_image_id
+        Int cpu
+    }
+
+    command <<<
+        set -euxo pipefail
+
+        # Sort NR by length with the longer sequences first
+        #   This is needed because the compression algorithm iterates through NR in order only emitting
+        #   sequences if they are not contained by what it has already seen. If a shorter sequence is
+        #   contained by a longer sequence, and the shorter sequence were to come first, it would be emitted
+        #   even though it is redundant to the longer sequence.
+        seqkit sort --reverse --by-length --two-pass --threads ~{cpu} ~{nr} -o nr_sorted
+
+        ncbi-compress \
+            --input-fasta nr_sorted \
+            --accession-mapping-files ~{accession2taxid}/prot.accession2taxid.FULL.gz \
+            --accession-mapping-files ~{accession2taxid}/pdb.accession2taxid \
+            --output-fasta nr_compressed.fa \
+            --k ~{k} \
+            --scaled ~{scaled} \
+            --similarity-threshold ~{similarity_threshold} \
+            --is-protein-fasta \
+            --chunk-size 100 \
+    >>>
+
+    output {
+        File nr_compressed = "nr_compressed.fa"
+    }
+
+    runtime {
+        docker: docker_image_id
+        cpu: 64
+        memory: "488G"
     }
 }
