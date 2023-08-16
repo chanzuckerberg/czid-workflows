@@ -46,8 +46,8 @@ workflow amr {
             input:
             non_host_reads = select_all(
                 [
-                    host_filter_stage.subsampled_out_subsampled_1_fa,
-                    host_filter_stage.subsampled_out_subsampled_2_fa
+                    RunRedup.redups_1_fa,
+                    RunRedup.redups_2_fa
                 ]
             ),
             min_contig_length = min_contig_length,
@@ -59,8 +59,8 @@ workflow amr {
         non_host_reads = select_first([non_host_reads, 
             select_all(
                 [
-                    host_filter_stage.subsampled_out_subsampled_1_fa,
-                    host_filter_stage.subsampled_out_subsampled_2_fa
+                    RunRedup.redups_1_fa,
+                    RunRedup.redups_2_fa
                 ]
             )]),
         card_json = card_json, 
@@ -124,8 +124,8 @@ workflow amr {
                            non_host_reads,
                            select_all(
                                [
-                                   host_filter_stage.subsampled_out_subsampled_1_fa,
-                                   host_filter_stage.subsampled_out_subsampled_2_fa
+                                    RunRedup.redups_1_fa,
+                                    RunRedup.redups_2_fa
                                ]
                            )
                        ]),
@@ -171,38 +171,48 @@ task RunRedup {
     }
     command <<<
         set -euxo pipefail
-        grep -v "^1" "~{cluster_sizes}" | cut -f2 > duplicated-reads.txt
-        grep -h ">" ~{sep=' ' non_host_reads} | sed "s/^>//" > passed_filters.txt
+        # exit if no duplicate reads
+        if [[ ! $(grep -v "^1\t" "~{cluster_sizes}") ]]; then
+            counter=1
+            for fasta in "~{non_host_reads}"; do
+                cp $fasta redups_$counter.fa
+                ((counter++))
+            done
+            exit 0
+        fi
 
-        python3 << CODE
-        """ write read headers excluded from deduplicated file """
-        with open("duplicated-pairs.txt", "w+") as f:
+        grep -v "^1\t" "~{cluster_sizes}" | cut -f2 > duplicated-reads.txt
+        grep -h ">" "~{non_host_reads}" | sed "s/^>//" > passed_filters.txt
+
+        python3 <<CODE
+        pair_values = []
+        passed_filters = set()
+        duplicates = set()
         with open("passed_filters.txt", "r") as pf:
-            passed_filters = set(pf.read().splitlines())
+            passed_filters.update(pf.read().splitlines())
         with open("duplicated-reads.txt", "r") as dr:
-            duplicate = set(dr.read().splitlines())
+            duplicates.update(dr.read().splitlines())
         with open("~{clusters}", "r") as clusters:
             for line in clusters:
                 key, value = line.strip().split(",")
-                if key in duplicate and key in passed_filters and key != value:
-                    f.write(value)
-                    f.write("\n")
+                if key in duplicates and key in passed_filters and key != value:
+                    pair_values.append(value)
+
+        with open("duplicated-pairs.txt", "w+") as f:
+            for value in pair_values:
+                f.write(value)
+                f.write("\n")
         CODE
-        if [ ! -s "duplicated-pairs.txt" ]; then
-        # if no duplicated files, create an empty output then exit
-        touch "redups_1.fa"
-        exit 0
-        fi
 
         counter=1
-        for fasta in ~{sep=' ' fastp_fa}; do
-        seqtk subseq $fasta duplicated-pairs.txt > redups_$counter.fa
-        ((counter++))
+        for fasta in "~{fastp_fa}"; do
+            seqtk subseq $fasta duplicated-pairs.txt | seqtk seq -a > redups_$counter.fa
+            ((counter++))
         done
     >>>
     output {
-        File redups1_fa = "redups_1.fa"
-        File? redups2_fa = "redups_2.fa"
+        File? redups_1_fa = "redups_1.fa"
+        File? redups_2_fa = "redups_2.fa"
     }
     runtime {
         docker: docker_image_id
