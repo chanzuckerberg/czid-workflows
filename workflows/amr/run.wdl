@@ -211,7 +211,7 @@ task RunRedup {
         done
     >>>
     output {
-        File? redups_1_fa = "redups_1.fa"
+        File redups_1_fa = "redups_1.fa"
         File? redups_2_fa = "redups_2.fa"
     }
     runtime {
