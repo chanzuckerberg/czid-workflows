@@ -44,8 +44,10 @@ RUN git clone --single-branch --branch scatter-gather https://github.com/morseco
     && mkdir diamond/build && cd diamond/build && cmake -DCMAKE_BUILD_TYPE=Release .. && make -j6
 
 # install aws cli
-RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" \
-    && unzip awscliv2.zip && ./aws/install -i /usr/local/aws-cli -b /usr/local/bin
+# RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" \
+#     && unzip awscliv2.zip && ./aws/install -i /usr/local/aws-cli -b /usr/local/bin
+
+
 
 FROM ubuntu:22.04 AS ncbi_compress_builder
 
@@ -101,12 +103,13 @@ COPY --from=builder /diamond/build/diamond /usr/local/bin
 COPY --from=builder /minimap2/minimap2 /usr/local/bin/
 COPY --from=builder /aria2-${ARIA2_VERSION}/src/aria2c /usr/local/bin/
 COPY --from=builder /seqkit /usr/local/bin/
-COPY --from=builder /usr/local/aws-cli /usr/local/aws-cli
-COPY --from=builder /usr/local/bin/aws /usr/local/bin
+# COPY --from=builder /usr/local/aws-cli /usr/local/aws-cli
+# COPY --from=builder /usr/local/bin/aws /usr/local/bin
 COPY --from=ncbi_compress_builder /ncbi-compress/target/release/ncbi-compress /usr/local/bin
 
 COPY requirements.txt requirements.txt
 RUN pip3 install -r requirements.txt
+RUN pip3 install awscli
 
 COPY *.py /usr/local/bin/
 COPY ncbi_download /usr/local/bin/
