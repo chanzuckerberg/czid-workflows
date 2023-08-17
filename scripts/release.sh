@@ -16,7 +16,7 @@ if ! [[ -d "$(dirname $0)/../workflows/$WORKFLOW_NAME" ]]; then
     exit 1
 fi
 
-# OLD_TAG=$(git describe --tags --match "${WORKFLOW_NAME}-v*" || echo "${WORKFLOW_NAME}-v0.0.0")
+OLD_TAG=$(git describe --tags --match "${WORKFLOW_NAME}-v*" || echo "${WORKFLOW_NAME}-v0.0.0")
 # if [[ $RELEASE_TYPE == major ]]; then
 #     TAG=$(echo "$OLD_TAG" | perl -ne '/(.+)-v(\d+)\.(\d+)\.(\d+)/; print "$1-v@{[$2+1]}.0.0"')
 # elif [[ $RELEASE_TYPE == minor ]]; then
