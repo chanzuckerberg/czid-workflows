@@ -560,7 +560,7 @@ task CompressNR {
 
         ncbi-compress \
             --input-fasta nr_sorted \
-            --accession-mapping-files ~{accession2taxid}/prot.accession2taxid.FULL.gz \
+            --accession-mapping-files ~{accession2taxid}/prot.accession2taxid.FULL \
             --accession-mapping-files ~{accession2taxid}/pdb.accession2taxid \
             --output-fasta nr_compressed.fa \
             --k ~{k} \
