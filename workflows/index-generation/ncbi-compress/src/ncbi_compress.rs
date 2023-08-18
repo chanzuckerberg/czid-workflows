@@ -126,6 +126,11 @@ pub mod ncbi_compress {
             writer.write_record(&record).unwrap();
         }
         log::info!("Finished splitting accessions by taxid");
+        // remove input fasta file
+        match fs::remove_file(input_fasta_path) {
+            Ok(()) => println!("input fasta deleted successfully"),
+            Err(e) => println!("Error deleting input fasta : {:?}", e),
+        }
         taxid_dir
     }
 
