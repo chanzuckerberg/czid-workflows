@@ -29,9 +29,13 @@ workflow amr {
             docker_image_id = host_filtering_docker_image_id,
             s3_wd_uri = s3_wd_uri
         }
+
+        File hisat2_filtered1_fastq = select_first([host_filter_stage.hisat2_human_filtered1_fastq, host_filter_stage.hisat2_host_filtered1_fastq])
+        File? hisat2_filtered2_fastq = if defined(host_filter_stage.hisat2_human_filtered2_fastq) then host_filter_stage.hisat2_human_filtered2_fastq
+                                                                          else host_filter_stage.hisat2_host_filtered2_fastq
         call RunRedup {
             input:
-            fastp_fa = select_all([host_filter_stage.fastp_out_fastp1_fastq, host_filter_stage.fastp_out_fastp2_fastq]),
+            superset_fqs = select_all([hisat2_filtered1_fastq, hisat2_filtered2_fastq]),
             non_host_reads = select_all(
                 [
                     host_filter_stage.subsampled_out_subsampled_1_fa,
@@ -163,7 +167,7 @@ workflow amr {
 
 task RunRedup {
     input {
-        Array[File] fastp_fa
+        Array[File] superset_fqs
         Array[File] non_host_reads
         File clusters
         File cluster_sizes
@@ -205,7 +209,7 @@ task RunRedup {
         CODE
 
         counter=1
-        for fasta in ~{sep=' ' fastp_fa}; do
+        for fasta in ~{sep=' ' superset_fqs}; do
             seqtk subseq $fasta duplicated-pairs.txt | seqtk seq -a > redups_$counter.fa
             ((counter++))
         done
