@@ -12,9 +12,9 @@ workflow index_generation {
         Int nt_compression_k = 31
         Int nt_compression_scaled = 1000
         Float nt_compression_similarity_threshold = 0.5
-        Int nr_compression_k = 31
-        Int nr_compression_scaled = 10
-        Float nr_compression_similarity_threshold = 0.5
+        # Int nr_compression_k = 31
+        # Int nr_compression_scaled = 10
+        # Float nr_compression_similarity_threshold = 0.5
         String docker_image_id
         String old_nt_s3_path
         String old_nr_s3_path
