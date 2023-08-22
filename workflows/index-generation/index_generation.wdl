@@ -57,16 +57,16 @@ workflow index_generation {
         cpu = 64
     }
 
-    call CompressNR {
-        input:
-        nr = DownloadNR.nr,
-        accession2taxid = DownloadAccession2Taxid.accession2taxid,
-        k = nr_compression_k,
-        scaled = nr_compression_scaled,
-        similarity_threshold = nr_compression_similarity_threshold,
-        docker_image_id = docker_image_id,
-        cpu = 64
-    }
+    # call CompressNR {
+    #     input:
+    #     nr = DownloadNR.nr,
+    #     accession2taxid = DownloadAccession2Taxid.accession2taxid,
+    #     k = nr_compression_k,
+    #     scaled = nr_compression_scaled,
+    #     similarity_threshold = nr_compression_similarity_threshold,
+    #     docker_image_id = docker_image_id,
+    #     cpu = 64
+    # }
 
     call GenerateIndexAccessions {
         input:
@@ -84,13 +84,13 @@ workflow index_generation {
 
     call GenerateNRDB {
         input:
-        nr = CompressNR.nr_compressed,
+        nr = DownloadNR.nr,
         docker_image_id = docker_image_id
     }
 
     call GenerateIndexDiamond {
         input:
-        nr = CompressNR.nr_compressed,
+        nr = DownloadNR.nr,
         docker_image_id = docker_image_id
     }
 
@@ -122,7 +122,7 @@ workflow index_generation {
 
 
     output {
-        File nr = CompressNR.nr_compressed
+        File nr = DownloadNR.nr
         File nt = CompressNT.nt_compressed
         File accession2taxid_db = GenerateIndexAccessions.accession2taxid_db
         File nt_loc_db = GenerateNTDB.nt_loc_db
@@ -532,51 +532,51 @@ task CompressNT {
 
     runtime {
         docker: docker_image_id
-        cpu: 64
-        memory: "488G"
+        cpu: 72
+        memory: "512G"
     }
 }
 
-task CompressNR {
-    input {
-        File nr
-        Directory accession2taxid
-        Int k
-        Int scaled
-        Float similarity_threshold
-        String docker_image_id
-        Int cpu
-    }
+# task CompressNR {
+#     input {
+#         File nr
+#         Directory accession2taxid
+#         Int k
+#         Int scaled
+#         Float similarity_threshold
+#         String docker_image_id
+#         Int cpu
+#     }
 
-    command <<<
-        set -euxo pipefail
+#     command <<<
+#         set -euxo pipefail
 
-        # Sort NR by length with the longer sequences first
-        #   This is needed because the compression algorithm iterates through NR in order only emitting
-        #   sequences if they are not contained by what it has already seen. If a shorter sequence is
-        #   contained by a longer sequence, and the shorter sequence were to come first, it would be emitted
-        #   even though it is redundant to the longer sequence.
-        seqkit sort --reverse --by-length --two-pass --threads ~{cpu} ~{nr} -o nr_sorted
+#         # Sort NR by length with the longer sequences first
+#         #   This is needed because the compression algorithm iterates through NR in order only emitting
+#         #   sequences if they are not contained by what it has already seen. If a shorter sequence is
+#         #   contained by a longer sequence, and the shorter sequence were to come first, it would be emitted
+#         #   even though it is redundant to the longer sequence.
+#         seqkit sort --reverse --by-length --two-pass --threads ~{cpu} ~{nr} -o nr_sorted
 
-        ncbi-compress \
-            --input-fasta nr_sorted \
-            --accession-mapping-files ~{accession2taxid}/prot.accession2taxid.FULL \
-            --accession-mapping-files ~{accession2taxid}/pdb.accession2taxid \
-            --output-fasta nr_compressed.fa \
-            --k ~{k} \
-            --scaled ~{scaled} \
-            --similarity-threshold ~{similarity_threshold} \
-            --is-protein-fasta \
-            --chunk-size 100 \
-    >>>
+#         ncbi-compress \
+#             --input-fasta nr_sorted \
+#             --accession-mapping-files ~{accession2taxid}/prot.accession2taxid.FULL \
+#             --accession-mapping-files ~{accession2taxid}/pdb.accession2taxid \
+#             --output-fasta nr_compressed.fa \
+#             --k ~{k} \
+#             --scaled ~{scaled} \
+#             --similarity-threshold ~{similarity_threshold} \
+#             --is-protein-fasta \
+#             --chunk-size 100 \
+#     >>>
 
-    output {
-        File nr_compressed = "nr_compressed.fa"
-    }
+#     output {
+#         File nr_compressed = "nr_compressed.fa"
+#     }
 
-    runtime {
-        docker: docker_image_id
-        cpu: 64
-        memory: "488G"
-    }
-}
+#     runtime {
+#         docker: docker_image_id
+#         cpu: 72
+#         memory: "488G"
+#     }
+# }
