@@ -8,9 +8,7 @@ struct RawSample {
 
 struct FilteredSample {
     Array[File]+ non_host_reads
-    Array[File]+ superset_non_host_reads
-    File clusters
-    File cluster_sizes
+    File contigs
 }
 
 
@@ -42,60 +40,44 @@ workflow amr {
             s3_wd_uri = s3_wd_uri
         }
 
-        Array[File]+ rs_non_host_reads = select_all([host_filter_stage.subsampled_out_subsampled_1_fa, host_filter_stage.subsampled_out_subsampled_2_fa])
-        Array[File]+ rs_superset_non_host_reads = if (defined(host_filter_stage.hisat2_human_filtered1_fastq))
+        Array[File]+ host_filtered_reads = if (defined(host_filter_stage.hisat2_human_filtered1_fastq))
             then select_all([host_filter_stage.hisat2_human_filtered1_fastq, host_filter_stage.hisat2_human_filtered2_fastq])
             else select_all([host_filter_stage.hisat2_host_filtered1_fastq, host_filter_stage.hisat2_host_filtered2_fastq])
-        File rs_clusters = host_filter_stage.czid_dedup_out_duplicate_clusters_csv
-        File rs_cluster_sizes = host_filter_stage.czid_dedup_out_duplicate_cluster_sizes_tsv
+
+        call RunRedup {
+            input:
+            host_filtered_reads = host_filtered_reads,
+            subsampled_reads = select_all([host_filter_stage.subsampled_out_subsampled_1_fa, host_filter_stage.subsampled_out_subsampled_2_fa]),
+            clusters = host_filter_stage.czid_dedup_out_duplicate_clusters_csv,
+            cluster_sizes = host_filter_stage.czid_dedup_out_duplicate_cluster_sizes_tsv,
+            docker_image_id = host_filtering_docker_image_id,
+        }
+        call RunSpades {
+            input:
+            reduplicated_reads = RunRedup.redups_fa,
+            min_contig_length = min_contig_length,
+            docker_image_id = host_filtering_docker_image_id,
+        }
     }
     if (defined(filtered_sample)) {
         FilteredSample filtered_sample_in = select_first([filtered_sample])
 
         Array[File]+ fs_non_host_reads = filtered_sample_in.non_host_reads
-        Array[File]+ fs_superset_non_host_reads = filtered_sample_in.superset_non_host_reads
-        File fs_clusters = filtered_sample_in.clusters
-        File fs_cluster_sizes = filtered_sample_in.cluster_sizes
+        File fs_contigs = filtered_sample_in.contigs
     }
 
-    Array[File]+ non_host_reads = select_first([rs_non_host_reads, fs_non_host_reads])
-    Array[File]+ superset_non_host_reads = select_first([rs_superset_non_host_reads, fs_superset_non_host_reads])
-    File clusters = select_first([rs_clusters, fs_clusters])
-    File cluster_sizes = select_first([rs_cluster_sizes, fs_cluster_sizes])
+    Array[File]+ non_host_reads = select_first([RunRedup.redups_fa, select_all([fs_non_host_reads])])
+    File contigs = select_first([RunSpades.contigs, select_all([fs_contigs])])
 
-    call RunRedup {
-        input:
-        superset_non_host_reads = superset_non_host_reads,
-        non_host_reads = non_host_reads,
-        clusters = clusters,
-        cluster_sizes = cluster_sizes,
-        docker_image_id = host_filtering_docker_image_id,
-    }
-    call RunSpades {
-        input:
-        reduplicated_reads = select_all(
-            [
-                RunRedup.redups_1_fa,
-                RunRedup.redups_2_fa
-            ]
-        ),
-        min_contig_length = min_contig_length,
-        docker_image_id = host_filtering_docker_image_id,
-    }
     call RunRgiBwtKma {
         input:
-        reduplicated_reads = select_all(
-            [
-                RunRedup.redups_1_fa,
-                RunRedup.redups_2_fa
-            ]
-        ),
+        non_host_reads = non_host_reads,
         card_json = card_json, 
         docker_image_id = docker_image_id
     }
     call RunRgiMain {
         input:
-        contigs = RunSpades.contigs,
+        contigs = contigs,
         card_json = card_json, 
         docker_image_id = docker_image_id
     }
@@ -139,20 +121,15 @@ workflow amr {
 
     call tsvToSam { 
         input: 
-        contigs = RunSpades.contigs,
+        contigs = contigs,
         final_summary = RunResultsPerSample.final_summary,
         docker_image_id = docker_image_id
     }
 
     call ZipOutputs {
         input:
-        contigs_in = RunSpades.contigs,
-        reduplicated_reads = select_all(
-            [
-                RunRedup.redups_1_fa,
-                RunRedup.redups_2_fa
-            ]
-        ),
+        contigs_in = contigs,
+        non_host_reads_in = non_host_reads,
         main_reports = select_all(
             [
                 RunResultsPerSample.final_summary,
@@ -187,8 +164,8 @@ workflow amr {
 
 task RunRedup {
     input {
-        Array[File]+ superset_non_host_reads
-        Array[File]+ non_host_reads
+        Array[File]+ host_filtered_reads
+        Array[File]+ subsampled_reads
         File clusters
         File cluster_sizes
         String docker_image_id
@@ -198,7 +175,7 @@ task RunRedup {
         # exit if no duplicate reads
         if [[ ! $(grep -v "^1\t" "~{cluster_sizes}") ]]; then
             counter=1
-            for fasta in ~{sep=' ' non_host_reads}; do
+            for fasta in ~{sep=' ' subsampled_reads}; do
                 cp $fasta redups_$counter.fa
                 ((counter++))
             done
@@ -206,7 +183,7 @@ task RunRedup {
         fi
 
         grep -v "^1\t" "~{cluster_sizes}" | cut -f2 > duplicated-reads.txt
-        grep -h ">" ~{sep=' ' non_host_reads} | sed "s/^>//" > passed_filters.txt
+        grep -h ">" ~{sep=' ' subsampled_reads} | sed "s/^>//" > passed_filters.txt
 
         python3 <<CODE
         pair_values = []
@@ -229,14 +206,13 @@ task RunRedup {
         CODE
 
         counter=1
-        for fasta in ~{sep=' ' superset_non_host_reads}; do
+        for fasta in ~{sep=' ' host_filtered_reads}; do
             seqtk subseq $fasta duplicated-pairs.txt | seqtk seq -a > redups_$counter.fa
             ((counter++))
         done
     >>>
     output {
-        File redups_1_fa = "redups_1.fa"
-        File? redups_2_fa = "redups_2.fa"
+        Array[File]+ redups_fa = glob("redups*.fa")
     }
     runtime {
         docker: docker_image_id
@@ -586,14 +562,14 @@ task RunRgiMain {
 }
 task RunRgiBwtKma {
     input {
-        Array[File]+ reduplicated_reads
+        Array[File]+ non_host_reads
         File card_json
         String docker_image_id
     }
 
     command <<<
         set -exuo pipefail
-        rgi bwt -1 ~{sep=' -2 ' reduplicated_reads} -a kma -o sr_amr_report --clean
+        rgi bwt -1 ~{sep=' -2 ' non_host_reads} -a kma -o sr_amr_report --clean
     >>>
 
     output {
@@ -647,7 +623,7 @@ task RunSpades {
 task ZipOutputs {
     input {
         File contigs_in
-        Array[File]+ reduplicated_reads
+        Array[File]+ non_host_reads_in
         Array[File]+ main_reports
         Array[File]+ raw_reports
         Array[File]+ intermediate_files
@@ -667,11 +643,11 @@ task ZipOutputs {
         # copy contigs and interleave non_host_reads
         cp ~{contigs_in} contigs.fasta
 
-        if [[ "~{length(reduplicated_reads)}" == 2 ]]; then
-            seqfu ilv -1 ~{sep=" -2 " reduplicated_reads} > reduplicated_reads_ilv.fasta
-            seqkit rename -1 -s "/" reduplicated_reads_ilv.fasta -o non_host_reads.fasta
+        if [[ "~{length(non_host_reads_in)}" == 2 ]]; then
+            seqfu ilv -1 ~{sep=" -2 " non_host_reads_in} > non_host_reads_in_ilv.fasta
+            seqkit rename -1 -s "/" non_host_reads_in_ilv.fasta -o non_host_reads.fasta
         else 
-            cat ~{sep=" " reduplicated_reads} > non_host_reads.fasta
+            cat ~{sep=" " non_host_reads_in} > non_host_reads.fasta
         fi
 
         cp ~{sep=' ' main_reports} ${TMPDIR}/outputs/final_reports
