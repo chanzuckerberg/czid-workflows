@@ -207,12 +207,12 @@ task RunRedup {
 
         counter=1
         for fasta in ~{sep=' ' host_filtered_reads}; do
-            seqtk subseq $fasta duplicated-pairs.txt | seqtk seq -a > redups_$counter.fa
+            seqtk subseq $fasta duplicated-pairs.txt > redups_$counter.fastq
             ((counter++))
         done
     >>>
     output {
-        Array[File]+ redups_fa = glob("redups*.fa")
+        Array[File]+ redups_fa = glob("redups*.fastq")
     }
     runtime {
         docker: docker_image_id
