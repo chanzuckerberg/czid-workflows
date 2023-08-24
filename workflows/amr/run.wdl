@@ -146,7 +146,7 @@ workflow amr {
 
     call ZipOutputs {
         input:
-        contigs = RunSpades.contigs,
+        contigs_in = RunSpades.contigs,
         reduplicated_reads = select_all(
             [
                 RunRedup.redups_1_fa,
@@ -646,7 +646,7 @@ task RunSpades {
 }
 task ZipOutputs {
     input {
-        File contigs
+        File contigs_in
         Array[File]+ reduplicated_reads
         Array[File]+ main_reports
         Array[File]+ raw_reports
@@ -665,7 +665,7 @@ task ZipOutputs {
         mkdir ${TMPDIR}/outputs/intermediate_files
 
         # copy contigs and interleave non_host_reads
-        cp ~{contigs} contigs.fasta
+        cp ~{contigs_in} contigs.fasta
 
         if [[ "~{length(reduplicated_reads)}" == 2 ]]; then
             seqfu ilv -1 ~{sep=" -2 " reduplicated_reads} > reduplicated_reads_ilv.fasta
@@ -682,8 +682,8 @@ task ZipOutputs {
     >>>
 
     output {
-        File non_host_reads_out = "non_host_reads.fasta"
-        File contigs_out = "contigs.fasta"
+        File non_host_reads = "non_host_reads.fasta"
+        File contigs = "contigs.fasta"
         File output_zip = "outputs.zip"
     }
 
