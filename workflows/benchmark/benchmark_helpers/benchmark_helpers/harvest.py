@@ -64,7 +64,7 @@ def load_contig_lengths(contig_fasta):
                     lengths[cur[0]] = cur[1]
                 cur = (line[1:].strip(), 0)
             else:
-                len = (cur[0], cur[1] + len(line.strip())) if cur is not None else len(line.strip())
+                cur = (cur[0], cur[1] + len(line.strip())) if cur is not None else len(line.strip())
         if cur is not None:
             lengths[cur[0]] = cur[1]
     return lengths
