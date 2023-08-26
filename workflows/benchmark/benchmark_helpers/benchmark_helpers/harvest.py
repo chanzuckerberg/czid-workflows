@@ -59,6 +59,9 @@ def load_contig_lengths(contig_fasta):
         lines = cleanup.enter_context(open(contig_fasta))
         cur = None
         for line in lines:
+            if "ASSEMBLY FAILED" in line:
+                return {}
+
             if line.startswith(">"):
                 if cur is not None:
                     lengths[cur[0]] = cur[1]
