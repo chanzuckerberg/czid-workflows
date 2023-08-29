@@ -224,7 +224,7 @@ task notebook {
         File combined = "combined_taxa.json"
         File benchmark_notebook = "short-read-mngs-benchmarks.ipynb"
         File benchmark_html = "short-read-mngs-benchmarks.html"
-        File? correlation = "correlation.txt"
+        File correlation = "correlation.txt"
     }
     runtime { 
         docker: docker_image_id 
