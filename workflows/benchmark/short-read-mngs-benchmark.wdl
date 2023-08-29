@@ -130,6 +130,7 @@ workflow short_read_mngs_benchmark  {
         File preprocessed_nr = preprocess_taxa_nr.preprocessed_taxa
         File benchmark_notebook = test_notebook.benchmark_notebook
         File benchmark_html = test_notebook.benchmark_html
+        File? correlation = test_notebook.correlation
         File? step_counts_run_1_json = read_step_counts_run_1.step_counts
         File? step_counts_run_2_json = read_step_counts_run_2.step_counts
         File? step_count_tsv = merge_step_counts.step_count_tsv
@@ -224,6 +225,7 @@ task notebook {
         File combined = "combined_taxa.json"
         File benchmark_notebook = "short-read-mngs-benchmarks.ipynb"
         File benchmark_html = "short-read-mngs-benchmarks.html"
+        File? correlation = "correlation.txt"
     }
     runtime { 
         docker: docker_image_id 
