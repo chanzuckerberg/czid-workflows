@@ -12,9 +12,10 @@ workflow index_generation {
         Int nt_compression_k = 31
         Int nt_compression_scaled = 1000
         Float nt_compression_similarity_threshold = 0.5
-        # Int nr_compression_k = 31
-        # Int nr_compression_scaled = 10
-        # Float nr_compression_similarity_threshold = 0.5
+        Int nr_compression_k = 31
+        Int nr_compression_scaled = 100
+        Float nr_compression_similarity_threshold = 0.5
+        String s3_accession_mapping_prefix # old accession mapping files
         String docker_image_id
         String old_nt_s3_path
         String old_nr_s3_path
@@ -37,7 +38,9 @@ workflow index_generation {
     call DownloadAccession2Taxid {
         input:
         ncbi_server = ncbi_server,
-        docker_image_id = docker_image_id
+        docker_image_id = docker_image_id,
+        s3_accession_mapping_prefix = s3_accession_mapping_prefix
+
     }
 
     # call DownloadTaxdump {
@@ -57,16 +60,16 @@ workflow index_generation {
         cpu = 64
     }
 
-    # call CompressNR {
-    #     input:
-    #     nr = DownloadNR.nr,
-    #     accession2taxid = DownloadAccession2Taxid.accession2taxid,
-    #     k = nr_compression_k,
-    #     scaled = nr_compression_scaled,
-    #     similarity_threshold = nr_compression_similarity_threshold,
-    #     docker_image_id = docker_image_id,
-    #     cpu = 64
-    # }
+    call CompressNR {
+        input:
+        nr = DownloadNR.nr,
+        accession2taxid = DownloadAccession2Taxid.accession2taxid,
+        k = nr_compression_k,
+        scaled = nr_compression_scaled,
+        similarity_threshold = nr_compression_similarity_threshold,
+        docker_image_id = docker_image_id,
+        cpu = 64
+    }
 
     call GenerateIndexAccessions {
         input:
@@ -184,13 +187,18 @@ task DownloadAccession2Taxid {
     input {
         String ncbi_server
         String docker_image_id
+        String s3_accession_mapping_prefix
     }
 
     command <<<
-        ncbi_download "~{ncbi_server}" pub/taxonomy/accession2taxid/nucl_gb.accession2taxid.gz
-        ncbi_download "~{ncbi_server}" pub/taxonomy/accession2taxid/nucl_wgs.accession2taxid.gz
-        ncbi_download "~{ncbi_server}" pub/taxonomy/accession2taxid/pdb.accession2taxid.gz
-        ncbi_download "~{ncbi_server}" pub/taxonomy/accession2taxid/prot.accession2taxid.FULL.gz
+        # ncbi_download "~{ncbi_server}" pub/taxonomy/accession2taxid/nucl_gb.accession2taxid.gz
+        # ncbi_download "~{ncbi_server}" pub/taxonomy/accession2taxid/nucl_wgs.accession2taxid.gz
+        # ncbi_download "~{ncbi_server}" pub/taxonomy/accession2taxid/pdb.accession2taxid.gz
+        # ncbi_download "~{ncbi_server}" pub/taxonomy/accession2taxid/prot.accession2taxid.FULL.gz
+        aws s3 cp ~{s3_accession_mapping_prefix}/nucl_gb.accession2taxid.gz pub/taxonomy/accession2taxid/nucl_gb.accession2taxid.gz
+        aws s3 cp ~{s3_accession_mapping_prefix}/nucl_wgs.accession2taxid.gz pub/taxonomy/accession2taxid/nucl_wgs.accession2taxid.gz
+        aws s3 cp ~{s3_accession_mapping_prefix}/accession2taxid/pdb.accession2taxid.gz pub/taxonomy/accession2taxid/pdb.accession2taxid.gz
+        aws s3 cp ~{s3_accession_mapping_prefix}/accession2taxid/prot.accession2taxid.gz pub/taxonomy/accession2taxid/prot.accession2taxid.FULL.gz
     >>>
 
     output {
@@ -524,10 +532,15 @@ task CompressNT {
             --k ~{k} \
             --scaled ~{scaled} \
             --similarity-threshold ~{similarity_threshold} \
+            --enable-sequence-retention-logging \
+            --logging-contained-in-tree-fn nt_contained_in_tree.tsv \
+            --logging-not-contained-in-chunk-fn nt_contained_in_chunk.tsv \
     >>>
 
     output {
         File nt_compressed = "nt_compressed.fa"
+        File nt_contained_in_tree = "nt_contained_in_tree.tsv"
+        File nt_contained_in_chunk = "nt_contained_in_chunk.tsv"
     }
 
     runtime {
@@ -537,46 +550,51 @@ task CompressNT {
     }
 }
 
-# task CompressNR {
-#     input {
-#         File nr
-#         Directory accession2taxid
-#         Int k
-#         Int scaled
-#         Float similarity_threshold
-#         String docker_image_id
-#         Int cpu
-#     }
+task CompressNR {
+    input {
+        File nr
+        Directory accession2taxid
+        Int k
+        Int scaled
+        Float similarity_threshold
+        String docker_image_id
+        Int cpu
+    }
 
-#     command <<<
-#         set -euxo pipefail
+    command <<<
+        set -euxo pipefail
 
-#         # Sort NR by length with the longer sequences first
-#         #   This is needed because the compression algorithm iterates through NR in order only emitting
-#         #   sequences if they are not contained by what it has already seen. If a shorter sequence is
-#         #   contained by a longer sequence, and the shorter sequence were to come first, it would be emitted
-#         #   even though it is redundant to the longer sequence.
-#         seqkit sort --reverse --by-length --two-pass --threads ~{cpu} ~{nr} -o nr_sorted
+        # Sort NR by length with the longer sequences first
+        #   This is needed because the compression algorithm iterates through NR in order only emitting
+        #   sequences if they are not contained by what it has already seen. If a shorter sequence is
+        #   contained by a longer sequence, and the shorter sequence were to come first, it would be emitted
+        #   even though it is redundant to the longer sequence.
+        seqkit sort --reverse --by-length --two-pass --threads ~{cpu} ~{nr} -o nr_sorted
 
-#         ncbi-compress \
-#             --input-fasta nr_sorted \
-#             --accession-mapping-files ~{accession2taxid}/prot.accession2taxid.FULL \
-#             --accession-mapping-files ~{accession2taxid}/pdb.accession2taxid \
-#             --output-fasta nr_compressed.fa \
-#             --k ~{k} \
-#             --scaled ~{scaled} \
-#             --similarity-threshold ~{similarity_threshold} \
-#             --is-protein-fasta \
-#             --chunk-size 100 \
-#     >>>
+        ncbi-compress \
+            --input-fasta nr_sorted \
+            --accession-mapping-files ~{accession2taxid}/prot.accession2taxid.FULL \
+            --accession-mapping-files ~{accession2taxid}/pdb.accession2taxid \
+            --output-fasta nr_compressed.fa \
+            --k ~{k} \
+            --scaled ~{scaled} \
+            --similarity-threshold ~{similarity_threshold} \
+            --is-protein-fasta \
+            --chunk-size 100 \
+            --enable-sequence-retention-logging \
+            --logging-contained-in-tree-fn nr_contained_in_tree.tsv \
+            --logging-not-contained-in-chunk-fn nr_contained_in_chunk.tsv \
+    >>>
 
-#     output {
-#         File nr_compressed = "nr_compressed.fa"
-#     }
+    output {
+        File nr_compressed = "nr_compressed.fa"
+        File nr_contained_in_tree = "nr_contained_in_tree.tsv"
+        File nr_contained_in_chunk = "nr_contained_in_chunk.tsv"
+    }
 
-#     runtime {
-#         docker: docker_image_id
-#         cpu: 72
-#         memory: "488G"
-#     }
-# }
+    runtime {
+        docker: docker_image_id
+        cpu: 72
+        memory: "488G"
+    }
+}
