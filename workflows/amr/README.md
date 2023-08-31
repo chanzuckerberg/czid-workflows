@@ -4,7 +4,31 @@ CZ ID's AMR workflow implements the [Resistance Gene Identifier (RGI)](https://g
 
 # Changelog
 
-## 1.2.3 - 2023-05-24
+## 1.2.10 - 2023-07-10
+
+NOTE: Due to a bug in our release script, there were no releases with version numbers 1.2.6 - 1.2.9.
+
+## 1.2.5 - 2023-06-13
+
+### Fixed
+
+- Fixed bug in calculating gene coverage. Contigs are now grouped by ARO accession instead of model ID before calculating coverage.
+- Pinned `dask` version to `2023.5.0` to prevent installation of newer versions incompatible with Python 3.8.
+
+### Changed
+- Updated `requests` to version 2.31.0.
+
+## 1.2.4 - 2023-05-23
+
+### Added
+
+- Added this README file.
+
+### Changed
+
+- Updated CARD database files.
+
+## 1.2.3 - 2023-05-18
 
 ### Added
 
@@ -22,7 +46,7 @@ CZ ID's AMR workflow implements the [Resistance Gene Identifier (RGI)](https://g
 
 ## 1.2.1 - 2023-05-10
 
-- Version 1.2.1 is unchanged from 1.2.0.
+Version 1.2.1 is unchanged from 1.2.0.
 
 ## 1.2.0 - 2023-05-10
 
@@ -147,7 +171,7 @@ CZ ID's AMR workflow implements the [Resistance Gene Identifier (RGI)](https://g
 
 ### Fixed
 
-- Run SPADES with a fixed number of threads (36) to prevent issues with using `$(nproc --all)`.
+- Run SPAdes with a fixed number of threads (36) to prevent issues with using `$(nproc --all)`.
 
 ### Changed
 
@@ -171,8 +195,8 @@ CZ ID's AMR workflow implements the [Resistance Gene Identifier (RGI)](https://g
 
 ### Added
 
-- Python requirements.txt file to run workflow without conda`.
-- Dockerfile based on Ubuntu 20.04 image.
+- Python requirements.txt file to run workflow without using conda.
+- Dockerfile based on Ubuntu 20.04 image, with Python 3.8 installed.
 - rzlim08 RGI fork that fixes header parsing.
 - CARD RGI dependencies installed in Docker build.
 - CARD databases added as part of Docker image build.
