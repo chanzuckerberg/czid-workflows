@@ -45,12 +45,12 @@ workflow czid_host_filter {
     docker_image_id = docker_image_id,
     s3_wd_uri = s3_wd_uri
   }
-  
-  call ercc_bowtie2_filter { 
-    input: 
+
+  call ercc_bowtie2_filter {
+    input:
     valid_input1_fastq = RunValidateInput.valid_input1_fastq,
     valid_input2_fastq = RunValidateInput.valid_input2_fastq,
-    ercc_index_tar = ercc_index_tar, 
+    ercc_index_tar = ercc_index_tar,
     docker_image_id = docker_image_id,
     cpu = cpu
   }
@@ -175,6 +175,7 @@ workflow czid_host_filter {
 
     File kallisto_transcript_abundance_tsv = kallisto.transcript_abundance_tsv
     File kallisto_ERCC_counts_tsv = kallisto.ERCC_counts_tsv
+    File kallisto_transcript_gene_mapping_tsv = kallisto.transcript_gene_mapping_tsv
     File? kallisto_gene_abundance_tsv = kallisto.gene_abundance_tsv
 
     File bowtie2_host_filtered1_fastq = bowtie2_filter.bowtie2_host_filtered1_fastq
@@ -262,7 +263,7 @@ task ercc_bowtie2_filter {
   }
 
   Boolean paired = defined(valid_input2_fastq)
-  String genome_name = "ercc" 
+  String genome_name = "ercc"
   String bowtie2_invocation =
       "bowtie2 -x '/tmp/${genome_name}/${genome_name}' ${bowtie2_options} -p ${cpu}"
         + (if (paired) then " -1 '${valid_input1_fastq}' -2 '${valid_input2_fastq}'" else " -U '${valid_input1_fastq}'")
@@ -289,14 +290,14 @@ task ercc_bowtie2_filter {
         count="$(cat bowtie2_ercc_filtered1.fastq | wc -l)"
     fi
 
-    
+
     # Calculate ercc counts for bowtie2
     samtools view /tmp/bowtie2_ercc.sam | cut -f3 |  (grep "ERCC-" || [ "$?" == "1" ])| sort | uniq -c | awk '{ print $2 "\t" $1}' > 'bowtie2_ERCC_counts.tsv'
 
     count=$((count / 4))
     jq --null-input --arg count "$count" '{"bowtie2_ercc_filtered_out":$count}' > 'bowtie2_ercc_filtered_out.count'
-    
-    if [[ "$count" -eq "0" ]]; then 
+
+    if [[ "$count" -eq "0" ]]; then
       raise_error InsufficientReadsError "There was an insufficient number of reads in the sample after the host and quality filtering steps."
     fi
 
@@ -451,6 +452,54 @@ task kallisto {
     echo -e "target_id\test_counts" > ERCC_counts.tsv
     grep ERCC- reads_per_transcript.kallisto.tsv | cut -f1,4 >> ERCC_counts.tsv
 
+    # Create transcript_id -> gene_id mapping TSV
+    >&2 python3 - reads_per_transcript.kallisto.tsv transcript_to_gene_mapping.kallisto.tsv << 'EOF'
+    # This takes the transcript TSV produced by Kallisto and produces a new TSV
+    # that has each row being the `transcript_id` (AKA, `target_id`) and the
+    # `gene_id` that corresponds to it. No header row. Intent is for produced
+    # mapping TSV to help user run further analysis on the transcript TSV
+    # outside of CZID if they need gene rollup info. See CZID-8315 for more info.
+    import sys
+    import csv
+    import re
+
+    # We want to extract ENSG part of transcript id since that's the gene id.
+    # Some transcript ids have two ENSG ids contained within, eg ENSG0325.2
+    # and also ENSG0325. In those cases, we always want the more specific id,
+    # so ENSG0325.2 in that example. The way our Kallisto index is structured,
+    # the more specific one always shows up first, so that's what we grab.
+    ENSG_ID_PATTERN = re.compile(r"(^|\|)(ENSG.*?)(\||$)")  # id we want => group 2
+    # ERCC also shows up too, we do not worry about gene ids for those.
+    ERCC_PREFIX = "ERCC"
+    # We also have rRNA with id U13369.1. Possible we might add more later on,
+    # so we recognize by pattern instead of exact match. No gene id extraction.
+    RRNA_ID_PATTERN = r"^U\d+"
+    def get_gene_id(transcript_id):
+        ensg_match = ENSG_ID_PATTERN.search(transcript_id)
+        try:
+            return ensg_match.group(2)
+        except AttributeError:  # no match found, so no ENSG id
+            # If there is no gene id, just pass back the whole transcript_id.
+            # Intent here is to keep later use of mapping tsv safe to just
+            # blindly look up on any transcript_id and not error out even
+            # though these lines aren't really the same category of thing.
+            if not transcript_id.startswith(ERCC_PREFIX) and not re.match(RRNA_ID_PATTERN, transcript_id):
+                print(f"Format of ID not recognized! transcript_id: {transcript_id}")
+            return transcript_id
+
+    with open(sys.argv[1], "r") as transcript_f, open(sys.argv[2], "w") as out_f:
+        transcript_reader = csv.DictReader(transcript_f, delimiter="\t")
+        out_writer = csv.writer(out_f, delimiter="\t")
+        for row in transcript_reader:
+            transcript_id = row["target_id"]
+            out_writer.writerow([transcript_id, get_gene_id(transcript_id)])
+    EOF
+
+    # TODO -- DEPRECATED! WARNING! Remove this part around end of Aug 2023.
+    # This entire Python script and the reads_per_gene.kallisto.tsv output
+    # have been deprecated in favor of direct use of the transcript tsv.
+    # See CZID-8315 for more info.
+    # --------- Deprecation START ---------
     # If we've been provided the GTF, then roll up the transcript abundance estimates by gene.
     if [[ -n '~{gtf_gz}' ]]; then
       >&2 python3 - reads_per_transcript.kallisto.tsv '~{gtf_gz}' << 'EOF'
@@ -511,6 +560,7 @@ task kallisto {
     result.to_csv("reads_per_gene.kallisto.tsv", sep="\t")
     EOF
     fi
+    # --------- Deprecation END ---------
 
     python3 - << 'EOF'
     import textwrap
@@ -540,6 +590,7 @@ task kallisto {
     String step_description_md = read_string("kallisto.description.md")
     File transcript_abundance_tsv = "reads_per_transcript.kallisto.tsv"
     File ERCC_counts_tsv = "ERCC_counts.tsv"
+    File transcript_gene_mapping_tsv = "transcript_to_gene_mapping.kallisto.tsv"
     File? gene_abundance_tsv = "reads_per_gene.kallisto.tsv"
   }
 
@@ -595,7 +646,7 @@ task bowtie2_filter {
         count="$(cat bowtie2_host_filtered1.fastq | wc -l)"
     fi
 
-    
+
     count=$((count / 4))
     jq --null-input --arg count "$count" '{"bowtie2_host_filtered_out":$count}' > 'bowtie2_host_filtered_out.count'
 
