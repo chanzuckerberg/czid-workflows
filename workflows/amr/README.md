@@ -4,9 +4,56 @@ CZ ID's AMR workflow implements the [Resistance Gene Identifier (RGI)](https://g
 
 # Changelog
 
-## [1.2.3] -- 2023-05-24
+## 1.2.3 - 2023-05-24
 
-## [1.0.0] -- 2023-04-25
+### Added
+
+- Nudged results from running RGI on contigs are now included in the primary AMR report. These rows have the value "Nudged" in the "Cut_Off_contig_amr" column.
+
+### Changed
+
+- RGI is now called with the `--include_nudge` flag on contigs in task `RunRgiMain`.
+
+## 1.2.2 - 2023-05-16
+
+### Fixed
+
+- Fixed a bug that caused creation of the indexed contig BAM file to error out if SPAdes assembly failed. The task now outputs an empty BAM file.
+
+## 1.2.1 - 2023-05-10
+
+- Version 1.2.1 is unchanged from 1.2.0.
+
+## 1.2.0 - 2023-05-10
+
+### Fixed
+
+- Fixed a bug that caused all gene names in the AMR reports to be entirely lowercase.
+
+## 1.1.2 - 2023-05-10
+
+### Added
+
+- Added Python test for the WDL task which generates reports as TSV files, `RunResultsPerSample`.
+
+### Fixed
+
+- Fixed a bug that occurred when determining ARO accessions for rows in the primary AMR report.
+- Removed carriage return characters from workflow test data.
+
+## 1.1.1 - 2023-04-25
+
+### Fixed
+
+- Fixed the filename specified for the non-host reads file produced by `ZipOutputs`.
+
+## 1.1.0 - 2023-04-25
+
+### Changed
+
+- The non-host reads file output by `ZipOutputs` is no longer compressed with gzip.
+
+## 1.0.0 - 2023-04-25
 
 ### Added
 
@@ -21,7 +68,7 @@ CZ ID's AMR workflow implements the [Resistance Gene Identifier (RGI)](https://g
 
 - The workflow will now only interleave non-host reads as part of the `ZipOutputs` task if two files are present. Interleaving is skipped for workflows where all non-host reads are contained in a single file.
 
-## [0.2.3] -- 2023-04-13
+## 0.2.3 - 2023-04-13
 
 ### Added
 
@@ -38,7 +85,7 @@ CZ ID's AMR workflow implements the [Resistance Gene Identifier (RGI)](https://g
 - Removed input parameter `Int? total_reads`
 - Removed task `GetTotalReads`.
 
-## [0.2.2] -- 2023-02-07
+## 0.2.2 - 2023-02-07
 
 ### Added
 
@@ -49,7 +96,7 @@ CZ ID's AMR workflow implements the [Resistance Gene Identifier (RGI)](https://g
 
 - Load json with all CARD models when running `rgi load`.`
 
-## [0.2.1] -- 2022-12-15
+## 0.2.1 - 2022-12-15
 
 ### Added
 
@@ -69,9 +116,9 @@ CZ ID's AMR workflow implements the [Resistance Gene Identifier (RGI)](https://g
 - Dockerfile: install RGI from commit 20b22dab on the rzlim08 fork.
 - CARD databases are now loaded at runtime, and have been removed from the Dockerfile.
 - For contigs, RGI is no longer called with the `--include_nudge` flag.
-- Updated `RunRgiMain` python test.
+- Updated `RunRgiMain` Python test.
 
-## [0.2.0] -- 2022-10-03
+## 0.2.0 - 2022-10-03
 
 ### Added
 
@@ -96,7 +143,7 @@ CZ ID's AMR workflow implements the [Resistance Gene Identifier (RGI)](https://g
 - Primary AMR workflow output now in `primary_AMR_report.tsv`, from task `RunResultsPerSample`.
 - Several intermediate output files have their names change to be consistent with snake_case.
 
-## [0.1.2] -- 2022-09-15
+## 0.1.2 - 2022-09-15
 
 ### Fixed
 
@@ -106,7 +153,7 @@ CZ ID's AMR workflow implements the [Resistance Gene Identifier (RGI)](https://g
 
 - SPAdes stdout stream redirected to stderr for logging purposes.
 
-## [0.1.1] -- 2022-09-09
+## 0.1.1 - 2022-09-09
 
 ### Added
 
@@ -120,7 +167,7 @@ CZ ID's AMR workflow implements the [Resistance Gene Identifier (RGI)](https://g
 - Uses different rzlim08 RGI fork branch that adds gene hit coordinates.
 - RGI main tasks now take in sequences from either top-level workflow inputs or host filtering/SPAdes output using `select_first()`.
 
-## [0.1.0] -- 2022-08-25
+## 0.1.0 - 2022-08-25
 
 ### Added
 
