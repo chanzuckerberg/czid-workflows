@@ -17,7 +17,9 @@ workflow czid_host_filter {
     File bowtie2_index_tar
     File hisat2_index_tar
     File kallisto_idx
-    File? gtf_gz  # Ensembl GTF for host species
+    # `gtf_gz` unused in v8.2.8+ (Sep 2023). Left here to prevent legacy calls
+    # of older workflows from breaking newer invocations that don't use it.
+    File? gtf_gz
 
     File human_bowtie2_index_tar
     File human_hisat2_index_tar
@@ -74,7 +76,6 @@ workflow czid_host_filter {
     fastp1_fastq = fastp_qc.fastp1_fastq,
     fastp2_fastq = fastp_qc.fastp2_fastq,
     kallisto_idx = kallisto_idx,
-    gtf_gz = gtf_gz,
     docker_image_id = docker_image_id,
     cpu = cpu
   }
@@ -418,7 +419,6 @@ task kallisto {
     File fastp1_fastq
     File? fastp2_fastq
     File kallisto_idx
-    File? gtf_gz
 
     # Run kallisto single-threaded with a fixed seed.
     # This will ensure non-random reproducibility between runs.
