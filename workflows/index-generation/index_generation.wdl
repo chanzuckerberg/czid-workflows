@@ -565,7 +565,7 @@ task CompressNT {
                 --similarity-threshold ~{similarity_threshold} \
                 --enable-sequence-retention-logging \
                 --logging-contained-in-tree-fn nt_contained_in_tree.tsv \
-                --logging-not-contained-in-chunk-fn nt_contained_in_chunk.tsv \
+                --logging-contained-in-chunk-fn nt_contained_in_chunk.tsv
         else
             ncbi-compress \
                 --input-fasta nt_sorted \
@@ -625,7 +625,7 @@ task CompressNR {
                 --is-protein-fasta \
                 --enable-sequence-retention-logging \
                 --logging-contained-in-tree-fn nr_contained_in_tree.tsv \
-                --logging-not-contained-in-chunk-fn nr_contained_in_chunk.tsv \
+                --logging-contained-in-chunk-fn nr_contained_in_chunk.tsv
         else
             ncbi-compress \
                 --input-fasta nr_sorted \
