@@ -176,7 +176,6 @@ workflow czid_host_filter {
     File kallisto_transcript_abundance_tsv = kallisto.transcript_abundance_tsv
     File kallisto_ERCC_counts_tsv = kallisto.ERCC_counts_tsv
     File kallisto_transcript_gene_mapping_tsv = kallisto.transcript_gene_mapping_tsv
-    File? kallisto_gene_abundance_tsv = kallisto.gene_abundance_tsv
 
     File bowtie2_host_filtered1_fastq = bowtie2_filter.bowtie2_host_filtered1_fastq
     File? bowtie2_host_filtered2_fastq = bowtie2_filter.bowtie2_host_filtered2_fastq
@@ -591,7 +590,6 @@ task kallisto {
     File transcript_abundance_tsv = "reads_per_transcript.kallisto.tsv"
     File ERCC_counts_tsv = "ERCC_counts.tsv"
     File transcript_gene_mapping_tsv = "transcript_to_gene_mapping.kallisto.tsv"
-    File? gene_abundance_tsv = "reads_per_gene.kallisto.tsv"
   }
 
   runtime {
