@@ -19,6 +19,8 @@ workflow index_generation {
         String docker_image_id
         String old_nt_s3_path
         String old_nr_s3_path
+        Boolean skip_protein_compression = false
+        Boolean logging_enabled = false
     }
 
     call DownloadNR {
@@ -56,44 +58,66 @@ workflow index_generation {
         k = nt_compression_k,
         scaled = nt_compression_scaled,
         similarity_threshold = nt_compression_similarity_threshold,
+        logging_enabled = logging_enabled,
         docker_image_id = docker_image_id,
         cpu = 64
     }
 
-    call CompressNR {
-        input:
-        nr = DownloadNR.nr,
-        accession2taxid = DownloadAccession2Taxid.accession2taxid,
-        k = nr_compression_k,
-        scaled = nr_compression_scaled,
-        similarity_threshold = nr_compression_similarity_threshold,
-        docker_image_id = docker_image_id,
-        cpu = 64
-    }
+    if (!skip_protein_compression) {
+        call CompressNR {
+            input:
+            nr = DownloadNR.nr,
+            accession2taxid = DownloadAccession2Taxid.accession2taxid,
+            k = nr_compression_k,
+            scaled = nr_compression_scaled,
+            similarity_threshold = nr_compression_similarity_threshold,
+            logging_enabled = logging_enabled,
+            docker_image_id = docker_image_id,
+            cpu = 64
+        }
+        call GenerateIndexAccessions as GenerateIndexAccessionsCompressedProtein {
+            input:
+            nr = CompressNR.nr_compressed,
+            nt = CompressNT.nt_compressed,
+            accession2taxid = DownloadAccession2Taxid.accession2taxid,
+            docker_image_id = docker_image_id
+        }
+        call GenerateNRDB as GenerateNRDBCompressedProtein {
+            input:
+            nr = CompressNR.nr_compressed,
+            docker_image_id = docker_image_id
+        }
 
-    call GenerateIndexAccessions {
-        input:
-        nr = DownloadNR.nr,
-        nt = CompressNT.nt_compressed,
-        accession2taxid = DownloadAccession2Taxid.accession2taxid,
-        docker_image_id = docker_image_id
+        call GenerateIndexDiamond as GenerateIndexDiamondCompressedProtein {
+            input:
+            nr = CompressNR.nr_compressed,
+            docker_image_id = docker_image_id
+        }
+
+    }
+    if (skip_protein_compression) {
+        call GenerateIndexAccessions {
+            input:
+            nr = DownloadNR.nr,
+            nt = CompressNT.nt_compressed,
+            accession2taxid = DownloadAccession2Taxid.accession2taxid,
+            docker_image_id = docker_image_id
+        }
+        call GenerateNRDB {
+            input:
+            nr = DownloadNR.nr,
+            docker_image_id = docker_image_id
+        }
+        call GenerateIndexDiamond {
+            input:
+            nr = DownloadNR.nr,
+            docker_image_id = docker_image_id
+        }
     }
 
     call GenerateNTDB {
         input:
         nt = CompressNT.nt_compressed,
-        docker_image_id = docker_image_id
-    }
-
-    call GenerateNRDB {
-        input:
-        nr = DownloadNR.nr,
-        docker_image_id = docker_image_id
-    }
-
-    call GenerateIndexDiamond {
-        input:
-        nr = DownloadNR.nr,
         docker_image_id = docker_image_id
     }
 
@@ -125,13 +149,19 @@ workflow index_generation {
 
 
     output {
-        File nr = DownloadNR.nr
+        File? nr = if (skip_protein_compression) then DownloadNR.nr else CompressNR.nr_compressed
         File nt = CompressNT.nt_compressed
-        File accession2taxid_db = GenerateIndexAccessions.accession2taxid_db
+        File? accession2taxid_db = GenerateIndexAccessions.accession2taxid_db
         File nt_loc_db = GenerateNTDB.nt_loc_db
         File nt_info_db = GenerateNTDB.nt_info_db
-        File nr_loc_db = GenerateNRDB.nr_loc_db
-        Directory diamond_index = GenerateIndexDiamond.diamond_index
+        File? nr_loc_db = if (skip_protein_compression) then GenerateNRDB.nr_loc_db else GenerateNRDBCompressedProtein.nr_loc_db
+        File? nt_contained_in_tree =  CompressNT.nt_contained_in_tree
+        File? nt_contained_in_chunk = CompressNT.nt_contained_in_chunk
+        File? nr_contained_in_tree = CompressNR.nr_contained_in_tree
+        File? nr_contained_in_chunk = CompressNR.nr_contained_in_chunk
+
+
+        Directory? diamond_index = if (skip_protein_compression) then GenerateIndexDiamond.diamond_index else GenerateIndexDiamondCompressedProtein.diamond_index
         # File taxid_lineages_db = GenerateIndexLineages.taxid_lineages_db
         # File versioned_taxid_lineages_csv = GenerateIndexLineages.versioned_taxid_lineages_csv
         # File deuterostome_taxids = GenerateIndexLineages.deuterostome_taxids
@@ -509,6 +539,7 @@ task CompressNT {
         Int k
         Int scaled
         Float similarity_threshold
+        Boolean logging_enabled
         String docker_image_id
         Int cpu
     }
@@ -522,19 +553,30 @@ task CompressNT {
         #   contained by a longer sequence, and the shorter sequence were to come first, it would be emitted
         #   even though it is redundant to the longer sequence.
         seqkit sort --reverse --by-length --two-pass --threads ~{cpu} ~{nt} -o nt_sorted
-
-        ncbi-compress \
-            --input-fasta nt_sorted \
-            --accession-mapping-files ~{accession2taxid}/nucl_wgs.accession2taxid \
-            --accession-mapping-files ~{accession2taxid}/nucl_gb.accession2taxid \
-            --accession-mapping-files ~{accession2taxid}/pdb.accession2taxid \
-            --output-fasta nt_compressed.fa \
-            --k ~{k} \
-            --scaled ~{scaled} \
-            --similarity-threshold ~{similarity_threshold} \
-            --enable-sequence-retention-logging \
-            --logging-contained-in-tree-fn nt_contained_in_tree.tsv \
-            --logging-not-contained-in-chunk-fn nt_contained_in_chunk.tsv \
+        if [ "~{logging_enabled}" ]; then
+            ncbi-compress \
+                --input-fasta nt_sorted \
+                --accession-mapping-files ~{accession2taxid}/nucl_wgs.accession2taxid \
+                --accession-mapping-files ~{accession2taxid}/nucl_gb.accession2taxid \
+                --accession-mapping-files ~{accession2taxid}/pdb.accession2taxid \
+                --output-fasta nt_compressed.fa \
+                --k ~{k} \
+                --scaled ~{scaled} \
+                --similarity-threshold ~{similarity_threshold} \
+                --enable-sequence-retention-logging \
+                --logging-contained-in-tree-fn nt_contained_in_tree.tsv \
+                --logging-not-contained-in-chunk-fn nt_contained_in_chunk.tsv \
+        else
+            ncbi-compress \
+                --input-fasta nt_sorted \
+                --accession-mapping-files ~{accession2taxid}/nucl_wgs.accession2taxid \
+                --accession-mapping-files ~{accession2taxid}/nucl_gb.accession2taxid \
+                --accession-mapping-files ~{accession2taxid}/pdb.accession2taxid \
+                --output-fasta nt_compressed.fa \
+                --k ~{k} \
+                --scaled ~{scaled} \
+                --similarity-threshold ~{similarity_threshold}
+        fi
     >>>
 
     output {
@@ -557,6 +599,7 @@ task CompressNR {
         Int k
         Int scaled
         Float similarity_threshold
+        Boolean logging_enabled
         String docker_image_id
         Int cpu
     }
@@ -570,20 +613,30 @@ task CompressNR {
         #   contained by a longer sequence, and the shorter sequence were to come first, it would be emitted
         #   even though it is redundant to the longer sequence.
         seqkit sort --reverse --by-length --two-pass --threads ~{cpu} ~{nr} -o nr_sorted
-
-        ncbi-compress \
-            --input-fasta nr_sorted \
-            --accession-mapping-files ~{accession2taxid}/prot.accession2taxid.FULL \
-            --accession-mapping-files ~{accession2taxid}/pdb.accession2taxid \
-            --output-fasta nr_compressed.fa \
-            --k ~{k} \
-            --scaled ~{scaled} \
-            --similarity-threshold ~{similarity_threshold} \
-            --is-protein-fasta \
-            --chunk-size 100 \
-            --enable-sequence-retention-logging \
-            --logging-contained-in-tree-fn nr_contained_in_tree.tsv \
-            --logging-not-contained-in-chunk-fn nr_contained_in_chunk.tsv \
+        if [ "~{logging_enabled}" ]; then
+            ncbi-compress \
+                --input-fasta nr_sorted \
+                --accession-mapping-files ~{accession2taxid}/prot.accession2taxid.FULL \
+                --accession-mapping-files ~{accession2taxid}/pdb.accession2taxid \
+                --output-fasta nr_compressed.fa \
+                --k ~{k} \
+                --scaled ~{scaled} \
+                --similarity-threshold ~{similarity_threshold} \
+                --is-protein-fasta \
+                --enable-sequence-retention-logging \
+                --logging-contained-in-tree-fn nr_contained_in_tree.tsv \
+                --logging-not-contained-in-chunk-fn nr_contained_in_chunk.tsv \
+        else
+            ncbi-compress \
+                --input-fasta nr_sorted \
+                --accession-mapping-files ~{accession2taxid}/prot.accession2taxid.FULL \
+                --accession-mapping-files ~{accession2taxid}/pdb.accession2taxid \
+                --output-fasta nr_compressed.fa \
+                --k ~{k} \
+                --scaled ~{scaled} \
+                --similarity-threshold ~{similarity_threshold} \
+                --is-protein-fasta
+        fi
     >>>
 
     output {
