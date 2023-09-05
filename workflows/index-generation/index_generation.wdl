@@ -151,12 +151,12 @@ workflow index_generation {
     output {
         File? nr = if (skip_protein_compression) then DownloadNR.nr else CompressNR.nr_compressed
         File nt = CompressNT.nt_compressed
-        File? accession2taxid_db = GenerateIndexAccessions.accession2taxid_db
+        File? accession2taxid_db = if (skip_protein_compression) then GenerateIndexAccessions.accession2taxid_db else GenerateIndexAccessionsCompressedProtein.accession2taxid_db
         File nt_loc_db = GenerateNTDB.nt_loc_db
         File nt_info_db = GenerateNTDB.nt_info_db
         File? nr_loc_db = if (skip_protein_compression) then GenerateNRDB.nr_loc_db else GenerateNRDBCompressedProtein.nr_loc_db
-        File? nt_contained_in_tree =  CompressNT.nt_contained_in_tree
-        File? nt_contained_in_chunk = CompressNT.nt_contained_in_chunk
+        File nt_contained_in_tree =  CompressNT.nt_contained_in_tree
+        File nt_contained_in_chunk = CompressNT.nt_contained_in_chunk
         File? nr_contained_in_tree = CompressNR.nr_contained_in_tree
         File? nr_contained_in_chunk = CompressNR.nr_contained_in_chunk
 
@@ -225,10 +225,10 @@ task DownloadAccession2Taxid {
         # ncbi_download "~{ncbi_server}" pub/taxonomy/accession2taxid/nucl_wgs.accession2taxid.gz
         # ncbi_download "~{ncbi_server}" pub/taxonomy/accession2taxid/pdb.accession2taxid.gz
         # ncbi_download "~{ncbi_server}" pub/taxonomy/accession2taxid/prot.accession2taxid.FULL.gz
-        aws s3 cp ~{s3_accession_mapping_prefix}/nucl_gb.accession2taxid.gz pub/taxonomy/accession2taxid/nucl_gb.accession2taxid.gz
-        aws s3 cp ~{s3_accession_mapping_prefix}/nucl_wgs.accession2taxid.gz pub/taxonomy/accession2taxid/nucl_wgs.accession2taxid.gz
-        aws s3 cp ~{s3_accession_mapping_prefix}/accession2taxid/pdb.accession2taxid.gz pub/taxonomy/accession2taxid/pdb.accession2taxid.gz
-        aws s3 cp ~{s3_accession_mapping_prefix}/accession2taxid/prot.accession2taxid.gz pub/taxonomy/accession2taxid/prot.accession2taxid.FULL.gz
+        aws s3 cp ~{s3_accession_mapping_prefix}/accession2taxid/nucl_gb.accession2taxid.gz pub/taxonomy/accession2taxid/nucl_gb.accession2taxid.gz
+        aws s3 cp ~{s3_accession_mapping_prefix}/accession2taxid/nucl_wgs.accession2taxid.gz pub/taxonomy/accession2taxid/nucl_wgs.accession2taxid.gz
+        aws s3 cp ~{s3_accession_mapping_prefix}/accession2taxid/accession2taxid/pdb.accession2taxid.gz pub/taxonomy/accession2taxid/pdb.accession2taxid.gz
+        aws s3 cp ~{s3_accession_mapping_prefix}/accession2taxid/accession2taxid/prot.accession2taxid.gz pub/taxonomy/accession2taxid/prot.accession2taxid.FULL.gz
     >>>
 
     output {
