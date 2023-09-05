@@ -227,8 +227,8 @@ task DownloadAccession2Taxid {
         # ncbi_download "~{ncbi_server}" pub/taxonomy/accession2taxid/prot.accession2taxid.FULL.gz
         aws s3 cp ~{s3_accession_mapping_prefix}/accession2taxid/nucl_gb.accession2taxid.gz pub/taxonomy/accession2taxid/nucl_gb.accession2taxid.gz
         aws s3 cp ~{s3_accession_mapping_prefix}/accession2taxid/nucl_wgs.accession2taxid.gz pub/taxonomy/accession2taxid/nucl_wgs.accession2taxid.gz
-        aws s3 cp ~{s3_accession_mapping_prefix}/accession2taxid/accession2taxid/pdb.accession2taxid.gz pub/taxonomy/accession2taxid/pdb.accession2taxid.gz
-        aws s3 cp ~{s3_accession_mapping_prefix}/accession2taxid/accession2taxid/prot.accession2taxid.gz pub/taxonomy/accession2taxid/prot.accession2taxid.FULL.gz
+        aws s3 cp ~{s3_accession_mapping_prefix}/accession2taxid/pdb.accession2taxid.gz pub/taxonomy/accession2taxid/pdb.accession2taxid.gz
+        aws s3 cp ~{s3_accession_mapping_prefix}/accession2taxid/prot.accession2taxid.gz pub/taxonomy/accession2taxid/prot.accession2taxid.FULL.gz
     >>>
 
     output {
