@@ -556,9 +556,9 @@ task CompressNT {
         if [ "~{logging_enabled}" ]; then
             ncbi-compress \
                 --input-fasta nt_sorted \
-                --accession-mapping-files ~{accession2taxid}/nucl_wgs.accession2taxid \
-                --accession-mapping-files ~{accession2taxid}/nucl_gb.accession2taxid \
-                --accession-mapping-files ~{accession2taxid}/pdb.accession2taxid \
+                --accession-mapping-files ~{accession2taxid}nucl_wgs.accession2taxid \
+                --accession-mapping-files ~{accession2taxid}nucl_gb.accession2taxid \
+                --accession-mapping-files ~{accession2taxid}pdb.accession2taxid \
                 --output-fasta nt_compressed.fa \
                 --k ~{k} \
                 --scaled ~{scaled} \
@@ -569,9 +569,9 @@ task CompressNT {
         else
             ncbi-compress \
                 --input-fasta nt_sorted \
-                --accession-mapping-files ~{accession2taxid}/nucl_wgs.accession2taxid \
-                --accession-mapping-files ~{accession2taxid}/nucl_gb.accession2taxid \
-                --accession-mapping-files ~{accession2taxid}/pdb.accession2taxid \
+                --accession-mapping-files ~{accession2taxid}nucl_wgs.accession2taxid \
+                --accession-mapping-files ~{accession2taxid}nucl_gb.accession2taxid \
+                --accession-mapping-files ~{accession2taxid}pdb.accession2taxid \
                 --output-fasta nt_compressed.fa \
                 --k ~{k} \
                 --scaled ~{scaled} \
@@ -616,8 +616,8 @@ task CompressNR {
         if [ "~{logging_enabled}" ]; then
             ncbi-compress \
                 --input-fasta nr_sorted \
-                --accession-mapping-files ~{accession2taxid}/prot.accession2taxid.FULL \
-                --accession-mapping-files ~{accession2taxid}/pdb.accession2taxid \
+                --accession-mapping-files ~{accession2taxid}prot.accession2taxid.FULL \
+                --accession-mapping-files ~{accession2taxid}pdb.accession2taxid \
                 --output-fasta nr_compressed.fa \
                 --k ~{k} \
                 --scaled ~{scaled} \
@@ -629,8 +629,8 @@ task CompressNR {
         else
             ncbi-compress \
                 --input-fasta nr_sorted \
-                --accession-mapping-files ~{accession2taxid}/prot.accession2taxid.FULL \
-                --accession-mapping-files ~{accession2taxid}/pdb.accession2taxid \
+                --accession-mapping-files ~{accession2taxid}prot.accession2taxid.FULL \
+                --accession-mapping-files ~{accession2taxid}pdb.accession2taxid \
                 --output-fasta nr_compressed.fa \
                 --k ~{k} \
                 --scaled ~{scaled} \
