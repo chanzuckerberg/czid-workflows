@@ -4,14 +4,66 @@ CZ ID's AMR workflow implements the [Resistance Gene Identifier (RGI)](https://g
 
 # Changelog
 
+## 1.2.15 - 2023-07-19
+
+### Fixed
+
+- Fixed a bug that caused the calculated gene coverage percentage to be incorrect in some cases, i.e. when only a reverse read was present in the contigs of a paired-end sample.
+
+## 1.2.14 - 2023-07-18
+
+### Fixed
+
+- Fixed a bug that caused contig IDs to be improperly parsed when creating the indexed contigs BAM/BAI files. This caused the workflow to halt in some cases.
+
+### Changed
+
+- The workflow now expects the `card_ontology` file to be organized by drug class, which should be the top-level keys in the JSON structure of the file. The code that generates the primary AMR report now queries the file by drug class instead of gene name to obtain high-level drug classes.
+
+
+## 1.2.13 - 2023-07-17
+
+1.2.13 is identical to 1.2.12.
+
+## 1.2.12 - 2023-07-17
+
+### Added
+
+- Added ARO accession number as a column in the primary AMR report.
+
+### Fixed
+
+- Fixed a bug that prevented contigs without corresponding read IDs to be indexed in the contigs BAM/BAI files. All contigs in a sample for a given gene can now be accessed by using the gene's ARO accession number as a key.
+
+### Changed
+
+- Contigs in the indexed BAM/BAI files are now indexed by ARO accession, not read IDs.
+
+## 1.2.11 - 2023-07-11
+
+### Fixed
+
+- Fixed a bug that caused the workflow to halt if an ontology entry did not have a `highLevelDrugClasses` key.
+- Fixed a bug that caused identified genes to not show up in the primary AMR report if they did not have a high-level drug class in the ontology.
+
 ## 1.2.10 - 2023-07-10
 
 NOTE: Due to a bug in our release script, there were no releases with version numbers 1.2.6 - 1.2.9.
 
+### Added
+
+- Added seqkit 2.4.0 to the AMR Dockerfile.
+- Added workflow parameter `File card_ontology`. The workflow expects this to be a customized JSON file containing the contents of the CARD ontology, with AMR gene names as top-level keys.
+- Added high-level drug classes to primary AMR report. The workflow queries the `card_ontology` file.
+- Added sample ontology file for testing purposes.
+
+### Changed
+
+- The interleaved non-host reads file now renames duplicate sequence IDs with seqkit. The renamed IDs have a forward slash and a counter  appended to them: `/1`, `/2`, etc.
+
 ## 1.2.5 - 2023-06-13
 
 ### Fixed
-
 - Fixed bug in calculating gene coverage. Contigs are now grouped by ARO accession instead of model ID before calculating coverage.
 - Pinned `dask` version to `2023.5.0` to prevent installation of newer versions incompatible with Python 3.8.
 
