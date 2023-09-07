@@ -23,7 +23,7 @@ workflow amr {
         String s3_wd_uri = ""
     }
     if (defined(raw_reads_0)) {
-        Array[File]+ raw_reads = select_all(select_first([raw_reads_0]), select_first([raw_reads_1]))
+        Array[File]+ raw_reads = select_all([select_first([raw_reads_0]), select_first([raw_reads_1])])
 
         call host_filter.czid_host_filter as host_filter_stage { 
             input:
