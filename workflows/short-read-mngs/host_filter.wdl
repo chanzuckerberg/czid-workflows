@@ -17,7 +17,9 @@ workflow czid_host_filter {
     File bowtie2_index_tar
     File hisat2_index_tar
     File kallisto_idx
-    File? gtf_gz  # Ensembl GTF for host species
+    # `gtf_gz` unused in v8.2.8+ (Sep 2023). Left here to prevent legacy calls
+    # of older workflows from breaking newer invocations that don't use it.
+    File? gtf_gz
 
     File human_bowtie2_index_tar
     File human_hisat2_index_tar
@@ -45,12 +47,12 @@ workflow czid_host_filter {
     docker_image_id = docker_image_id,
     s3_wd_uri = s3_wd_uri
   }
-  
-  call ercc_bowtie2_filter { 
-    input: 
+
+  call ercc_bowtie2_filter {
+    input:
     valid_input1_fastq = RunValidateInput.valid_input1_fastq,
     valid_input2_fastq = RunValidateInput.valid_input2_fastq,
-    ercc_index_tar = ercc_index_tar, 
+    ercc_index_tar = ercc_index_tar,
     docker_image_id = docker_image_id,
     cpu = cpu
   }
@@ -74,7 +76,6 @@ workflow czid_host_filter {
     fastp1_fastq = fastp_qc.fastp1_fastq,
     fastp2_fastq = fastp_qc.fastp2_fastq,
     kallisto_idx = kallisto_idx,
-    gtf_gz = gtf_gz,
     docker_image_id = docker_image_id,
     cpu = cpu
   }
@@ -175,7 +176,7 @@ workflow czid_host_filter {
 
     File kallisto_transcript_abundance_tsv = kallisto.transcript_abundance_tsv
     File kallisto_ERCC_counts_tsv = kallisto.ERCC_counts_tsv
-    File? kallisto_gene_abundance_tsv = kallisto.gene_abundance_tsv
+    File kallisto_transcript_gene_mapping_tsv = kallisto.transcript_gene_mapping_tsv
 
     File bowtie2_host_filtered1_fastq = bowtie2_filter.bowtie2_host_filtered1_fastq
     File? bowtie2_host_filtered2_fastq = bowtie2_filter.bowtie2_host_filtered2_fastq
@@ -262,7 +263,7 @@ task ercc_bowtie2_filter {
   }
 
   Boolean paired = defined(valid_input2_fastq)
-  String genome_name = "ercc" 
+  String genome_name = "ercc"
   String bowtie2_invocation =
       "bowtie2 -x '/tmp/${genome_name}/${genome_name}' ${bowtie2_options} -p ${cpu}"
         + (if (paired) then " -1 '${valid_input1_fastq}' -2 '${valid_input2_fastq}'" else " -U '${valid_input1_fastq}'")
@@ -289,14 +290,14 @@ task ercc_bowtie2_filter {
         count="$(cat bowtie2_ercc_filtered1.fastq | wc -l)"
     fi
 
-    
+
     # Calculate ercc counts for bowtie2
     samtools view /tmp/bowtie2_ercc.sam | cut -f3 |  (grep "ERCC-" || [ "$?" == "1" ])| sort | uniq -c | awk '{ print $2 "\t" $1}' > 'bowtie2_ERCC_counts.tsv'
 
     count=$((count / 4))
     jq --null-input --arg count "$count" '{"bowtie2_ercc_filtered_out":$count}' > 'bowtie2_ercc_filtered_out.count'
-    
-    if [[ "$count" -eq "0" ]]; then 
+
+    if [[ "$count" -eq "0" ]]; then
       raise_error InsufficientReadsError "There was an insufficient number of reads in the sample after the host and quality filtering steps."
     fi
 
@@ -418,7 +419,6 @@ task kallisto {
     File fastp1_fastq
     File? fastp2_fastq
     File kallisto_idx
-    File? gtf_gz
 
     # Run kallisto single-threaded with a fixed seed.
     # This will ensure non-random reproducibility between runs.
@@ -451,66 +451,48 @@ task kallisto {
     echo -e "target_id\test_counts" > ERCC_counts.tsv
     grep ERCC- reads_per_transcript.kallisto.tsv | cut -f1,4 >> ERCC_counts.tsv
 
-    # If we've been provided the GTF, then roll up the transcript abundance estimates by gene.
-    if [[ -n '~{gtf_gz}' ]]; then
-      >&2 python3 - reads_per_transcript.kallisto.tsv '~{gtf_gz}' << 'EOF'
-    # Given kallisto output tsv based on index of GENCODE transcripts FASTA, and matching
-    # GENCODE GTF, report the total est_counts and tpm for each gene (sum over all transcripts
-    # of each gene). Also outputs reads for some rRNA, although no summing for that.
+    # Create transcript_id -> gene_id mapping TSV
+    >&2 python3 - reads_per_transcript.kallisto.tsv transcript_to_gene_mapping.kallisto.tsv << 'EOF'
+    # This takes the transcript TSV produced by Kallisto and produces a new TSV
+    # that has each row being the `transcript_id` (AKA, `target_id`) and the
+    # `gene_id` that corresponds to it. No header row. Intent is for produced
+    # mapping TSV to help user run further analysis on the transcript TSV
+    # outside of CZID if they need gene rollup info. See CZID-8315 for more info.
     import sys
+    import csv
     import re
-    import pandas as pd
-    import gtfparse
 
-    # We match kallisto reads to the GTF file via ENST ids. IDs from kallisto
-    # output have many IDs per row, concatenated by pipe chars. ENST seems to
-    # always be at start, but might show anywhere? Regex here will extract ENST.
-    ENST_ID_PATTERN = re.compile(r"(^|\|)(ENST.*?)(\||$)")  # group 2 is ENST id
-    # ERCC also shows up too, we do not worry about extracting ENST ids from those.
+    # We want to extract ENSG part of transcript id since that's the gene id.
+    # Some transcript ids have two ENSG ids contained within, eg ENSG0325.2
+    # and also ENSG0325. In those cases, we always want the more specific id,
+    # so ENSG0325.2 in that example. The way our Kallisto index is structured,
+    # the more specific one always shows up first, so that's what we grab.
+    ENSG_ID_PATTERN = re.compile(r"(^|\|)(ENSG.*?)(\||$)")  # id we want => group 2
+    # ERCC also shows up too, we do not worry about gene ids for those.
     ERCC_PREFIX = "ERCC"
     # We also have rRNA with id U13369.1. Possible we might add more later on,
-    # so we recognize by pattern instead of just doing an exact match.
+    # so we recognize by pattern instead of exact match. No gene id extraction.
     RRNA_ID_PATTERN = r"^U\d+"
-    def extract_enst_id(target_id):
-        enst_match = ENST_ID_PATTERN.search(target_id)
+    def get_gene_id(transcript_id):
+        ensg_match = ENSG_ID_PATTERN.search(transcript_id)
         try:
-            return enst_match.group(2)
-        except AttributeError:  # no match found, so no ENST id
-            # If it is another known id pattern, no need to warn about it.
-            if not target_id.startswith(ERCC_PREFIX) and not re.match(RRNA_ID_PATTERN, target_id):
-                print(f"Format of ID not recognized! target_id: {target_id}")
-            return "MISSING_ENST_ID"  # we do not use this; just for dev debugging
+            return ensg_match.group(2)
+        except AttributeError:  # no match found, so no ENSG id
+            # If there is no gene id, just pass back the whole transcript_id.
+            # Intent here is to keep later use of mapping tsv safe to just
+            # blindly look up on any transcript_id and not error out even
+            # though these lines aren't really the same category of thing.
+            if not transcript_id.startswith(ERCC_PREFIX) and not re.match(RRNA_ID_PATTERN, transcript_id):
+                print(f"Format of ID not recognized! transcript_id: {transcript_id}")
+            return transcript_id
 
-    kallisto_df = pd.read_csv(sys.argv[1], sep="\t")
-    kallisto_df["enst_id"] = kallisto_df["target_id"].apply(extract_enst_id)
-
-    gtf_df = gtfparse.read_gtf(sys.argv[2])
-    # When GTF `feature` is "transcript", `transcript_id` are all ENST ids.
-    tx_df = gtf_df[gtf_df["feature"] == "transcript"][
-        ["transcript_id", "gene_id"]
-    ]
-
-    merged_df = pd.merge(
-        kallisto_df[["enst_id", "est_counts", "tpm"]],
-        tx_df,
-        left_on="enst_id",
-        right_on="transcript_id",
-    )
-
-    gene_abundance = merged_df.groupby("gene_id").sum(numeric_only=True)
-
-    # For the rRNA counts, they leapfrog the gene rollup and just get written
-    # directly to the end of the output. We have to `set_index` to gene_id
-    # below because the `groupby` above on merged_df made gene_id the index,
-    # so we have to match to that before merging together and outputting.
-    rrna_abundance = kallisto_df[kallisto_df["target_id"].str.match(RRNA_ID_PATTERN)][
-        ["target_id", "est_counts", "tpm"]
-    ].rename(columns={"target_id": "gene_id"}).set_index("gene_id")
-
-    result = pd.concat([gene_abundance, rrna_abundance])
-    result.to_csv("reads_per_gene.kallisto.tsv", sep="\t")
+    with open(sys.argv[1], "r") as transcript_f, open(sys.argv[2], "w") as out_f:
+        transcript_reader = csv.DictReader(transcript_f, delimiter="\t")
+        out_writer = csv.writer(out_f, delimiter="\t")
+        for row in transcript_reader:
+            transcript_id = row["target_id"]
+            out_writer.writerow([transcript_id, get_gene_id(transcript_id)])
     EOF
-    fi
 
     python3 - << 'EOF'
     import textwrap
@@ -540,7 +522,7 @@ task kallisto {
     String step_description_md = read_string("kallisto.description.md")
     File transcript_abundance_tsv = "reads_per_transcript.kallisto.tsv"
     File ERCC_counts_tsv = "ERCC_counts.tsv"
-    File? gene_abundance_tsv = "reads_per_gene.kallisto.tsv"
+    File transcript_gene_mapping_tsv = "transcript_to_gene_mapping.kallisto.tsv"
   }
 
   runtime {
@@ -595,7 +577,7 @@ task bowtie2_filter {
         count="$(cat bowtie2_host_filtered1.fastq | wc -l)"
     fi
 
-    
+
     count=$((count / 4))
     jq --null-input --arg count "$count" '{"bowtie2_host_filtered_out":$count}' > 'bowtie2_host_filtered_out.count'
 
