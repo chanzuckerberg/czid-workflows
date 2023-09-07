@@ -2,20 +2,13 @@ version 1.1
 
 import "../short-read-mngs/host_filter.wdl" as host_filter
 
-struct RawSample {
-    Array[File]+ raw_reads
-}
-
-struct FilteredSample {
-    Array[File]+ non_host_reads
-    File contigs
-}
-
 
 workflow amr {
     input {
-        RawSample? raw_sample
-        FilteredSample? filtered_sample
+        File? raw_reads_0
+        File? raw_reads_1
+        Array[File]? non_host_reads
+        File? contigs
         String docker_image_id
         String sample_name
         String host_filtering_docker_image_id = "czid-short-read-mngs" # default local value
@@ -29,13 +22,13 @@ workflow amr {
         # Dummy values - required by SFN interface
         String s3_wd_uri = ""
     }
-    if (defined(raw_sample)) {
-        RawSample raw_sample_in = select_first([raw_sample])
+    if (defined(raw_reads_0)) {
+        Array[File]+ raw_reads = select_all(select_first([raw_reads_0]), select_first([raw_reads_1]))
 
         call host_filter.czid_host_filter as host_filter_stage { 
             input:
-            fastqs_0 = raw_sample_in.raw_reads[0],
-            fastqs_1 = if length(raw_sample_in.raw_reads) > 1 then raw_sample_in.raw_reads[1] else None,
+            fastqs_0 = raw_reads[0],
+            fastqs_1 = if length(raw_reads) > 1 then raw_reads[1] else None,
             docker_image_id = host_filtering_docker_image_id,
             s3_wd_uri = s3_wd_uri
         }
@@ -59,25 +52,19 @@ workflow amr {
             docker_image_id = host_filtering_docker_image_id,
         }
     }
-    if (defined(filtered_sample)) {
-        FilteredSample filtered_sample_in = select_first([filtered_sample])
 
-        Array[File]+ fs_non_host_reads = filtered_sample_in.non_host_reads
-        File fs_contigs = filtered_sample_in.contigs
-    }
-
-    Array[File]+ non_host_reads = select_first([RunRedup.redups_fa, select_all([fs_non_host_reads])])
-    File contigs = select_first([RunSpades.contigs, select_all([fs_contigs])])
+    Array[File]+ non_host_reads_in = select_first([RunRedup.redups_fa, select_first([non_host_reads])])
+    File contigs_in = select_first([RunSpades.contigs, select_first([contigs])])
 
     call RunRgiBwtKma {
         input:
-        non_host_reads = non_host_reads,
+        non_host_reads_in = non_host_reads_in,
         card_json = card_json, 
         docker_image_id = docker_image_id
     }
     call RunRgiMain {
         input:
-        contigs = contigs,
+        contigs_in = contigs_in,
         card_json = card_json, 
         docker_image_id = docker_image_id
     }
@@ -121,15 +108,15 @@ workflow amr {
 
     call tsvToSam { 
         input: 
-        contigs = contigs,
+        contigs_in = contigs_in,
         final_summary = RunResultsPerSample.final_summary,
         docker_image_id = docker_image_id
     }
 
     call ZipOutputs {
         input:
-        contigs_in = contigs,
-        non_host_reads_in = non_host_reads,
+        contigs_in = contigs_in,
+        non_host_reads_in = non_host_reads_in,
         main_reports = select_all(
             [
                 RunResultsPerSample.final_summary,
@@ -536,18 +523,18 @@ task RunRgiKmerBwt {
 }
 task RunRgiMain { 
     input { 
-        File contigs
+        File contigs_in
         File card_json
         String docker_image_id
     }
     command <<<
         set -exuo pipefail
-        if [[ $(head -n 1 "~{contigs}") == ";ASSEMBLY FAILED" ]]; then
+        if [[ $(head -n 1 "~{contigs_in}") == ";ASSEMBLY FAILED" ]]; then
             # simulate empty outputs
             echo "{}" > contig_amr_report.json
             cp /tmp/empty-main-header.txt contig_amr_report.txt
         else
-            rgi main -i "~{contigs}" -o contig_amr_report -t contig -a BLAST --include_nudge --clean
+            rgi main -i "~{contigs_in}" -o contig_amr_report -t contig -a BLAST --include_nudge --clean
         fi
     >>>
     output {
@@ -562,14 +549,14 @@ task RunRgiMain {
 }
 task RunRgiBwtKma {
     input {
-        Array[File]+ non_host_reads
+        Array[File]+ non_host_reads_in
         File card_json
         String docker_image_id
     }
 
     command <<<
         set -exuo pipefail
-        rgi bwt -1 ~{sep=' -2 ' non_host_reads} -a kma -o sr_amr_report --clean
+        rgi bwt -1 ~{sep=' -2 ' non_host_reads_in} -a kma -o sr_amr_report --clean
     >>>
 
     output {
@@ -730,7 +717,7 @@ task MakeGeneCoverage {
 
 task tsvToSam {
     input {
-        File contigs
+        File contigs_in
         File final_summary
         String docker_image_id
     }
@@ -753,7 +740,7 @@ task tsvToSam {
         OUTPUT_BAM = "contig_amr_report.sorted.bam"
 
         # Create an empty BAM/BAI file if the SPADES assembly failed, then exit
-        with open("~{contigs}") as f:
+        with open("~{contigs_in}") as f:
             first_line = f.readline()
             if first_line == ";ASSEMBLY FAILED\n":
                 output_bam = pysam.AlignmentFile(OUTPUT_BAM, "wb", reference_names=["NoGenes"], reference_lengths=[100])
@@ -762,8 +749,8 @@ task tsvToSam {
                 sys.exit()
 
         # Create index to enable querying fasta file
-        pysam.faidx("~{contigs}")
-        contigs_fasta = pysam.Fastafile("~{contigs}")
+        pysam.faidx("~{contigs_in}")
+        contigs_fasta = pysam.Fastafile("~{contigs_in}")
 
         # Load columns of interest from CSV and drop rows with at least one NaN
         df = pd.read_csv("~{final_summary}", sep="\t", usecols=[COLUMN_ARO_CONTIG, COLUMN_CONTIG_NAME])
