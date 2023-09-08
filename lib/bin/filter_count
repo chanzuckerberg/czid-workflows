@@ -10,24 +10,24 @@
 #   3 (optional): a message to display to the user if all reads are filtered out at this step
 #     if this is omitted an error is not raised for insufficient reads
 
-set -euo pipefail
+set -eo pipefail
 
-if [[ $1 == *gz ]]; then
+if [[ "$1" == *gz ]]; then
     # gzip -t checks the whole file so might be a bit slow. 
     # a faster but more imperfect method would be to check that the first 2 bytes equal 0x8b1f
-    if ! gzip -t $1 > /dev/null 2>&1; then
-        raise_error InvalidFileFormatError "The file: $(basename $1) is not a proper gzip file"
+    if ! gzip -t "$1" > /dev/null 2>&1; then
+        raise_error InvalidFileFormatError "The file: $(basename "$1") is not a proper gzip file"
     fi
-    WC_OUT=$(gzip -dc $1 | awk 'NR % 4 == 2' | wc)
+    WC_OUT=$(gzip -dc "$1" | awk 'NR % 4 == 2' | wc)
 else
-    WC_OUT=$(cat $1 | awk 'NR % 4 == 2' | wc)
+    WC_OUT=$(cat "$1" | awk 'NR % 4 == 2' | wc)
 fi
 LINES=$(echo $WC_OUT | cut -f 2 -d ' ')
 CHARS=$(echo $WC_OUT | cut -f 3 -d ' ')
-BASES=$(expr $CHARS - $LINES)
+BASES=$(($CHARS - $LINES))
 echo "{ \"$2_reads\": \"$LINES\" }" > $2_reads.count
 echo "{ \"$2_bases\": \"$BASES\" }" > $2_bases.count
 
 if [[ $LINES == 0 && -n $3 ]]; then
-    raise_error InsufficientReadsError $3
+    raise_error InsufficientReadsError "$3"
 fi

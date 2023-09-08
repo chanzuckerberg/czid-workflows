@@ -142,10 +142,6 @@ class TestConsensusGenomes(WDLTestCase):
         self.assertEqual(output_stats["n_gap"], 0)
         self.assertEqual(output_stats["n_ambiguous"], 1)
 
-        self.assertEqual(res["outputs"]["consensus_genome.vadr_alerts_out"], None)
-        self.assertEqual(res["outputs"]["consensus_genome.vadr_quality_out"], None)
-        self.assertEqual(res["outputs"]["consensus_genome.vadr_errors"], None)
-
         args.append(f"ref_fasta={self.sc2_ref_fasta}")
         with self.assertRaises(CalledProcessError) as ecm:
             self.run_miniwdl(args)

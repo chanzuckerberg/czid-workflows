@@ -22,9 +22,13 @@ task RunValidateInput {
 
         python3 <<CODE
         from Bio import SeqIO
-
-        for record in SeqIO.parse("sample_validated.fastq", "fastq"):
-            pass
+        import json
+        
+        try: 
+            for record in SeqIO.parse("sample_validated.fastq", "fastq"):
+                pass
+        except ValueError as e:
+            exit(json.dumps(dict(wdl_error_message=True, error="InvalidInputFileError", cause=str(e))))
         CODE
 
         filter_count sample_validated.fastq validated "No reads remaining after input validation"
@@ -427,7 +431,13 @@ task RunReadsToContigs {
     command <<<
         set -euxo pipefail
         # use minimap2 to align reads back to contigs
-        minimap2 -ax map-ont "~{assembled_reads}" "~{input_fastq}" -o sample.reads_to_contigs.sam -t 15 --secondary=no
+        minimap2 -ax map-ont "~{assembled_reads}" "~{input_fastq}" -o sample.reads_to_contigs_all.sam -t 15 --secondary=no
+        # filter only primary contigs
+        samtools view -h -F 0x900 sample.reads_to_contigs_all.sam > sample.reads_to_contigs_primary.sam
+
+        # filter out contigs with too much clipping
+        python3 /usr/local/bin/filter_clipped_alignments.py sample.reads_to_contigs_primary.sam sample.reads_to_contigs.sam -m 20
+        grep -v "^@" sample.reads_to_contigs.sam | awk '{ print $1 "\t" $3 "\t" length($10)}'  > reads_to_contigs.tsv
         samtools view -b sample.reads_to_contigs.sam | samtools sort > sample.reads_to_contigs.bam
         samtools index sample.reads_to_contigs.bam sample.reads_to_contigs.bam.bai
 
@@ -436,7 +446,6 @@ task RunReadsToContigs {
 
         # convert non-contigs.fastq file to .fasta file
         seqtk seq -a sample.non_contigs.fastq > sample.non_contigs.fasta
-        samtools view -F 0x900 sample.reads_to_contigs.sam | awk '{ print $1 "\t" $3 "\t" length($10)}' > reads_to_contigs.tsv
 
         python3 - << 'EOF'
         import textwrap
@@ -582,67 +591,6 @@ task RunNTAlignment {
     }
 }
 
-# TODO: (tmorse) fuse me
-task RunCallHitsNT {
-    input {
-        File nt_m8
-        File lineage_db
-        File taxon_blacklist
-        File deuterostome_db
-        File accession2taxid
-        Int min_read_length = 36
-        String docker_image_id
-        String count_type = "NT"
-    }
-
-    command <<<
-        set -euxo pipefail
-        python3 <<CODE
-        from idseq_dag.util.m8 import call_hits_m8, generate_taxon_count_json_from_m8
-        call_hits_m8(
-            input_m8="~{nt_m8}",
-            lineage_map_path="~{lineage_db}",
-            accession2taxid_dict_path="~{accession2taxid}",
-            output_m8="gsnap.deduped.m8",
-            output_summary="gsnap.hitsummary.tab",
-            min_alignment_length=~{min_read_length},
-            deuterostome_path="~{deuterostome_db}",
-            taxon_whitelist_path=None,
-            taxon_blacklist_path="~{taxon_blacklist}",
-        )
-        generate_taxon_count_json_from_m8(
-            blastn_6_path="gsnap.deduped.m8",
-            hit_level_path="gsnap.hitsummary.tab",
-            count_type="~{count_type}",
-            lineage_map_path="~{lineage_db}",
-            deuterostome_path="~{deuterostome_db}",
-            taxon_whitelist_path=None,
-            taxon_blacklist_path="~{taxon_blacklist}",
-            duplicate_cluster_sizes_path=None,
-            output_json_file="gsnap_counts_with_dcr.json",
-        )
-        CODE
-
-        python3 - << 'EOF'
-        import textwrap
-        with open("call_hits_nt.description.md", "w") as outfile:
-            print(textwrap.dedent("""
-            Assigns accessions from minimap2 alignments to their respective taxon
-            """).strip(), file=outfile)
-        EOF
-    >>>
-
-    output {
-        String step_description_md = read_string("call_hits_nt.description.md")
-        File nt_deduped_m8 = "gsnap.deduped.m8"
-        File nt_counts_json = "gsnap_counts_with_dcr.json"
-    }
-
-    runtime {
-        docker: docker_image_id
-    }
-}
-
 task RunNRAlignment {
     input {
         File assembled_reads_fa
@@ -693,70 +641,9 @@ task RunNRAlignment {
 }
 
 # TODO: (tmorse) fuse me
-task RunCallHitsNR {
-    input {
-        File nr_m8
-        File lineage_db
-        File taxon_blacklist
-        File deuterostome_db
-        File accession2taxid
-        Int min_read_length = 36
-        String docker_image_id
-        String count_type = "NR"
-    }
-
-    command <<<
-        set -euxo pipefail
-        python3 <<CODE
-        from idseq_dag.util.m8 import call_hits_m8, generate_taxon_count_json_from_m8
-        call_hits_m8(
-            input_m8="~{nr_m8}",
-            lineage_map_path="~{lineage_db}",
-            accession2taxid_dict_path="~{accession2taxid}",
-            output_m8="rapsearch2.deduped.m8",
-            output_summary="rapsearch2.hitsummary.tab",
-            min_alignment_length=~{min_read_length},
-            deuterostome_path="~{deuterostome_db}",
-            taxon_whitelist_path=None,
-            taxon_blacklist_path="~{taxon_blacklist}",
-        )
-        generate_taxon_count_json_from_m8(
-            blastn_6_path="rapsearch2.deduped.m8",
-            hit_level_path="rapsearch2.hitsummary.tab",
-            count_type="~{count_type}",
-            lineage_map_path="~{lineage_db}",
-            deuterostome_path="~{deuterostome_db}",
-            taxon_whitelist_path=None,
-            taxon_blacklist_path="~{taxon_blacklist}",
-            duplicate_cluster_sizes_path=None,
-            output_json_file="rapsearch2_counts_with_dcr.json",
-        )
-        CODE
-
-        python3 - << 'EOF'
-        import textwrap
-        with open("call_hits_nr.description.md", "w") as outfile:
-            print(textwrap.dedent("""
-            Assigns accessions from DIAMOND alignments to their respective taxon
-            """).strip(), file=outfile)
-        EOF
-    >>>
-
-    output {
-        String step_description_md = read_string("call_hits_nr.description.md")
-        File nr_deduped_m8 = "rapsearch2.deduped.m8"
-        File nr_counts_json = "rapsearch2_counts_with_dcr.json"
-    }
-
-    runtime {
-        docker: docker_image_id
-    }
-}
-
-# TODO: (tmorse) fuse me
 task FindTopHitsNT {
     input {
-        File nt_deduped_m8
+        File nt_m8
         String docker_image_id
     }
 
@@ -765,7 +652,7 @@ task FindTopHitsNT {
         python3 <<CODE
         from idseq_dag.steps.blast_contigs import get_top_m8_nt
 
-        get_top_m8_nt("~{nt_deduped_m8}", "gsnap.blast.top.m8")
+        get_top_m8_nt("~{nt_m8}", "gsnap.blast.top.m8")
         CODE
 
         python3 - << 'EOF'
@@ -792,7 +679,7 @@ task FindTopHitsNT {
 # TODO: (tmorse) fuse me
 task FindTopHitsNR {
     input {
-        File nr_deduped_m8
+        File nr_m8
         String docker_image_id
     }
 
@@ -801,7 +688,7 @@ task FindTopHitsNR {
         python3 <<CODE
         from idseq_dag.steps.blast_contigs import get_top_m8_nr
 
-        get_top_m8_nr("~{nr_deduped_m8}", "rapsearch2.blast.top.m8")
+        get_top_m8_nr("~{nr_m8}", "rapsearch2.blast.top.m8")
         CODE
 
         python3 - << 'EOF'
@@ -912,64 +799,6 @@ task SummarizeHitsNR {
     output {
         File nr_m8_reassigned = "m8_reassigned_nr.tab"
         File nr_hit_summary = "rapsearch2.hitsummary2.tab"
-    }
-
-    runtime {
-        docker: docker_image_id
-    }
-}
-
-# TODO: (tmorse) fuse me
-task TallyHitsNT {
-    input {
-        File reads_fastq
-        File nt_deduped_m8
-        File nt_hit_summary
-        File reads_to_contigs_tsv
-        String docker_image_id
-    }
-
-    command <<<
-        set -euxo pipefail  
-        python3 /usr/local/bin/tally_counts.py \
-            --reads-fastq-filepath "~{reads_fastq}" \
-            --m8-filepath "~{nt_deduped_m8}" \
-            --hitsummary-filepath "~{nt_hit_summary}" \
-            --reads-to-contigs-filepath "~{reads_to_contigs_tsv}" \
-            --output-filepath "tallied_hits_nt.csv" \
-    >>>
-
-    output {
-        File tallied_hits = "tallied_hits_nt.csv"
-    }
-
-    runtime {
-        docker: docker_image_id
-    }
-}
-
-# TODO: (tmorse) fuse me
-task TallyHitsNR {
-    input {
-        File reads_fastq
-        File nr_deduped_m8
-        File nr_hit_summary
-        File reads_to_contigs_tsv
-        String docker_image_id
-    }
-
-    command <<<
-        set -euxo pipefail
-        python3 /usr/local/bin/tally_counts.py \
-            --reads-fastq-filepath "~{reads_fastq}" \
-            --m8-filepath "~{nr_deduped_m8}" \
-            --hitsummary-filepath "~{nr_hit_summary}" \
-            --reads-to-contigs-filepath "~{reads_to_contigs_tsv}" \
-            --output-filepath "tallied_hits_nr.csv" \
-    >>>
-
-    output {
-        File tallied_hits = "tallied_hits_nr.csv"
     }
 
     runtime {
@@ -1392,7 +1221,6 @@ task GenerateCoverageViz {
         File contig_in_contig_coverage_json
         File contig_in_contig_stats_json
         File contig_in_contigs_fasta
-        File nt_deduped_m8
         File nt_info_db
         String docker_image_id
     }
@@ -1403,7 +1231,7 @@ task GenerateCoverageViz {
         --step-module idseq_dag.steps.generate_coverage_viz \
         --step-class PipelineStepGenerateCoverageViz \
         --step-name coverage_viz_out \
-        --input-files '[["~{nt_m8_reassigned}", "~{nt_hit_summary}", "~{nt_top_m8}"], ["~{contig_in_contig_coverage_json}", "~{contig_in_contig_stats_json}", "~{contig_in_contigs_fasta}"], ["~{nt_deduped_m8}"]]' \
+        --input-files '[["~{nt_m8_reassigned}", "~{nt_hit_summary}", "~{nt_top_m8}"], ["~{contig_in_contig_coverage_json}", "~{contig_in_contig_stats_json}", "~{contig_in_contigs_fasta}"], ["~{nt_top_m8}"]]' \
         --output-files '["coverage_viz_summary.json"]' \
         --output-dir-s3 '' \
         --additional-files '{"info_db": "~{nt_info_db}"}' \
@@ -1451,7 +1279,7 @@ workflow czid_long_read_mngs {
         File nt_info_db
 
         String? minimap2_db
-        String minimap2_args = "-cx asm20 --secondary=yes"
+        String minimap2_args = "-cx map-ont --secondary=yes"
         String minimap2_prefix = "gsnap"
 
         String? diamond_db
@@ -1557,18 +1385,6 @@ workflow czid_long_read_mngs {
             docker_image_id = docker_image_id,
     }
 
-    call RunCallHitsNT { 
-        input:
-            nt_m8 = RunNTAlignment.nt_m8,
-            lineage_db = lineage_db,
-            taxon_blacklist = taxon_blacklist,
-            deuterostome_db = deuterostome_db,
-            accession2taxid = accession2taxid_db,
-            min_read_length = min_read_length,
-            count_type = library_type,
-            docker_image_id = docker_image_id,
-    }
-
     call RunNRAlignment {
         input:
             assembled_reads_fa=RemoveUnmappedContigs.mapped_contigs_fasta,
@@ -1580,27 +1396,15 @@ workflow czid_long_read_mngs {
             docker_image_id=docker_image_id,
     }
 
-    call RunCallHitsNR { 
-        input:
-            nr_m8 = RunNRAlignment.nr_m8,
-            lineage_db = lineage_db,
-            taxon_blacklist = taxon_blacklist,
-            deuterostome_db = deuterostome_db,
-            accession2taxid = accession2taxid_db,
-            min_read_length = min_read_length,
-            count_type = library_type,
-            docker_image_id = docker_image_id,
-    }
-
     call FindTopHitsNT {
         input:
-            nt_deduped_m8 = RunCallHitsNT.nt_deduped_m8,
+            nt_m8 = RunNTAlignment.nt_m8,
             docker_image_id = docker_image_id,
     }
 
     call FindTopHitsNR {
         input:
-            nr_deduped_m8 = RunCallHitsNR.nr_deduped_m8,
+            nr_m8 = RunNRAlignment.nr_m8,
             docker_image_id = docker_image_id,
     }
 
@@ -1641,28 +1445,10 @@ workflow czid_long_read_mngs {
             docker_image_id = docker_image_id,
     }
 
-    call TallyHitsNT {
-        input:
-            reads_fastq = RunSubsampling.subsampled_fastq,
-            nt_deduped_m8 = RunCallHitsNT.nt_deduped_m8,
-            nt_hit_summary = SummarizeHitsNT.nt_hit_summary,
-            reads_to_contigs_tsv = RunReadsToContigs.reads_to_contigs_tsv,
-            docker_image_id = docker_image_id,
-    }
-
     call UnmappedReads {
         input:
             input_file = RunSubsampling.subsampled_fastq,
             nt_hit_summary = SummarizeHitsNT.nt_hit_summary,
-            nr_hit_summary = SummarizeHitsNR.nr_hit_summary,
-            reads_to_contigs_tsv = RunReadsToContigs.reads_to_contigs_tsv,
-            docker_image_id = docker_image_id,
-    }
-
-    call TallyHitsNR {
-        input:
-            reads_fastq = RunSubsampling.subsampled_fastq,
-            nr_deduped_m8 = RunCallHitsNR.nr_deduped_m8,
             nr_hit_summary = SummarizeHitsNR.nr_hit_summary,
             reads_to_contigs_tsv = RunReadsToContigs.reads_to_contigs_tsv,
             docker_image_id = docker_image_id,
@@ -1768,7 +1554,6 @@ workflow czid_long_read_mngs {
             contig_in_contig_coverage_json = GenerateCoverageStats.contig_coverage_json,
             contig_in_contig_stats_json = GenerateContigStats.contig_stats_json,
             contig_in_contigs_fasta = RemoveUnmappedContigs.mapped_contigs_fasta,
-            nt_deduped_m8 = RunCallHitsNT.nt_deduped_m8,
             nt_info_db = nt_info_db,
             docker_image_id = docker_image_id,
     }
@@ -1807,14 +1592,8 @@ workflow czid_long_read_mngs {
         # PrepareNTAlignmentInputs
         # RunNTAlignment
         File nt_alignment = RunNTAlignment.nt_m8
-        # RunCallHitsNT
-        File nt_deduped_m8 = RunCallHitsNT.nt_deduped_m8
-        File nt_counts_json = RunCallHitsNT.nt_counts_json
         # RunNRAlignment
         File nr_alignment = RunNRAlignment.nr_m8
-        # RunCallHitsNR
-        File nr_deduped_m8 = RunCallHitsNR.nr_deduped_m8
-        File nr_counts_json = RunCallHitsNR.nr_counts_json
         # FindTopHitsNT
         File nt_top_m8 = FindTopHitsNT.nt_top_m8
         # FindTopHitsNR
@@ -1823,10 +1602,6 @@ workflow czid_long_read_mngs {
         File nt_hit_summary = SummarizeHitsNT.nt_hit_summary
         # SummarizeHitsNR
         File nr_hit_summary = SummarizeHitsNR.nr_hit_summary
-        # TallyHitsNT
-        File nt_tallied_hits = TallyHitsNT.tallied_hits
-        # TallyHitsNR
-        File nr_tallied_hits = TallyHitsNR.tallied_hits
         # UnmappedReads
         File unmapped_fq = UnmappedReads.unmapped_fq
         File unmapped_reads = UnmappedReads.unmapped_reads

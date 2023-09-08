@@ -29,9 +29,9 @@ workflow czid_short_read_mngs {
     }
     call stage2.czid_non_host_alignment as non_host_alignment {
         input:
-        host_filter_out_gsnap_filter_1_fa = host_filter.gsnap_filter_out_gsnap_filter_1_fa,
-        host_filter_out_gsnap_filter_2_fa = host_filter.gsnap_filter_out_gsnap_filter_2_fa,
-        host_filter_out_gsnap_filter_merged_fa = host_filter.gsnap_filter_out_gsnap_filter_merged_fa,
+        host_filter_out_gsnap_filter_1_fa = host_filter.subsampled_out_subsampled_1_fa,
+        host_filter_out_gsnap_filter_2_fa = host_filter.subsampled_out_subsampled_2_fa,
+        host_filter_out_gsnap_filter_merged_fa = host_filter.subsampled_out_subsampled_merged_fa,
         duplicate_cluster_sizes_tsv = host_filter.czid_dedup_out_duplicate_cluster_sizes_tsv,
         czid_dedup_out_duplicate_clusters_csv = host_filter.czid_dedup_out_duplicate_clusters_csv,
         minimap2_local_db_path = minimap2_local_db_path,
@@ -43,9 +43,9 @@ workflow czid_short_read_mngs {
     }
     call stage3.czid_postprocess as postprocess {
         input:
-        host_filter_out_gsnap_filter_1_fa = host_filter.gsnap_filter_out_gsnap_filter_1_fa,
-        host_filter_out_gsnap_filter_2_fa = host_filter.gsnap_filter_out_gsnap_filter_2_fa,
-        host_filter_out_gsnap_filter_merged_fa = host_filter.gsnap_filter_out_gsnap_filter_merged_fa,
+        host_filter_out_gsnap_filter_1_fa = host_filter.subsampled_out_subsampled_1_fa,
+        host_filter_out_gsnap_filter_2_fa = host_filter.subsampled_out_subsampled_2_fa,
+        host_filter_out_gsnap_filter_merged_fa = host_filter.subsampled_out_subsampled_merged_fa,
         duplicate_cluster_sizes_tsv = host_filter.czid_dedup_out_duplicate_cluster_sizes_tsv,
         czid_dedup_out_duplicate_clusters_csv = host_filter.czid_dedup_out_duplicate_clusters_csv,
         gsnap_out_gsnap_m8 = non_host_alignment.gsnap_out_gsnap_m8,

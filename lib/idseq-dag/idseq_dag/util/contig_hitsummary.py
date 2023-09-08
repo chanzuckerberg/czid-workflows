@@ -52,6 +52,7 @@ def summarize_hits(
         else:
             reader = BlastnOutput6Reader(in_f, min_alignment_length=min_alignment_length)
 
+        hit_by_qseqid = {}
         for hit in reader:
             qseqid = hit["qseqid"]
             accession = hit["sseqid"]
@@ -62,6 +63,31 @@ def summarize_hits(
             if not should_keep(lineage):
                 continue
 
+            if prev_hit := hit_by_qseqid.get(qseqid, False):
+                # take the weighted mean
+                prev_hit["pident"] = (prev_hit["pident"] * prev_hit["length"] + hit["pident"] * hit["length"]) / (prev_hit["length"] + hit["length"])
+                prev_hit["evalue"] = (prev_hit["evalue"] * prev_hit["length"] + hit["evalue"] * hit["length"]) / (prev_hit["length"] + hit["length"])
+
+                # take the sum for these values
+                prev_hit["mismatch"] += hit["mismatch"]
+                prev_hit["gapopen"] += hit["gapopen"]
+                prev_hit["bitscore"] += hit["bitscore"]
+                prev_hit["length"] += hit["length"]
+
+                # take the min/max for these values
+                prev_hit["qstart"] = min(prev_hit["qstart"], hit["qstart"])
+                prev_hit["qend"] = max(prev_hit["qend"], hit["qend"])
+                prev_hit["sstart"] = min(prev_hit["sstart"], hit["sstart"])
+                prev_hit["send"] = max(prev_hit["send"], hit["send"])
+            else:
+                hit_by_qseqid[qseqid] = hit
+
+        for hit in hit_by_qseqid.values():
+            qseqid = hit["qseqid"]
+            accession = hit["sseqid"]
+            taxid = accession_to_taxid.get(accession.split(".")[0], "NA")
+            lineage = taxid_to_lineage.get(str(taxid), NULL_LINEAGE)
+            species_taxid, genus_taxid, family_taxid = lineage
             if qseqid not in contig_to_reads:
                 m8_writer.writerow(hit)
                 hitsummary_writer.writerow({

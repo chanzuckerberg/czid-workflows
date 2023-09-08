@@ -33,8 +33,7 @@ RUN sed -i s/archive.ubuntu.com/us-west-2.ec2.archive.ubuntu.com/ /etc/apt/sourc
         echo 'APT::Install-Recommends "false";' > /etc/apt/apt.conf.d/98czid; \
         echo 'APT::Install-Suggests "false";' > /etc/apt/apt.conf.d/99czid
 
-RUN apt-get -q update
-RUN apt-get -q install -y \
+RUN apt-get -q update && apt-get -q install -y \
         jq \
         moreutils \
         pigz \
@@ -69,6 +68,8 @@ RUN apt-get -q install -y \
         fastx-toolkit \
         seqtk \
         bedtools \
+        dh-autoreconf \
+        nasm \
         build-essential
 
 # The following packages pull in python2.7
@@ -77,7 +78,7 @@ RUN apt-get -q install -y \
         spades \
         ncbi-blast+
 
-RUN pip3 install boto3==1.23.10 marisa-trie==0.7.7
+RUN pip3 install boto3==1.23.10 marisa-trie==0.7.7 pytest
 RUN pip3 install miniwdl==${MINIWDL_VERSION} miniwdl-s3parcp==0.0.5 miniwdl-s3upload==0.0.4
 RUN pip3 install https://github.com/chanzuckerberg/miniwdl-plugins/archive/f0465b0.zip#subdirectory=sfn-wdl
 RUN pip3 install https://github.com/chanzuckerberg/s3mi/archive/v0.8.0.tar.gz
@@ -116,7 +117,7 @@ RUN chmod +x /usr/bin/PriceSeqFilter
 RUN curl -Ls https://github.com/chanzuckerberg/s3parcp/releases/download/v0.2.0-alpha/s3parcp_0.2.0-alpha_Linux_x86_64.tar.gz | tar -C /usr/bin -xz s3parcp
 
 # FIXME: check if use of pandas, pysam is necessary
-RUN apt-get -q install -y python3-pysam python3-pandas
+RUN pip3 install pysam==0.14.1 pandas==1.1.5
 
 # Workaround for srst2 refusing to work with upstream bowtie2 and samtools
 # FIXME: replace srst2 with a more appropriate tool
@@ -160,9 +161,6 @@ RUN curl -L  https://idseq-rapsearch2.s3-us-west-2.amazonaws.com/RAPSearch2.24_6
 RUN sed -i -e 's|^INC.*|INC := -I /usr/include/boost|' -e 's|^LIB.*|LIB :=|' Makefile
 RUN make
 ENV PATH="${PATH}:/rapsearch2/Src/"
-# Uninstall build only dependencies
-RUN apt-get purge -y g++ libperl4-corelibs-perl make
-WORKDIR /
 
 RUN apt-get -y update && apt-get install -y build-essential libz-dev git python3-pip cmake
 
@@ -183,10 +181,33 @@ RUN mv diamond /usr/local/bin
 
 RUN curl -Ls https://github.com/chanzuckerberg/s3parcp/releases/download/v0.2.0-alpha/s3parcp_0.2.0-alpha_Linux_x86_64.tar.gz | tar -C /usr/bin -xz s3parcp
 
+# Host filtering (2022 version) dependencies
+# fastp (libdeflate libisal (dh-autoreconf nasm))
+# hisat2
+# bowtie2 [already installed]
+# kallisto
+WORKDIR /tmp
+RUN wget -nv -O - https://github.com/intel/isa-l/archive/refs/tags/v2.30.0.tar.gz | tar zx
+RUN cd isa-l-* && ./autogen.sh && ./configure && make -j8 && make install
+RUN wget -nv -O - https://github.com/ebiggers/libdeflate/archive/refs/tags/v1.12.tar.gz | tar zx
+RUN cd libdeflate-* && make -j8 && make install
+RUN ldconfig
+RUN git clone https://github.com/mlin/fastp.git && git -C fastp checkout c427e57
+RUN cd fastp && make -j8 && ./fastp test && cp fastp /usr/local/bin
+WORKDIR /
+RUN wget -nv -O /tmp/HISAT2.zip https://czid-public-references.s3.us-west-2.amazonaws.com/test/hisat2/hisat2.zip \
+        && unzip /tmp/HISAT2.zip && rm /tmp/HISAT2.zip
+RUN curl -L https://github.com/pachterlab/kallisto/releases/download/v0.46.1/kallisto_linux-v0.46.1.tar.gz | tar xz -C /
+
+# Uninstall build only dependencies
+RUN apt-get purge -y g++ libperl4-corelibs-perl make
+
 COPY --from=lib idseq-dag /tmp/idseq-dag
 RUN pip3 install /tmp/idseq-dag && rm -rf /tmp/idseq-dag
 
 COPY --from=lib idseq_utils /tmp/idseq_utils
 RUN pip3 install /tmp/idseq_utils && rm -rf /tmp/idseq_utils
+
+COPY --from=lib /bin/raise_error /usr/local/bin/raise_error
 
 COPY --from=s3quilt /usr/lib/python3/dist-packages/s3quilt/ /usr/lib/python3/dist-packages/s3quilt/

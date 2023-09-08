@@ -90,7 +90,7 @@ def harvest_sample(sample, outputs_json, taxadb):
 
     # collect read counts at various pipeline steps
     ans["paired"] = (
-        outputs_json["czid_short_read_mngs.host_filter.star_out_unmapped2_fastq"]
+        outputs_json["czid_short_read_mngs.host_filter.fastp_out_fastp2_fastq"]
         is not None
     )
     ans["input_reads"] = read_output_jsonfile(outputs_json, "host_filter.input_read_count")[
@@ -98,14 +98,11 @@ def harvest_sample(sample, outputs_json, taxadb):
     ]
     for step in [
         "validate_input",
-        "star",
-        "trimmomatic",
-        "priceseq",
+        "fastp",
+        "bowtie2_host_filtered",
+        "hisat2_host_filtered",
         "czid_dedup",
-        "lzw",
-        "bowtie2",
         "subsampled",
-        "gsnap_filter",
     ]:
         ans[step + "_reads"] = read_output_jsonfile(
             outputs_json, "host_filter." + step + "_out_count"

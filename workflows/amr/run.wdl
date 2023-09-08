@@ -11,11 +11,12 @@ workflow amr {
         String docker_image_id
         String sample_name
         String host_filtering_docker_image_id = "czid-short-read-mngs" # default local value
-        File card_json = "s3://czid-public-references/test/AMRv2/card.json"
-        File kmer_db = "s3://czid-public-references/test/AMRv2/61_kmer_db.json"
-        File amr_kmer_db = "s3://czid-public-references/test/AMRv2/all_amr_61mers.txt"
-        File wildcard_data = "s3://czid-public-references/test/AMRv2/wildcard_database_v3.1.0.fasta"
-        File wildcard_index = "s3://czid-public-references/test/AMRv2/index-for-model-sequences.txt"
+        File card_json = "s3://czid-public-references/card/2023-05-22/card.json"
+        File card_ontology = "s3://czid-public-references/amr_v2/ontology/initial/ontology.json"
+        File kmer_db = "s3://czid-public-references/card/2023-05-22/61_kmer_db.json"
+        File amr_kmer_db = "s3://czid-public-references/card/2023-05-22/all_amr_61mers.txt"
+        File wildcard_data = "s3://czid-public-references/card/2023-05-22/wildcard_database_v4.0.0.fasta"
+        File wildcard_index = "s3://czid-public-references/card/2023-05-22/index-for-model-sequences.txt"
         Int min_contig_length = 100
         # Dummy values - required by SFN interface
         String s3_wd_uri = ""
@@ -32,8 +33,8 @@ workflow amr {
             input:
             non_host_reads = select_all(
                 [
-                    host_filter_stage.gsnap_filter_out_gsnap_filter_1_fa,
-                    host_filter_stage.gsnap_filter_out_gsnap_filter_2_fa
+                    host_filter_stage.subsampled_out_subsampled_1_fa,
+                    host_filter_stage.subsampled_out_subsampled_2_fa
                 ]
             ),
             min_contig_length = min_contig_length,
@@ -45,8 +46,8 @@ workflow amr {
         non_host_reads = select_first([non_host_reads, 
             select_all(
                 [
-                    host_filter_stage.gsnap_filter_out_gsnap_filter_1_fa,
-                    host_filter_stage.gsnap_filter_out_gsnap_filter_2_fa
+                    host_filter_stage.subsampled_out_subsampled_1_fa,
+                    host_filter_stage.subsampled_out_subsampled_2_fa
                 ]
             )]),
         card_json = card_json, 
@@ -91,25 +92,30 @@ workflow amr {
         kma_output = RunRgiBwtKma.kma_amr_results,
         kma_species_output = RunRgiKmerBwt.kma_species_calling,
         gene_coverage = MakeGeneCoverage.output_gene_coverage,
+        card_ontology = card_ontology,
         docker_image_id = docker_image_id,
         sample_name = sample_name
     }
+
+    call tsvToSam { 
+        input: 
+        contigs = select_first([contigs, RunSpades.contigs]),
+        final_summary = RunResultsPerSample.final_summary,
+        docker_image_id = docker_image_id
+    }
+
     call ZipOutputs {
         input:
+        contigs_in = select_first([contigs, RunSpades.contigs]),
         nonHostReads = select_first([
                            non_host_reads,
                            select_all(
                                [
-                                   host_filter_stage.gsnap_filter_out_gsnap_filter_1_fa,
-                                   host_filter_stage.gsnap_filter_out_gsnap_filter_2_fa
+                                   host_filter_stage.subsampled_out_subsampled_1_fa,
+                                   host_filter_stage.subsampled_out_subsampled_2_fa
                                ]
                            )
                        ]),
-        outputFiles = select_all(
-            [
-                select_first([contigs, RunSpades.contigs]),
-            ]
-        ),
         mainReports = select_all(
             [
                 RunResultsPerSample.final_summary,
@@ -149,6 +155,7 @@ task RunResultsPerSample {
         File kma_output
         File kma_species_output
         File gene_coverage
+        File card_ontology
         String docker_image_id
         String sample_name
     }
@@ -156,10 +163,11 @@ task RunResultsPerSample {
         set -euxo pipefail
 
         python3 <<CODE
+        import json
         import pandas as pd
         def clean_aro(df, column_name):
             """modifies dataframe inplace to clean the ARO string"""
-            df[column_name] = df[column_name].map(lambda x: x.lower().strip())
+            df[column_name] = df[column_name].map(lambda x: x.strip())
 
 
         def append_suffix_to_colname(df, suffix):
@@ -181,14 +189,18 @@ task RunResultsPerSample {
 
         main_output = pd.read_csv("~{main_output}", sep="\t")
         clean_aro(main_output, "Best_Hit_ARO")
+        
+
         main_output.sort_values(by='Best_Hit_ARO', inplace=True)
 
         main_species_output = pd.read_csv("~{main_species_output}", sep="\t")
         clean_aro(main_species_output, "Best_Hit_ARO")
+
         main_species_output.sort_values(by = 'Best_Hit_ARO', inplace=True)
 
         kma_output = pd.read_csv("~{kma_output}", sep="\t")
         clean_aro(kma_output, "ARO Term")
+
         kma_output.sort_values(by = 'ARO Term', inplace=True)
 
         kma_species_output = pd.read_csv("~{kma_species_output}", sep="\t")
@@ -212,12 +224,16 @@ task RunResultsPerSample {
             merge_a, "Best_Hit_ARO_contig_amr", "Best_Hit_ARO_contig_sp"
         )
         merge_a.to_csv("merge_a.tsv", index=None, sep="\t")
+
+        merge_a['ARO_contig_amr'] = merge_a['ARO_contig_amr'].astype(str)
         
         append_suffix_to_colname(kma_output, "_kma_amr")  # ARO Term
         append_suffix_to_colname(kma_species_output, "_kma_sp")  # ARO term
 
         merge_b = kma_output.merge(kma_species_output, left_on = 'ARO Term_kma_amr', right_on = 'ARO term_kma_sp',
                                    how = 'outer', suffixes = [None, None])
+        
+        merge_b['ARO Accession_kma_amr'] = merge_b['ARO Accession_kma_amr'].astype(str)
 
         
         # remove kma results from variant models (because these results are inaccurate)
@@ -229,10 +245,11 @@ task RunResultsPerSample {
         merge_b.to_csv("merge_b.tsv", index=None, sep="\t")
 
         # final merge of MAIN and KMA combined results
-        merge_x = merge_a.merge(merge_b, left_on = 'ARO_contig',
-                                right_on = 'ARO_kma', how='outer',
+        merge_x = merge_a.merge(merge_b, left_on = 'ARO_contig_amr',
+                                right_on = 'ARO Accession_kma_amr', how='outer',
                                 suffixes = [None, None])
 
+        merge_x["ARO_accession"] = this_or_that(merge_x, "ARO_contig_amr", "ARO Accession_kma_amr")
         merge_x["ARO_overall"] = this_or_that(merge_x, "ARO_contig", "ARO_kma")
         merge_x["Gene_Family_overall"] = this_or_that(
             merge_x, "AMR Gene Family_contig_amr", "AMR Gene Family_kma_amr"
@@ -249,6 +266,8 @@ task RunResultsPerSample {
         merge_x.to_csv("comprehensive_AMR_metrics.tsv", index=None, sep='\t')
 
         df = pd.read_csv("comprehensive_AMR_metrics.tsv", sep='\t')
+        df["ARO_contig_amr"] = df["ARO_contig_amr"].apply(lambda x: f'{x:.0f}' if x==x else x)  # Convert non-nan to int float
+        
         big_table = df[['ARO_overall', 'Gene_Family_overall', 'Drug_Class_overall', 'Resistance_Mechanism_overall', 'model_overall', 'All Mapped Reads_kma_amr', 'Percent Coverage_kma_amr','Depth_kma_amr', 'CARD*kmer Prediction_kma_sp', 'Cut_Off_contig_amr', 'Percentage Length of Reference Sequence_contig_amr', 'Best_Identities_contig_amr', 'CARD*kmer Prediction_contig_sp']]
         big_table.sort_values(by='Gene_Family_overall', inplace=True)
 
@@ -263,6 +282,17 @@ task RunResultsPerSample {
             set_list = list(input_set)
             return([i for i in set_list if i == i])
 
+        ontology = json.load(open("~{card_ontology}"))
+        def get_high_level_classes(drug_class_string_list):
+            drug_classes = set()
+            for drug_class_string in drug_class_string_list:
+                drug_classes |= set(drug_class_string.split('; '))
+            high_level_classes = set()
+            for drug_class in drug_classes:
+                if drug_class in ontology:
+                    high_level_classes |= set(ontology[drug_class].get('highLevelDrugClasses', []))
+            return high_level_classes
+
         this_list = list(set(df['ARO_overall']))
         result_df = {}
         for index in this_list:#[0:1]:
@@ -271,13 +301,24 @@ task RunResultsPerSample {
             gf = remove_na(set(sub_df['AMR Gene Family_contig_amr']).union(set(sub_df['AMR Gene Family_kma_amr'])))
             result['sample_name'] = "~{sample_name}"
             result['gene_family'] = ';'.join(gf) if len(gf) > 0 else None
+
+            accession = list(set(sub_df['ARO_accession'].dropna().apply(lambda x: f'ARO:{int(x)}')))
+            result['aro_accession'] = ';'.join(accession) if len(accession) > 0 else None
         
             dc = remove_na(set(sub_df['Drug Class_contig_amr']).union(set(sub_df['Drug Class_kma_amr'])))
             result['drug_class'] = ';'.join(dc) if len(dc) > 0 else None
+
+            hldc = get_high_level_classes(dc)
+            # Join classes with a semicolon and a space since we have a python list instead of a nice pandas union
+            result['high_level_drug_class'] = '; '.join(hldc) if len(hldc) > 0 else None
+
             rm = remove_na(set(sub_df['Resistance Mechanism_contig_amr']).union(set(sub_df['Resistance Mechanism_kma_amr'])))
             result['resistance_mechanism'] = ';'.join(rm) if len(rm) > 0 else None
+
             
+            sub_df.loc[(sub_df['Cut_Off_contig_amr'] == 'Strict') & (sub_df['Nudged_contig_amr'] == True), 'Cut_Off_contig_amr'] = "Nudged"
             co = remove_na(set(sub_df['Cut_Off_contig_amr']))
+
             result['cutoff'] = ';'.join(co) if len(co) > 0 else None
             
             mt = remove_na(set(sub_df['Model_type_contig_amr']).union(set(sub_df['Reference Model Type_kma_amr'])))
@@ -286,9 +327,9 @@ task RunResultsPerSample {
             rcb = remove_na(set(sub_df['Percent Coverage_kma_amr']))
             result['read_coverage_breadth'] = max(rcb) if len(rcb) > 0 else None
 
-            gene_id = ";".join(remove_na(set(sub_df["ID_contig_amr"].unique())))
+            gene_id = ";".join(remove_na(set(sub_df["ARO_contig_amr"].unique())))
             if gene_id:
-                contig_coverage = gene_coverage[gene_coverage["ID"] == gene_id]["gene_coverage_perc"].iloc[0]
+                contig_coverage = gene_coverage[gene_coverage["ID"].astype('str') == gene_id]["gene_coverage_perc"].iloc[0]
             else:
                 contig_coverage = None
             result["contig_coverage_breadth"] = contig_coverage
@@ -300,6 +341,9 @@ task RunResultsPerSample {
             
             nr = remove_na(set(sub_df['All Mapped Reads_kma_amr']))
             result['num_reads'] = max(nr) if len(nr) > 0 else None
+
+            read_gi = remove_na(set(sub_df["Reference Sequence_kma_amr"]))
+            result["read_gene_id"] = ";".join(read_gi) if len(read_gi) > 0 else None
             
             pid = remove_na(set(sub_df['Best_Identities_contig_amr']))
             result['contig_percent_id'] = sum(pid) / len(pid) if len(pid) > 0 else None
@@ -333,8 +377,8 @@ task RunResultsPerSample {
             result_df[index] = result
         final_df = pd.DataFrame.from_dict(result_df)
         final_df = final_df.transpose()
-        final_df = final_df[["sample_name", "gene_family", "drug_class", "resistance_mechanism", "model_type", "num_contigs", 
-                             "cutoff", "contig_coverage_breadth", "contig_percent_id", "contig_species", "num_reads", "read_coverage_breadth", "read_coverage_depth", "read_species"]]
+        final_df = final_df[["sample_name", "gene_family", "aro_accession", "drug_class", "high_level_drug_class", "resistance_mechanism", "model_type", "num_contigs",
+                             "cutoff", "contig_coverage_breadth", "contig_percent_id", "contig_species", "num_reads", "read_gene_id", "read_coverage_breadth", "read_coverage_depth", "read_species"]]
         final_df.sort_index(inplace=True)
         final_df.dropna(subset=['drug_class'], inplace=True)
         final_df.to_csv("primary_AMR_report.tsv", sep='\t', index_label="gene_name")
@@ -369,7 +413,7 @@ task RunRgiKmerMain {
         time rgi load \
             -i "~{card_json}" \
             --wildcard_annotation "~{wildcard_data}" \
-            --wildcard_version 3.1.0 \
+            --wildcard_version 4.0.0 \
             --wildcard_index "~{wildcard_index}" \
             --kmer_database "~{kmer_db}" \
             --amr_kmers "~{amr_kmer_db}" \
@@ -402,7 +446,7 @@ task RunRgiKmerBwt {
         time rgi load \
             -i "~{card_json}" \
             --wildcard_annotation "~{wildcard_data}" \
-            --wildcard_version 3.1.0 \
+            --wildcard_version 4.0.0 \
             --wildcard_index "~{wildcard_index}" \
             --kmer_database "~{kmer_db}" \
             --amr_kmers "~{amr_kmer_db}" \
@@ -432,7 +476,7 @@ task RunRgiMain {
             echo "{}" > contig_amr_report.json
             cp /tmp/empty-main-header.txt contig_amr_report.txt
         else
-            rgi main -i "~{contigs}" -o contig_amr_report -t contig -a BLAST --clean 
+            rgi main -i "~{contigs}" -o contig_amr_report -t contig -a BLAST --include_nudge --clean
         fi
     >>>
     output {
@@ -507,8 +551,8 @@ task RunSpades {
 }
 task ZipOutputs {
     input {
+        File contigs_in
         Array[File] nonHostReads
-        Array[File] outputFiles
         Array[File] mainReports
         Array[File] rawReports
         Array[File] intermediateFiles
@@ -525,12 +569,16 @@ task ZipOutputs {
         mkdir ${TMPDIR}/outputs/raw_reports
         mkdir ${TMPDIR}/outputs/intermediate_files
 
-        counter=1
-        for fastx in ~{sep= ' ' nonHostReads}; do 
-            cp $fastx ${TMPDIR}/outputs/non_host_reads_R$counter."${fastx#*.}"
-            ((counter++))
-        done
-        cp ~{sep=' ' outputFiles} ${TMPDIR}/outputs/
+        # copy contigs and interleave non_host_reads
+        cp ~{contigs_in} contigs.fasta
+
+        if [[ "~{length(nonHostReads)}" == 2 ]]; then
+            seqfu ilv -1 ~{sep=" -2 " nonHostReads} > non_host_reads_ilv.fasta
+            seqkit rename -1 -s "/" non_host_reads_ilv.fasta -o non_host_reads.fasta
+        else 
+            cat ~{sep=" " nonHostReads} > non_host_reads.fasta
+        fi
+
         cp ~{sep=' ' mainReports} ${TMPDIR}/outputs/final_reports
         cp ~{sep=' ' rawReports} ${TMPDIR}/outputs/raw_reports
         cp ~{sep=' ' intermediateFiles} ${TMPDIR}/outputs/intermediate_files
@@ -539,6 +587,8 @@ task ZipOutputs {
     >>>
 
     output {
+        File non_host_reads = "non_host_reads.fasta"
+        File contigs = "contigs.fasta"
         File output_zip = "outputs.zip"
     }
 
@@ -559,7 +609,7 @@ task MakeGeneCoverage {
     import pandas as pd
     import numpy as np
     import json
-    df = pd.read_csv("~{main_amr_results}", delimiter="\t").loc[:, ["ORF_ID", "ID", "Model_ID", "Hit_Start", "Hit_End", "Percentage Length of Reference Sequence"]]
+    df = pd.read_csv("~{main_amr_results}", delimiter="\t").loc[:, ["ORF_ID", "ID", "ARO", "Model_ID", "Hit_Start", "Hit_End", "Percentage Length of Reference Sequence"]]
 
     # create seq length reference map
     with open("~{main_output_json}") as json_file:
@@ -568,24 +618,28 @@ task MakeGeneCoverage {
     for ind, row in df.iterrows():
         db_seq_length[row["Model_ID"]] = len(rgi_main_json[row["ORF_ID"]][row["ID"]]["dna_sequence_from_broadstreet"])
 
-    agg_res = df.groupby(["ID", "Model_ID"]).agg(lambda x: list(x))
+    agg_res = df.groupby(["ARO", "Model_ID"]).agg(lambda x: list(x))
 
     gene_coverage = []
+    # We are measuring gene coverage by keeping track of the coordinate ranges
+    # of the reference genome that are covered by the contigs.
+    # Here, ind is a tuple: (ARO, Model_ID)
     for ind, row, in agg_res.iterrows():
-      max_end = -1
-      gene_coverage_bps = 0
-      for start, end, in sorted(zip(row["Hit_Start"], row["Hit_End"]), key=lambda x: x[0]):
-        gene_coverage_bps += max(0, # if end-max(max_end, start) is negative
-                      # segment is contained in a previous segment, so don't add
-                     end - max(max_end, start) # if max_end > start, don't double count the already added portion of the gene
-                    )
-        max_end = max(max_end, end)
-      gene_coverage.append({
-        "ID": ind[0],
-        "gene_coverage_bps": gene_coverage_bps,
-        "db_seq_length": db_seq_length[ind[1]],
-        "gene_coverage_perc": np.round((gene_coverage_bps/db_seq_length[ind[1]])*100, 4)
-      })
+        covered_coords = set()
+        for start, end in zip(row["Hit_Start"], row["Hit_End"]):
+            contig_length = end - start
+            # Get a positive (1) or negative (-1) step for our range, depending on if
+            # we have a forward or reverse contig.
+            sign = int(contig_length / abs(contig_length))
+            covered_coords = covered_coords.union(range(start, end, sign))
+        gene_coverage_bps = len(covered_coords)
+        gene_coverage.append({
+            "ID": ind[0],
+            "gene_coverage_bps": gene_coverage_bps,
+            "db_seq_length": db_seq_length[ind[1]],
+            "gene_coverage_perc": np.round((gene_coverage_bps/db_seq_length[ind[1]])*100, 4)
+        })
+
     if gene_coverage:
         gene_coverage_df = pd.DataFrame(gene_coverage)
         gene_coverage_df.to_csv("gene_coverage.tsv", index=None, sep="\t")
@@ -601,4 +655,83 @@ task MakeGeneCoverage {
     runtime {
         docker: docker_image_id
     } 
+}
+
+task tsvToSam {
+    input {
+        File contigs
+        File final_summary
+        String docker_image_id
+    }
+
+    command <<<
+        set -euxo pipefail
+        python3 <<CODE
+        import pandas as pd
+        import pysam
+        import re
+        import sys
+
+        # NOTE: Contigs are indexed by ARO accession, not gene_id. This is because contigs and reads
+        # come from different sources, so not every contig will have a corresponding gene_id,
+        # even if you join the two datasets on the ARO accession. Thus indexing on gene_id is not
+        # possible.
+
+        COLUMN_ARO_CONTIG = "ARO_contig_amr"
+        COLUMN_CONTIG_NAME = "Contig_contig_amr"
+        OUTPUT_BAM = "contig_amr_report.sorted.bam"
+
+        # Create an empty BAM/BAI file if the SPADES assembly failed, then exit
+        with open("~{contigs}") as f:
+            first_line = f.readline()
+            if first_line == ";ASSEMBLY FAILED\n":
+                output_bam = pysam.AlignmentFile(OUTPUT_BAM, "wb", reference_names=["NoGenes"], reference_lengths=[100])
+                output_bam.close()
+                pysam.index(OUTPUT_BAM)
+                sys.exit()
+
+        # Create index to enable querying fasta file
+        pysam.faidx("~{contigs}")
+        contigs_fasta = pysam.Fastafile("~{contigs}")
+
+        # Load columns of interest from CSV and drop rows with at least one NaN
+        df = pd.read_csv("~{final_summary}", sep="\t", usecols=[COLUMN_ARO_CONTIG, COLUMN_CONTIG_NAME])
+        df = df.dropna(subset=COLUMN_CONTIG_NAME)
+
+        # Format accessions to follow the pattern 'ARO:3000000'; Remove extraneous _* at the end of contig names
+        df[COLUMN_ARO_CONTIG] = df[COLUMN_ARO_CONTIG].apply(lambda x: f'ARO:{int(x)}')
+        df[COLUMN_CONTIG_NAME] = df[COLUMN_CONTIG_NAME].apply(lambda x: re.sub(r'_\d*$', '', x))
+
+        # Create BAM with mock reference lengths for the header. If contigss are found at all, have a mock accession
+        # to make sure we can create the SAM file with no errors (web app will look for that file)
+        contig_aros = df[COLUMN_ARO_CONTIG].dropna().unique().tolist() or ["NoGenes"]
+        output_bam = pysam.AlignmentFile(OUTPUT_BAM, "wb", reference_names=contig_aros, reference_lengths=[100] * len(contig_aros))
+
+        # Go through each line of the TSV and create a SAM record (https://wckdouglas.github.io/2021/12/pytest-with-pysam)
+        for index, row in df.iterrows():
+            contig_aro = row[COLUMN_ARO_CONTIG]
+            contig_name = row[COLUMN_CONTIG_NAME]
+            contig_sequence = contigs_fasta.fetch(contig_name)
+
+            # Create new alignment
+            alignment = pysam.AlignedSegment(output_bam.header)
+            alignment.reference_name = contig_aro
+            alignment.query_name = contig_name
+            alignment.query_sequence = contig_sequence
+            alignment.reference_start = 1
+            output_bam.write(alignment)
+
+        output_bam.close()
+        pysam.index(OUTPUT_BAM)
+        CODE
+    >>>
+
+    output {
+        File output_sorted = "contig_amr_report.sorted.bam"
+        File output_sorted_bai = "contig_amr_report.sorted.bam.bai"
+    }
+
+    runtime {
+        docker: docker_image_id
+    }
 }

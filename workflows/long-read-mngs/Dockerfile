@@ -41,7 +41,7 @@ RUN apt-get -qq update && apt-get -qq -y install \
     zlib1g-dev \
     && locale-gen en_US.UTF-8
 
-RUN pip3 install boto3 marisa-trie==0.7.7 requests biopython pandas pysam scipy
+RUN pip3 install boto3 marisa-trie==0.7.7 requests biopython pandas pysam scipy==1.10.0
 
 ADD https://raw.githubusercontent.com/chanzuckerberg/miniwdl/v1.1.5/examples/clean_download_cache.sh /usr/local/bin
 RUN chmod +x /usr/local/bin/clean_download_cache.sh
@@ -58,7 +58,7 @@ RUN wget https://github.com/shenwei356/seqkit/releases/download/v2.3.0/seqkit_li
     cp seqkit /usr/local/bin
 ENV PATH=$PATH:$(pwd)
 
-ARG FLYE_VER="2.9"
+ARG FLYE_VER="2.9.2"
 RUN wget https://github.com/fenderglass/Flye/archive/${FLYE_VER}.tar.gz && \
     tar -xvf ${FLYE_VER}.tar.gz && \
     rm ${FLYE_VER}.tar.gz && \

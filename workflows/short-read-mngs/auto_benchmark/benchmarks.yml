@@ -17,11 +17,11 @@ settings:
 
 databases:
   viral:
-    host_filter.star_genome: s3://czid-public-references/host_filter/ercc/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/STAR_genome.tar
-    host_filter.bowtie2_genome: s3://czid-public-references/host_filter/ercc/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/bowtie2_genome.tar
-    host_filter.gsnap_genome: s3://czid-public-references/test/gsnap/ERCC_gsnap2017-11-15_k16.tar
-    host_filter.human_star_genome: s3://czid-public-references/host_filter/ercc/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/STAR_genome.tar
-    host_filter.human_bowtie2_genome: s3://czid-public-references/host_filter/ercc/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/bowtie2_genome.tar
+    host_filter.bowtie2_index_tar: s3://czid-public-references/host_filter/ercc/20221031/bowtie2_index_tar/ercc.bowtie2.tar
+    host_filter.hisat2_index_tar: s3://czid-public-references/host_filter/ercc/20221031/hisat2_index_tar/ercc.hisat2.tar
+    host_filter.kallisto_idx: s3://czid-public-references/host_filter/ercc/20221031/kallisto_idx/ercc.kallisto.idx
+    host_filter.human_bowtie2_index_tar: s3://czid-public-references/host_filter/ercc/20221031/bowtie2_index_tar/ercc.bowtie2.tar
+    host_filter.human_hisat2_index_tar: s3://czid-public-references/host_filter/ercc/20221031/hisat2_index_tar/ercc.hisat2.tar
     minimap2_local_db_path: s3://czid-public-references/test/viral-alignment-indexes/viral_nt
     diamond_local_db_path: s3://czid-public-references/test/viral-alignment-indexes/viral_nr
     diamond_args: mid-sensitive

@@ -189,7 +189,6 @@ class PipelineStepRunAssembly(PipelineStep):
             command.write_text_to_file('@NO INFO', bowtie_sam)
             command.write_text_to_file('{}', contig_stats)
             traceback.print_exc()
-        command.remove_rf(assembled_dir)
 
     @staticmethod
     def generate_read_to_contig_mapping(assembled_contig,

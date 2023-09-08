@@ -20,24 +20,12 @@ class PipelineStepNonhostFastq(PipelineStep):
             # could be several GBs in the worst case.
             clusters_dict = parse_clusters_file(self.input_files_local[2][0])
 
-        self.run_with_tax_ids(None, None, clusters_dict)
-        # TODO: (gdingle): Generate taxon-specific downloads in idseq-web at
-        # time of download. See https://jira.czi.team/browse/IDSEQ-2599.
-        betacoronaviruses = {
-            2697049,  # SARS-CoV2
-            694002,  # betacoronavirus genus
-        }
-        self.run_with_tax_ids(betacoronaviruses, "betacoronavirus", clusters_dict)
+        self.run_nonhost_fastq_generation(clusters_dict)
 
-    def run_with_tax_ids(
+    def run_nonhost_fastq_generation(
         self,
-        tax_ids: Optional[Set[int]],
-        filename: Optional[str],
         clusters_dict: Dict[str, List] = None,
     ) -> None:
-        assert (tax_ids and filename) or not (
-            tax_ids or filename), 'Must be supplied with tax_ids and filename or neither'
-
         scratch_dir = os.path.join(self.output_dir_local, "scratch_nonhost_fastq")
         command.make_dirs(scratch_dir)
         self.nonhost_headers = [
@@ -50,17 +38,11 @@ class PipelineStepNonhostFastq(PipelineStep):
 
         nonhost_fasta = self.input_files_local[1][0]
 
-        if filename is None:
-            output_fastqs = self.output_files_local()
-        else:
-            output_fastqs = [
-                f"{os.path.dirname(fastq)}/{filename}__{os.path.basename(self.output_files_local()[i])}"
-                for i, fastq in enumerate(fastqs)]
-            self.additional_output_files_hidden.extend(output_fastqs)
+        output_fastqs = self.output_files_local()
 
         fastqs = self.unzip_files(fastqs)
 
-        self.generate_nonhost_headers(nonhost_fasta, clusters_dict, tax_ids)
+        self.generate_nonhost_headers(nonhost_fasta, clusters_dict)
 
         for i in range(len(fastqs)):
             self.generate_nonhost_fastq(self.nonhost_headers[i], fastqs[i], output_fastqs[i])
@@ -120,28 +102,13 @@ class PipelineStepNonhostFastq(PipelineStep):
         nt_index = fragments.index("NT")
         header = ":".join(fragments[nt_index + 2:])
 
-        annot_tax_ids = set(
-            int(fragments[fragments.index(annot_type) + 1])
-            for annot_type in [
-                "species_nt",
-                "species_nr",
-                "genus_nt",
-                "genus_nr",
-            ]
-        )
-
-        return read_index, header, annot_tax_ids
+        return read_index, header
 
     def generate_nonhost_headers(
         self,
         nonhost_fasta_file: str,
         clusters_dict: Dict[str, List] = None,
-        tax_ids: Set[int] = None
     ):
-        # This var is only needed when tax_ids, because tax_id
-        # may match only on one half of a read pair. In that case, we still
-        # want to include both.
-        seen = set()
         with open(nonhost_fasta_file, "r") as input_file, \
                 open(self.nonhost_headers[0], "w") as output_file_0, \
                 open(self.nonhost_headers[1], "w") as output_file_1:
@@ -149,26 +116,19 @@ class PipelineStepNonhostFastq(PipelineStep):
                 # Assumes that the header line in the nonhost_fasta starts with ">"
                 if line[0] != ">":
                     continue
-                read_index, header, annot_tax_ids = PipelineStepNonhostFastq.extract_header_from_line(line)
-                other_headers = clusters_dict[header][1:] if clusters_dict else []
-                if tax_ids:
-                    if tax_ids.intersection(annot_tax_ids) and (header not in seen):
-                        output_file_0.write(header + "\n")
-                        output_file_1.write(header + "\n")
-                        seen.add(header)
-                        for other_header in other_headers:
-                            output_file_0.write(other_header + "\n")
-                            output_file_1.write(other_header + "\n")
-                            # Add other headers just in case something has gone
-                            # wrong upstream with czid-dedup.
-                            seen.add(other_header)
-                    continue
+                read_index, header = PipelineStepNonhostFastq.extract_header_from_line(line)
+                if clusters_dict:
+                    if header not in clusters_dict:
+                        header += "/2" if read_index else "/1"
+                    other_headers = clusters_dict[header][1:]
                 else:
-                    output_file = output_file_0 if read_index == 0 else output_file_1
-                    output_file.write(header + "\n")
-                    for other_header in other_headers:
-                        output_file.write(other_header + "\n")
-                    continue
+                    other_headers = []
+                other_headers = clusters_dict[header][1:] if clusters_dict else []
+
+                output_file = output_file_0 if read_index == 0 else output_file_1
+                output_file.write(header + "\n")
+                for other_header in other_headers:
+                    output_file.write(other_header + "\n")
 
     @staticmethod
     # Use seqtk, which is orders of magnitude faster than Python for this particular step.
