@@ -343,6 +343,22 @@ task GenerateIndexDiamond {
     command <<<
         # Ignore warning is needed because sometimes NR has sequences of only DNA characters which causes this to fail
         diamond makedb --ignore-warnings --in ~{nr} -d diamond_index_chunksize_~{chunksize} --scatter-gather -b ~{chunksize}
+        cd diamond_index_chunksize_~{chunksize}
+        for dmnd_file in *.dmnd; do
+            output=$(diamond dbinfo -d "$dmnd_file")
+
+            # Extract the number of Letters and Sequences from the output
+            letters=$(echo "$output" | grep "Letters" | awk '{print $NF}')
+            sequences=$(echo "$output" | grep "Sequences" | awk '{print $NF}')
+
+            # Extract the chunk identifier from the current dmnd file name
+            chunk_number="${dmnd_file##*_}"
+            chunk_number="${chunk_number%.dmnd}"
+
+            # Rename the file
+            mv "$dmnd_file" "${chunk_number}-${letters}-${sequences}.dmnd"
+        done
+
     >>>
 
     output {
