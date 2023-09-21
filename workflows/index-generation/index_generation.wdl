@@ -356,7 +356,7 @@ task GenerateIndexDiamond {
             chunk_number="${chunk_number%.dmnd}"
 
             # Rename the file
-            mv "$dmnd_file" "${chunk_number}-${letters}-${sequences}.dmnd"
+            mv "$dmnd_file" "${chunk_number}-${sequences}-${letters}.dmnd"
         done
 
     >>>
