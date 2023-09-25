@@ -53,8 +53,8 @@ workflow amr {
         }
     }
 
-    Array[File]+ non_host_reads_in = select_first([RunRedup.redups_fa, select_all([non_host_reads])])
-    File contigs_in = select_first([RunSpades.contigs, select_all([contigs])])
+    Array[File]+ non_host_reads_in = select_first([RunRedup.redups_fa, non_host_reads])
+    File contigs_in = select_first([RunSpades.contigs, contigs])
 
     call RunRgiBwtKma {
         input:
