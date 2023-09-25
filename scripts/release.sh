@@ -28,7 +28,7 @@ OLD_TAG=$(git describe --tags --match "${WORKFLOW_NAME}-v*" || echo "${WORKFLOW_
 #     exit 1
 # fi
 
-TAG="amr-v1.3.0-beta.7"
+TAG="amr-v1.3.0-beta.8"
 
 if [[ $( git branch --show-current) != "main" ]]; then 
     COMMIT=$(git rev-parse --short HEAD)
