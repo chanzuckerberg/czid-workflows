@@ -75,6 +75,7 @@ workflow amr {
             subsampled_reads = filtered_sample_in.subsampled_reads,
             clusters = filtered_sample_in.clusters,
             cluster_sizes = filtered_sample_in.cluster_sizes,
+            docker_image_id = host_filtering_docker_image_id,
         }
     }
 
