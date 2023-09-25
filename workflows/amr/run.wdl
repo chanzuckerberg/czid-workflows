@@ -53,18 +53,18 @@ workflow amr {
         }
     }
 
-    Array[File]+ non_host_reads_in = select_first([RunRedup.redups_fa, non_host_reads])
-    File contigs_in = select_first([RunSpades.contigs, contigs])
+    Array[File]+ non_host_reads_fa = select_first([RunRedup.redups_fa, non_host_reads])
+    File contigs_fa = select_first([RunSpades.contigs, contigs])
 
     call RunRgiBwtKma {
         input:
-        non_host_reads_in = non_host_reads_in,
+        non_host_reads_fa = non_host_reads_fa,
         card_json = card_json, 
         docker_image_id = docker_image_id
     }
     call RunRgiMain {
         input:
-        contigs_in = contigs_in,
+        contigs_fa = contigs_fa,
         card_json = card_json, 
         docker_image_id = docker_image_id
     }
@@ -108,15 +108,15 @@ workflow amr {
 
     call tsvToSam { 
         input: 
-        contigs_in = contigs_in,
+        contigs_fa = contigs_fa,
         final_summary = RunResultsPerSample.final_summary,
         docker_image_id = docker_image_id
     }
 
     call ZipOutputs {
         input:
-        contigs_in = contigs_in,
-        non_host_reads_in = non_host_reads_in,
+        contigs_fa = contigs_fa,
+        non_host_reads_fa = non_host_reads_fa,
         main_reports = select_all(
             [
                 RunResultsPerSample.final_summary,
@@ -523,18 +523,18 @@ task RunRgiKmerBwt {
 }
 task RunRgiMain { 
     input { 
-        File contigs_in
+        File contigs_fa
         File card_json
         String docker_image_id
     }
     command <<<
         set -exuo pipefail
-        if [[ $(head -n 1 "~{contigs_in}") == ";ASSEMBLY FAILED" ]]; then
+        if [[ $(head -n 1 "~{contigs_fa}") == ";ASSEMBLY FAILED" ]]; then
             # simulate empty outputs
             echo "{}" > contig_amr_report.json
             cp /tmp/empty-main-header.txt contig_amr_report.txt
         else
-            rgi main -i "~{contigs_in}" -o contig_amr_report -t contig -a BLAST --include_nudge --clean
+            rgi main -i "~{contigs_fa}" -o contig_amr_report -t contig -a BLAST --include_nudge --clean
         fi
     >>>
     output {
@@ -549,14 +549,14 @@ task RunRgiMain {
 }
 task RunRgiBwtKma {
     input {
-        Array[File]+ non_host_reads_in
+        Array[File]+ non_host_reads_fa
         File card_json
         String docker_image_id
     }
 
     command <<<
         set -exuo pipefail
-        rgi bwt -1 ~{sep=' -2 ' non_host_reads_in} -a kma -o sr_amr_report --clean
+        rgi bwt -1 ~{sep=' -2 ' non_host_reads_fa} -a kma -o sr_amr_report --clean
     >>>
 
     output {
@@ -609,8 +609,8 @@ task RunSpades {
 }
 task ZipOutputs {
     input {
-        File contigs_in
-        Array[File]+ non_host_reads_in
+        File contigs_fa
+        Array[File]+ non_host_reads_fa
         Array[File]+ main_reports
         Array[File]+ raw_reports
         Array[File]+ intermediate_files
@@ -628,13 +628,13 @@ task ZipOutputs {
         mkdir ${TMPDIR}/outputs/intermediate_files
 
         # copy contigs and interleave non_host_reads
-        cp ~{contigs_in} contigs.fasta
+        cp ~{contigs_fa} contigs.fasta
 
-        if [[ "~{length(non_host_reads_in)}" == 2 ]]; then
-            seqfu ilv -1 ~{sep=" -2 " non_host_reads_in} > non_host_reads_in_ilv.fasta
-            seqkit rename -1 -s "/" non_host_reads_in_ilv.fasta -o non_host_reads.fasta
+        if [[ "~{length(non_host_reads_fa)}" == 2 ]]; then
+            seqfu ilv -1 ~{sep=" -2 " non_host_reads_fa} > non_host_reads_fa_ilv.fasta
+            seqkit rename -1 -s "/" non_host_reads_fa_ilv.fasta -o non_host_reads.fasta
         else 
-            cat ~{sep=" " non_host_reads_in} > non_host_reads.fasta
+            cat ~{sep=" " non_host_reads_fa} > non_host_reads.fasta
         fi
 
         cp ~{sep=' ' main_reports} ${TMPDIR}/outputs/final_reports
@@ -717,7 +717,7 @@ task MakeGeneCoverage {
 
 task tsvToSam {
     input {
-        File contigs_in
+        File contigs_fa
         File final_summary
         String docker_image_id
     }
@@ -740,7 +740,7 @@ task tsvToSam {
         OUTPUT_BAM = "contig_amr_report.sorted.bam"
 
         # Create an empty BAM/BAI file if the SPADES assembly failed, then exit
-        with open("~{contigs_in}") as f:
+        with open("~{contigs_fa}") as f:
             first_line = f.readline()
             if first_line == ";ASSEMBLY FAILED\n":
                 output_bam = pysam.AlignmentFile(OUTPUT_BAM, "wb", reference_names=["NoGenes"], reference_lengths=[100])
@@ -749,8 +749,8 @@ task tsvToSam {
                 sys.exit()
 
         # Create index to enable querying fasta file
-        pysam.faidx("~{contigs_in}")
-        contigs_fasta = pysam.Fastafile("~{contigs_in}")
+        pysam.faidx("~{contigs_fa}")
+        contigs_fasta = pysam.Fastafile("~{contigs_fa}")
 
         # Load columns of interest from CSV and drop rows with at least one NaN
         df = pd.read_csv("~{final_summary}", sep="\t", usecols=[COLUMN_ARO_CONTIG, COLUMN_CONTIG_NAME])
