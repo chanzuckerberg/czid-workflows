@@ -39,7 +39,7 @@ pub mod ncbi_compress {
         let taxid_dir = TempDir::new_in(temp_file_output_dir, "accessions_by_taxid").unwrap();
         let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
         // Build a trie of the accessions in the input fasta
-        let mut builder = TrieBuilder::new(); // is this supposed to be TrieStoreBuilder?
+        let mut builder = TrieBuilder::new(); 
         reader.records().enumerate().for_each(|(i, result)| {
             let record = result.unwrap();
             let accession_id = record.id().split_whitespace().next().unwrap();

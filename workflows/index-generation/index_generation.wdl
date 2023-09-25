@@ -496,11 +496,11 @@ task LoadTaxonLineages {
                 '~{s3_dir}/nr',
                 '~{s3_dir}/nr_loc.marisa',
                 '~{s3_dir}/taxid-lineages.marisa',
-                '~{s3_dir}/accession2taxid.marisa',
+                's3://czid-public-references/ncbi-indexes-prod/2021-01-22/index-generation-2/accession2taxid.marisa', # patch for now
                 '~{s3_dir}/deuterostome_taxids.txt',
                 '~{s3_dir}/nt_info.marisa',
                 '~{s3_dir}/taxon_ignore_list.txt',
-                '~{index_name}',
+                '2021-01-22',
                 NOW(),
                 NOW()
             ); 
