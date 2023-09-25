@@ -2,13 +2,23 @@ version 1.1
 
 import "../short-read-mngs/host_filter.wdl" as host_filter
 
+struct RawSample {
+    Array[File]+ raw_reads
+}
+
+struct FilteredSample {
+    Array[File]+ subsampled_reads
+    Array[File]+ non_host_reads
+    File clusters
+    File cluster_sizes
+    File contigs
+}
+
 
 workflow amr {
     input {
-        File? raw_reads_0
-        File? raw_reads_1
-        Array[File]? non_host_reads
-        File? contigs
+        RawSample? raw_sample
+        FilteredSample? filtered_sample
         String docker_image_id
         String sample_name
         String host_filtering_docker_image_id = "czid-short-read-mngs" # default local value
@@ -22,8 +32,10 @@ workflow amr {
         # Dummy values - required by SFN interface
         String s3_wd_uri = ""
     }
-    if (defined(raw_reads_0)) {
-        Array[File]+ raw_reads = select_all([raw_reads_0, raw_reads_1])
+
+    if (defined(raw_sample)) {
+        RawSample raw_sample_in = select_first([raw_sample])
+        Array[File]+ raw_reads = select_all(raw_sample_in.raw_reads)
 
         call host_filter.czid_host_filter as host_filter_stage { 
             input:
@@ -37,7 +49,7 @@ workflow amr {
             then select_all([host_filter_stage.hisat2_human_filtered1_fastq, host_filter_stage.hisat2_human_filtered2_fastq])
             else select_all([host_filter_stage.hisat2_host_filtered1_fastq, host_filter_stage.hisat2_host_filtered2_fastq])
 
-        call RunRedup {
+        call RunRedup as RunRedupRaw {
             input:
             host_filtered_reads = host_filtered_reads,
             subsampled_reads = select_all([host_filter_stage.subsampled_out_subsampled_1_fa, host_filter_stage.subsampled_out_subsampled_2_fa]),
@@ -47,14 +59,27 @@ workflow amr {
         }
         call RunSpades {
             input:
-            reduplicated_reads = RunRedup.redups_fa,
+            reduplicated_reads = RunRedupRaw.redups_fa,
             min_contig_length = min_contig_length,
             docker_image_id = host_filtering_docker_image_id,
         }
     }
 
-    Array[File]+ non_host_reads_fa = select_first([RunRedup.redups_fa, non_host_reads])
-    File contigs_fa = select_first([RunSpades.contigs, contigs])
+    if (defined(filtered_sample)) {
+        FilteredSample filtered_sample_in = select_first([filtered_sample])
+        File filtered_sample_contigs = filtered_sample_in.contigs
+
+        call RunRedup as RunRedupFiltered {
+            input:
+            host_filtered_reads = filtered_sample_in.non_host_reads,
+            subsampled_reads = filtered_sample_in.subsampled_reads,
+            clusters = filtered_sample_in.clusters,
+            cluster_sizes = filtered_sample_in.cluster_sizes,
+        }
+    }
+
+    Array[File]+ non_host_reads_fa = select_first([RunRedupRaw.redups_fa, RunRedupFiltered.redups_fa])
+    File contigs_fa = select_first([RunSpades.contigs, filtered_sample_contigs])
 
     call RunRgiBwtKma {
         input:
