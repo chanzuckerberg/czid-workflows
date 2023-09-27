@@ -97,6 +97,7 @@ workflow index_generation {
         File nt_info_db = GenerateNTDB.nt_info_db
         File nr_loc_db = GenerateNRDB.nr_loc_db
         Directory diamond_index = GenerateIndexDiamond.diamond_index
+        File tax_id_to_names_csv = GenerateIndexLineages.tax_id_to_names_csv
         File taxid_lineages_db = GenerateIndexLineages.taxid_lineages_db
         File versioned_taxid_lineages_csv = GenerateIndexLineages.versioned_taxid_lineages_csv
         File deuterostome_taxids = GenerateIndexLineages.deuterostome_taxids
@@ -327,6 +328,7 @@ task GenerateIndexLineages {
 
     output {
         File taxid_lineages_db = "taxid-lineages.marisa"
+        File tax_id_to_names_csv = "names.csv.gz"
         File versioned_taxid_lineages_csv = "versioned-taxid-lineages.csv.gz"
         File deuterostome_taxids = "deuterostome_taxids.txt"
         File taxon_ignore_list = "taxon_ignore_list.txt"
