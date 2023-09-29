@@ -28,6 +28,11 @@ else
     exit 1
 fi
 
+# Fix until we can update this script to follow semantic versioning
+if [[ $WORKFLOW_NAME == amr ]]; then
+    TAG="amr-v1.3.0"
+fi
+
 if [[ $( git branch --show-current) != "main" ]]; then 
     COMMIT=$(git rev-parse --short HEAD)
     TAG=$TAG"-$COMMIT"
@@ -37,7 +42,10 @@ TAG_MSG=$(mktemp)
 echo "# Changes for ${TAG} ($(date +%Y-%m-%d))" > $TAG_MSG
 echo "$RELEASE_NOTES" >> $TAG_MSG
 git log --pretty=format:%s ${OLD_TAG}..HEAD >> $TAG_MSG || true
-git config --get user.name || git config user.name "CZ ID release action triggered by ${GITHUB_ACTOR:-$(whoami)}"
+if ! git config --get user.name ; then
+    git config user.name "CZ ID release action triggered by ${GITHUB_ACTOR:-$(whoami)}"
+fi
+git config --get user.name
 git tag --annotate --file $TAG_MSG "$TAG"
 git push origin "$TAG"
 

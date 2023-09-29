@@ -4,6 +4,21 @@ CZ ID's AMR workflow implements the [Resistance Gene Identifier (RGI)](https://g
 
 # Changelog
 
+## 1.3.0 - 2023-09-29
+
+### Added
+
+- Duplicate reads that correspond with a read present in the subsampled reads used as input are now interleaved with subsampled reads before being used as input to the rest of the workflow. This should result in more accurate reporting of reads-based statistics in the workflow output (number of reads, reads per million, coverage depth, and depth per million reads).
+
+### Fixed
+
+- Input parameters that expect a non-empty array are now declared as `Array[T]+` instead of `Array[T]`.
+- Variables that were in camelCase have been renamed to conform to snake_case to be consistent with the rest of the workflow.
+
+### Changed
+
+- The workflow's input parameters for declaring sample input files has changed. Samples must now be declared using one of either the `RawSample` struct or the `FilteredSample` struct. The `FilteredSample` struct, meant for samples that have previously undergone host filtering in CZID, requires a file containing all non-host reads as well as two tsv files describing duplicate reads clusters and their sizes, in addition to the previously needed subsampled reads and contigs files.
+
 ## 1.2.15 - 2023-07-19
 
 ### Fixed
@@ -136,13 +151,13 @@ Version 1.2.1 is unchanged from 1.2.0.
 - Contigs indexed by gene are now output as a BAM/BAI file pair from new task `tsvToSam`.
 - A new column to the primary AMR report `read_gene_id` that can be used to look up sequences in the above-mentioned contigs bam file.
 
-### Changed
-
-- The non-host reads used for workflow runs on unfiltered samples now use the subsampled output from host filtering. Previously, the workflow used reads that were output from the host filtering process before subsampling.
-
 ### Fixed
 
 - The workflow will now only interleave non-host reads as part of the `ZipOutputs` task if two files are present. Interleaving is skipped for workflows where all non-host reads are contained in a single file.
+
+### Changed
+
+- The non-host reads used for workflow runs on unfiltered samples now use the subsampled output from host filtering. Previously, the workflow used reads that were output from the host filtering process before subsampling.
 
 ## 0.2.3 - 2023-04-13
 

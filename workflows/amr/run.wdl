@@ -2,12 +2,23 @@ version 1.1
 
 import "../short-read-mngs/host_filter.wdl" as host_filter
 
+struct RawSample {
+    Array[File]+ raw_reads
+}
+
+struct FilteredSample {
+    Array[File]+ subsampled_reads
+    Array[File]+ non_host_reads
+    File clusters
+    File cluster_sizes
+    File contigs
+}
+
+
 workflow amr {
     input {
-        Array[File]? non_host_reads
-        File? raw_reads_0
-        File? raw_reads_1
-        File? contigs
+        RawSample? raw_sample
+        FilteredSample? filtered_sample
         String docker_image_id
         String sample_name
         String host_filtering_docker_image_id = "czid-short-read-mngs" # default local value
@@ -21,41 +32,65 @@ workflow amr {
         # Dummy values - required by SFN interface
         String s3_wd_uri = ""
     }
-    if (defined(raw_reads_0)) { 
+
+    if (defined(raw_sample)) {
+        RawSample raw_sample_in = select_first([raw_sample])
+        Array[File]+ raw_reads = select_all(raw_sample_in.raw_reads)
+
         call host_filter.czid_host_filter as host_filter_stage { 
             input:
-            fastqs_0 = select_first([raw_reads_0]),
-            fastqs_1 = if defined(raw_reads_1) then select_first([raw_reads_1]) else None,
+            fastqs_0 = raw_reads[0],
+            fastqs_1 = if length(raw_reads) > 1 then raw_reads[1] else None,
             docker_image_id = host_filtering_docker_image_id,
             s3_wd_uri = s3_wd_uri
         }
+
+        Array[File]+ host_filtered_reads = if (defined(host_filter_stage.hisat2_human_filtered1_fastq))
+            then select_all([host_filter_stage.hisat2_human_filtered1_fastq, host_filter_stage.hisat2_human_filtered2_fastq])
+            else select_all([host_filter_stage.hisat2_host_filtered1_fastq, host_filter_stage.hisat2_host_filtered2_fastq])
+
+        call RunRedup as RunRedupRaw {
+            input:
+            host_filtered_reads = host_filtered_reads,
+            subsampled_reads = select_all([host_filter_stage.subsampled_out_subsampled_1_fa, host_filter_stage.subsampled_out_subsampled_2_fa]),
+            clusters = host_filter_stage.czid_dedup_out_duplicate_clusters_csv,
+            cluster_sizes = host_filter_stage.czid_dedup_out_duplicate_cluster_sizes_tsv,
+            docker_image_id = host_filtering_docker_image_id,
+        }
         call RunSpades {
             input:
-            non_host_reads = select_all(
-                [
-                    host_filter_stage.subsampled_out_subsampled_1_fa,
-                    host_filter_stage.subsampled_out_subsampled_2_fa
-                ]
-            ),
+            reduplicated_reads = RunRedupRaw.redups_fa,
             min_contig_length = min_contig_length,
             docker_image_id = host_filtering_docker_image_id,
         }
     }
+
+    if (defined(filtered_sample)) {
+        FilteredSample filtered_sample_in = select_first([filtered_sample])
+        File filtered_sample_contigs = filtered_sample_in.contigs
+
+        call RunRedup as RunRedupFiltered {
+            input:
+            host_filtered_reads = filtered_sample_in.non_host_reads,
+            subsampled_reads = filtered_sample_in.subsampled_reads,
+            clusters = filtered_sample_in.clusters,
+            cluster_sizes = filtered_sample_in.cluster_sizes,
+            docker_image_id = host_filtering_docker_image_id,
+        }
+    }
+
+    Array[File]+ non_host_reads_fa = select_first([RunRedupRaw.redups_fa, RunRedupFiltered.redups_fa])
+    File contigs_fa = select_first([RunSpades.contigs, filtered_sample_contigs])
+
     call RunRgiBwtKma {
         input:
-        non_host_reads = select_first([non_host_reads, 
-            select_all(
-                [
-                    host_filter_stage.subsampled_out_subsampled_1_fa,
-                    host_filter_stage.subsampled_out_subsampled_2_fa
-                ]
-            )]),
+        non_host_reads_fa = non_host_reads_fa,
         card_json = card_json, 
         docker_image_id = docker_image_id
     }
     call RunRgiMain {
         input:
-        contigs = select_first([contigs, RunSpades.contigs]),
+        contigs_fa = contigs_fa,
         card_json = card_json, 
         docker_image_id = docker_image_id
     }
@@ -99,30 +134,22 @@ workflow amr {
 
     call tsvToSam { 
         input: 
-        contigs = select_first([contigs, RunSpades.contigs]),
+        contigs_fa = contigs_fa,
         final_summary = RunResultsPerSample.final_summary,
         docker_image_id = docker_image_id
     }
 
     call ZipOutputs {
         input:
-        contigs_in = select_first([contigs, RunSpades.contigs]),
-        nonHostReads = select_first([
-                           non_host_reads,
-                           select_all(
-                               [
-                                   host_filter_stage.subsampled_out_subsampled_1_fa,
-                                   host_filter_stage.subsampled_out_subsampled_2_fa
-                               ]
-                           )
-                       ]),
-        mainReports = select_all(
+        contigs_fa = contigs_fa,
+        non_host_reads_fa = non_host_reads_fa,
+        main_reports = select_all(
             [
                 RunResultsPerSample.final_summary,
                 RunResultsPerSample.synthesized_report,
             ]
         ),
-        rawReports = select_all(
+        raw_reports = select_all(
             [
                 RunRgiKmerBwt.kma_species_calling,
                 RunRgiKmerBwt.sr_species_allele,
@@ -132,7 +159,7 @@ workflow amr {
                 RunRgiBwtKma.gene_mapping_data,
             ]
         ),
-        intermediateFiles = select_all(
+        intermediate_files = select_all(
             [
                 RunRgiBwtKma.artifacts_mapping_stats,
                 RunRgiBwtKma.overall_mapping_stats,
@@ -146,6 +173,63 @@ workflow amr {
         docker_image_id = docker_image_id
     }
 
+}
+
+task RunRedup {
+    input {
+        Array[File]+ host_filtered_reads
+        Array[File]+ subsampled_reads
+        File clusters
+        File cluster_sizes
+        String docker_image_id
+    }
+    command <<<
+        set -euxo pipefail
+        # exit if no duplicate reads
+        if [[ ! $(grep -v "^1\t" "~{cluster_sizes}") ]]; then
+            counter=1
+            for fasta in ~{sep=' ' subsampled_reads}; do
+                cp $fasta redups_$counter.fa
+                ((counter++))
+            done
+            exit 0
+        fi
+
+        grep -v "^1\t" "~{cluster_sizes}" | cut -f2 > duplicated-reads.txt
+        grep -h ">" ~{sep=' ' subsampled_reads} | sed "s/^>//" > passed_filters.txt
+
+        python3 <<CODE
+        pair_values = []
+        passed_filters = set()
+        duplicates = set()
+        with open("passed_filters.txt", "r") as pf:
+            passed_filters.update(pf.read().splitlines())
+        with open("duplicated-reads.txt", "r") as dr:
+            duplicates.update(dr.read().splitlines())
+        with open("~{clusters}", "r") as clusters:
+            for line in clusters:
+                key, value = line.strip().split(",")
+                if key in duplicates and key in passed_filters and key != value:
+                    pair_values.append(value)
+
+        with open("duplicated-pairs.txt", "w+") as f:
+            for value in pair_values:
+                f.write(value)
+                f.write("\n")
+        CODE
+
+        counter=1
+        for fasta in ~{sep=' ' host_filtered_reads}; do
+            seqtk subseq $fasta duplicated-pairs.txt > redups_$counter.fastq
+            ((counter++))
+        done
+    >>>
+    output {
+        Array[File]+ redups_fa = glob("redups*.fastq")
+    }
+    runtime {
+        docker: docker_image_id
+    }
 }
 
 task RunResultsPerSample {
@@ -421,7 +505,7 @@ task RunRgiKmerMain {
         rgi kmer_query --rgi -k 61 -i "~{main_output_json}" --output contig_species_report 
     >>>
     output { 
-        Array[File] output_kmer_main = glob("contig_species_report*")
+        Array[File]+ output_kmer_main = glob("contig_species_report*")
         File species_calling = "contig_species_report_61mer_analysis_rgi_summary.txt"
     }
     runtime {
@@ -454,7 +538,7 @@ task RunRgiKmerBwt {
         rgi kmer_query --bwt -k 61 -i "~{output_sorted_length_100}" --output sr_species_report
     >>>
     output {
-        Array[File] output_kmer_bwt = glob("sr_species_report*")
+        Array[File]+ output_kmer_bwt = glob("sr_species_report*")
         File sr_species_allele = "sr_species_report_61mer_analysis.allele.txt"
         File kma_species_calling = "sr_species_report_61mer_analysis.gene.txt"
     }
@@ -465,22 +549,22 @@ task RunRgiKmerBwt {
 }
 task RunRgiMain { 
     input { 
-        File contigs
+        File contigs_fa
         File card_json
         String docker_image_id
     }
     command <<<
         set -exuo pipefail
-        if [[ $(head -n 1 "~{contigs}") == ";ASSEMBLY FAILED" ]]; then
+        if [[ $(head -n 1 "~{contigs_fa}") == ";ASSEMBLY FAILED" ]]; then
             # simulate empty outputs
             echo "{}" > contig_amr_report.json
             cp /tmp/empty-main-header.txt contig_amr_report.txt
         else
-            rgi main -i "~{contigs}" -o contig_amr_report -t contig -a BLAST --include_nudge --clean
+            rgi main -i "~{contigs_fa}" -o contig_amr_report -t contig -a BLAST --include_nudge --clean
         fi
     >>>
     output {
-        Array[File] output_main = glob("contig_amr_report*")
+        Array[File]+ output_main = glob("contig_amr_report*")
         File output_json = "contig_amr_report.json"
         File main_amr_results = "contig_amr_report.txt"
     }
@@ -491,18 +575,18 @@ task RunRgiMain {
 }
 task RunRgiBwtKma {
     input {
-        Array[File] non_host_reads
+        Array[File]+ non_host_reads_fa
         File card_json
         String docker_image_id
     }
 
     command <<<
         set -exuo pipefail
-        rgi bwt -1 ~{sep=' -2 ' non_host_reads} -a kma -o sr_amr_report --clean
+        rgi bwt -1 ~{sep=' -2 ' non_host_reads_fa} -a kma -o sr_amr_report --clean
     >>>
 
     output {
-        Array[File] output_kma = glob("sr_amr_report*")
+        Array[File]+ output_kma = glob("sr_amr_report*")
         File kma_amr_results = "sr_amr_report.allele_mapping_data.txt"
         File artifacts_mapping_stats = "sr_amr_report.artifacts_mapping_stats.txt"
         File gene_mapping_data = "sr_amr_report.gene_mapping_data.txt"
@@ -519,7 +603,7 @@ task RunRgiBwtKma {
 }
 task RunSpades { 
     input { 
-        Array[File] non_host_reads
+        Array[File]+ reduplicated_reads
         Int min_contig_length
         String docker_image_id
     }
@@ -533,10 +617,10 @@ task RunSpades {
 
         }
         trap handle_failure ERR
-        if [[ "~{length(non_host_reads)}" -gt 1 ]]; then 
-            spades.py -1 ~{sep=" -2 " non_host_reads} -o "spades/" -m 100 -t 36 --only-assembler 1>&2
+        if [[ "~{length(reduplicated_reads)}" -gt 1 ]]; then
+            spades.py -1 ~{sep=" -2 " reduplicated_reads} -o "spades/" -m 100 -t 36 --only-assembler 1>&2
         else
-            spades.py -s ~{non_host_reads[0]} -o "spades/" -m 100 -t 36 --only-assembler 1>&2
+            spades.py -s ~{reduplicated_reads[0]} -o "spades/" -m 100 -t 36 --only-assembler 1>&2
         fi
         seqtk seq -L ~{min_contig_length} spades/contigs.fasta > spades/contigs_filtered.fasta
         mv spades/contigs_filtered.fasta spades/contigs.fasta
@@ -551,11 +635,11 @@ task RunSpades {
 }
 task ZipOutputs {
     input {
-        File contigs_in
-        Array[File] nonHostReads
-        Array[File] mainReports
-        Array[File] rawReports
-        Array[File] intermediateFiles
+        File contigs_fa
+        Array[File]+ non_host_reads_fa
+        Array[File]+ main_reports
+        Array[File]+ raw_reports
+        Array[File]+ intermediate_files
         String docker_image_id
     }
 
@@ -570,18 +654,18 @@ task ZipOutputs {
         mkdir ${TMPDIR}/outputs/intermediate_files
 
         # copy contigs and interleave non_host_reads
-        cp ~{contigs_in} contigs.fasta
+        cp ~{contigs_fa} contigs.fasta
 
-        if [[ "~{length(nonHostReads)}" == 2 ]]; then
-            seqfu ilv -1 ~{sep=" -2 " nonHostReads} > non_host_reads_ilv.fasta
-            seqkit rename -1 -s "/" non_host_reads_ilv.fasta -o non_host_reads.fasta
+        if [[ "~{length(non_host_reads_fa)}" == 2 ]]; then
+            seqfu ilv -1 ~{sep=" -2 " non_host_reads_fa} > non_host_reads_fa_ilv.fasta
+            seqkit rename -1 -s "/" non_host_reads_fa_ilv.fasta -o non_host_reads.fasta
         else 
-            cat ~{sep=" " nonHostReads} > non_host_reads.fasta
+            cat ~{sep=" " non_host_reads_fa} > non_host_reads.fasta
         fi
 
-        cp ~{sep=' ' mainReports} ${TMPDIR}/outputs/final_reports
-        cp ~{sep=' ' rawReports} ${TMPDIR}/outputs/raw_reports
-        cp ~{sep=' ' intermediateFiles} ${TMPDIR}/outputs/intermediate_files
+        cp ~{sep=' ' main_reports} ${TMPDIR}/outputs/final_reports
+        cp ~{sep=' ' raw_reports} ${TMPDIR}/outputs/raw_reports
+        cp ~{sep=' ' intermediate_files} ${TMPDIR}/outputs/intermediate_files
         export WORK=$(pwd)
         cd ${TMPDIR}/outputs; zip -r ${WORK}/outputs.zip .
     >>>
@@ -659,7 +743,7 @@ task MakeGeneCoverage {
 
 task tsvToSam {
     input {
-        File contigs
+        File contigs_fa
         File final_summary
         String docker_image_id
     }
@@ -682,7 +766,7 @@ task tsvToSam {
         OUTPUT_BAM = "contig_amr_report.sorted.bam"
 
         # Create an empty BAM/BAI file if the SPADES assembly failed, then exit
-        with open("~{contigs}") as f:
+        with open("~{contigs_fa}") as f:
             first_line = f.readline()
             if first_line == ";ASSEMBLY FAILED\n":
                 output_bam = pysam.AlignmentFile(OUTPUT_BAM, "wb", reference_names=["NoGenes"], reference_lengths=[100])
@@ -691,8 +775,8 @@ task tsvToSam {
                 sys.exit()
 
         # Create index to enable querying fasta file
-        pysam.faidx("~{contigs}")
-        contigs_fasta = pysam.Fastafile("~{contigs}")
+        pysam.faidx("~{contigs_fa}")
+        contigs_fasta = pysam.Fastafile("~{contigs_fa}")
 
         # Load columns of interest from CSV and drop rows with at least one NaN
         df = pd.read_csv("~{final_summary}", sep="\t", usecols=[COLUMN_ARO_CONTIG, COLUMN_CONTIG_NAME])
