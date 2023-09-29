@@ -17,18 +17,16 @@ if ! [[ -d "$(dirname $0)/../workflows/$WORKFLOW_NAME" ]]; then
 fi
 
 OLD_TAG=$(git describe --tags --match "${WORKFLOW_NAME}-v*" || echo "${WORKFLOW_NAME}-v0.0.0")
-# if [[ $RELEASE_TYPE == major ]]; then
-#     TAG=$(echo "$OLD_TAG" | perl -ne '/(.+)-v(\d+)\.(\d+)\.(\d+)/; print "$1-v@{[$2+1]}.0.0"')
-# elif [[ $RELEASE_TYPE == minor ]]; then
-#     TAG=$(echo "$OLD_TAG" | perl -ne '/(.+)-v(\d+)\.(\d+)\.(\d+)/; print "$1-v$2.@{[$3+1]}.0"')
-# elif [[ $RELEASE_TYPE == patch ]]; then
-#     TAG=$(echo "$OLD_TAG" | perl -ne '/(.+)-v(\d+)\.(\d+)\.(\d+)/; print "$1-v$2.$3.@{[$4+1]}"')
-# else
-#     echo "RELEASE_TYPE should be one of major, minor, patch" 1>&2
-#     exit 1
-# fi
-
-TAG="amr-v1.3.0"
+if [[ $RELEASE_TYPE == major ]]; then
+    TAG=$(echo "$OLD_TAG" | perl -ne '/(.+)-v(\d+)\.(\d+)\.(\d+)/; print "$1-v@{[$2+1]}.0.0"')
+elif [[ $RELEASE_TYPE == minor ]]; then
+    TAG=$(echo "$OLD_TAG" | perl -ne '/(.+)-v(\d+)\.(\d+)\.(\d+)/; print "$1-v$2.@{[$3+1]}.0"')
+elif [[ $RELEASE_TYPE == patch ]]; then
+    TAG=$(echo "$OLD_TAG" | perl -ne '/(.+)-v(\d+)\.(\d+)\.(\d+)/; print "$1-v$2.$3.@{[$4+1]}"')
+else
+    echo "RELEASE_TYPE should be one of major, minor, patch" 1>&2
+    exit 1
+fi
 
 if [[ $( git branch --show-current) != "main" ]]; then 
     COMMIT=$(git rev-parse --short HEAD)
@@ -39,10 +37,7 @@ TAG_MSG=$(mktemp)
 echo "# Changes for ${TAG} ($(date +%Y-%m-%d))" > $TAG_MSG
 echo "$RELEASE_NOTES" >> $TAG_MSG
 git log --pretty=format:%s ${OLD_TAG}..HEAD >> $TAG_MSG || true
-if ! git config --get user.name ; then
-    git config user.name "CZ ID release action triggered by ${GITHUB_ACTOR:-$(whoami)}"
-fi
-git config --get user.name
+git config --get user.name || git config user.name "CZ ID release action triggered by ${GITHUB_ACTOR:-$(whoami)}"
 git tag --annotate --file $TAG_MSG "$TAG"
 git push origin "$TAG"
 
