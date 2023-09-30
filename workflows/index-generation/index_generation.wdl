@@ -178,8 +178,11 @@ task DownloadNR {
     }
 
     command <<<
-        # ncbi_download "~{ncbi_server}" blast/db/FASTA/nr.gz
-        aws s3 cp ~{old_nr_s3_path} blast/db/FASTA/nr
+        if ["~{old_nr_s3_path}" == ""]; then
+            ncbi_download "~{ncbi_server}" blast/db/FASTA/nr.gz
+        else
+            aws s3 cp ~{old_nr_s3_path} blast/db/FASTA/nr
+        fi
     >>>
 
     output {
@@ -199,8 +202,11 @@ task DownloadNT {
     }
 
     command <<<
-        # ncbi_download "~{ncbi_server}" blast/db/FASTA/nt.gz
-        aws s3 cp ~{old_nt_s3_path} blast/db/FASTA/nt
+        if ["~{old_nt_s3_path}" == ""]; then
+            ncbi_download "~{ncbi_server}" blast/db/FASTA/nt.gz
+        else
+            aws s3 cp ~{old_nt_s3_path} blast/db/FASTA/nt
+        fi
         
     >>>
 
@@ -221,14 +227,17 @@ task DownloadAccession2Taxid {
     }
 
     command <<<
-        # ncbi_download "~{ncbi_server}" pub/taxonomy/accession2taxid/nucl_gb.accession2taxid.gz
-        # ncbi_download "~{ncbi_server}" pub/taxonomy/accession2taxid/nucl_wgs.accession2taxid.gz
-        # ncbi_download "~{ncbi_server}" pub/taxonomy/accession2taxid/pdb.accession2taxid.gz
-        # ncbi_download "~{ncbi_server}" pub/taxonomy/accession2taxid/prot.accession2taxid.FULL.gz
-        aws s3 cp ~{s3_accession_mapping_prefix}/accession2taxid/nucl_gb.accession2taxid.gz pub/taxonomy/accession2taxid/nucl_gb.accession2taxid.gz
-        aws s3 cp ~{s3_accession_mapping_prefix}/accession2taxid/nucl_wgs.accession2taxid.gz pub/taxonomy/accession2taxid/nucl_wgs.accession2taxid.gz
-        aws s3 cp ~{s3_accession_mapping_prefix}/accession2taxid/pdb.accession2taxid.gz pub/taxonomy/accession2taxid/pdb.accession2taxid.gz
-        aws s3 cp ~{s3_accession_mapping_prefix}/accession2taxid/prot.accession2taxid.gz pub/taxonomy/accession2taxid/prot.accession2taxid.FULL.gz
+        if ["~{s3_accession_mapping_prefix}" == ""]; then
+            ncbi_download "~{ncbi_server}" pub/taxonomy/accession2taxid/nucl_gb.accession2taxid.gz
+            ncbi_download "~{ncbi_server}" pub/taxonomy/accession2taxid/nucl_wgs.accession2taxid.gz
+            ncbi_download "~{ncbi_server}" pub/taxonomy/accession2taxid/pdb.accession2taxid.gz
+            ncbi_download "~{ncbi_server}" pub/taxonomy/accession2taxid/prot.accession2taxid.FULL.gz
+        else
+            aws s3 cp ~{s3_accession_mapping_prefix}/accession2taxid/nucl_gb.accession2taxid.gz pub/taxonomy/accession2taxid/nucl_gb.accession2taxid.gz
+            aws s3 cp ~{s3_accession_mapping_prefix}/accession2taxid/nucl_wgs.accession2taxid.gz pub/taxonomy/accession2taxid/nucl_wgs.accession2taxid.gz
+            aws s3 cp ~{s3_accession_mapping_prefix}/accession2taxid/pdb.accession2taxid.gz pub/taxonomy/accession2taxid/pdb.accession2taxid.gz
+            aws s3 cp ~{s3_accession_mapping_prefix}/accession2taxid/prot.accession2taxid.gz pub/taxonomy/accession2taxid/prot.accession2taxid.FULL.gz
+        fi
         gunzip pub/taxonomy/accession2taxid/nucl_gb.accession2taxid.gz
         gunzip pub/taxonomy/accession2taxid/nucl_wgs.accession2taxid.gz
         gunzip pub/taxonomy/accession2taxid/pdb.accession2taxid.gz
