@@ -15,10 +15,10 @@ workflow index_generation {
         Int nr_compression_k = 31
         Int nr_compression_scaled = 100
         Float nr_compression_similarity_threshold = 0.5
-        String s3_accession_mapping_prefix # old accession mapping files
+        String s3_accession_mapping_prefix = "" # old accession mapping files
         String docker_image_id
-        String old_nt_s3_path
-        String old_nr_s3_path
+        String old_nt_s3_path = "" # old nt file
+        String old_nr_s3_path = "" # old nr file
         Boolean skip_protein_compression = false
         Boolean logging_enabled = false
     }
@@ -155,6 +155,7 @@ workflow index_generation {
         File nt_loc_db = GenerateNTDB.nt_loc_db
         File nt_info_db = GenerateNTDB.nt_info_db
         File? nr_loc_db = if (skip_protein_compression) then GenerateNRDB.nr_loc_db else GenerateNRDBCompressedProtein.nr_loc_db
+        File? nr_info_db = if (skip_protein_compression) then GenerateNRDB.nr_info_db else GenerateNRDBCompressedProtein.nr_info_db
         File nt_contained_in_tree =  CompressNT.nt_contained_in_tree
         File nt_contained_in_chunk = CompressNT.nt_contained_in_chunk
         File? nr_contained_in_tree = CompressNR.nr_contained_in_tree
@@ -335,6 +336,7 @@ task GenerateNRDB {
 
     output {
         File nr_loc_db = "nr_loc.marisa"
+        File nr_info_db = "nr_info.marisa"
     }
 
     runtime {
