@@ -57,7 +57,7 @@ def get_accession_metadata(accession_id: str):
                     accession_metadata[key] = entry.find('GBQualifier_value').text
         return accession_metadata
     except Exception as e:
-        logging.warn(f"Fetching metadata for accession ID {accession_id} failed with error: {e}", exec_info=True)
+        logging.warn(f"Fetching metadata for accession ID {accession_id} failed with error: {e}", exc_info=True)
         return accession_metadata
 
 
