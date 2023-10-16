@@ -143,6 +143,13 @@ def _equals(previous_row: Dict[str, str], row: Dict[str, str]):
 
     return True
 
+def _find_highest_taxonomy_changed(previous_row: Dict[str, str], row: Dict[str, str]):
+    fieldnames_to_search = [f'{level}_name' for level in _taxon_levels]
+    # searches in order of taxid (should be the same), is_phage, superkingdom -> kingdom -> ... -> species
+    for fieldname in fieldnames_to_search:
+        if previous_row[fieldname] != row[fieldname]:
+            return (fieldname, previous_row[fieldname], row[fieldname])
+
 
 def version_taxon_lineages(
     previous_lineages_filename: Union[str, None],
@@ -225,7 +232,7 @@ def version_taxon_lineages(
         f"Number of rows in existing taxon lineages table: {num_existing_rows}"
     )
 
-    with gzip.open(output_filename, "wt") as wf:
+    with gzip.open(output_filename, "wt") as wf, open("changelog.csv", 'w') as log, open("deleted_log.csv", 'w') as deleted_log, open("new_taxa", 'w') as new_taxa_log:
         writer = csv.DictWriter(wf, fieldnames=_fieldnames + _versioning_fieldnames)
         writer.writeheader()
         # keep track of counts of different types of taxa
@@ -235,6 +242,9 @@ def version_taxon_lineages(
         num_updated_lineage_rows = 0
         num_total_new_rows = 0
         num_deprecated_rows = 0
+
+        log_writer = csv.writer(log)
+        log_writer.writerow(["taxid", "taxonomy_level", "old_value", "new_value"])
 
         with gzip.open(lineages_filename, "rt") as rf:
             for row in csv.DictReader(rf):
@@ -263,6 +273,9 @@ def version_taxon_lineages(
                     num_total_new_rows += 1
 
                     if previous_row:
+                        (taxonomy_level, old_val, new_val) = _find_highest_taxonomy_changed(previous_row, row)
+                        print(taxonomy_level, old_val, new_val)
+                        log_writer.writerow([taxonomy_level, old_val, new_val])
                         # this is an updated lineage
                         writer.writerow(previous_row)
                         num_total_new_rows += 1
