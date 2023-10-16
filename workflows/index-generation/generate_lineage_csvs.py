@@ -184,10 +184,13 @@ def version_taxon_lineages(
     scheme described above
     """
     previous_lineages = {}
+    previous_lineages_version = None
     if previous_lineages_filename:
         with gzip.open(previous_lineages_filename, "rt") as f:
             for row in csv.DictReader(f):
-                previous_lineages[row["taxid"]] = row
+                previous_lineages[(row["taxid"], row["version_end"])] = row
+                if not previous_lineages_version or previous_lineages_version < row["version_end"]:
+                    previous_lineages_version = row["version_end"]
 
     with gzip.open(output_filename, "wt") as wf:
         writer = csv.DictWriter(wf, fieldnames=_fieldnames + _versioning_fieldnames)
@@ -195,13 +198,7 @@ def version_taxon_lineages(
 
         with gzip.open(lineages_filename, "rt") as rf:
             for row in csv.DictReader(rf):
-                previous_row = previous_lineages.get(row["taxid"])
-
-                if previous_row:
-                    # If we have a previous row, remove it so we can later
-                    #   iterate through only the rows from previous_lineages
-                    #   that aren't also in lineages
-                    del previous_lineages[row["taxid"]]
+                previous_row = previous_lineages.pop((row["taxid"], previous_lineages_version), None)
 
                 if previous_row and _equals(row, previous_row):
                     # We already have this lineage, update it's version_end
