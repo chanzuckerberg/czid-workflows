@@ -20,6 +20,7 @@ workflow index_generation {
         String old_nt_s3_path = "" # old nt file
         String old_nr_s3_path = "" # old nr file
         Boolean skip_protein_compression = false
+        Boolean skip_nuc_compression = false
         Boolean logging_enabled = false
     }
 
@@ -30,12 +31,14 @@ workflow index_generation {
         old_nr_s3_path = old_nr_s3_path
     }
 
+
     call DownloadNT {
         input:
         ncbi_server = ncbi_server,
         docker_image_id = docker_image_id,
         old_nt_s3_path = old_nt_s3_path
     }
+
 
     call DownloadAccession2Taxid {
         input:
@@ -44,25 +47,11 @@ workflow index_generation {
         s3_accession_mapping_prefix = s3_accession_mapping_prefix
 
     }
-
     # call DownloadTaxdump {
     #     input:
     #     ncbi_server = ncbi_server,
     #     docker_image_id = docker_image_id
     # }
-
-    call CompressNT {
-        input:
-        nt = DownloadNT.nt,
-        accession2taxid = DownloadAccession2Taxid.accession2taxid,
-        k = nt_compression_k,
-        scaled = nt_compression_scaled,
-        similarity_threshold = nt_compression_similarity_threshold,
-        logging_enabled = logging_enabled,
-        docker_image_id = docker_image_id,
-        cpu = 64
-    }
-
     if (!skip_protein_compression) {
         call CompressNR {
             input:
@@ -75,51 +64,112 @@ workflow index_generation {
             docker_image_id = docker_image_id,
             cpu = 64
         }
-        call GenerateIndexAccessions as GenerateIndexAccessionsCompressedProtein {
-            input:
-            nr = CompressNR.nr_compressed,
-            nt = CompressNT.nt_compressed,
-            accession2taxid = DownloadAccession2Taxid.accession2taxid,
-            docker_image_id = docker_image_id
-        }
-        call GenerateNRDB as GenerateNRDBCompressedProtein {
-            input:
-            nr = CompressNR.nr_compressed,
-            docker_image_id = docker_image_id
-        }
-
-        call GenerateIndexDiamond as GenerateIndexDiamondCompressedProtein {
-            input:
-            nr = CompressNR.nr_compressed,
-            docker_image_id = docker_image_id
-        }
-
     }
+
+    if (!skip_nuc_compression) {
+        call CompressNT {
+            input:
+            nt = DownloadNT.nt,
+            accession2taxid = DownloadAccession2Taxid.accession2taxid,
+            k = nt_compression_k,
+            scaled = nt_compression_scaled,
+            similarity_threshold = nt_compression_similarity_threshold,
+            logging_enabled = logging_enabled,
+            docker_image_id = docker_image_id,
+            cpu = 64
+        }
+    }
+
+    if (skip_nuc_compression) {
+        call GenerateNTDB as GenerateNTDBNoCompression {
+            input:
+            nt = DownloadNT.nt,
+            docker_image_id = docker_image_id
+        }
+        call GenerateIndexMinimap2 as GenerateIndexMinimap2NoCompression {
+            input:
+            nt = DownloadNT.nt,
+            docker_image_id = docker_image_id
+        }
+    }
+
+    if (!skip_nuc_compression) {
+        call GenerateNTDB as GenerateNTDBWCompression {
+            input:
+            nt = select_first([CompressNT.nt_compressed]),
+            docker_image_id = docker_image_id
+        }
+        call GenerateIndexMinimap2 as GenerateIndexMinimap2WCompression {
+            input:
+            nt = select_first([CompressNT.nt_compressed]),
+            docker_image_id = docker_image_id
+        }
+    }
+
     if (skip_protein_compression) {
-        call GenerateIndexAccessions {
-            input:
-            nr = DownloadNR.nr,
-            nt = CompressNT.nt_compressed,
-            accession2taxid = DownloadAccession2Taxid.accession2taxid,
-            docker_image_id = docker_image_id
-        }
-        call GenerateNRDB {
+        call GenerateNRDB as GenerateNRDBNoCompression {
             input:
             nr = DownloadNR.nr,
             docker_image_id = docker_image_id
         }
-        call GenerateIndexDiamond {
+        call GenerateIndexDiamond as GenerateIndexDiamondNoCompression {
             input:
             nr = DownloadNR.nr,
+            docker_image_id = docker_image_id
+        }
+    }
+    if (!skip_protein_compression) {
+        call GenerateNRDB as GenerateNRDBWCompression {
+            input:
+            nr = select_first([CompressNR.nr_compressed]),
+            docker_image_id = docker_image_id
+        }
+        call GenerateIndexDiamond as GenerateIndexDiamondWCompression{
+            input:
+            nr = select_first([CompressNR.nr_compressed]),
             docker_image_id = docker_image_id
         }
     }
 
-    call GenerateNTDB {
-        input:
-        nt = CompressNT.nt_compressed,
-        docker_image_id = docker_image_id
+    if (skip_protein_compression && !skip_nuc_compression) {
+        call GenerateIndexAccessions as GenerateIndexAccessionsNoCompressProtein {
+            input:
+            nr = DownloadNR.nr,
+            nt = select_first([CompressNT.nt_compressed]),
+            accession2taxid = DownloadAccession2Taxid.accession2taxid,
+            docker_image_id = docker_image_id
+        }
     }
+
+    if (!skip_protein_compression && skip_nuc_compression) {
+        call GenerateIndexAccessions as GenerateIndexAccessionsNoCompressNuc {
+            input:
+            nr = select_first([CompressNR.nr_compressed]),
+            nt = DownloadNT.nt,
+            accession2taxid = DownloadAccession2Taxid.accession2taxid,
+            docker_image_id = docker_image_id
+        }
+    }
+    if (!skip_nuc_compression && !skip_protein_compression) {
+        call GenerateIndexAccessions as GenerateIndexAccessionsWCompression {
+            input:
+            nr = select_first([CompressNR.nr_compressed]),
+            nt = select_first([CompressNT.nt_compressed]),
+            accession2taxid = DownloadAccession2Taxid.accession2taxid,
+            docker_image_id = docker_image_id
+        }
+    }
+
+    if (skip_nuc_compression && skip_protein_compression) {
+        call GenerateIndexAccessions as GenerateIndexAccessionsNoCompression {
+            input:
+            nr = DownloadNR.nr,
+            nt = DownloadNT.nt,
+            accession2taxid = DownloadAccession2Taxid.accession2taxid,
+            docker_image_id = docker_image_id
+        }
+    }
+
 
     # call GenerateIndexLineages {
     #     input:
@@ -128,12 +178,6 @@ workflow index_generation {
     #     previous_lineages = previous_lineages,
     #     docker_image_id = docker_image_id
     # }
-    
-    call GenerateIndexMinimap2 {
-        input:
-        nt = CompressNT.nt_compressed,
-        docker_image_id = docker_image_id
-    }
 
 
     # if (write_to_db && defined(environ) && defined(s3_dir)) {
@@ -145,29 +189,30 @@ workflow index_generation {
             # versioned_taxid_lineages_csv = GenerateIndexLineages.versioned_taxid_lineages_csv,
             docker_image_id = docker_image_id
     }
-    # }
-
 
     output {
         File? nr = if (skip_protein_compression) then DownloadNR.nr else CompressNR.nr_compressed
-        File nt = CompressNT.nt_compressed
-        File? accession2taxid_db = if (skip_protein_compression) then GenerateIndexAccessions.accession2taxid_db else GenerateIndexAccessionsCompressedProtein.accession2taxid_db
-        File nt_loc_db = GenerateNTDB.nt_loc_db
-        File nt_info_db = GenerateNTDB.nt_info_db
-        File? nr_loc_db = if (skip_protein_compression) then GenerateNRDB.nr_loc_db else GenerateNRDBCompressedProtein.nr_loc_db
+        File? nt = if (skip_nuc_compression) then DownloadNT.nt else CompressNT.nt_compressed
+        File? accession2taxid_db = if (skip_protein_compression && !skip_nuc_compression) then GenerateIndexAccessionsNoCompressProtein.accession2taxid_db
+                                    else if (!skip_protein_compression && skip_nuc_compression) then GenerateIndexAccessionsNoCompressNuc.accession2taxid_db
+                                    else if (!skip_nuc_compression && !skip_protein_compression)then GenerateIndexAccessionsWCompression.accession2taxid_db
+                                    else GenerateIndexAccessionsNoCompression.accession2taxid_db
+        File? nt_loc_db = if (skip_nuc_compression) then GenerateNTDBNoCompression.nt_loc_db else GenerateNTDBWCompression.nt_loc_db
+        File? nt_info_db = if (skip_nuc_compression) then GenerateNTDBNoCompression.nt_info_db else GenerateNTDBWCompression.nt_info_db
+        File? nr_loc_db = if (skip_protein_compression) then GenerateNRDBNoCompression.nr_loc_db else GenerateNRDBWCompression.nr_loc_db
         # File? nr_info_db = if (skip_protein_compression) then GenerateNRDB.nr_info_db else GenerateNRDBCompressedProtein.nr_info_db
-        File nt_contained_in_tree =  CompressNT.nt_contained_in_tree
-        File nt_contained_in_chunk = CompressNT.nt_contained_in_chunk
+        File? nt_contained_in_tree =  CompressNT.nt_contained_in_tree
+        File? nt_contained_in_chunk = CompressNT.nt_contained_in_chunk
         File? nr_contained_in_tree = CompressNR.nr_contained_in_tree
         File? nr_contained_in_chunk = CompressNR.nr_contained_in_chunk
 
 
-        Directory? diamond_index = if (skip_protein_compression) then GenerateIndexDiamond.diamond_index else GenerateIndexDiamondCompressedProtein.diamond_index
+        Directory? diamond_index = if (skip_protein_compression) then GenerateIndexDiamondNoCompression.diamond_index else GenerateIndexDiamondWCompression.diamond_index
         # File taxid_lineages_db = GenerateIndexLineages.taxid_lineages_db
         # File versioned_taxid_lineages_csv = GenerateIndexLineages.versioned_taxid_lineages_csv
         # File deuterostome_taxids = GenerateIndexLineages.deuterostome_taxids
         # File taxon_ignore_list = GenerateIndexLineages.taxon_ignore_list
-        Directory minimap2_index = GenerateIndexMinimap2.minimap2_index
+        Directory? minimap2_index = if (skip_nuc_compression) then GenerateIndexMinimap2NoCompression.minimap2_index else GenerateIndexMinimap2WCompression.minimap2_index
     }
 }
 
