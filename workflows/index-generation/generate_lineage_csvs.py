@@ -265,7 +265,6 @@ def version_taxon_lineages(
                     else:
                         num_new_taxa_rows += 1
             
-            # log number of entries in new lineages filename
 
             for previous_row in previous_lineages.values():
                 # All rows left in previous_lineages are for taxons that have
@@ -276,15 +275,16 @@ def version_taxon_lineages(
                 num_deprecated_rows += 1
                 num_total_new_rows += 1
 
-        logging.warning(f'Number of unchanged lineage rows: {num_unchanged_rows}')
-        logging.warning(f'Number of updated lineage rows: {num_updated_lineage_rows}')
-        logging.warning(f'Number of new taxa rows: {num_new_taxa_rows}')
-        logging.warning(f'Number of deprecated rows: {num_deprecated_rows}')
-        logging.warning(f'Number of total rows written to new table: {num_total_new_rows}')
+        summary_counts = f'Number of taxa with unchanged lineages: {num_unchanged_rows}\n' \
+            f'Number of taxa/rows with updated lineages: {num_updated_lineage_rows}\n' \
+            f'Number of new taxa rows: {num_new_taxa_rows}\n' \
+            f'Number of deprecated rows: {num_deprecated_rows}\n' \
+            f'Number of total rows written to new table: {num_total_new_rows}'
+        logging.info(summary_counts)
 
         expected_existing_num_rows = num_unchanged_rows + num_deprecated_rows
         if not expected_existing_num_rows == num_existing_rows:
-            logging.warning(f'Number of expected existing rows (deprecated, unchanged, and updated rows) {expected_existing_num_rows} does not match number of rows in taxon lineages table {num_existing_rows}')
+            logging.warning(f'Number of expected existing rows (deprecated lineages and unchanged lineages) {expected_existing_num_rows} does not match number of rows in taxon lineages table {num_existing_rows}')
 
         expected_total_rows = num_existing_rows + num_updated_lineage_rows + num_new_taxa_rows
         if not expected_total_rows == num_total_new_rows:
