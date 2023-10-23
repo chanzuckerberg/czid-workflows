@@ -7,6 +7,8 @@ from datetime import datetime
 
 from typing import Dict, Union
 
+logging.basicConfig(level=logging.DEBUG, format="%(asctime)s|%(levelname)s|%(message)s")
+
 _taxon_levels = [
     "superkingdom",
     "kingdom",
@@ -220,7 +222,9 @@ def version_taxon_lineages(
 
     # log number of entries in previous lineages
     num_existing_rows = len(previous_lineages)
-    logging.warning(f'Number of rows in existing taxon lineages table: {num_existing_rows}')
+    logging.warning(
+        f"Number of rows in existing taxon lineages table: {num_existing_rows}"
+    )
 
     with gzip.open(output_filename, "wt") as wf:
         writer = csv.DictWriter(wf, fieldnames=_fieldnames + _versioning_fieldnames)
@@ -264,7 +268,6 @@ def version_taxon_lineages(
                         num_deprecated_rows += 1
                     else:
                         num_new_taxa_rows += 1
-            
 
             for previous_row in previous_lineages.values():
                 # All rows left in previous_lineages are for taxons that have
@@ -275,20 +278,28 @@ def version_taxon_lineages(
                 num_deprecated_rows += 1
                 num_total_new_rows += 1
 
-        summary_counts = f'Number of taxa with unchanged lineages: {num_unchanged_rows}\n' \
-            f'Number of taxa/rows with updated lineages: {num_updated_lineage_rows}\n' \
-            f'Number of new taxa rows: {num_new_taxa_rows}\n' \
-            f'Number of deprecated rows: {num_deprecated_rows}\n' \
-            f'Number of total rows written to new table: {num_total_new_rows}'
+        summary_counts = (
+            f"Number of taxa with unchanged lineages: {num_unchanged_rows}\n"
+            f"Number of taxa/rows with updated lineages: {num_updated_lineage_rows}\n"
+            f"Number of new taxa rows: {num_new_taxa_rows}\n"
+            f"Number of deprecated rows: {num_deprecated_rows}\n"
+            f"Number of total rows written to new table: {num_total_new_rows}"
+        )
         logging.info(summary_counts)
 
         expected_existing_num_rows = num_unchanged_rows + num_deprecated_rows
         if not expected_existing_num_rows == num_existing_rows:
-            logging.warning(f'Number of expected existing rows (deprecated lineages and unchanged lineages) {expected_existing_num_rows} does not match number of rows in taxon lineages table {num_existing_rows}')
+            logging.warning(
+                f"Number of expected existing rows (deprecated lineages and unchanged lineages) {expected_existing_num_rows} does not match number of rows in taxon lineages table {num_existing_rows}"
+            )
 
-        expected_total_rows = num_existing_rows + num_updated_lineage_rows + num_new_taxa_rows
+        expected_total_rows = (
+            num_existing_rows + num_updated_lineage_rows + num_new_taxa_rows
+        )
         if not expected_total_rows == num_total_new_rows:
-            logging.warning(f'Expected number of rows in new table (length of old table + updated rows + new rows) {expected_total_rows} does not match number of rows written {num_total_new_rows}')
+            logging.warning(
+                f"Expected number of rows in new table (length of old table + updated rows + new rows) {expected_total_rows} does not match number of rows written {num_total_new_rows}"
+            )
 
 
 if __name__ == "__main__":
