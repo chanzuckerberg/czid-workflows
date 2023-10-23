@@ -143,9 +143,26 @@ def _equals(previous_row: Dict[str, str], row: Dict[str, str]):
 
     return True
 
+
 def _find_highest_taxonomy_changed(previous_row: Dict[str, str], row: Dict[str, str]):
-    fieldnames_to_search = [f'{level}_name' for level in _taxon_levels]
-    # searches in order of taxid (should be the same), is_phage, superkingdom -> kingdom -> ... -> species
+    """
+    Finds the highest rank taxonomy level at which a taxon was reclassified. e.g. if species A was reassigned
+    to a different genus and family, it would return the new family name instead of the genus name.
+    """
+    fieldnames_to_search = [
+        f"{level}_{label}"
+        for level in _taxon_levels
+        for label in [
+            "name",
+            "taxid",
+            "common_name",
+        ]  # prefer to output level changed at as name rather than taxid
+    ] + [
+        "taxid",
+        "tax_name",
+        "is_phage",
+    ]  # make sure tax_name is at the end of the list to search since it'll change if a genus/family changes
+
     for fieldname in fieldnames_to_search:
         if previous_row[fieldname] != row[fieldname]:
             return (fieldname, previous_row[fieldname], row[fieldname])
@@ -232,7 +249,11 @@ def version_taxon_lineages(
         f"Number of rows in existing taxon lineages table: {num_existing_rows}"
     )
 
-    with gzip.open(output_filename, "wt") as wf, open("changelog.csv", 'w') as log, open("deleted_log.csv", 'w') as deleted_log, open("new_taxa", 'w') as new_taxa_log:
+    with gzip.open(output_filename, "wt") as wf, open(
+        "changelog.csv", "w"
+    ) as changed_taxa, open("deleted_log.csv", "w") as deleted_log, open(
+        "new_taxa.csv", "w"
+    ) as new_taxa_log:
         writer = csv.DictWriter(wf, fieldnames=_fieldnames + _versioning_fieldnames)
         writer.writeheader()
         # keep track of counts of different types of taxa
@@ -243,11 +264,23 @@ def version_taxon_lineages(
         num_total_new_rows = 0
         num_deprecated_rows = 0
 
-        log_writer = csv.writer(log)
-        log_writer.writerow(["taxid", "taxonomy_level", "old_value", "new_value"])
+        changed_taxa_writer = csv.writer(changed_taxa)
+        changed_taxa_writer.writerow(
+            ["taxid", "tax_name", "taxonomy_level", "old_value", "new_value"]
+        )
+
+        deleted_taxa_writer = csv.writer(deleted_log)
+        deleted_taxa_writer.writerow(["taxid", "tax_name"])
+
+        new_taxa_writer = csv.writer(new_taxa_log)
+        new_taxa_writer.writerow(["taxid", "tax_name"])
+
+        non_deprecated_taxids = set()
 
         with gzip.open(lineages_filename, "rt") as rf:
             for row in csv.DictReader(rf):
+                non_deprecated_taxids.add(row["taxid"])
+
                 previous_row = previous_lineages.pop(
                     (row["taxid"], previous_lineages_version), None
                 )
@@ -273,16 +306,28 @@ def version_taxon_lineages(
                     num_total_new_rows += 1
 
                     if previous_row:
-                        (taxonomy_level, old_val, new_val) = _find_highest_taxonomy_changed(previous_row, row)
-                        print(taxonomy_level, old_val, new_val)
-                        log_writer.writerow([taxonomy_level, old_val, new_val])
+                        (
+                            taxonomy_level,
+                            old_val,
+                            new_val,
+                        ) = _find_highest_taxonomy_changed(previous_row, row)
+                        changed_taxa_writer.writerow(
+                            [
+                                row["taxid"],
+                                row["tax_name"],
+                                taxonomy_level,
+                                old_val,
+                                new_val,
+                            ]
+                        )
                         # this is an updated lineage
                         writer.writerow(previous_row)
+                    else:
+                        # this is a new lineage
+                        new_taxa_writer.writerow([row["taxid"], row["tax_name"]])
                         num_total_new_rows += 1
                         num_updated_lineage_rows += 1
                         num_deprecated_rows += 1
-                    else:
-                        # this is a new lineage
                         num_new_taxa_rows += 1
 
             for previous_row in previous_lineages.values():
@@ -291,6 +336,10 @@ def version_taxon_lineages(
                 #   write them to the new output file so we have them for older versions,
                 #   they just won't have their version updated so they will be considered expired.
                 writer.writerow(previous_row)
+                if not previous_row["taxid"] in non_deprecated_taxids:
+                    deleted_taxa_writer.writerow(
+                        [previous_row["taxid"], previous_row["tax_name"]]
+                    )
                 num_deprecated_rows += 1
                 num_total_new_rows += 1
 
