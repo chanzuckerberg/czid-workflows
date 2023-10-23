@@ -7,6 +7,8 @@ from datetime import datetime
 
 from typing import Dict, Union
 
+logging.basicConfig(level=logging.DEBUG, format="%(asctime)s|%(levelname)s|%(message)s")
+
 _taxon_levels = [
     "superkingdom",
     "kingdom",
@@ -23,7 +25,9 @@ _fieldnames = [
     "tax_name",
     "is_phage",
 ] + [
-    f"{level}_{label}" for level in _taxon_levels for label in ["taxid", "name", "common_name"]
+    f"{level}_{label}"
+    for level in _taxon_levels
+    for label in ["taxid", "name", "common_name"]
 ]
 
 _versioning_fieldnames = [
@@ -33,11 +37,26 @@ _versioning_fieldnames = [
     "updated_at",
 ]
 
-PHAGE_FAMILIES_NAMES = {'Myoviridae', 'Siphoviridae', 'Podoviridae', 'Lipothrixviridae',
-                        'Rudiviridae', 'Ampullaviridae', 'Bicaudaviridae', 'Clavaviridae',
-                        'Corticoviridae', 'Cystoviridae', 'Fuselloviridae', 'Globuloviridae',
-                        'Guttaviridae', 'Inoviridae', 'Leviviridae', 'Microviridae',
-                        'Plasmaviridae', 'Tectiviridae'}
+PHAGE_FAMILIES_NAMES = {
+    "Myoviridae",
+    "Siphoviridae",
+    "Podoviridae",
+    "Lipothrixviridae",
+    "Rudiviridae",
+    "Ampullaviridae",
+    "Bicaudaviridae",
+    "Clavaviridae",
+    "Corticoviridae",
+    "Cystoviridae",
+    "Fuselloviridae",
+    "Globuloviridae",
+    "Guttaviridae",
+    "Inoviridae",
+    "Leviviridae",
+    "Microviridae",
+    "Plasmaviridae",
+    "Tectiviridae",
+}
 
 
 def generate_taxon_lineage_names(
@@ -87,7 +106,9 @@ def generate_taxon_lineage_names(
         for row in csv.DictReader(f):
             names[row["tax_id"]] = (row["name_txt"], row["name_txt_common"])
 
-    with gzip.open(lineages_filename, "rt") as rf, gzip.open(output_filename, "wt") as wf:
+    with gzip.open(lineages_filename, "rt") as rf, gzip.open(
+        output_filename, "wt"
+    ) as wf:
         writer = csv.DictWriter(wf, fieldnames=_fieldnames)
         writer.writeheader()
 
@@ -102,7 +123,10 @@ def generate_taxon_lineage_names(
             for level in _taxon_levels:
                 new_row[f"{level}_taxid"] = row[level]
                 name, common_name = names.get(row[level], ("", ""))
-                new_row[f"{level}_name"], new_row[f"{level}_common_name"] = name, common_name
+                new_row[f"{level}_name"], new_row[f"{level}_common_name"] = (
+                    name,
+                    common_name,
+                )
             writer.writerow(new_row)
 
 
@@ -190,12 +214,17 @@ def version_taxon_lineages(
         with gzip.open(previous_lineages_filename, "rt") as f:
             for row in csv.DictReader(f):
                 previous_lineages[(row["taxid"], row["version_end"])] = row
-                if not previous_lineages_version or previous_lineages_version < row["version_end"]:
+                if (
+                    not previous_lineages_version
+                    or previous_lineages_version < row["version_end"]
+                ):
                     previous_lineages_version = row["version_end"]
 
     # log number of entries in previous lineages
     num_existing_rows = len(previous_lineages)
-    logging.warning(f'Number of rows in existing taxon lineages table: {num_existing_rows}')
+    logging.warning(
+        f"Number of rows in existing taxon lineages table: {num_existing_rows}"
+    )
 
     with gzip.open(output_filename, "wt") as wf:
         writer = csv.DictWriter(wf, fieldnames=_fieldnames + _versioning_fieldnames)
@@ -208,7 +237,9 @@ def version_taxon_lineages(
 
         with gzip.open(lineages_filename, "rt") as rf:
             for row in csv.DictReader(rf):
-                previous_row = previous_lineages.pop((row["taxid"], previous_lineages_version), None)
+                previous_row = previous_lineages.pop(
+                    (row["taxid"], previous_lineages_version), None
+                )
 
                 if previous_row and _equals(row, previous_row):
                     # We already have this lineage, update its version_end
@@ -237,7 +268,6 @@ def version_taxon_lineages(
                         num_deprecated_rows += 1
                     else:
                         num_new_taxa_rows += 1
-            
 
             for previous_row in previous_lineages.values():
                 # All rows left in previous_lineages are for taxons that have
@@ -248,20 +278,28 @@ def version_taxon_lineages(
                 num_deprecated_rows += 1
                 num_total_new_rows += 1
 
-        summary_counts = f'Number of taxa with unchanged lineages: {num_unchanged_rows}\n' \
-            f'Number of taxa/rows with updated lineages: {num_updated_lineage_rows}\n' \
-            f'Number of new taxa rows: {num_new_taxa_rows}\n' \
-            f'Number of deprecated rows: {num_deprecated_rows}\n' \
-            f'Number of total rows written to new table: {num_total_new_rows}'
+        summary_counts = (
+            f"Number of taxa with unchanged lineages: {num_unchanged_rows}\n"
+            f"Number of taxa/rows with updated lineages: {num_updated_lineage_rows}\n"
+            f"Number of new taxa rows: {num_new_taxa_rows}\n"
+            f"Number of deprecated rows: {num_deprecated_rows}\n"
+            f"Number of total rows written to new table: {num_total_new_rows}"
+        )
         logging.info(summary_counts)
 
         expected_existing_num_rows = num_unchanged_rows + num_deprecated_rows
         if not expected_existing_num_rows == num_existing_rows:
-            logging.warning(f'Number of expected existing rows (deprecated lineages and unchanged lineages) {expected_existing_num_rows} does not match number of rows in taxon lineages table {num_existing_rows}')
+            logging.warning(
+                f"Number of expected existing rows (deprecated lineages and unchanged lineages) {expected_existing_num_rows} does not match number of rows in taxon lineages table {num_existing_rows}"
+            )
 
-        expected_total_rows = num_existing_rows + num_updated_lineage_rows + num_new_taxa_rows
+        expected_total_rows = (
+            num_existing_rows + num_updated_lineage_rows + num_new_taxa_rows
+        )
         if not expected_total_rows == num_total_new_rows:
-            logging.warning(f'Expected number of rows in new table (length of old table + updated rows + new rows) {expected_total_rows} does not match number of rows written {num_total_new_rows}')
+            logging.warning(
+                f"Expected number of rows in new table (length of old table + updated rows + new rows) {expected_total_rows} does not match number of rows written {num_total_new_rows}"
+            )
 
 
 if __name__ == "__main__":
