@@ -274,8 +274,8 @@ def version_taxon_lineages(
 
             for previous_row in previous_lineages.values():
                 # All rows left in previous_lineages are for taxons that have
-                #   been removed or outdated lineages for existing taxa. We still need to 
-                #   write them to the new output file so we have them for older versions, 
+                #   been removed or outdated lineages for existing taxa. We still need to
+                #   write them to the new output file so we have them for older versions,
                 #   they just won't have their version updated so they will be considered expired.
                 writer.writerow(previous_row)
                 num_deprecated_rows += 1
@@ -295,7 +295,11 @@ def version_taxon_lineages(
         expected_existing_num_rows = num_unchanged_rows + num_deprecated_rows
         if not expected_existing_num_rows == num_existing_rows:
             logging.warning(
-                f"Number of expected existing rows (deprecated lineages and unchanged lineages) {expected_existing_num_rows} does not match number of rows in taxon lineages table {num_existing_rows}"
+                """
+                Number of expected existing rows (deprecated lineages and unchanged lineages)
+                 %s does not match number of rows in taxon lineages table %s
+                """
+                % (expected_existing_num_rows, num_existing_rows)
             )
 
         expected_total_new_rows = (
@@ -303,7 +307,11 @@ def version_taxon_lineages(
         )
         if not expected_total_new_rows == num_total_new_rows:
             logging.warning(
-                f"Expected number of rows in new table (length of old table + updated rows + new rows) {expected_total_new_rows} does not match number of rows written {num_total_new_rows}"
+                """
+                Expected number of rows in new table (length of old table + updated rows + new rows)
+                 %s does not match number of rows written %s
+                """
+                % (expected_total_new_rows, num_total_new_rows)
             )
 
 
