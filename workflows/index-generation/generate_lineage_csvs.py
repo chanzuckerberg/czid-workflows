@@ -220,15 +220,16 @@ def version_taxon_lineages(
                 ):
                     previous_lineages_version = row["version_end"]
 
-    # log number of entries in previous lineages
     num_existing_rows = len(previous_lineages)
-    logging.warning(
+    logging.info(
         f"Number of rows in existing taxon lineages table: {num_existing_rows}"
     )
 
     with gzip.open(output_filename, "wt") as wf:
         writer = csv.DictWriter(wf, fieldnames=_fieldnames + _versioning_fieldnames)
         writer.writeheader()
+        # keep track of counts of different types of taxa
+        # this allows us to spot check results without loading output file into memory
         num_unchanged_rows = 0
         num_new_taxa_rows = 0
         num_updated_lineage_rows = 0
@@ -242,7 +243,7 @@ def version_taxon_lineages(
                 )
 
                 if previous_row and _equals(row, previous_row):
-                    # We already have this lineage, update its version_end
+                    # We already have this exact lineage, update its version_end
                     #   to keep it from expiring
                     previous_row["version_end"] = version
                     previous_row["updated_at"] = str(datetime.now())
@@ -262,43 +263,47 @@ def version_taxon_lineages(
                     num_total_new_rows += 1
 
                     if previous_row:
+                        # this is an updated lineage
                         writer.writerow(previous_row)
                         num_total_new_rows += 1
                         num_updated_lineage_rows += 1
                         num_deprecated_rows += 1
                     else:
+                        # this is a new lineage
                         num_new_taxa_rows += 1
 
             for previous_row in previous_lineages.values():
                 # All rows left in previous_lineages are for taxons that have
-                #   been removed. We still need to write them to the new output
-                #   file so we have them for older versions, they just won't have
-                #   their version updated so they will be considered expired.
+                #   been removed or outdated lineages for existing taxa. We still need to 
+                #   write them to the new output file so we have them for older versions, 
+                #   they just won't have their version updated so they will be considered expired.
                 writer.writerow(previous_row)
                 num_deprecated_rows += 1
                 num_total_new_rows += 1
 
         summary_counts = (
             f"Number of taxa with unchanged lineages: {num_unchanged_rows}\n"
-            f"Number of taxa/rows with updated lineages: {num_updated_lineage_rows}\n"
-            f"Number of new taxa rows: {num_new_taxa_rows}\n"
-            f"Number of deprecated rows: {num_deprecated_rows}\n"
+            f"Number of taxa with updated lineages: {num_updated_lineage_rows}\n"
+            f"Number of new taxa: {num_new_taxa_rows}\n"
+            f"Number of deprecated lineage rows (outdated lineage or deprecated taxa): {num_deprecated_rows}\n"
             f"Number of total rows written to new table: {num_total_new_rows}"
         )
         logging.info(summary_counts)
 
+        # Assert that the correct number of rows have been written to the new table
+        # and that we've correctly calculated the number of taxa in each category
         expected_existing_num_rows = num_unchanged_rows + num_deprecated_rows
         if not expected_existing_num_rows == num_existing_rows:
             logging.warning(
                 f"Number of expected existing rows (deprecated lineages and unchanged lineages) {expected_existing_num_rows} does not match number of rows in taxon lineages table {num_existing_rows}"
             )
 
-        expected_total_rows = (
+        expected_total_new_rows = (
             num_existing_rows + num_updated_lineage_rows + num_new_taxa_rows
         )
-        if not expected_total_rows == num_total_new_rows:
+        if not expected_total_new_rows == num_total_new_rows:
             logging.warning(
-                f"Expected number of rows in new table (length of old table + updated rows + new rows) {expected_total_rows} does not match number of rows written {num_total_new_rows}"
+                f"Expected number of rows in new table (length of old table + updated rows + new rows) {expected_total_new_rows} does not match number of rows written {num_total_new_rows}"
             )
 
 
