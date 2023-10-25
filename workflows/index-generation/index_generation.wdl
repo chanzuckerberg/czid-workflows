@@ -101,6 +101,9 @@ workflow index_generation {
         File versioned_taxid_lineages_csv = GenerateIndexLineages.versioned_taxid_lineages_csv
         File deuterostome_taxids = GenerateIndexLineages.deuterostome_taxids
         File taxon_ignore_list = GenerateIndexLineages.taxon_ignore_list
+        File changed_taxa_log = GenerateIndexLineages.changed_taxa_log
+        File deleted_taxa_log = GenerateIndexLineages.deleted_taxa_log
+        File new_taxa_log = GenerateIndexLineages.new_taxa_log
         Directory minimap2_index = GenerateIndexMinimap2.minimap2_index
     }
 }
@@ -330,6 +333,9 @@ task GenerateIndexLineages {
         File versioned_taxid_lineages_csv = "versioned-taxid-lineages.csv.gz"
         File deuterostome_taxids = "deuterostome_taxids.txt"
         File taxon_ignore_list = "taxon_ignore_list.txt"
+        File changed_taxa_log = "changed_lineage_taxa.csv"
+        File deleted_taxa_log = "deleted_taxa.csv"
+        File new_taxa_log = "new_taxa.csv"
     }
 
     runtime {

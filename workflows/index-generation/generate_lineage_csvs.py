@@ -249,13 +249,11 @@ def version_taxon_lineages(
         f"Number of rows in existing taxon lineages table: {num_existing_rows}"
     )
 
-    with gzip.open(output_filename, "wt") as wf, open(
-        "changelog.csv", "w"
-    ) as changed_taxa, open("deleted_log.csv", "w") as deleted_log, open(
-        "new_taxa.csv", "w"
+    with gzip.open(output_filename, "wt") as wf, gzip.open(
+        "changed_lineage_taxa.csv.gz", "wt"
+    ) as changed_taxa, gzip.open("deleted_taxa.csv.gz", "wt") as deleted_log, gzip.open(
+        "new_taxa.csv.gz", "wt"
     ) as new_taxa_log:
-        writer = csv.DictWriter(wf, fieldnames=_fieldnames + _versioning_fieldnames)
-        writer.writeheader()
         # keep track of counts of different types of taxa
         # this allows us to spot check results without loading output file into memory
         num_unchanged_rows = 0
@@ -263,6 +261,11 @@ def version_taxon_lineages(
         num_updated_lineage_rows = 0
         num_total_new_rows = 0
         num_deprecated_rows = 0
+        num_deleted_taxa = 0
+
+        # writer for versioned output taxon lineage csv
+        versioned_csv_writer = csv.DictWriter(wf, fieldnames=_fieldnames + _versioning_fieldnames)
+        versioned_csv_writer.writeheader()
 
         changed_taxa_writer = csv.writer(changed_taxa)
         changed_taxa_writer.writerow(
@@ -275,6 +278,9 @@ def version_taxon_lineages(
         new_taxa_writer = csv.writer(new_taxa_log)
         new_taxa_writer.writerow(["taxid", "tax_name"])
 
+        # Keeping track of taxids in the non-versioned lineage file 
+        # allows us to separate taxa that have been deprecated altogether
+        # from those that have just had their lineage changed.
         non_deprecated_taxids = set()
 
         with gzip.open(lineages_filename, "rt") as rf:
@@ -290,7 +296,7 @@ def version_taxon_lineages(
                     #   to keep it from expiring
                     previous_row["version_end"] = version
                     previous_row["updated_at"] = str(datetime.now())
-                    writer.writerow(previous_row)
+                    versioned_csv_writer.writerow(previous_row)
                     num_unchanged_rows += 1
                     num_total_new_rows += 1
                 else:
@@ -302,10 +308,11 @@ def version_taxon_lineages(
                     row["version_end"] = version
                     row["created_at"] = str(datetime.now())
                     row["updated_at"] = str(datetime.now())
-                    writer.writerow(row)
+                    versioned_csv_writer.writerow(row)
                     num_total_new_rows += 1
 
                     if previous_row:
+                        # this is an updated lineage
                         (
                             taxonomy_level,
                             old_val,
@@ -320,14 +327,13 @@ def version_taxon_lineages(
                                 new_val,
                             ]
                         )
-                        # this is an updated lineage
-                        writer.writerow(previous_row)
-                    else:
-                        # this is a new lineage
-                        new_taxa_writer.writerow([row["taxid"], row["tax_name"]])
+                        versioned_csv_writer.writerow(previous_row)
                         num_total_new_rows += 1
                         num_updated_lineage_rows += 1
                         num_deprecated_rows += 1
+                    else:
+                        # this is a new lineage
+                        new_taxa_writer.writerow([row["taxid"], row["tax_name"]])
                         num_new_taxa_rows += 1
 
             for previous_row in previous_lineages.values():
@@ -335,19 +341,22 @@ def version_taxon_lineages(
                 #   been removed or outdated lineages for existing taxa. We still need to
                 #   write them to the new output file so we have them for older versions,
                 #   they just won't have their version updated so they will be considered expired.
-                writer.writerow(previous_row)
-                if not previous_row["taxid"] in non_deprecated_taxids:
+                versioned_csv_writer.writerow(previous_row)
+                num_deprecated_rows += 1
+                num_total_new_rows += 1
+                if not previous_row["taxid"] in non_deprecated_taxids and previous_row["version_end"] == previous_lineages_version:
                     deleted_taxa_writer.writerow(
                         [previous_row["taxid"], previous_row["tax_name"]]
                     )
-                num_deprecated_rows += 1
-                num_total_new_rows += 1
+                    num_deleted_taxa += 1
+
 
         summary_counts = (
             f"Number of taxa with unchanged lineages: {num_unchanged_rows}\n"
             f"Number of taxa with updated lineages: {num_updated_lineage_rows}\n"
             f"Number of new taxa: {num_new_taxa_rows}\n"
             f"Number of deprecated lineage rows (outdated lineage or deprecated taxa): {num_deprecated_rows}\n"
+            f"Number of deprecated taxa: {num_deleted_taxa}\n"
             f"Number of total rows written to new table: {num_total_new_rows}"
         )
         logging.info(summary_counts)
