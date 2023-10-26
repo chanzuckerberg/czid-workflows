@@ -14,7 +14,7 @@ class TestAMR(WDLTestCase):
     CARD = "s3://czid-public-references/test/AMRv2/card.json"
 
     def testRgiMain(self):
-        inputs = {"contigs": relpath("contigs.fasta"), "card_json": self.CARD}
+        inputs = {"contigs_fa": relpath("contigs.fasta"), "card_json": self.CARD}
         res = self.run_miniwdl(task="RunRgiMain", task_input=inputs)
         with open(res["outputs"]["RunRgiMain.main_amr_results"]) as main_results:
             lastline = main_results.read().splitlines()[-1]
@@ -23,14 +23,14 @@ class TestAMR(WDLTestCase):
         self.assertEqual(main[3], "260")
 
     def testRgiEmptyMain(self):
-        inputs = {"contigs": relpath("contigs_failed.fasta"), "card_json": self.CARD}
+        inputs = {"contigs_fa": relpath("contigs_failed.fasta"), "card_json": self.CARD}
         res = self.run_miniwdl(task="RunRgiMain", task_input=inputs)
         with open(res["outputs"]["RunRgiMain.main_amr_results"]) as main_results:
             self.assertEqual(len(main_results.read().splitlines()), 1)
 
     def testRgiBwtKma(self):
         inputs = {
-            "non_host_reads": [
+            "non_host_reads_fa": [
                 relpath("gsnap_filter_1.fa"),
                 relpath("gsnap_filter_2.fa"),
             ],
