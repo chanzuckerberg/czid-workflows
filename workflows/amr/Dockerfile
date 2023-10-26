@@ -21,9 +21,9 @@ COPY requirements.txt requirements.txt
 RUN pip3 install -r requirements.txt
 
 
-RUN git clone https://github.com/rzlim08/rgi.git
+RUN git clone https://github.com/arpcard/rgi.git
 RUN mkdir -p rgi/inputs/heatmap_inputs
-RUN cd rgi/ && git checkout 20b22dab2676e6cdfd16245dd15b9af3d266cb1b && python setup.py build && python setup.py test && python setup.py install
+RUN cd rgi/ && git checkout 5bd27cdf946d618198bf30971272b43a12842de6 && python setup.py build && python setup.py test && python setup.py install
 
 # Install seqfu (used for interleaving input files)
 ARG SEQFU_VER="1.16.0"
