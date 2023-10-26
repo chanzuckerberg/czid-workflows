@@ -22,7 +22,9 @@ _fieldnames = [
     "tax_name",
     "is_phage",
 ] + [
-    f"{level}_{label}" for level in _taxon_levels for label in ["taxid", "name", "common_name"]
+    f"{level}_{label}"
+    for level in _taxon_levels
+    for label in ["taxid", "name", "common_name"]
 ]
 
 _versioning_fieldnames = [
@@ -32,11 +34,26 @@ _versioning_fieldnames = [
     "updated_at",
 ]
 
-PHAGE_FAMILIES_NAMES = {'Myoviridae', 'Siphoviridae', 'Podoviridae', 'Lipothrixviridae',
-                        'Rudiviridae', 'Ampullaviridae', 'Bicaudaviridae', 'Clavaviridae',
-                        'Corticoviridae', 'Cystoviridae', 'Fuselloviridae', 'Globuloviridae',
-                        'Guttaviridae', 'Inoviridae', 'Leviviridae', 'Microviridae',
-                        'Plasmaviridae', 'Tectiviridae'}
+PHAGE_FAMILIES_NAMES = {
+    "Myoviridae",
+    "Siphoviridae",
+    "Podoviridae",
+    "Lipothrixviridae",
+    "Rudiviridae",
+    "Ampullaviridae",
+    "Bicaudaviridae",
+    "Clavaviridae",
+    "Corticoviridae",
+    "Cystoviridae",
+    "Fuselloviridae",
+    "Globuloviridae",
+    "Guttaviridae",
+    "Inoviridae",
+    "Leviviridae",
+    "Microviridae",
+    "Plasmaviridae",
+    "Tectiviridae",
+}
 
 
 def generate_taxon_lineage_names(
@@ -86,7 +103,9 @@ def generate_taxon_lineage_names(
         for row in csv.DictReader(f):
             names[row["tax_id"]] = (row["name_txt"], row["name_txt_common"])
 
-    with gzip.open(lineages_filename, "rt") as rf, gzip.open(output_filename, "wt") as wf:
+    with gzip.open(lineages_filename, "rt") as rf, gzip.open(
+        output_filename, "wt"
+    ) as wf:
         writer = csv.DictWriter(wf, fieldnames=_fieldnames)
         writer.writeheader()
 
@@ -101,7 +120,10 @@ def generate_taxon_lineage_names(
             for level in _taxon_levels:
                 new_row[f"{level}_taxid"] = row[level]
                 name, common_name = names.get(row[level], ("", ""))
-                new_row[f"{level}_name"], new_row[f"{level}_common_name"] = name, common_name
+                new_row[f"{level}_name"], new_row[f"{level}_common_name"] = (
+                    name,
+                    common_name,
+                )
             writer.writerow(new_row)
 
 
@@ -184,10 +206,16 @@ def version_taxon_lineages(
     scheme described above
     """
     previous_lineages = {}
+    previous_lineages_version = None
     if previous_lineages_filename:
         with gzip.open(previous_lineages_filename, "rt") as f:
             for row in csv.DictReader(f):
-                previous_lineages[row["taxid"]] = row
+                previous_lineages[(row["taxid"], row["version_end"])] = row
+                if (
+                    not previous_lineages_version
+                    or previous_lineages_version < row["version_end"]
+                ):
+                    previous_lineages_version = row["version_end"]
 
     with gzip.open(output_filename, "wt") as wf:
         writer = csv.DictWriter(wf, fieldnames=_fieldnames + _versioning_fieldnames)
@@ -195,13 +223,9 @@ def version_taxon_lineages(
 
         with gzip.open(lineages_filename, "rt") as rf:
             for row in csv.DictReader(rf):
-                previous_row = previous_lineages.get(row["taxid"])
-
-                if previous_row:
-                    # If we have a previous row, remove it so we can later
-                    #   iterate through only the rows from previous_lineages
-                    #   that aren't also in lineages
-                    del previous_lineages[row["taxid"]]
+                previous_row = previous_lineages.pop(
+                    (row["taxid"], previous_lineages_version), None
+                )
 
                 if previous_row and _equals(row, previous_row):
                     # We already have this lineage, update it's version_end
