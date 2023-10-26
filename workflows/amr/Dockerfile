@@ -20,10 +20,8 @@ RUN apt-get update && apt-get -y install  ncbi-blast+=2.9.0-2 prodigal=1:2.6.3-4
 COPY requirements.txt requirements.txt
 RUN pip3 install -r requirements.txt
 
-
-RUN git clone https://github.com/arpcard/rgi.git
-RUN mkdir -p rgi/inputs/heatmap_inputs
-RUN cd rgi/ && git checkout 5bd27cdf946d618198bf30971272b43a12842de6 && python setup.py build && python setup.py test && python setup.py install
+# RGI version 6.0.3
+RUN pip3 install git+https://github.com/arpcard/rgi.git@5bd27cdf946d618198bf30971272b43a12842de6
 
 # Install seqfu (used for interleaving input files)
 ARG SEQFU_VER="1.16.0"
