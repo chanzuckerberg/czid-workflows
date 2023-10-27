@@ -333,9 +333,9 @@ task GenerateIndexLineages {
         File versioned_taxid_lineages_csv = "versioned-taxid-lineages.csv.gz"
         File deuterostome_taxids = "deuterostome_taxids.txt"
         File taxon_ignore_list = "taxon_ignore_list.txt"
-        File changed_taxa_log = "changed_lineage_taxa.csv"
-        File deleted_taxa_log = "deleted_taxa.csv"
-        File new_taxa_log = "new_taxa.csv"
+        File changed_taxa_log = "changed_lineage_taxa.csv.gz"
+        File deleted_taxa_log = "deleted_taxa.csv.gz"
+        File new_taxa_log = "new_taxa.csv.gz"
     }
 
     runtime {
