@@ -138,14 +138,14 @@ task RunHostFilter {
             The minimap2 aligner is used for host filtration. Unmapped reads are passed to the subsequent step. Different parameters are required for alignment of RNA vs DNA reads using minimap2. Therefore, based on the initial input validation, the appropriate parameters are selected.
 
             If the sample is of type RNA, minimap2 uses splice-aware configuration:
-            '''
+            ```
             minimap2 -t {threads} -ax splice {minimap_host_db} {input_fastq} -o sample.hostfiltered.sam --split-prefix temp_name
-            '''
+            ```
 
             If the sample is of type DNA, minimap2 uses standard map-ont configuration:
-            '''
+            ```
             minimap2 -t {threads} -ax map-ont {minimap_host_db} {input_fastq} -o sample.hostfiltered.sam --split-prefix temp_name
-            '''
+            ```
 
             Minimap2 documentation can be found [here](https://lh3.github.io/minimap2/minimap2.html).
             """).strip(), file=outfile)
@@ -231,14 +231,14 @@ task RunHumanFilter {
 
 
                 If the sample is of type RNA, minimap2 uses splice-aware configuration:
-                '''
+                ```
                 minimap2 -t {threads} -ax splice {minimap_human_db} {input_fastq} -o sample.humanfiltered.sam --split-prefix temp_name
-                '''
+                ```
 
                 If the sample is of type DNA, minimap2 uses standard map-ont configuration:
-                '''
+                ```
                 minimap2 -t {threads} -ax map-ont {minimap_human_db} {input_fastq} -o sample.humanfiltered.sam --split-prefix temp_name
-                '''
+                ```
 
                 Minimap2 documentation can be found [here](https://lh3.github.io/minimap2/minimap2.html).
             """).strip(), file=outfile)
@@ -277,9 +277,9 @@ task RunSubsampling {
         import textwrap
         with open("subsampling.description.md", "w") as outfile:
             print(textwrap.dedent("""
-            Subsamples to 100,000 reads.
+            Subsamples to 1 million reads.
 
-            For samples with a high fraction of non-host reads (i.e., stool samples), the FASTA outputs following host and quality filtration steps may contain large numbers of sequences. Alignment to NT and NR databases is a resource-intensive step. To reduce computational time, the reads are sub-sampled to 100,000 total reads.
+            For samples with a high fraction of non-host reads (i.e., stool samples), the FASTA outputs following host and quality filtration steps may contain large numbers of sequences. Alignment to NT and NR databases is a resource-intensive step. To reduce computational time, the reads are sub-sampled to 1 million reads.
             """).strip(), file=outfile)
         EOF
     >>>
@@ -364,9 +364,9 @@ task RunAssembly {
             To obtain longer contigs for improved sensitivity during mapping, long reads are de novo assembled using metaFlye.
 
             metaFlye is the Flye software option optimised for low-coverage samples, and run with one iteration of polishing, as follows:
-            '''
+            ```
             flye --threads $(nproc) --meta $flye_setting {input_fastq} --out-dir temp_flye_out --iterations 1
-            '''
+            ```
 
             Flye documentation can be found [here](https://github.com/fenderglass/Flye).
             """).strip(), file=outfile)
@@ -456,9 +456,9 @@ task RunReadsToContigs {
             During assembly, the metaFlye output loses the information about which contig each individual read belongs to. Therefore, we use minimap2 to map the original reads onto their assembled contigs and samtools to extract non-contig reads.
 
             Reads are mapped to the contigs as follows:
-            '''
+            ```
             minimap2 -ax map-ont {assembled_reads} {input_fastq} -o sample.reads_to_contigs.sam -t 15 --secondary=no
-            '''
+            ```
             """).strip(), file=outfile)
         EOF
     >>>
