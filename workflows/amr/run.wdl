@@ -7,11 +7,7 @@ struct RawSample {
 }
 
 struct FilteredSample {
-    Array[File]+ subsampled_reads
-    Array[File]+ non_host_reads
-    File clusters
-    File cluster_sizes
-    File contigs
+    Array[File]+ host_filtered_reads
 }
 
 
@@ -48,39 +44,21 @@ workflow amr {
         Array[File]+ host_filtered_reads = if (defined(host_filter_stage.hisat2_human_filtered1_fastq))
             then select_all([host_filter_stage.hisat2_human_filtered1_fastq, host_filter_stage.hisat2_human_filtered2_fastq])
             else select_all([host_filter_stage.hisat2_host_filtered1_fastq, host_filter_stage.hisat2_host_filtered2_fastq])
-
-        call RunRedup as RunRedupRaw {
-            input:
-            host_filtered_reads = host_filtered_reads,
-            subsampled_reads = select_all([host_filter_stage.subsampled_out_subsampled_1_fa, host_filter_stage.subsampled_out_subsampled_2_fa]),
-            clusters = host_filter_stage.czid_dedup_out_duplicate_clusters_csv,
-            cluster_sizes = host_filter_stage.czid_dedup_out_duplicate_cluster_sizes_tsv,
-            docker_image_id = host_filtering_docker_image_id,
-        }
-        call RunSpades {
-            input:
-            reduplicated_reads = RunRedupRaw.redups_fa,
-            min_contig_length = min_contig_length,
-            docker_image_id = host_filtering_docker_image_id,
-        }
     }
 
     if (defined(filtered_sample)) {
         FilteredSample filtered_sample_in = select_first([filtered_sample])
-        File filtered_sample_contigs = filtered_sample_in.contigs
-
-        call RunRedup as RunRedupFiltered {
-            input:
-            host_filtered_reads = filtered_sample_in.non_host_reads,
-            subsampled_reads = filtered_sample_in.subsampled_reads,
-            clusters = filtered_sample_in.clusters,
-            cluster_sizes = filtered_sample_in.cluster_sizes,
-            docker_image_id = host_filtering_docker_image_id,
-        }
+        Array[File]+ filtered_sample_reads = filtered_sample_in.host_filtered_reads
     }
 
-    Array[File]+ non_host_reads_fa = select_first([RunRedupRaw.redups_fa, RunRedupFiltered.redups_fa])
-    File contigs_fa = select_first([RunSpades.contigs, filtered_sample_contigs])
+    Array[File]+ non_host_reads_fa = select_first([host_filtered_reads, filtered_sample_reads])
+
+    call RunSpades {
+        input:
+        non_host_reads_fa = non_host_reads_fa,
+        min_contig_length = min_contig_length,
+        docker_image_id = host_filtering_docker_image_id,
+    }
 
     call RunRgiBwtKma {
         input:
@@ -90,7 +68,7 @@ workflow amr {
     }
     call RunRgiMain {
         input:
-        contigs_fa = contigs_fa,
+        contigs_fa = RunSpades.contigs,
         card_json = card_json, 
         docker_image_id = docker_image_id
     }
@@ -134,14 +112,14 @@ workflow amr {
 
     call tsvToSam { 
         input: 
-        contigs_fa = contigs_fa,
+        contigs_fa = RunSpades.contigs,
         final_summary = RunResultsPerSample.final_summary,
         docker_image_id = docker_image_id
     }
 
     call ZipOutputs {
         input:
-        contigs_fa = contigs_fa,
+        contigs_fa = RunSpades.contigs,
         non_host_reads_fa = non_host_reads_fa,
         main_reports = select_all(
             [
@@ -173,63 +151,6 @@ workflow amr {
         docker_image_id = docker_image_id
     }
 
-}
-
-task RunRedup {
-    input {
-        Array[File]+ host_filtered_reads
-        Array[File]+ subsampled_reads
-        File clusters
-        File cluster_sizes
-        String docker_image_id
-    }
-    command <<<
-        set -euxo pipefail
-        # exit if no duplicate reads
-        if [[ ! $(grep -v "^1\t" "~{cluster_sizes}") ]]; then
-            counter=1
-            for fasta in ~{sep=' ' subsampled_reads}; do
-                cp $fasta redups_$counter.fa
-                ((counter++))
-            done
-            exit 0
-        fi
-
-        grep -v "^1\t" "~{cluster_sizes}" | cut -f2 > duplicated-reads.txt
-        grep -h ">" ~{sep=' ' subsampled_reads} | sed "s/^>//" > passed_filters.txt
-
-        python3 <<CODE
-        pair_values = []
-        passed_filters = set()
-        duplicates = set()
-        with open("passed_filters.txt", "r") as pf:
-            passed_filters.update(pf.read().splitlines())
-        with open("duplicated-reads.txt", "r") as dr:
-            duplicates.update(dr.read().splitlines())
-        with open("~{clusters}", "r") as clusters:
-            for line in clusters:
-                key, value = line.strip().split(",")
-                if key in duplicates and key in passed_filters and key != value:
-                    pair_values.append(value)
-
-        with open("duplicated-pairs.txt", "w+") as f:
-            for value in pair_values:
-                f.write(value)
-                f.write("\n")
-        CODE
-
-        counter=1
-        for fasta in ~{sep=' ' host_filtered_reads}; do
-            seqtk subseq $fasta duplicated-pairs.txt > redups_$counter.fastq
-            ((counter++))
-        done
-    >>>
-    output {
-        Array[File]+ redups_fa = glob("redups*.fastq")
-    }
-    runtime {
-        docker: docker_image_id
-    }
 }
 
 task RunResultsPerSample {
@@ -603,7 +524,7 @@ task RunRgiBwtKma {
 }
 task RunSpades { 
     input { 
-        Array[File]+ reduplicated_reads
+        Array[File]+ non_host_reads_fa
         Int min_contig_length
         String docker_image_id
     }
@@ -617,10 +538,10 @@ task RunSpades {
 
         }
         trap handle_failure ERR
-        if [[ "~{length(reduplicated_reads)}" -gt 1 ]]; then
-            spades.py -1 ~{sep=" -2 " reduplicated_reads} -o "spades/" -m 100 -t 36 --only-assembler 1>&2
+        if [[ "~{length(non_host_reads_fa)}" -gt 1 ]]; then
+            spades.py -1 ~{sep=" -2 " non_host_reads_fa} -o "spades/" -m 100 -t 36 --only-assembler 1>&2
         else
-            spades.py -s ~{reduplicated_reads[0]} -o "spades/" -m 100 -t 36 --only-assembler 1>&2
+            spades.py -s ~{non_host_reads_fa[0]} -o "spades/" -m 100 -t 36 --only-assembler 1>&2
         fi
         seqtk seq -L ~{min_contig_length} spades/contigs.fasta > spades/contigs_filtered.fasta
         mv spades/contigs_filtered.fasta spades/contigs.fasta
