@@ -163,16 +163,17 @@ class TestIndexGeneration(unittest.TestCase):
             self._phage_to_nonphage_assertions(result)
             self.assertEqual(len(result), 17, result)
 
-
     def _is_phage_assertions(self, results):
-        phage_taxid = 373406 # Mycobacterium virus Cooper
-        non_phage_taxid = 1031976 # Influenza A
+        phage_taxid = 373406  # Mycobacterium virus Cooper
+        non_phage_taxid = 1031976  # Influenza A
         phage_row = self._find_entries_for_taxid(results, phage_taxid, sort=False)[0]
         self.assertEqual(int(phage_row["is_phage"]), 1)
-        non_phage_row = self._find_entries_for_taxid(results, non_phage_taxid, sort=False)[0]
+        non_phage_row = self._find_entries_for_taxid(
+            results, non_phage_taxid, sort=False
+        )[0]
         self.assertEqual(int(non_phage_row["is_phage"]), 0)
 
-    def test_generate_taxon_lineage_names(self): 
+    def test_generate_taxon_lineage_names(self):
         with tempfile.NamedTemporaryFile(
             "wb", suffix="csv.gz"
         ) as names_file, tempfile.NamedTemporaryFile(
@@ -199,4 +200,3 @@ class TestIndexGeneration(unittest.TestCase):
             output_unzipped = gzip.open(output.name, "rt")
             result = list(csv.DictReader(output_unzipped))
             self._is_phage_assertions(result)
-
