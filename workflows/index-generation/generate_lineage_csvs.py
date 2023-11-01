@@ -144,9 +144,9 @@ def _equals(previous_row: Dict[str, str], row: Dict[str, str]):
     return True
 
 
-def _find_highest_taxonomy_changed(previous_row: Dict[str, str], row: Dict[str, str]):
+def _find_lineage_change(previous_row: Dict[str, str], row: Dict[str, str]):
     """
-    Finds the highest rank taxonomy level at which a taxon was reclassified. e.g. if species A was reassigned
+    Finds the highest rank taxonomy level at which a taxon was reclassified, or changes in phage/non-phage classification. e.g. if species A was reassigned
     to a different genus and family, it would return the new family name instead of the genus name.
     """
     fieldnames_to_search = [
@@ -271,14 +271,14 @@ def version_taxon_lineages(
 
         changed_taxa_writer = csv.writer(changed_taxa)
         changed_taxa_writer.writerow(
-            ["taxid", "tax_name", "taxonomy_level", "old_value", "new_value"]
+            ["taxid", "tax_name", "changed_field", "old_value", "new_value", "superkingdom"]
         )
 
         deleted_taxa_writer = csv.writer(deleted_log)
-        deleted_taxa_writer.writerow(["taxid", "tax_name"])
+        deleted_taxa_writer.writerow(["taxid", "tax_name", "superkingdom"])
 
         new_taxa_writer = csv.writer(new_taxa_log)
-        new_taxa_writer.writerow(["taxid", "tax_name"])
+        new_taxa_writer.writerow(["taxid", "tax_name", "superkingdom"])
 
         # Keeping track of taxids in the non-versioned lineage file
         # allows us to separate taxa that have been deprecated altogether
@@ -316,17 +316,18 @@ def version_taxon_lineages(
                     if previous_row:
                         # this is an updated lineage
                         (
-                            taxonomy_level,
+                            changed_field,
                             old_val,
                             new_val,
-                        ) = _find_highest_taxonomy_changed(previous_row, row)
+                        ) = _find_lineage_change(previous_row, row)
                         changed_taxa_writer.writerow(
                             [
                                 row["taxid"],
                                 row["tax_name"],
-                                taxonomy_level,
+                                changed_field,
                                 old_val,
                                 new_val,
+                                row["superkingdom_name"],
                             ]
                         )
                         versioned_csv_writer.writerow(previous_row)
@@ -335,7 +336,7 @@ def version_taxon_lineages(
                         num_deprecated_rows += 1
                     else:
                         # this is a new lineage
-                        new_taxa_writer.writerow([row["taxid"], row["tax_name"]])
+                        new_taxa_writer.writerow([row["taxid"], row["tax_name"], row["superkingdom_name"]])
                         num_new_taxa_rows += 1
 
             for previous_row in previous_lineages.values():
@@ -351,7 +352,7 @@ def version_taxon_lineages(
                     and previous_row["version_end"] == previous_lineages_version
                 ):
                     deleted_taxa_writer.writerow(
-                        [previous_row["taxid"], previous_row["tax_name"]]
+                        [previous_row["taxid"], previous_row["tax_name"], previous_row["superkingdom_name"]]
                     )
                     num_deleted_taxa += 1
 
