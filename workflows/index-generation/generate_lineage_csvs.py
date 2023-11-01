@@ -37,6 +37,9 @@ _versioning_fieldnames = [
     "updated_at",
 ]
 
+
+# We label as 'phage' all of the prokaryotic (bacterial and archaeal) virus families
+# listed here: https://en.wikipedia.org/wiki/Bacteriophage
 PHAGE_FAMILIES_NAMES = {
     "Myoviridae",
     "Siphoviridae",
@@ -56,6 +59,14 @@ PHAGE_FAMILIES_NAMES = {
     "Microviridae",
     "Plasmaviridae",
     "Tectiviridae",
+    "Turriviridae",
+    "Ackermannviridae",
+    "Sphaerolipoviridae",
+    "Pleolipoviridae",
+    "Finnlakeviridae",
+    "Portogloboviridae",
+    "Spiraviridae",
+    "Tristromaviridae",
 }
 
 
@@ -117,7 +128,6 @@ def generate_taxon_lineage_names(
             new_row = {
                 "taxid": row["tax_id"],
                 "tax_name": tax_name,
-                "is_phage": 1 if tax_name in PHAGE_FAMILIES_NAMES else 0,
             }
 
             for level in _taxon_levels:
@@ -127,6 +137,8 @@ def generate_taxon_lineage_names(
                     name,
                     common_name,
                 )
+            family_name = new_row["family_name"]
+            new_row["is_phage"] = 1 if family_name in PHAGE_FAMILIES_NAMES else 0
             writer.writerow(new_row)
 
 
