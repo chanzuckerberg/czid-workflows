@@ -10,7 +10,7 @@ task RunValidateInput {
 
     command <<<
         set -euxo pipefail
-        
+
         filter_count "~{input_fastq}" original "No reads provided"
 
         export FASTQ_PATH="~{input_fastq}"
@@ -23,8 +23,8 @@ task RunValidateInput {
         python3 <<CODE
         from Bio import SeqIO
         import json
-        
-        try: 
+
+        try:
             for record in SeqIO.parse("sample_validated.fastq", "fastq"):
                 pass
         except ValueError as e:
@@ -220,7 +220,7 @@ task RunHumanFilter {
         samtools view -S -b sample.humanfiltered.sam > sample.humanfiltered.bam
 
         filter_count sample.humanfiltered.fastq human_filtered "No reads remaining after human read filtering"
-        
+
         python3 - << 'EOF'
         import textwrap
         with open("human_filter.description.md", "w") as outfile:
@@ -441,7 +441,7 @@ task RunReadsToContigs {
         samtools view -b sample.reads_to_contigs.sam | samtools sort > sample.reads_to_contigs.bam
         samtools index sample.reads_to_contigs.bam sample.reads_to_contigs.bam.bai
 
-        # extract reads that didn't map to contigs as non-contig reads 
+        # extract reads that didn't map to contigs as non-contig reads
         samtools fastq -n -f 4 sample.reads_to_contigs.sam > sample.non_contigs.fastq
 
         # convert non-contigs.fastq file to .fasta file
@@ -451,7 +451,7 @@ task RunReadsToContigs {
         import textwrap
         with open("reads_to_contigs.description.md", "w") as outfile:
             print(textwrap.dedent("""
-            Aligns reads back to contigs to identify reads associated with each contig. 
+            Aligns reads back to contigs to identify reads associated with each contig.
 
             During assembly, the metaFlye output loses the information about which contig each individual read belongs to. Therefore, we use minimap2 to map the original reads onto their assembled contigs and samtools to extract non-contig reads.
 
@@ -494,7 +494,7 @@ task RemoveUnmappedContigs {
 
         with open("~{reads_to_contig_tsv}") as f:
             contigs_with_reads = set(row[1] for row in csv.reader(f, delimiter="\t"))
-        
+
         contigs = SeqIO.parse("~{assembled_reads}", "fasta")
         SeqIO.write((contig for contig in contigs if contig.id in contigs_with_reads), "mapped_contigs.fasta", "fasta")
         CODE
@@ -549,9 +549,9 @@ task RunNTAlignment {
     input {
         File all_sequences_to_align
         String? db_path
-        String minimap2_args 
+        String minimap2_args
         Boolean run_locally = false
-        File? local_minimap2_index 
+        File? local_minimap2_index
         String prefix
         # only required for remote alignment
         String? s3_wd_uri
@@ -595,9 +595,9 @@ task RunNRAlignment {
     input {
         File assembled_reads_fa
         String? db_path
-        String diamond_args 
+        String diamond_args
         Boolean run_locally = false
-        File? local_diamond_index 
+        File? local_diamond_index
         # only required for remote alignment
         String? s3_wd_uri
         String docker_image_id
@@ -610,12 +610,12 @@ task RunNRAlignment {
             exit 0
         fi
 
-        if [[ "~{run_locally}" == true ]]; then 
+        if [[ "~{run_locally}" == true ]]; then
           diamond makedb --in "~{local_diamond_index}" -d reference
           diamond blastx -d reference -q "~{assembled_reads_fa}" -o "diamond.m8" "--~{diamond_args}"
         else
           python3 <<CODE
-        import os 
+        import os
         from idseq_utils.batch_run_helpers import run_alignment
 
         run_alignment(
@@ -659,7 +659,7 @@ task FindTopHitsNT {
         import textwrap
         with open("find_top_hits_nt.description.md", "w") as outfile:
             print(textwrap.dedent("""
-            Gets the top hit for each read and contig alignment for NT. 
+            Gets the top hit for each read and contig alignment for NT.
 
             Amongst all equally good hits, the top hit is assigned based on the accession with the most total read count. Otherwise, the hit is assigned randomly.
             """).strip(), file=outfile)
@@ -1235,7 +1235,7 @@ task GenerateCoverageViz {
         --output-files '["coverage_viz_summary.json"]' \
         --output-dir-s3 '' \
         --additional-files '{"info_db": "~{nt_info_db}"}' \
-        --additional-attributes '{"min_contig_size": 1}'
+        --additional-attributes '{"min_contig_size": 1, "is_long_read_run": true}'
     >>>
 
     output {
@@ -1545,7 +1545,7 @@ workflow czid_long_read_mngs {
             assembly_refined_taxid_annot_fasta = GenerateTaxidFasta.refined_taxid_annot_fasta,
             docker_image_id = docker_image_id,
     }
-    
+
     call GenerateCoverageViz {
         input:
             nt_m8_reassigned = SummarizeHitsNT.nt_m8_reassigned,
