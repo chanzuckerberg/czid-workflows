@@ -138,7 +138,11 @@ def generate_taxon_lineage_names(
                     common_name,
                 )
             family_name = new_row["family_name"]
-            new_row["is_phage"] = 1 if family_name in PHAGE_FAMILIES_NAMES else 0
+            new_row["is_phage"] = (
+                1
+                if family_name in PHAGE_FAMILIES_NAMES or "phage" in tax_name.lower()
+                else 0
+            )
             writer.writerow(new_row)
 
 
