@@ -186,33 +186,41 @@ workflow index_generation {
             environ = environ,
             index_name = index_name,
             s3_dir = s3_dir,
-            # versioned_taxid_lineages_csv = GenerateIndexLineages.versioned_taxid_lineages_csv,
-            docker_image_id = docker_image_id
+            minimap2_index = if (skip_nuc_compression) then GenerateIndexMinimap2NoCompression.minimap2_index else GenerateIndexMinimap2WCompression.minimap2_index,
+            diamond_index = if (skip_protein_compression) then GenerateIndexDiamondNoCompression.diamond_index else GenerateIndexDiamondWCompression.diamond_index,
+            nt = if (skip_nuc_compression) then DownloadNT.nt else CompressNT.nt_compressed,
+            nr = if (skip_protein_compression) then DownloadNR.nr else CompressNR.nr_compressed,
+            nt_loc_db = if (skip_nuc_compression) then GenerateNTDBNoCompression.nt_loc_db else GenerateNTDBWCompression.nt_loc_db,
+            nt_info_db = if (skip_nuc_compression) then GenerateNTDBNoCompression.nt_info_db else GenerateNTDBWCompression.nt_info_db,
+            nr_loc_db = if (skip_protein_compression) then GenerateNRDBNoCompression.nr_loc_db else GenerateNRDBWCompression.nr_loc_db,
+            accession2taxid_db = if (skip_protein_compression && !skip_nuc_compression) then GenerateIndexAccessionsNoCompressProtein.accession2taxid_db
+                        else if (!skip_protein_compression && skip_nuc_compression) then GenerateIndexAccessionsNoCompressNuc.accession2taxid_db
+                        else if (!skip_nuc_compression && !skip_protein_compression)then GenerateIndexAccessionsWCompression.accession2taxid_db
+                        else GenerateIndexAccessionsNoCompression.accession2taxid_db,
+            docker_image_id = docker_image_id,
+
     }
 
     output {
-        File? nr = if (skip_protein_compression) then DownloadNR.nr else CompressNR.nr_compressed
-        File? nt = if (skip_nuc_compression) then DownloadNT.nt else CompressNT.nt_compressed
-        File? accession2taxid_db = if (skip_protein_compression && !skip_nuc_compression) then GenerateIndexAccessionsNoCompressProtein.accession2taxid_db
-                                    else if (!skip_protein_compression && skip_nuc_compression) then GenerateIndexAccessionsNoCompressNuc.accession2taxid_db
-                                    else if (!skip_nuc_compression && !skip_protein_compression)then GenerateIndexAccessionsWCompression.accession2taxid_db
-                                    else GenerateIndexAccessionsNoCompression.accession2taxid_db
-        File? nt_loc_db = if (skip_nuc_compression) then GenerateNTDBNoCompression.nt_loc_db else GenerateNTDBWCompression.nt_loc_db
-        File? nt_info_db = if (skip_nuc_compression) then GenerateNTDBNoCompression.nt_info_db else GenerateNTDBWCompression.nt_info_db
-        File? nr_loc_db = if (skip_protein_compression) then GenerateNRDBNoCompression.nr_loc_db else GenerateNRDBWCompression.nr_loc_db
-        # File? nr_info_db = if (skip_protein_compression) then GenerateNRDB.nr_info_db else GenerateNRDBCompressedProtein.nr_info_db
-        File? nt_contained_in_tree =  CompressNT.nt_contained_in_tree
-        File? nt_contained_in_chunk = CompressNT.nt_contained_in_chunk
-        File? nr_contained_in_tree = CompressNR.nr_contained_in_tree
-        File? nr_contained_in_chunk = CompressNR.nr_contained_in_chunk
+        # File? nr=nr
+        # File? nt=nt
+        # File? accession2taxid_db=accession2taxid_db
+        # File? nt_loc_db=nt_loc_db
+        # File? nt_info_db=nt_info_db
+        # File? nr_loc_db=nr_loc_db
+        # # File? nr_info_db = if (skip_protein_compression) then GenerateNRDB.nr_info_db else GenerateNRDBCompressedProtein.nr_info_db
+        # File? nt_contained_in_tree =  CompressNT.nt_contained_in_tree
+        # File? nt_contained_in_chunk = CompressNT.nt_contained_in_chunk
+        # File? nr_contained_in_tree = CompressNR.nr_contained_in_tree
+        # File? nr_contained_in_chunk = CompressNR.nr_contained_in_chunk
 
 
-        Directory? diamond_index = if (skip_protein_compression) then GenerateIndexDiamondNoCompression.diamond_index else GenerateIndexDiamondWCompression.diamond_index
+        # Directory? diamond_index = if (skip_protein_compression) then GenerateIndexDiamondNoCompression.diamond_index else GenerateIndexDiamondWCompression.diamond_index
         # File taxid_lineages_db = GenerateIndexLineages.taxid_lineages_db
         # File versioned_taxid_lineages_csv = GenerateIndexLineages.versioned_taxid_lineages_csv
         # File deuterostome_taxids = GenerateIndexLineages.deuterostome_taxids
         # File taxon_ignore_list = GenerateIndexLineages.taxon_ignore_list
-        Directory? minimap2_index = if (skip_nuc_compression) then GenerateIndexMinimap2NoCompression.minimap2_index else GenerateIndexMinimap2WCompression.minimap2_index
+        # Directory? minimap2_index = if (skip_nuc_compression) then GenerateIndexMinimap2NoCompression.minimap2_index else GenerateIndexMinimap2WCompression.minimap2_index
     }
 }
 
@@ -283,11 +291,13 @@ task DownloadAccession2Taxid {
             aws s3 cp ~{s3_accession_mapping_prefix}/accession2taxid/nucl_wgs.accession2taxid.gz pub/taxonomy/accession2taxid/nucl_wgs.accession2taxid.gz
             aws s3 cp ~{s3_accession_mapping_prefix}/accession2taxid/pdb.accession2taxid.gz pub/taxonomy/accession2taxid/pdb.accession2taxid.gz
             aws s3 cp ~{s3_accession_mapping_prefix}/accession2taxid/prot.accession2taxid.gz pub/taxonomy/accession2taxid/prot.accession2taxid.FULL.gz
+
+            gunzip pub/taxonomy/accession2taxid/nucl_gb.accession2taxid.gz
+            gunzip pub/taxonomy/accession2taxid/nucl_wgs.accession2taxid.gz
+            gunzip pub/taxonomy/accession2taxid/pdb.accession2taxid.gz
+            gunzip pub/taxonomy/accession2taxid/prot.accession2taxid.FULL.gz
         fi
-        gunzip pub/taxonomy/accession2taxid/nucl_gb.accession2taxid.gz
-        gunzip pub/taxonomy/accession2taxid/nucl_wgs.accession2taxid.gz
-        gunzip pub/taxonomy/accession2taxid/pdb.accession2taxid.gz
-        gunzip pub/taxonomy/accession2taxid/prot.accession2taxid.FULL.gz
+
     >>>
 
     output {
@@ -491,6 +501,14 @@ task LoadTaxonLineages {
         String index_name
         String? s3_dir
         # File versioned_taxid_lineages_csv
+        Directory? minimap2_index
+        Directory? diamond_index
+        File? nt
+        File? nr
+        File? nt_loc_db
+        File? nt_info_db
+        File? nr_loc_db
+        File? accession2taxid_db
         String docker_image_id
     }
 
@@ -549,17 +567,17 @@ task LoadTaxonLineages {
                 updated_at
             ) VALUES(
                 '~{index_name}',
-                '~{s3_dir}/index-generation-2/nt_compressed.fa',
-                '~{s3_dir}/index-generation-2/nt_loc.marisa',
-                '~{s3_dir}/index-generation-2/nr_compressed.fa',
-                '~{s3_dir}/index-generation-2/nr_loc.marisa',
+                '~{s3_dir}/index-generation-2/~{nt}',
+                '~{s3_dir}/index-generation-2/~{nt_loc_db}',
+                '~{s3_dir}/index-generation-2/~{nr}',
+                '~{s3_dir}/index-generation-2/~{nr_loc_db}',
                 's3://czid-public-references/ncbi-indexes-prod/2021-01-22/index-generation-2/taxid-lineages.marisa',
-                's3://czid-public-references/ncbi-indexes-prod/2021-01-22/index-generation-2/accession2taxid.marisa', # patch for now
+                '~{s3_dir}/index-generation-2/~{accession2taxid_db}', # patch for now
                 's3://czid-public-references/ncbi-indexes-prod/2021-01-22/index-generation-2/deuterostome_taxids.txt',
-                '~{s3_dir}/index-generation-2/nt_info.marisa',
+                '~{s3_dir}/index-generation-2/~{nt_info_db}',
                 's3://czid-public-references/ncbi-indexes-prod/2021-01-22/index-generation-2/taxon_ignore_list.txt',
-                '~{s3_dir}/index-generation-2/minimap2_index/nt_k14_w8_20/',
-                '~{s3_dir}/index-generation-2/diamond_index_chunksize_5500000000/',
+                '~{s3_dir}/index-generation-2/~{minimap2_index}/',
+                '~{s3_dir}/index-generation-2/~{diamond_index}/',
                 '2021-01-22',
                 NOW(),
                 NOW()
