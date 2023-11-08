@@ -166,12 +166,24 @@ class TestIndexGeneration(unittest.TestCase):
     def _is_phage_assertions(self, results):
         phage_taxid = 373406  # Mycobacterium virus Cooper
         non_phage_taxid = 1031976  # Influenza A
+        phage_taxid_without_family = 28368  # Corynebacterium diphtheriae phage
+        non_phage_contains_phage_text = 2704112  # Aphagea
         phage_row = self._find_entries_for_taxid(results, phage_taxid, sort=False)[0]
         self.assertEqual(int(phage_row["is_phage"]), 1)
         non_phage_row = self._find_entries_for_taxid(
             results, non_phage_taxid, sort=False
         )[0]
         self.assertEqual(int(non_phage_row["is_phage"]), 0)
+
+        phage_row_without_family = self._find_entries_for_taxid(
+            results, phage_taxid_without_family, sort=False
+        )[0]
+        self.assertEqual(int(phage_row_without_family["is_phage"]), 1)
+
+        non_phage_row_contains_phage_text = self._find_entries_for_taxid(
+            results, non_phage_contains_phage_text, sort=False
+        )[0]
+        self.assertEqual(int(non_phage_row_contains_phage_text["is_phage"]), 0)
 
     def test_generate_taxon_lineage_names(self):
         with tempfile.NamedTemporaryFile(
