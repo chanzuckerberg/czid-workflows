@@ -95,7 +95,8 @@ run: build python-dependencies ## run a miniwdl workflow. eg. make run WORKFLOW=
 
 .PHONY: miniwdl-explore
 miniwdl-explore: ## !ADVANCED! explore a previous miniwdl workflow run in the cli. eg. make miniwdl-explore OUTPATH='/mnt/path/to/output/'
-	cat $(OUTPATH)/inputs.json | jq ' [values[]] | flatten | .[] | tostring | select(startswith("s3") or startswith("/"))' | xargs -I {} s3parcp {} $(OUTPATH)/work/_miniwdl_inputs/0/
+	cat $(OUTPATH)/inputs.json | jq ' [values[]] | flatten | .[] | tostring | select(startswith("s3"))' | xargs -I {} aws s3 cp "{}" $(OUTPATH)/work/_miniwdl_inputs/0/
+	cat $(OUTPATH)/inputs.json | jq ' [values[]] | flatten | .[] | tostring | select(startswith("/"))' | xargs -I {} cp "{}" $(OUTPATH)/work/_miniwdl_inputs/0/
 	docker run -it --entrypoint bash -w /mnt/miniwdl_task_container/work -v$(OUTPATH):/mnt/miniwdl_task_container czid-$(WORKFLOW)
 
 .PHONY: ls

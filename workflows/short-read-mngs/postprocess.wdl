@@ -28,6 +28,7 @@ task RunAssembly {
     File assembly_scaffolds_fasta = "assembly/scaffolds.fasta"
     File assembly_read_contig_sam = "assembly/read-contig.sam"
     File assembly_contig_stats_json = "assembly/contig_stats.json"
+    File? assembly_spades_output_log = "assembly/spades/spades.log"
     File? output_read_count = "assembly_out.count"
     File? version = "assembly_version.txt"
   }
@@ -367,6 +368,7 @@ task GenerateAnnotatedFasta {
     String step_description_md = read_string("refined_annotated_out.description.md")
     File assembly_refined_annotated_merged_fa = "assembly/refined_annotated_merged.fa"
     File assembly_refined_unidentified_fa = "assembly/refined_unidentified.fa"
+    File assembly_unique_refined_unidentified_fa = "assembly/unique_refined_unidentified.fa"
     File? output_read_count = "refined_annotated_out.count"
   }
   runtime {
@@ -401,13 +403,16 @@ task GenerateTaxidFasta {
     --step-class PipelineStepGenerateTaxidFasta \
     --step-name refined_taxid_fasta_out \
     --input-files '[["~{assembly_refined_annotated_merged_fa}", "~{assembly_refined_unidentified_fa}"], ["~{assembly_gsnap_blast_m8}", "~{assembly_gsnap_reassigned_m8}", "~{assembly_gsnap_hitsummary2_tab}", "~{assembly_refined_gsnap_counts_with_dcr_json}", "~{assembly_gsnap_contig_summary_json}"], ["~{assembly_rapsearch2_blast_m8}", "~{assembly_rapsearch2_reassigned_m8}", "~{assembly_rapsearch2_hitsummary2_tab}", "~{assembly_refined_rapsearch2_counts_with_dcr_json}", "~{assembly_rapsearch2_contig_summary_json}", "~{assembly_rapsearch2_blast_top_m8}"]]' \
-    --output-files '["assembly/refined_taxid_annot.fasta"]' \
+    --output-files '["assembly/refined_taxid_annot_mapped_only.fasta", "assembly/refined_taxid_annot.fasta"]' \
     --output-dir-s3 '~{s3_wd_uri}' \
     --additional-files '{"lineage_db": "~{lineage_db}"}' \
     --additional-attributes '{}'
   >>>
   output {
     String step_description_md = read_string("refined_taxid_fasta_out.description.md")
+    # mapped reads only: mostly here because some steps can not handle unmapped
+    File assembly_refined_taxid_annot_mapped_only_fasta = "assembly/refined_taxid_annot_mapped_only.fasta"
+    # mapped+unmapped reads: Users generally want file with *all* non-host reads
     File assembly_refined_taxid_annot_fasta = "assembly/refined_taxid_annot.fasta"
     File? output_read_count = "refined_taxid_fasta_out.count"
   }
@@ -420,7 +425,7 @@ task GenerateTaxidLocator {
   input {
     String docker_image_id
     String s3_wd_uri
-    File assembly_refined_taxid_annot_fasta
+    File assembly_refined_taxid_annot_mapped_only_fasta
   }
   command<<<
   set -euxo pipefail
@@ -428,7 +433,7 @@ task GenerateTaxidLocator {
     --step-module idseq_dag.steps.generate_taxid_locator \
     --step-class PipelineStepGenerateTaxidLocator \
     --step-name refined_taxid_locator_out \
-    --input-files '[["~{assembly_refined_taxid_annot_fasta}"]]' \
+    --input-files '[["~{assembly_refined_taxid_annot_mapped_only_fasta}"]]' \
     --output-files '["assembly/refined_taxid_annot_sorted_nt.fasta", "assembly/refined_taxid_locations_nt.json", "assembly/refined_taxid_annot_sorted_nr.fasta", "assembly/refined_taxid_locations_nr.json", "assembly/refined_taxid_annot_sorted_genus_nt.fasta", "assembly/refined_taxid_locations_genus_nt.json", "assembly/refined_taxid_annot_sorted_genus_nr.fasta", "assembly/refined_taxid_locations_genus_nr.json", "assembly/refined_taxid_annot_sorted_family_nt.fasta", "assembly/refined_taxid_locations_family_nt.json", "assembly/refined_taxid_annot_sorted_family_nr.fasta", "assembly/refined_taxid_locations_family_nr.json", "assembly/refined_taxid_locations_combined.json"]' \
     --output-dir-s3 '~{s3_wd_uri}' \
     --additional-files '{}' \
@@ -640,7 +645,7 @@ workflow czid_postprocess {
       docker_image_id = docker_image_id,
       s3_wd_uri = s3_wd_uri,
       assembly_refined_annotated_merged_fa = GenerateAnnotatedFasta.assembly_refined_annotated_merged_fa,
-      assembly_refined_unidentified_fa = GenerateAnnotatedFasta.assembly_refined_unidentified_fa,
+      assembly_refined_unidentified_fa = GenerateAnnotatedFasta.assembly_unique_refined_unidentified_fa,
       assembly_gsnap_blast_m8 = BlastContigs_refined_gsnap_out.assembly_gsnap_blast_m8,
       assembly_gsnap_reassigned_m8 = BlastContigs_refined_gsnap_out.assembly_gsnap_reassigned_m8,
       assembly_gsnap_hitsummary2_tab = BlastContigs_refined_gsnap_out.assembly_gsnap_hitsummary2_tab,
@@ -660,7 +665,7 @@ workflow czid_postprocess {
     input:
       docker_image_id = docker_image_id,
       s3_wd_uri = s3_wd_uri,
-      assembly_refined_taxid_annot_fasta = GenerateTaxidFasta.assembly_refined_taxid_annot_fasta
+      assembly_refined_taxid_annot_mapped_only_fasta = GenerateTaxidFasta.assembly_refined_taxid_annot_mapped_only_fasta
   }
 
   output {
@@ -669,6 +674,7 @@ workflow czid_postprocess {
     File assembly_out_assembly_scaffolds_fasta = RunAssembly.assembly_scaffolds_fasta
     File assembly_out_assembly_read_contig_sam = RunAssembly.assembly_read_contig_sam
     File assembly_out_assembly_contig_stats_json = RunAssembly.assembly_contig_stats_json
+    File? assembly_out_assembly_spades_output_log = RunAssembly.assembly_spades_output_log
     File? spades_version = RunAssembly.version
     File? assembly_out_count = RunAssembly.output_read_count
     File coverage_out_assembly_contig_coverage_json = GenerateCoverageStats.assembly_contig_coverage_json
@@ -697,6 +703,7 @@ workflow czid_postprocess {
     File refined_annotated_out_assembly_refined_annotated_merged_fa = GenerateAnnotatedFasta.assembly_refined_annotated_merged_fa
     File refined_annotated_out_assembly_refined_unidentified_fa = GenerateAnnotatedFasta.assembly_refined_unidentified_fa
     File? refined_annotated_out_count = GenerateAnnotatedFasta.output_read_count
+    File refined_taxid_fasta_out_assembly_refined_taxid_annot_mapped_only_fasta = GenerateTaxidFasta.assembly_refined_taxid_annot_mapped_only_fasta
     File refined_taxid_fasta_out_assembly_refined_taxid_annot_fasta = GenerateTaxidFasta.assembly_refined_taxid_annot_fasta
     File? refined_taxid_fasta_out_count = GenerateTaxidFasta.output_read_count
     File refined_taxid_locator_out_assembly_refined_taxid_annot_sorted_nt_fasta = GenerateTaxidLocator.assembly_refined_taxid_annot_sorted_nt_fasta

@@ -17,7 +17,9 @@ workflow czid_host_filter {
     File bowtie2_index_tar
     File hisat2_index_tar
     File kallisto_idx
-    File? gtf_gz  # Ensembl GTF for host species
+    # `gtf_gz` unused in v8.2.8+ (Sep 2023). Left here to prevent legacy calls
+    # of older workflows from breaking newer invocations that don't use it.
+    File? gtf_gz
 
     File human_bowtie2_index_tar
     File human_hisat2_index_tar
@@ -45,12 +47,12 @@ workflow czid_host_filter {
     docker_image_id = docker_image_id,
     s3_wd_uri = s3_wd_uri
   }
-  
-  call ercc_bowtie2_filter { 
-    input: 
+
+  call ercc_bowtie2_filter {
+    input:
     valid_input1_fastq = RunValidateInput.valid_input1_fastq,
     valid_input2_fastq = RunValidateInput.valid_input2_fastq,
-    ercc_index_tar = ercc_index_tar, 
+    ercc_index_tar = ercc_index_tar,
     docker_image_id = docker_image_id,
     cpu = cpu
   }
@@ -74,7 +76,6 @@ workflow czid_host_filter {
     fastp1_fastq = fastp_qc.fastp1_fastq,
     fastp2_fastq = fastp_qc.fastp2_fastq,
     kallisto_idx = kallisto_idx,
-    gtf_gz = gtf_gz,
     docker_image_id = docker_image_id,
     cpu = cpu
   }
@@ -175,7 +176,7 @@ workflow czid_host_filter {
 
     File kallisto_transcript_abundance_tsv = kallisto.transcript_abundance_tsv
     File kallisto_ERCC_counts_tsv = kallisto.ERCC_counts_tsv
-    File? kallisto_gene_abundance_tsv = kallisto.gene_abundance_tsv
+    File kallisto_transcript_gene_mapping_tsv = kallisto.transcript_gene_mapping_tsv
 
     File bowtie2_host_filtered1_fastq = bowtie2_filter.bowtie2_host_filtered1_fastq
     File? bowtie2_host_filtered2_fastq = bowtie2_filter.bowtie2_host_filtered2_fastq
@@ -262,7 +263,7 @@ task ercc_bowtie2_filter {
   }
 
   Boolean paired = defined(valid_input2_fastq)
-  String genome_name = "ercc" 
+  String genome_name = "ercc"
   String bowtie2_invocation =
       "bowtie2 -x '/tmp/${genome_name}/${genome_name}' ${bowtie2_options} -p ${cpu}"
         + (if (paired) then " -1 '${valid_input1_fastq}' -2 '${valid_input2_fastq}'" else " -U '${valid_input1_fastq}'")
@@ -289,12 +290,16 @@ task ercc_bowtie2_filter {
         count="$(cat bowtie2_ercc_filtered1.fastq | wc -l)"
     fi
 
-    
+
     # Calculate ercc counts for bowtie2
     samtools view /tmp/bowtie2_ercc.sam | cut -f3 |  (grep "ERCC-" || [ "$?" == "1" ])| sort | uniq -c | awk '{ print $2 "\t" $1}' > 'bowtie2_ERCC_counts.tsv'
 
     count=$((count / 4))
     jq --null-input --arg count "$count" '{"bowtie2_ercc_filtered_out":$count}' > 'bowtie2_ercc_filtered_out.count'
+
+    if [[ "$count" -eq "0" ]]; then
+      raise_error InsufficientReadsError "There was an insufficient number of reads in the sample after the host and quality filtering steps."
+    fi
 
     python3 - << 'EOF'
     import textwrap
@@ -414,16 +419,21 @@ task kallisto {
     File fastp1_fastq
     File? fastp2_fastq
     File kallisto_idx
-    File? gtf_gz
-    String kallisto_options = ""
+
+    # Run kallisto single-threaded with a fixed seed.
+    # This will ensure non-random reproducibility between runs.
+    String kallisto_options = "--threads=1 --seed=42"
 
     String docker_image_id
     Int cpu = 16
   }
   Boolean paired = defined(fastp2_fastq)
-  # TODO: input fragment length parameters for non-paired-end (l = average, s = std dev)
+  # TODO: It would be better to have fragment length params for non-paired-end
+  # (l = average, s = std dev) get set dynamically based on the input data.
+  # See this GitHub comment for more background info:
+  # https://github.com/chanzuckerberg/czid-workflows/pull/282#issuecomment-1647494061
   String kallisto_invocation = "/kallisto/kallisto quant"
-      + " -i '${kallisto_idx}' -o $(pwd) --plaintext ${if (paired) then '' else '--single -l 200 -s 20'} ${kallisto_options} -t ${cpu}"
+      + " -i '${kallisto_idx}' -o $(pwd) --plaintext ${if (paired) then '' else '--single -l 200 -s 20'} ${kallisto_options}"
       + " '~{fastp1_fastq}'" + if (defined(fastp2_fastq)) then " '~{fastp2_fastq}'" else ""
 
   command <<<
@@ -441,40 +451,48 @@ task kallisto {
     echo -e "target_id\test_counts" > ERCC_counts.tsv
     grep ERCC- reads_per_transcript.kallisto.tsv | cut -f1,4 >> ERCC_counts.tsv
 
-    # If we've been provided the GTF, then roll up the transcript abundance estimates by gene.
-    if [[ -n '~{gtf_gz}' ]]; then
-      python3 - reads_per_transcript.kallisto.tsv '~{gtf_gz}' << 'EOF'
-    # Given kallisto output tsv based on index of Ensembl transcripts FASTA, and matching
-    # Ensembl GTF, report the total est_counts and tpm for each gene (sum over all transcripts
-    # of each gene).
+    # Create transcript_id -> gene_id mapping TSV
+    >&2 python3 - reads_per_transcript.kallisto.tsv transcript_to_gene_mapping.kallisto.tsv << 'EOF'
+    # This takes the transcript TSV produced by Kallisto and produces a new TSV
+    # that has each row being the `transcript_id` (AKA, `target_id`) and the
+    # `gene_id` that corresponds to it. No header row. Intent is for produced
+    # mapping TSV to help user run further analysis on the transcript TSV
+    # outside of CZID if they need gene rollup info. See CZID-8315 for more info.
     import sys
-    import pandas as pd
-    import gtfparse
+    import csv
+    import re
 
-    kallisto_df = pd.read_csv(sys.argv[1], sep="\t")
+    # We want to extract ENSG part of transcript id since that's the gene id.
+    # Some transcript ids have two ENSG ids contained within, eg ENSG0325.2
+    # and also ENSG0325. In those cases, we always want the more specific id,
+    # so ENSG0325.2 in that example. The way our Kallisto index is structured,
+    # the more specific one always shows up first, so that's what we grab.
+    ENSG_ID_PATTERN = re.compile(r"(^|\|)(ENSG.*?)(\||$)")  # id we want => group 2
+    # ERCC also shows up too, we do not worry about gene ids for those.
+    ERCC_PREFIX = "ERCC"
+    # We also have rRNA with id U13369.1. Possible we might add more later on,
+    # so we recognize by pattern instead of exact match. No gene id extraction.
+    RRNA_ID_PATTERN = r"^U\d+"
+    def get_gene_id(transcript_id):
+        ensg_match = ENSG_ID_PATTERN.search(transcript_id)
+        try:
+            return ensg_match.group(2)
+        except AttributeError:  # no match found, so no ENSG id
+            # If there is no gene id, just pass back the whole transcript_id.
+            # Intent here is to keep later use of mapping tsv safe to just
+            # blindly look up on any transcript_id and not error out even
+            # though these lines aren't really the same category of thing.
+            if not transcript_id.startswith(ERCC_PREFIX) and not re.match(RRNA_ID_PATTERN, transcript_id):
+                print(f"Format of ID not recognized! transcript_id: {transcript_id}")
+            return transcript_id
 
-    gtf_df = gtfparse.read_gtf(sys.argv[2])
-    tx_df = gtf_df[gtf_df["feature"] == "transcript"][
-        ["transcript_id", "transcript_version", "gene_id"]
-    ]
-    # kallisto target_id is a versioned transcript ID e.g. "ENST00000390446.3", while the GTF
-    # breaks out: transcript_id "ENST00000390446"; transcript_version "3";
-    # synthesize a column with the versioned transcript ID for merging.
-    tx_df = tx_df.assign(
-        transcript_id_version=tx_df["transcript_id"] + "." + tx_df["transcript_version"]
-    )
-
-    merged_df = pd.merge(
-        kallisto_df[["target_id", "est_counts", "tpm"]],
-        tx_df[["transcript_id_version", "gene_id"]],
-        left_on="target_id",
-        right_on="transcript_id_version",
-    )
-
-    gene_abundance = merged_df.groupby("gene_id").sum(numeric_only=True)
-    gene_abundance.to_csv("reads_per_gene.kallisto.tsv", sep="\t")
+    with open(sys.argv[1], "r") as transcript_f, open(sys.argv[2], "w") as out_f:
+        transcript_reader = csv.DictReader(transcript_f, delimiter="\t")
+        out_writer = csv.writer(out_f, delimiter="\t")
+        for row in transcript_reader:
+            transcript_id = row["target_id"]
+            out_writer.writerow([transcript_id, get_gene_id(transcript_id)])
     EOF
-    fi
 
     python3 - << 'EOF'
     import textwrap
@@ -483,7 +501,7 @@ task kallisto {
       **kallisto RNA quantification**
 
       Quantifies host transcripts using [kallisto](https://pachterlab.github.io/kallisto/about).
-      The host transcript sequences are sourced from Ensembl, along with
+      The host transcript sequences are sourced from GENCODE, along with
       [ERCC control sequences](https://www.nist.gov/programs-projects/external-rna-controls-consortium).
       Not all CZ ID host species have transcripts indexed; for those without, kallisto is run using ERCC
       sequences only.
@@ -504,7 +522,7 @@ task kallisto {
     String step_description_md = read_string("kallisto.description.md")
     File transcript_abundance_tsv = "reads_per_transcript.kallisto.tsv"
     File ERCC_counts_tsv = "ERCC_counts.tsv"
-    File? gene_abundance_tsv = "reads_per_gene.kallisto.tsv"
+    File transcript_gene_mapping_tsv = "transcript_to_gene_mapping.kallisto.tsv"
   }
 
   runtime {
@@ -543,7 +561,7 @@ task bowtie2_filter {
     ~{bowtie2_invocation}
 
     # generate sort & compressed BAM file for archival
-    samtools sort -n -o "bowtie2_host.bam" -@ 4 -T /tmp "/tmp/bowtie2.sam" & samtools_pid=$!
+    samtools sort -n -o "bowtie2_host.bam" -@ 8 -T /tmp "/tmp/bowtie2.sam"
 
     # Extract reads [pairs] that did NOT map to the index
     if [[ '~{paired}' == 'true' ]]; then
@@ -552,14 +570,14 @@ task bowtie2_filter {
         # +  8 (mate unmapped)
         # ----
         #   13
-        samtools fastq -f 13 -1 'bowtie2_host_filtered1.fastq' -2 'bowtie2_host_filtered2.fastq' -0 /dev/null -s /dev/null /tmp/bowtie2.sam
+        samtools fastq -f 13 -1 'bowtie2_host_filtered1.fastq' -2 'bowtie2_host_filtered2.fastq' -0 /dev/null -s /dev/null bowtie2_host.bam
         count="$(cat bowtie2_host_filtered{1,2}.fastq | wc -l)"
     else
-        samtools fastq -f 4 /tmp/bowtie2.sam > 'bowtie2_host_filtered1.fastq'
+        samtools fastq -f 4 bowtie2_host.bam > 'bowtie2_host_filtered1.fastq'
         count="$(cat bowtie2_host_filtered1.fastq | wc -l)"
     fi
 
-    
+
     count=$((count / 4))
     jq --null-input --arg count "$count" '{"bowtie2_host_filtered_out":$count}' > 'bowtie2_host_filtered_out.count'
 
@@ -585,8 +603,6 @@ task bowtie2_filter {
       Bowtie2 documentation can be found [here](https://bowtie-bio.sourceforge.net/bowtie2/index.shtml)
       """).strip(), file=outfile)
     EOF
-
-    wait $samtools_pid
 
   >>>
 
@@ -632,6 +648,8 @@ task hisat2_filter {
 
     ~{hisat2_invocation}
 
+    samtools sort -n -o /tmp/hisat2.bam -@ 8 -l 1 -T /tmp "/tmp/hisat2.sam"
+
     # Extract reads [pairs] that did NOT map to the index
     if [[ '~{paired}' == 'true' ]]; then
         #    1 (read paired)
@@ -639,10 +657,10 @@ task hisat2_filter {
         # +  8 (mate unmapped)
         # ----
         #   13
-        samtools fastq -f 13 -1 'hisat2_host_filtered1.fastq' -2 'hisat2_host_filtered2.fastq' -0 /dev/null -s /dev/null /tmp/hisat2.sam
+        samtools fastq -f 13 -1 'hisat2_host_filtered1.fastq' -2 'hisat2_host_filtered2.fastq' -0 /dev/null -s /dev/null /tmp/hisat2.bam
         count="$(cat hisat2_host_filtered{1,2}.fastq | wc -l)"
     else
-        samtools fastq -f 4 /tmp/hisat2.sam > 'hisat2_host_filtered1.fastq'
+        samtools fastq -f 4 /tmp/hisat2.bam > 'hisat2_host_filtered1.fastq'
         count="$(cat hisat2_host_filtered1.fastq | wc -l)"
     fi
 
@@ -724,7 +742,7 @@ task bowtie2_human_filter {
     ~{bowtie2_invocation}
 
     # generate sort & compressed BAM file for archival
-    samtools sort -n -o "bowtie2_human.bam" -@ 4 -T /tmp "/tmp/bowtie2.sam" & samtools_pid=$!
+    samtools sort -n -o "bowtie2_human.bam" -@ 8 -T /tmp "/tmp/bowtie2.sam"
 
     # Extract reads [pairs] that did NOT map to the index
     if [[ '~{paired}' == 'true' ]]; then
@@ -733,10 +751,10 @@ task bowtie2_human_filter {
         # +  8 (mate unmapped)
         # ----
         #   13
-        samtools fastq -f 13 -1 'bowtie2_human_filtered1.fastq' -2 'bowtie2_human_filtered2.fastq' -0 /dev/null -s /dev/null /tmp/bowtie2.sam
+        samtools fastq -f 13 -1 'bowtie2_human_filtered1.fastq' -2 'bowtie2_human_filtered2.fastq' -0 /dev/null -s /dev/null bowtie2_human.bam
         count="$(cat bowtie2_human_filtered{1,2}.fastq | wc -l)"
     else
-        samtools fastq -f 4 /tmp/bowtie2.sam > 'bowtie2_human_filtered1.fastq'
+        samtools fastq -f 4 bowtie2_human.bam > 'bowtie2_human_filtered1.fastq'
         count="$(cat bowtie2_human_filtered1.fastq | wc -l)"
     fi
 
@@ -755,8 +773,6 @@ task bowtie2_human_filter {
       to alleviate any potential data privacy concerns.
       """).strip(), file=outfile)
     EOF
-
-    wait $samtools_pid
   >>>
 
   output {
@@ -801,6 +817,8 @@ task hisat2_human_filter {
 
     ~{hisat2_invocation}
 
+    samtools sort -n -o /tmp/hisat2.bam -@ 8 -l 1 -T /tmp "/tmp/hisat2.sam"
+
     # Extract reads [pairs] that did NOT map to the index
     if [[ '~{paired}' == 'true' ]]; then
         #    1 (read paired)
@@ -808,10 +826,10 @@ task hisat2_human_filter {
         # +  8 (mate unmapped)
         # ----
         #   13
-        samtools fastq -f 13 -1 'hisat2_human_filtered1.fastq' -2 'hisat2_human_filtered2.fastq' -0 /dev/null -s /dev/null /tmp/hisat2.sam
+        samtools fastq -f 13 -1 'hisat2_human_filtered1.fastq' -2 'hisat2_human_filtered2.fastq' -0 /dev/null -s /dev/null /tmp/hisat2.bam
         count="$(cat hisat2_human_filtered{1,2}.fastq | wc -l)"
     else
-        samtools fastq -f 4 /tmp/hisat2.sam > 'hisat2_human_filtered1.fastq'
+        samtools fastq -f 4 /tmp/hisat2.bam > 'hisat2_human_filtered1.fastq'
         count="$(cat hisat2_human_filtered1.fastq | wc -l)"
     fi
 
@@ -852,7 +870,8 @@ task collect_insert_size_metrics {
   }
 
   command <<<
-    picard CollectInsertSizeMetrics 'I=~{bam}' O=picard_insert_metrics.txt H=insert_size_histogram.pdf
+    samtools sort -o "bowtie2_coordinate_sorted.bam" -@ 8 -T /tmp "~{bam}"
+    picard CollectInsertSizeMetrics I=bowtie2_coordinate_sorted.bam O=picard_insert_metrics.txt H=insert_size_histogram.pdf
     python3 - << 'EOF'
     import textwrap
     with open("collect_insert_size_metrics.description.md", "w") as outfile:
@@ -865,7 +884,7 @@ task collect_insert_size_metrics {
       Picard is run on the output BAM file obtained from running Bowtie2 on the host genome:
 
       ```
-      picard CollectInsertSizeMetrics 'I=~{bam}' O=picard_insert_metrics.txt H=insert_size_histogram.pdf
+      picard CollectInsertSizeMetrics I=bowtie2_coordinate_sorted.bam O=picard_insert_metrics.txt H=insert_size_histogram.pdf
       ```
 
       Picard documentation can be found [here](https://gatk.broadinstitute.org/hc/en-us/articles/360037055772-CollectInsertSizeMetrics-Picard-)

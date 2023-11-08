@@ -17,8 +17,8 @@ Currently we have 5 main workflows. The details of each pipeline are in a README
 * [short-read-mngs](workflows/short-read-mngs/README.md) 
 * [consensus-genome](workflows/consensus-genome/README.md)
 * [phylotree-ng](workflows/phylotree-ng/README.md)
-* long-read-mngs (Beta)
-* amr (Beta)
+* [long-read-mngs](workflows/long-read-mngs/README.md)
+* [amr](workflows/amr/README.md)
 
 ## Running these workflows
 This repository contains [WDL](https://openwdl.org/) workflows that the [CZ ID](https://czid.org) platform uses in
@@ -28,6 +28,7 @@ to get started with them.
 ### System Requirements 
 The system requirements differs for each workflow and depending on the database being used. For example running the short-read-mngs workflow with the full NT and NR databases would require an instance with >1TB of disk space and >100GB of memory. Running other workflows (e.g. consensus-genome, amr) requires much less space. 
 
+If using an ARM Mac try following [these](RunningCZIDWorkflowsOnARMMacs.md) setup instructions
 ### Software requirements
 * docker with buildx support (version >= 19.03)
 * python3 

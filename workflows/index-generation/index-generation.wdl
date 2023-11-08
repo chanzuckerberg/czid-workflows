@@ -8,7 +8,7 @@ workflow index_generation {
         String? environ
         # TODO: (alignment_config) remove after alignment config table is removed
         String? s3_dir
-        # File? previous_lineages
+        File? previous_lineages
         Int nt_compression_k = 31
         Int nt_compression_scaled = 1000
         Float nt_compression_similarity_threshold = 0.5
@@ -47,11 +47,11 @@ workflow index_generation {
         s3_accession_mapping_prefix = s3_accession_mapping_prefix
 
     }
-    # call DownloadTaxdump {
-    #     input:
-    #     ncbi_server = ncbi_server,
-    #     docker_image_id = docker_image_id
-    # }
+    call DownloadTaxdump {
+        input:
+        ncbi_server = ncbi_server,
+        docker_image_id = docker_image_id
+    }
     if (!skip_protein_compression) {
         call CompressNR {
             input:
@@ -171,13 +171,13 @@ workflow index_generation {
     }
 
 
-    # call GenerateIndexLineages {
-    #     input:
-    #     taxdump = DownloadTaxdump.taxdump,
-    #     index_name = index_name,
-    #     previous_lineages = previous_lineages,
-    #     docker_image_id = docker_image_id
-    # }
+    call GenerateIndexLineages {
+        input:
+        taxdump = DownloadTaxdump.taxdump,
+        index_name = index_name,
+        previous_lineages = previous_lineages,
+        docker_image_id = docker_image_id
+    }
 
 
     # if (write_to_db && defined(environ) && defined(s3_dir)) {
@@ -202,25 +202,21 @@ workflow index_generation {
     }
 
     output {
-        # File? nr=nr
-        # File? nt=nt
-        # File? accession2taxid_db=accession2taxid_db
-        # File? nt_loc_db=nt_loc_db
-        # File? nt_info_db=nt_info_db
-        # File? nr_loc_db=nr_loc_db
-        # # File? nr_info_db = if (skip_protein_compression) then GenerateNRDB.nr_info_db else GenerateNRDBCompressedProtein.nr_info_db
-        # File? nt_contained_in_tree =  CompressNT.nt_contained_in_tree
-        # File? nt_contained_in_chunk = CompressNT.nt_contained_in_chunk
-        # File? nr_contained_in_tree = CompressNR.nr_contained_in_tree
-        # File? nr_contained_in_chunk = CompressNR.nr_contained_in_chunk
-
-
-        # Directory? diamond_index = if (skip_protein_compression) then GenerateIndexDiamondNoCompression.diamond_index else GenerateIndexDiamondWCompression.diamond_index
-        # File taxid_lineages_db = GenerateIndexLineages.taxid_lineages_db
-        # File versioned_taxid_lineages_csv = GenerateIndexLineages.versioned_taxid_lineages_csv
-        # File deuterostome_taxids = GenerateIndexLineages.deuterostome_taxids
-        # File taxon_ignore_list = GenerateIndexLineages.taxon_ignore_list
-        # Directory? minimap2_index = if (skip_nuc_compression) then GenerateIndexMinimap2NoCompression.minimap2_index else GenerateIndexMinimap2WCompression.minimap2_index
+        File? nr = LoadTaxonLineages.nr_
+        File? nt = LoadTaxonLineages.nt_
+        File? accession2taxid_db = LoadTaxonLineages.accession2taxid_db_
+        File? nt_loc_db = LoadTaxonLineages.nt_loc_db_
+        File? nt_info_db = LoadTaxonLineages.nt_info_db_
+        File? nr_loc_db = LoadTaxonLineages.nr_loc_db_
+        Directory? minimap2_index = LoadTaxonLineages.minimap2_index_
+        Directory? diamond_index = LoadTaxonLineages.diamond_index_
+        File taxid_lineages_db = GenerateIndexLineages.taxid_lineages_db
+        File versioned_taxid_lineages_csv = GenerateIndexLineages.versioned_taxid_lineages_csv
+        File deuterostome_taxids = GenerateIndexLineages.deuterostome_taxids
+        File taxon_ignore_list = GenerateIndexLineages.taxon_ignore_list
+        File changed_taxa_log = GenerateIndexLineages.changed_taxa_log
+        File deleted_taxa_log = GenerateIndexLineages.deleted_taxa_log
+        File new_taxa_log = GenerateIndexLineages.new_taxa_log
     }
 }
 
@@ -488,6 +484,9 @@ task GenerateIndexLineages {
         File versioned_taxid_lineages_csv = "versioned-taxid-lineages.csv.gz"
         File deuterostome_taxids = "deuterostome_taxids.txt"
         File taxon_ignore_list = "taxon_ignore_list.txt"
+        File changed_taxa_log = "changed_lineage_taxa.csv.gz"
+        File deleted_taxa_log = "deleted_taxa.csv.gz"
+        File new_taxa_log = "new_taxa.csv.gz"
     }
 
     runtime {
@@ -585,7 +584,16 @@ task LoadTaxonLineages {
         "
     >>>
 
-    output {}
+    output {
+        File? nt_=nt
+        File? nr_=nr
+        File? accession2taxid_db_=accession2taxid_db
+        File? nt_loc_db_=nt_loc_db
+        File? nt_info_db_=nt_info_db
+        File? nr_loc_db_=nr_loc_db
+        Directory? minimap2_index_=minimap2_index
+        Directory? diamond_index_=diamond_index
+    }
 
     runtime {
         docker: docker_image_id

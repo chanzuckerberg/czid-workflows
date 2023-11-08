@@ -1,0 +1,27 @@
+taxon_counts_run_1: s3://idseq-samples-staging/samples/933/26167/30968/short-read-mngs-8/refined_taxon_counts_with_dcr.json
+contig_summary_run_1: s3://idseq-samples-staging/samples/933/26167/30968/short-read-mngs-8/combined_contig_summary.json
+contig_fasta_run_1: s3://idseq-samples-staging/samples/933/26167/30968/short-read-mngs-8/contigs.fasta
+
+step_counts_run_1: 
+  - s3://idseq-samples-staging/samples/933/26167/30968/short-read-mngs-8/bowtie2_host_filtered_out.count
+  - s3://idseq-samples-staging/samples/933/26167/30968/short-read-mngs-8/czid_dedup_out.count
+  - s3://idseq-samples-staging/samples/933/26167/30968/short-read-mngs-8/fastp_out.count
+  - s3://idseq-samples-staging/samples/933/26167/30968/short-read-mngs-8/hisat2_host_filtered_out.count
+  - s3://idseq-samples-staging/samples/933/26167/30968/short-read-mngs-8/fastqs.count
+  - s3://idseq-samples-staging/samples/933/26167/30968/short-read-mngs-8/subsampled_out.count
+  - s3://idseq-samples-staging/samples/933/26167/30968/short-read-mngs-8/validate_input_out.count
+
+step_counts_run_2:
+  - s3://idseq-samples-staging/samples/963/25857/30729/short-read-mngs-8/bowtie2_host_filtered_out.count
+  - s3://idseq-samples-staging/samples/963/25857/30729/short-read-mngs-8/czid_dedup_out.count
+  - s3://idseq-samples-staging/samples/963/25857/30729/short-read-mngs-8/fastp_out.count
+  - s3://idseq-samples-staging/samples/963/25857/30729/short-read-mngs-8/fastqs.count
+  - s3://idseq-samples-staging/samples/963/25857/30729/short-read-mngs-8/hisat2_host_filtered_out.count
+  - s3://idseq-samples-staging/samples/963/25857/30729/short-read-mngs-8/subsampled_out.count
+  - s3://idseq-samples-staging/samples/963/25857/30729/short-read-mngs-8/validate_input_out.count
+
+taxon_counts_run_2: s3://idseq-samples-staging/samples/963/25857/30729/short-read-mngs-8/refined_taxon_counts_with_dcr.json
+contig_summary_run_2: s3://idseq-samples-staging/samples/963/25857/30729/short-read-mngs-8/combined_contig_summary.json
+contig_fasta_run_2: s3://idseq-samples-staging/samples/963/25857/30729/short-read-mngs-8/contigs.fasta
+ground_truth: s3://idseq-bench/datasets/truth_files/norg_13__nacc_35__uniform_weight_per_organism__hiseq_reads__v10.TRUTH.txt
+workflow_type: short-read-mngs

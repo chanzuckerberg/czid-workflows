@@ -70,7 +70,7 @@ RUN apt-get -q update && apt-get -q install -y \
         bedtools \
         dh-autoreconf \
         nasm \
-        build-essential 
+        build-essential
 
 # The following packages pull in python2.7
 RUN apt-get -q install -y \
@@ -185,7 +185,7 @@ RUN curl -Ls https://github.com/chanzuckerberg/s3parcp/releases/download/v0.2.0-
 # fastp (libdeflate libisal (dh-autoreconf nasm))
 # hisat2
 # bowtie2 [already installed]
-# kallisto + python gtfparse
+# kallisto
 WORKDIR /tmp
 RUN wget -nv -O - https://github.com/intel/isa-l/archive/refs/tags/v2.30.0.tar.gz | tar zx
 RUN cd isa-l-* && ./autogen.sh && ./configure && make -j8 && make install
@@ -198,7 +198,6 @@ WORKDIR /
 RUN wget -nv -O /tmp/HISAT2.zip https://czid-public-references.s3.us-west-2.amazonaws.com/test/hisat2/hisat2.zip \
         && unzip /tmp/HISAT2.zip && rm /tmp/HISAT2.zip
 RUN curl -L https://github.com/pachterlab/kallisto/releases/download/v0.46.1/kallisto_linux-v0.46.1.tar.gz | tar xz -C /
-RUN pip3 install gtfparse==1.2.1
 
 # Uninstall build only dependencies
 RUN apt-get purge -y g++ libperl4-corelibs-perl make
@@ -208,5 +207,7 @@ RUN pip3 install /tmp/idseq-dag && rm -rf /tmp/idseq-dag
 
 COPY --from=lib idseq_utils /tmp/idseq_utils
 RUN pip3 install /tmp/idseq_utils && rm -rf /tmp/idseq_utils
+
+COPY --from=lib /bin/raise_error /usr/local/bin/raise_error
 
 COPY --from=s3quilt /usr/lib/python3/dist-packages/s3quilt/ /usr/lib/python3/dist-packages/s3quilt/

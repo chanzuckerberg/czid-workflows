@@ -46,6 +46,7 @@ class TestAMR(WDLTestCase):
         inputs = {
             "sample_name": "sample",
             "gene_coverage": relpath("RunResultsPerSample", "gene_coverage.tsv"),
+            "card_ontology": relpath("RunResultsPerSample", "ontology.json"),
             "kma_species_output": relpath(
                 "RunResultsPerSample", "sr_species_report_61mer_analysis.gene.txt"
             ),

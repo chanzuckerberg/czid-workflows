@@ -1,2 +1,8 @@
 __pycache__
 pyrightconfig.json
+
+
+# Makefile kludge
+.venv
+.build-*
+.python_dependencies_installed
