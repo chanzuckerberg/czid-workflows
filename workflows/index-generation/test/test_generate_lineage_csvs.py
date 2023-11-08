@@ -31,9 +31,10 @@ class TestIndexGeneration(unittest.TestCase):
 
     version = datetime.now().strftime("%Y-%m-%d")
 
-    def _find_entries_for_taxid(self, results, taxid):
+    def _find_entries_for_taxid(self, results, taxid, sort=True):
         entries = [x for x in results if int(x["taxid"]) == taxid]
-        entries.sort(key=lambda x: x["version_end"])
+        if sort:
+            entries.sort(key=lambda x: x["version_end"])
         return entries
 
     def _unchanged_taxa_assertions(self, results):
@@ -161,3 +162,53 @@ class TestIndexGeneration(unittest.TestCase):
             self._new_taxid_assertions(result)
             self._phage_to_nonphage_assertions(result)
             self.assertEqual(len(result), 17, result)
+
+    def _is_phage_assertions(self, results):
+        phage_taxid = 373406  # Mycobacterium virus Cooper
+        non_phage_taxid = 1031976  # Influenza A
+        phage_taxid_without_family = 28368  # Corynebacterium diphtheriae phage
+        non_phage_contains_phage_text = 2704112  # Aphagea
+        phage_row = self._find_entries_for_taxid(results, phage_taxid, sort=False)[0]
+        self.assertEqual(int(phage_row["is_phage"]), 1)
+        non_phage_row = self._find_entries_for_taxid(
+            results, non_phage_taxid, sort=False
+        )[0]
+        self.assertEqual(int(non_phage_row["is_phage"]), 0)
+
+        phage_row_without_family = self._find_entries_for_taxid(
+            results, phage_taxid_without_family, sort=False
+        )[0]
+        self.assertEqual(int(phage_row_without_family["is_phage"]), 1)
+
+        non_phage_row_contains_phage_text = self._find_entries_for_taxid(
+            results, non_phage_contains_phage_text, sort=False
+        )[0]
+        self.assertEqual(int(non_phage_row_contains_phage_text["is_phage"]), 0)
+
+    def test_generate_taxon_lineage_names(self):
+        with tempfile.NamedTemporaryFile(
+            "wb", suffix="csv.gz"
+        ) as names_file, tempfile.NamedTemporaryFile(
+            "wb", suffix="csv.gz"
+        ) as lineages_taxid_file, tempfile.NamedTemporaryFile(
+            "r", suffix="csv.gz"
+        ) as output:
+            with open(join(test_files_dir, "names_file_test.csv"), "rb") as names_raw:
+                names_file.write(gzip.compress(names_raw.read()))
+                names_file.seek(0)
+
+            with open(
+                join(test_files_dir, "lineages_file_test.csv"), "rb"
+            ) as lineages_raw:
+                lineages_taxid_file.write(gzip.compress(lineages_raw.read()))
+                lineages_taxid_file.seek(0)
+
+            lineage_csvs.generate_taxon_lineage_names(
+                names_filename=names_file.name,
+                lineages_filename=lineages_taxid_file.name,
+                output_filename=output.name,
+            )
+
+            output_unzipped = gzip.open(output.name, "rt")
+            result = list(csv.DictReader(output_unzipped))
+            self._is_phage_assertions(result)
