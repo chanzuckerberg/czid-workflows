@@ -2,6 +2,7 @@ import csv
 import gzip
 import sys
 import logging
+import re
 
 from datetime import datetime
 
@@ -138,7 +139,12 @@ def generate_taxon_lineage_names(
                     common_name,
                 )
             family_name = new_row["family_name"]
-            new_row["is_phage"] = 1 if family_name in PHAGE_FAMILIES_NAMES else 0
+            new_row["is_phage"] = (
+                1
+                if family_name in PHAGE_FAMILIES_NAMES
+                or re.search(r"\bphage\b", tax_name)
+                else 0
+            )
             writer.writerow(new_row)
 
 
