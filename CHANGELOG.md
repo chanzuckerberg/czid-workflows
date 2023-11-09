@@ -14,6 +14,8 @@ To add clarity for users it is [recommended](https://keepachangelog.com/en/1.0.0
 
 In addition, if a modification is made that may affect the results of a pipeline run, we suggest using noting the `[Pipeline Change]` as well as including the specific change that was made, the predicted result to the output. 
 
+When developing add changes to an `-unreleased` entry for your workflow: i.e. `short-read-mngs-unreleased`. Make sure to use the same markdown heading level `###`. If one does not exist, create one, otherwise update the existing.
+
 ## Changelog
 
 ### short-read-mngs-v7.1.11
