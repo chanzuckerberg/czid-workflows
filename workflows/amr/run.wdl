@@ -185,7 +185,6 @@ task RunRedup {
     }
     command <<<
         set -euxo pipefail
-
         # exit if no duplicate reads
         if [[ ! $(grep -v "^1\t" "~{cluster_sizes}") ]]; then
             counter=1
@@ -219,6 +218,8 @@ task RunRedup {
                 f.write("\n")
         CODE
 
+        # Extract the duplicate reads from the host filtered reads file in fasta format,
+        # then concatenate those reads to the end of the corresponding subsampled reads file
         export HOST_FILTERED_READS_FILES=(~{sep=' ' host_filtered_reads})
         export SUBSAMPLED_READS_FILES=(~{sep=' ' subsampled_reads})
 

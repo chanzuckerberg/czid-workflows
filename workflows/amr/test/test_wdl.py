@@ -79,7 +79,10 @@ class TestAMR(WDLTestCase):
 
     def testRunRedup(self):
         inputs = {
-            "host_filtered_reads": [relpath("RunRedup", "host_filter_1.fastq"), relpath("RunRedup", "host_filter_2.fastq")],
+            "host_filtered_reads": [
+                relpath("RunRedup", "host_filter_1.fastq"),
+                relpath("RunRedup", "host_filter_2.fastq")
+            ],
             "subsampled_reads": [relpath("RunRedup", "subsampled_1.fa"), relpath("RunRedup", "subsampled_2.fa")],
             "clusters": relpath("RunRedup", "clusters.csv"),
             "cluster_sizes": relpath("RunRedup", "duplicate_cluster_sizes.tsv"),
@@ -134,16 +137,16 @@ class TestAMR(WDLTestCase):
             reads.append(this_read)
             output_2 = {read[0]: "".join(read[1:]) for read in reads if len(read) > 0}
 
-
         # Check ids
         output_ids_1 = output_1.keys()
         assert len(set(output_ids_1)) == len(output_ids_1)
         output_ids_1 = set(output_ids_1)
+
         output_ids_2 = output_2.keys()
         assert len(set(output_ids_2)) == len(output_ids_2)
         output_ids_2 = set(output_ids_2)
-        assert output_ids_1 == output_ids_2
 
+        assert output_ids_1 == output_ids_2
         output_ids = output_ids_1 & output_ids_2
 
         for read_id in target_read_ids:
