@@ -30,7 +30,7 @@ fi
 
 # Fix until we can update this script to follow semantic versioning
 if [[ $WORKFLOW_NAME == amr ]]; then
-    TAG="amr-v1.3.1-beta.1"
+    TAG="amr-v1.3.1"
 fi
 
 if [[ $( git branch --show-current) != "main" ]]; then 
