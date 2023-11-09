@@ -28,14 +28,11 @@ else
     exit 1
 fi
 
-<<<<<<< Updated upstream
 # Fix until we can update this script to follow semantic versioning
 if [[ $WORKFLOW_NAME == amr ]]; then
     TAG="amr-v1.3.0"
 fi
-=======
 TAG_MSG=$(mktemp)
->>>>>>> Stashed changes
 
 if [[ $( git branch --show-current) != "main" ]]; then 
     COMMIT=$(git rev-parse --short HEAD)
