@@ -43,10 +43,10 @@ else
     git config --local user.email "action@github.com"
     git config --local user.name "GitHub Action"
     sed -i "s/^### \$WORKFLOW_NAME-unreleased/^### \$TAG/g" CHANGELOG.md
-    git add $CHANGELOG_FILE
+    git add "CHANGELOG.md"
     git commit -m "Update changelog for version $TAG"
     git push origin main
-    awk "/^### $TAG/,/^### /{if (!/^### $TAG/ && !/^### /) print}" "$FILE_PATH" >> $TAG_MSG
+    sed -n "/^### $TAG/,/^### /p" "CHANGELOG.md" | sed '1d;$d' >> $TAG_MSG
 fi
 
 git log --pretty=format:%s ${OLD_TAG}..HEAD >> $TAG_MSG || true
