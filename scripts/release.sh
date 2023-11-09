@@ -42,7 +42,7 @@ if [[ $( git branch --show-current) != "main" ]]; then
 else
     git config --local user.email "action@github.com"
     git config --local user.name "GitHub Action"
-    sed -i "s/^### \$WORKFLOW_NAME-unreleased/^### \$TAG/g" CHANGELOG.md
+    sed -i "s/^### $WORKFLOW_NAME-unreleased/### $TAG/g" "CHANGELOG.md"
     git add "CHANGELOG.md"
     git commit -m "Update changelog for version $TAG"
     git push origin main
