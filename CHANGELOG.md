@@ -14,7 +14,7 @@ To add clarity for users it is [recommended](https://keepachangelog.com/en/1.0.0
 
 In addition, if a modification is made that may affect the results of a pipeline run, we suggest using noting the `[Pipeline Change]` as well as including the specific change that was made, the predicted result to the output. 
 
-### Unreleased
+## Changelog
 
 ### short-read-mngs-v7.1.11
 - Reduce memory usage of generating the alignment viz

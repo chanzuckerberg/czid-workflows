@@ -28,19 +28,30 @@ else
     exit 1
 fi
 
+<<<<<<< Updated upstream
 # Fix until we can update this script to follow semantic versioning
 if [[ $WORKFLOW_NAME == amr ]]; then
     TAG="amr-v1.3.0"
 fi
+=======
+TAG_MSG=$(mktemp)
+>>>>>>> Stashed changes
 
 if [[ $( git branch --show-current) != "main" ]]; then 
     COMMIT=$(git rev-parse --short HEAD)
     TAG=$TAG"-$COMMIT"
+    echo "# Changes for ${TAG} ($(date +%Y-%m-%d))" > $TAG_MSG
+    echo "$RELEASE_NOTES" >> $TAG_MSG
+else
+    git config --local user.email "action@github.com"
+    git config --local user.name "GitHub Action"
+    sed -i "s/^### \$WORKFLOW_NAME-unreleased/^### \$TAG/g" CHANGELOG.md
+    git add $CHANGELOG_FILE
+    git commit -m "Update changelog for version $TAG"
+    git push origin main
+    awk "/^### $TAG/,/^### /{if (!/^### $TAG/ && !/^### /) print}" "$FILE_PATH" >> $TAG_MSG
 fi
 
-TAG_MSG=$(mktemp)
-echo "# Changes for ${TAG} ($(date +%Y-%m-%d))" > $TAG_MSG
-echo "$RELEASE_NOTES" >> $TAG_MSG
 git log --pretty=format:%s ${OLD_TAG}..HEAD >> $TAG_MSG || true
 if ! git config --get user.name ; then
     git config user.name "CZ ID release action triggered by ${GITHUB_ACTOR:-$(whoami)}"
