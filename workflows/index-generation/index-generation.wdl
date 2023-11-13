@@ -648,6 +648,7 @@ task CompressNT {
         Boolean logging_enabled
         String docker_image_id
         Int cpu
+        Int threads = if cpu * 0.75 < 1 then 1 else floor(cpu * 0.75)
     }
 
     command <<< 
@@ -658,7 +659,7 @@ task CompressNT {
         #   sequences if they are not contained by what it has already seen. If a shorter sequence is
         #   contained by a longer sequence, and the shorter sequence were to come first, it would be emitted
         #   even though it is redundant to the longer sequence.
-        seqkit sort --reverse --by-length --two-pass --threads ~{cpu} ~{nt} -o nt_sorted
+        seqkit sort --reverse --by-length --two-pass --threads ~{threads} ~{nt} -o nt_sorted
         if [ "~{logging_enabled}" ]; then
             ncbi-compress \
                 --input-fasta nt_sorted \
@@ -693,8 +694,8 @@ task CompressNT {
 
     runtime {
         docker: docker_image_id
-        cpu: 72
-        memory: "512G"
+        cpu: 64
+        memory: "488G"
     }
 }
 
@@ -708,6 +709,7 @@ task CompressNR {
         Boolean logging_enabled
         String docker_image_id
         Int cpu
+        Int threads = if cpu * 0.75 < 1 then 1 else floor(cpu * 0.75)
     }
 
     command <<<
@@ -718,7 +720,7 @@ task CompressNR {
         #   sequences if they are not contained by what it has already seen. If a shorter sequence is
         #   contained by a longer sequence, and the shorter sequence were to come first, it would be emitted
         #   even though it is redundant to the longer sequence.
-        seqkit sort --reverse --by-length --two-pass --threads ~{cpu} ~{nr} -o nr_sorted
+        seqkit sort --reverse --by-length --two-pass --threads ~{threads} ~{nr} -o nr_sorted
         if [ "~{logging_enabled}" ]; then
             ncbi-compress \
                 --input-fasta nr_sorted \
@@ -753,7 +755,7 @@ task CompressNR {
 
     runtime {
         docker: docker_image_id
-        cpu: 72
+        cpu: 64
         memory: "488G"
     }
 }
