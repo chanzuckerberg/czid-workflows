@@ -566,17 +566,17 @@ task LoadTaxonLineages {
                 updated_at
             ) VALUES(
                 '~{index_name}',
-                '~{s3_dir}/index-generation-2/~{nt}',
-                '~{s3_dir}/index-generation-2/~{nt_loc_db}',
-                '~{s3_dir}/index-generation-2/~{nr}',
-                '~{s3_dir}/index-generation-2/~{nr_loc_db}',
+                '~{s3_dir}/index-generation-2/nt_compressed.fa',
+                '~{s3_dir}/index-generation-2/nt_loc.marisa',
+                '~{s3_dir}/index-generation-2/nr_compressed.fa',
+                '~{s3_dir}/index-generation-2/nr_loc.marisa',
                 's3://czid-public-references/ncbi-indexes-prod/2021-01-22/index-generation-2/taxid-lineages.marisa',
-                '~{s3_dir}/index-generation-2/~{accession2taxid_db}', # patch for now
+                '~{s3_dir}/index-generation-2/accession2taxid.marisa', # patch for now
                 's3://czid-public-references/ncbi-indexes-prod/2021-01-22/index-generation-2/deuterostome_taxids.txt',
-                '~{s3_dir}/index-generation-2/~{nt_info_db}',
+                '~{s3_dir}/index-generation-2/nt_info.marisa',
                 's3://czid-public-references/ncbi-indexes-prod/2021-01-22/index-generation-2/taxon_ignore_list.txt',
-                '~{s3_dir}/index-generation-2/~{minimap2_index}/',
-                '~{s3_dir}/index-generation-2/~{diamond_index}/',
+                '~{s3_dir}/index-generation-2/nt_k14_w8_20/',
+                '~{s3_dir}/index-generation-2/diamond_index_chunksize_5500000000/',
                 '2021-01-22',
                 NOW(),
                 NOW()
