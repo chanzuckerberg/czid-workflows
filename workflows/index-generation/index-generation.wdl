@@ -648,7 +648,7 @@ task CompressNT {
         Boolean logging_enabled
         String docker_image_id
         Int cpu
-        Int threads = if cpu * 0.75 < 1 then 1 else floor(cpu * 0.75)
+        Int threads = if cpu * 0.5 < 1 then 1 else floor(cpu * 0.5)
     }
 
     command <<< 
@@ -709,7 +709,7 @@ task CompressNR {
         Boolean logging_enabled
         String docker_image_id
         Int cpu
-        Int threads = if cpu * 0.75 < 1 then 1 else floor(cpu * 0.75)
+        Int threads = if cpu * 0.5 < 1 then 1 else floor(cpu * 0.5)
     }
 
     command <<<
