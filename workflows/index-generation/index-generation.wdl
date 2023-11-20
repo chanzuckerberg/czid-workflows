@@ -653,6 +653,7 @@ task SeqkitSort {
         File fasta
         Int cpu
         Int threads = if cpu * 0.5 < 1 then 1 else floor(cpu * 0.5)
+        String docker_image_id
     }
     # Sort NT/NR by length with the longer sequences first
     #   This is needed because the downstream compression algorithm iterates through NT/NR in order only emitting
@@ -662,6 +663,7 @@ task SeqkitSort {
 
     command <<<
         set -euxo pipefail
+
         python3 /usr/local/bin/break_apart_fasta_by_seq_length.py --fasta-file ~{fasta}
         rm ~{fasta}
         for file in *.fa; do
@@ -673,6 +675,10 @@ task SeqkitSort {
     >>>
     output {
         File sorted = "sorted_${fasta}"
+    }
+    runtime {
+        docker: docker_image_id
+        cpu: cpu
     }
 
 }
