@@ -687,7 +687,6 @@ task CompressNT {
         Boolean logging_enabled
         String docker_image_id
         Int cpu
-        Int threads = if cpu * 0.5 < 1 then 1 else floor(cpu * 0.5)
     }
 
     command <<< 
@@ -695,7 +694,7 @@ task CompressNT {
 
         if [ "~{logging_enabled}" ]; then
             ncbi-compress \
-                --input-fasta nt_sorted \
+                --input-fasta ~{nt_sorted} \
                 --accession-mapping-files ~{accession2taxid}nucl_wgs.accession2taxid \
                 --accession-mapping-files ~{accession2taxid}nucl_gb.accession2taxid \
                 --accession-mapping-files ~{accession2taxid}pdb.accession2taxid \
@@ -742,7 +741,6 @@ task CompressNR {
         Boolean logging_enabled
         String docker_image_id
         Int cpu
-        Int threads = if cpu * 0.5 < 1 then 1 else floor(cpu * 0.5)
     }
 
     command <<<
@@ -750,7 +748,7 @@ task CompressNR {
 
         if [ "~{logging_enabled}" ]; then
             ncbi-compress \
-                --input-fasta nr_sorted \
+                --input-fasta ~{nr_sorted} \
                 --accession-mapping-files ~{accession2taxid}prot.accession2taxid.FULL \
                 --accession-mapping-files ~{accession2taxid}pdb.accession2taxid \
                 --output-fasta nr_compressed.fa \
