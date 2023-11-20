@@ -6,7 +6,13 @@ from Bio import SeqIO
 def get_file_name(length):
     min_length = int(length/1000)*1000
     max_length = min_length + 1000
-    return f"sequences_{min_length}-{max_length}.fa"
+
+    # pad with leading zeros so that we can concatenate the files together in order with cat
+    min_length_padded = str(min_length).zfill(12)
+    max_length_padded = str(max_length).zfill(12)
+
+    return f"sequences_{min_length_padded}-{max_length_padded}.fa"
+
 
 def break_apart_fasta(fn):
     # Iterate through sequences and append to appropriate files
