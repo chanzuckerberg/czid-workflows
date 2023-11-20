@@ -60,7 +60,7 @@ workflow index_generation {
         }
         call CompressNR {
             input:
-            nr = SeqkitSortNR.sorted,
+            nr_sorted = SeqkitSortNR.sorted,
             accession2taxid = DownloadAccession2Taxid.accession2taxid,
             k = nr_compression_k,
             scaled = nr_compression_scaled,
@@ -79,7 +79,7 @@ workflow index_generation {
         }
         call CompressNT {
             input:
-            nt = SeqkitSortNT.sorted,
+            nt_sorted = SeqkitSortNT.sorted,
             accession2taxid = DownloadAccession2Taxid.accession2taxid,
             k = nt_compression_k,
             scaled = nt_compression_scaled,
