@@ -4,6 +4,17 @@ CZ ID's AMR workflow implements the [Resistance Gene Identifier (RGI)](https://g
 
 # Changelog
 
+## 1.3.1 - 2023-11-15
+
+### Added
+
+- Added unit testing for the `RunRedup` task. This tests that the task has properly concatenated subsampled reads with their duplicates, has only added duplicates back if the original read is present in the subsampled reads, and that output is in FASTA format.
+
+### Fixed
+
+- Fixed a bug where in the case of a sample that had duplicate reads, the `RunRedup` task failed to include reads from the subsampled reads file.
+- Fixed a bug where the non-host reads output file was in FASTQ format instead of the expected FASTA format.
+
 ## 1.3.0 - 2023-09-29
 
 ### Added
