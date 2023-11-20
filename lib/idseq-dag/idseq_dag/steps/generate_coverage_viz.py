@@ -76,7 +76,7 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
         """
         Extract taxon, accession, contig, and read data from input files.
         Remove taxons with no contigs in any accession, _unless_ long read run.
-        For long read, we keep all taxons because reads are just generally
+        For long read, we keep all taxons because every read is generally
         considered long enough to deserve entry into coverage viz.
         Select the best accessions for each taxon.
         """
@@ -90,8 +90,6 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
         # Get a map from accession name to hits (reads and contigs)
         # Also get a map from taxons to accession names.
         (accession_data, taxon_data) = PipelineStepGenerateCoverageViz.generate_accession_data(hit_summary, valid_contigs_with_read_counts)
-        print("VOODOOVOODOOVOODOO am I coming through?")  # REMOVE
-        print("is_long_read_run:", is_long_read_run)
         if not is_long_read_run:
             # Remove taxons with no contigs in any of their accessions
             PipelineStepGenerateCoverageViz.remove_taxons_with_no_contigs(accession_data, taxon_data)
