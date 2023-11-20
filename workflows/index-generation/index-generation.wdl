@@ -53,9 +53,14 @@ workflow index_generation {
         docker_image_id = docker_image_id
     }
     if (!skip_protein_compression) {
+        call SeqkitSort as SeqkitSortNR {
+            input:
+            fasta = DownloadNR.nr,
+            cpu = 64
+        }
         call CompressNR {
             input:
-            nr = DownloadNR.nr,
+            nr = SeqkitSortNR.sorted,
             accession2taxid = DownloadAccession2Taxid.accession2taxid,
             k = nr_compression_k,
             scaled = nr_compression_scaled,
@@ -67,9 +72,14 @@ workflow index_generation {
     }
 
     if (!skip_nuc_compression) {
+        call SeqkitSort as SeqkitSortNT {
+            input:
+            fasta = DownloadNT.nt,
+            cpu = 64
+        }
         call CompressNT {
             input:
-            nt = DownloadNT.nt,
+            nt = SeqkitSortNT.sorted,
             accession2taxid = DownloadAccession2Taxid.accession2taxid,
             k = nt_compression_k,
             scaled = nt_compression_scaled,
@@ -638,9 +648,38 @@ task GenerateIndexMinimap2 {
     }
 }
 
+task SeqkitSort {
+    input {
+        File fasta
+        Int cpu
+        Int threads = if cpu * 0.5 < 1 then 1 else floor(cpu * 0.5)
+    }
+    # Sort NT/NR by length with the longer sequences first
+    #   This is needed because the downstream compression algorithm iterates through NT/NR in order only emitting
+    #   sequences if they are not contained by what it has already seen. If a shorter sequence is
+    #   contained by a longer sequence, and the shorter sequence were to come first, it would be emitted
+    #   even though it is redundant to the longer sequence.
+
+    command <<<
+        set -euxo pipefail
+        python3 /usr/local/bin/break_apart_fasta_by_seq_length.py --fasta-file ~{fasta}
+        rm ~{fasta}
+        for file in *.fa; do
+            seqkit sort --reverse --by-length --two-pass --threads ~{threads} $file -o sorted_$file
+            rm $file
+            rm $file.seqkit.fai
+        done
+        cat sorted_*.fa > combined_sorted.fa
+    >>>
+    output {
+        File sorted = "sorted_${fasta}"
+    }
+
+}
+
 task CompressNT {
     input {
-        File nt
+        File nt_sorted
         Directory accession2taxid
         Int k
         Int scaled
@@ -654,12 +693,6 @@ task CompressNT {
     command <<< 
         set -euxo pipefail
 
-        # Sort NT by length with the longer sequences first
-        #   This is needed because the compression algorithm iterates through NT in order only emitting
-        #   sequences if they are not contained by what it has already seen. If a shorter sequence is
-        #   contained by a longer sequence, and the shorter sequence were to come first, it would be emitted
-        #   even though it is redundant to the longer sequence.
-        seqkit sort --reverse --by-length --two-pass --threads ~{threads} ~{nt} -o nt_sorted
         if [ "~{logging_enabled}" ]; then
             ncbi-compress \
                 --input-fasta nt_sorted \
@@ -701,7 +734,7 @@ task CompressNT {
 
 task CompressNR {
     input {
-        File nr
+        File nr_sorted
         Directory accession2taxid
         Int k
         Int scaled
@@ -715,12 +748,6 @@ task CompressNR {
     command <<<
         set -euxo pipefail
 
-        # Sort NR by length with the longer sequences first
-        #   This is needed because the compression algorithm iterates through NR in order only emitting
-        #   sequences if they are not contained by what it has already seen. If a shorter sequence is
-        #   contained by a longer sequence, and the shorter sequence were to come first, it would be emitted
-        #   even though it is redundant to the longer sequence.
-        seqkit sort --reverse --by-length --two-pass --threads ~{threads} ~{nr} -o nr_sorted
         if [ "~{logging_enabled}" ]; then
             ncbi-compress \
                 --input-fasta nr_sorted \
