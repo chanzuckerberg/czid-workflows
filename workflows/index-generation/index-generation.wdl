@@ -672,6 +672,7 @@ task SeqkitSort {
             rm $file.seqkit.fai
         done
 
+        cd ..
         # Combine the sorted files with longest sequences at the top
         ls -r outputs/sorted*.fa | xargs cat > combined_sorted.fa
 
