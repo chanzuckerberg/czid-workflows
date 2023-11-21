@@ -30,16 +30,12 @@ workflow index_generation {
         docker_image_id = docker_image_id,
         old_nr_s3_path = old_nr_s3_path
     }
-
-
     call DownloadNT {
         input:
         ncbi_server = ncbi_server,
         docker_image_id = docker_image_id,
         old_nt_s3_path = old_nt_s3_path
     }
-
-
     call DownloadAccession2Taxid {
         input:
         ncbi_server = ncbi_server,
@@ -56,7 +52,9 @@ workflow index_generation {
         call SeqkitSort as SeqkitSortNR {
             input:
             fasta = DownloadNR.nr,
-            cpu = 64
+            cpu = 64,
+            docker_image_id = docker_image_id
+
         }
         call CompressNR {
             input:
@@ -75,7 +73,8 @@ workflow index_generation {
         call SeqkitSort as SeqkitSortNT {
             input:
             fasta = DownloadNT.nt,
-            cpu = 64
+            cpu = 64,
+            docker_image_id = docker_image_id
         }
         call CompressNT {
             input:
@@ -671,7 +670,11 @@ task SeqkitSort {
             rm $file
             rm $file.seqkit.fai
         done
-        cat sorted_*.fa > combined_sorted.fa
+
+        # Combine the sorted files with longest sequences at the top
+        ls -r sorted*.fa | xargs cat > combined_sorted.fa
+
+
     >>>
     output {
         File sorted = "sorted_${fasta}"
