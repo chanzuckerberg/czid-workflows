@@ -663,8 +663,9 @@ task SeqkitSort {
     command <<<
         set -euxo pipefail
 
-        python3 /usr/local/bin/break_apart_fasta_by_seq_length.py --fasta-file ~{fasta}
-        rm ~{fasta}
+        python3 /usr/local/bin/break_apart_fasta_by_seq_length.py --fasta-file ~{fasta} --output-dir outputs
+
+        cd outputs
         for file in *.fa; do
             seqkit sort --reverse --by-length --two-pass --threads ~{threads} $file -o sorted_$file
             rm $file
@@ -672,12 +673,12 @@ task SeqkitSort {
         done
 
         # Combine the sorted files with longest sequences at the top
-        ls -r sorted*.fa | xargs cat > combined_sorted.fa
+        ls -r outputs/sorted*.fa | xargs cat > combined_sorted.fa
 
 
     >>>
     output {
-        File sorted = "sorted_${fasta}"
+        File sorted = "combined_sorted.fa"
     }
     runtime {
         docker: docker_image_id

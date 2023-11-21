@@ -1,4 +1,5 @@
 import argparse
+import os
 
 from Bio import SeqIO
 
@@ -14,19 +15,23 @@ def get_file_name(length):
     return f"sequences_{min_length_padded}-{max_length_padded}.fa"
 
 
-def break_apart_fasta(fn):
+def break_apart_fasta(fn, output_dir):
     # Iterate through sequences and append to appropriate files
     with open(fn, "r") as input_handle:
         for record in SeqIO.parse(input_handle, "fasta"):
             seq_length = len(record.seq)
             file_name = get_file_name(seq_length)
-            with open(file_name, "a") as output_handle:
+            if not os.path.exists(output_dir):
+                 os.makedirs(output_dir)
+            output_path = os.path.join(output_dir, file_name)
+            with open(output_path, "a") as output_handle:
                 SeqIO.write(record, output_handle, "fasta")
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Break apart fasta file into smaller files based on sequence length')
     parser.add_argument('--fasta-file', required=True)
+    parser.add_argument('--output-dir', required=True)
     args = parser.parse_args()
 
-    break_apart_fasta(args.fasta_file)
+    break_apart_fasta(args.fasta_file, args.output_dir)
