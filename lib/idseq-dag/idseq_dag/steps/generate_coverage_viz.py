@@ -35,7 +35,7 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
         max_num_bins_coverage = self.additional_attributes.get("max_num_bins_coverage", MAX_NUM_BINS_COVERAGE)
         num_accessions_per_taxon = self.additional_attributes.get("num_accessions_per_taxon", NUM_ACCESSIONS_PER_TAXON)
         min_contig_size = self.additional_attributes.get("min_contig_size", MIN_CONTIG_SIZE)
-        is_long_read_run = self.additional_attributes.get("is_long_read_run", False)
+        keep_taxons_with_no_contigs = self.additional_attributes.get("keep_taxons_with_no_contigs", False)
 
         info_db = s3.fetch_reference(
             self.additional_files["info_db"],
@@ -44,7 +44,7 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
         with open_file_db_by_extension(info_db, "256pI") as info_dict:
             # Extract data from input files.
             (taxon_data, accession_data, contig_data, read_data) = self.prepare_data(
-                self.input_files_local, info_dict, min_contig_size, num_accessions_per_taxon, is_long_read_run
+                self.input_files_local, info_dict, min_contig_size, num_accessions_per_taxon, keep_taxons_with_no_contigs
             )
 
         # Generate the coverage viz data for each accession.
@@ -72,12 +72,13 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
         self.additional_output_folders_hidden.append(coverage_viz_dir)
 
     @staticmethod
-    def prepare_data(input_files_local, info_dict, min_contig_size, num_accessions_per_taxon, is_long_read_run=False):
+    def prepare_data(input_files_local, info_dict, min_contig_size, num_accessions_per_taxon, keep_taxons_with_no_contigs=False):
         """
         Extract taxon, accession, contig, and read data from input files.
-        Remove taxons with no contigs in any accession, _unless_ long read run.
+        Remove taxons with no contigs in any accession, _unless_ explicitly indicated.
         For long read, we keep all taxons because every read is generally
-        considered long enough to deserve entry into coverage viz.
+        considered long enough to deserve entry into coverage viz, so the
+        long-read WDL indicates that we should keep such loose reads.
         Select the best accessions for each taxon.
         """
         (_reassigned_m8, hit_summary, blast_top_m8) = input_files_local[0]
@@ -90,7 +91,7 @@ class PipelineStepGenerateCoverageViz(PipelineStep):  # pylint: disable=abstract
         # Get a map from accession name to hits (reads and contigs)
         # Also get a map from taxons to accession names.
         (accession_data, taxon_data) = PipelineStepGenerateCoverageViz.generate_accession_data(hit_summary, valid_contigs_with_read_counts)
-        if not is_long_read_run:
+        if not keep_taxons_with_no_contigs:
             # Remove taxons with no contigs in any of their accessions
             PipelineStepGenerateCoverageViz.remove_taxons_with_no_contigs(accession_data, taxon_data)
 
