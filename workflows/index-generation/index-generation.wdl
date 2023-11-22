@@ -663,7 +663,8 @@ task SeqkitSort {
     command <<<
         set -euxo pipefail
 
-        python3 /usr/local/bin/break_apart_fasta_by_seq_length.py --fasta-file ~{fasta} --output-dir outputs
+        total_seqs=$(grep ">" ~{fasta} | wc -l)
+        python3 /usr/local/bin/break_apart_fasta_by_seq_length.py --fasta-file ~{fasta} --output-dir outputs --total-seqs ${total_seqs}
 
         cd outputs
         for file in *.fa; do
