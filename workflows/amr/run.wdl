@@ -55,7 +55,7 @@ workflow amr {
             subsampled_reads = select_all([host_filter_stage.subsampled_out_subsampled_1_fa, host_filter_stage.subsampled_out_subsampled_2_fa]),
             clusters = host_filter_stage.czid_dedup_out_duplicate_clusters_csv,
             cluster_sizes = host_filter_stage.czid_dedup_out_duplicate_cluster_sizes_tsv,
-            docker_image_id = host_filtering_docker_image_id,
+            docker_image_id = docker_image_id,
         }
         call RunSpades {
             input:
@@ -75,7 +75,7 @@ workflow amr {
             subsampled_reads = filtered_sample_in.subsampled_reads,
             clusters = filtered_sample_in.clusters,
             cluster_sizes = filtered_sample_in.cluster_sizes,
-            docker_image_id = host_filtering_docker_image_id,
+            docker_image_id = docker_image_id,
         }
     }
 
@@ -218,14 +218,18 @@ task RunRedup {
                 f.write("\n")
         CODE
 
-        counter=1
-        for fasta in ~{sep=' ' host_filtered_reads}; do
-            seqtk subseq $fasta duplicated-pairs.txt > redups_$counter.fastq
-            ((counter++))
+        # Extract the duplicate reads from the host filtered reads file in fasta format,
+        # then concatenate those reads to the end of the corresponding subsampled reads file
+        export HOST_FILTERED_READS_FILES=(~{sep=' ' host_filtered_reads})
+        export SUBSAMPLED_READS_FILES=(~{sep=' ' subsampled_reads})
+
+        for index in ${!HOST_FILTERED_READS_FILES[@]}; do
+            seqkit grep -f duplicated-pairs.txt ${HOST_FILTERED_READS_FILES[$index]} | seqkit fq2fa -o duplicate_reads_$index.fasta
+            cat ${SUBSAMPLED_READS_FILES[$index]} duplicate_reads_$index.fasta > redups_$index.fasta
         done
     >>>
     output {
-        Array[File]+ redups_fa = glob("redups*.fastq")
+        Array[File]+ redups_fa = glob("redups*.fasta")
     }
     runtime {
         docker: docker_image_id
@@ -623,8 +627,13 @@ task RunSpades {
         else
             spades.py -s ~{reduplicated_reads[0]} -o "spades/" -m 100 -t 36 --only-assembler 1>&2
         fi
-        seqtk seq -L ~{min_contig_length} spades/contigs.fasta > spades/contigs_filtered.fasta
-        mv spades/contigs_filtered.fasta spades/contigs.fasta
+
+        if [[ $(head -n 1 spades/contigs.fasta) ==  "" ]]; then
+            handle_failure
+        else
+            seqtk seq -L ~{min_contig_length} spades/contigs.fasta > spades/contigs_filtered.fasta
+            mv spades/contigs_filtered.fasta spades/contigs.fasta
+        fi
     >>>
     output { 
         File contigs = "spades/contigs.fasta"

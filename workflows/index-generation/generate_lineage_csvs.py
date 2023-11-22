@@ -1,10 +1,14 @@
 import csv
 import gzip
 import sys
+import logging
+import re
 
 from datetime import datetime
 
 from typing import Dict, Union
+
+logging.basicConfig(level=logging.DEBUG, format="%(asctime)s|%(levelname)s|%(message)s")
 
 _taxon_levels = [
     "superkingdom",
@@ -22,7 +26,9 @@ _fieldnames = [
     "tax_name",
     "is_phage",
 ] + [
-    f"{level}_{label}" for level in _taxon_levels for label in ["taxid", "name", "common_name"]
+    f"{level}_{label}"
+    for level in _taxon_levels
+    for label in ["taxid", "name", "common_name"]
 ]
 
 _versioning_fieldnames = [
@@ -32,11 +38,37 @@ _versioning_fieldnames = [
     "updated_at",
 ]
 
-PHAGE_FAMILIES_NAMES = {'Myoviridae', 'Siphoviridae', 'Podoviridae', 'Lipothrixviridae',
-                        'Rudiviridae', 'Ampullaviridae', 'Bicaudaviridae', 'Clavaviridae',
-                        'Corticoviridae', 'Cystoviridae', 'Fuselloviridae', 'Globuloviridae',
-                        'Guttaviridae', 'Inoviridae', 'Leviviridae', 'Microviridae',
-                        'Plasmaviridae', 'Tectiviridae'}
+
+# We label as 'phage' all of the prokaryotic (bacterial and archaeal) virus families
+# listed here: https://en.wikipedia.org/wiki/Bacteriophage
+PHAGE_FAMILIES_NAMES = {
+    "Myoviridae",
+    "Siphoviridae",
+    "Podoviridae",
+    "Lipothrixviridae",
+    "Rudiviridae",
+    "Ampullaviridae",
+    "Bicaudaviridae",
+    "Clavaviridae",
+    "Corticoviridae",
+    "Cystoviridae",
+    "Fuselloviridae",
+    "Globuloviridae",
+    "Guttaviridae",
+    "Inoviridae",
+    "Leviviridae",
+    "Microviridae",
+    "Plasmaviridae",
+    "Tectiviridae",
+    "Turriviridae",
+    "Ackermannviridae",
+    "Sphaerolipoviridae",
+    "Pleolipoviridae",
+    "Finnlakeviridae",
+    "Portogloboviridae",
+    "Spiraviridae",
+    "Tristromaviridae",
+}
 
 
 def generate_taxon_lineage_names(
@@ -86,7 +118,9 @@ def generate_taxon_lineage_names(
         for row in csv.DictReader(f):
             names[row["tax_id"]] = (row["name_txt"], row["name_txt_common"])
 
-    with gzip.open(lineages_filename, "rt") as rf, gzip.open(output_filename, "wt") as wf:
+    with gzip.open(lineages_filename, "rt") as rf, gzip.open(
+        output_filename, "wt"
+    ) as wf:
         writer = csv.DictWriter(wf, fieldnames=_fieldnames)
         writer.writeheader()
 
@@ -95,13 +129,22 @@ def generate_taxon_lineage_names(
             new_row = {
                 "taxid": row["tax_id"],
                 "tax_name": tax_name,
-                "is_phage": 1 if tax_name in PHAGE_FAMILIES_NAMES else 0,
             }
 
             for level in _taxon_levels:
                 new_row[f"{level}_taxid"] = row[level]
                 name, common_name = names.get(row[level], ("", ""))
-                new_row[f"{level}_name"], new_row[f"{level}_common_name"] = name, common_name
+                new_row[f"{level}_name"], new_row[f"{level}_common_name"] = (
+                    name,
+                    common_name,
+                )
+            family_name = new_row["family_name"]
+            new_row["is_phage"] = (
+                1
+                if family_name in PHAGE_FAMILIES_NAMES
+                or re.search(r"\bphage\b", tax_name)
+                else 0
+            )
             writer.writerow(new_row)
 
 
@@ -117,6 +160,31 @@ def _equals(previous_row: Dict[str, str], row: Dict[str, str]):
             return False
 
     return True
+
+
+def _find_lineage_change(previous_row: Dict[str, str], row: Dict[str, str]):
+    """
+    Finds the highest rank taxonomy level at which a taxon was reclassified, or changes in
+    phage/non-phage classification. e.g. if species A was reassigned
+    to a different genus and family, it would return the new family name instead of the genus name.
+    """
+    fieldnames_to_search = [
+        f"{level}_{label}"
+        for level in _taxon_levels
+        for label in [
+            "name",
+            "taxid",
+            "common_name",
+        ]  # prefer to output level changed at as name rather than taxid
+    ] + [
+        "taxid",
+        "tax_name",
+        "is_phage",
+    ]  # make sure tax_name is at the end of the list to search since it'll change if a genus/family changes
+
+    for fieldname in fieldnames_to_search:
+        if previous_row[fieldname] != row[fieldname]:
+            return (fieldname, previous_row[fieldname], row[fieldname])
 
 
 def version_taxon_lineages(
@@ -184,31 +252,81 @@ def version_taxon_lineages(
     scheme described above
     """
     previous_lineages = {}
+    previous_lineages_version = None
     if previous_lineages_filename:
         with gzip.open(previous_lineages_filename, "rt") as f:
             for row in csv.DictReader(f):
-                previous_lineages[row["taxid"]] = row
+                previous_lineages[(row["taxid"], row["version_end"])] = row
+                if (
+                    not previous_lineages_version
+                    or previous_lineages_version < row["version_end"]
+                ):
+                    previous_lineages_version = row["version_end"]
 
-    with gzip.open(output_filename, "wt") as wf:
-        writer = csv.DictWriter(wf, fieldnames=_fieldnames + _versioning_fieldnames)
-        writer.writeheader()
+    num_existing_rows = len(previous_lineages)
+    logging.info(
+        f"Number of rows in existing taxon lineages table: {num_existing_rows}"
+    )
+
+    with gzip.open(output_filename, "wt") as wf, gzip.open(
+        "changed_lineage_taxa.csv.gz", "wt"
+    ) as changed_taxa, gzip.open("deleted_taxa.csv.gz", "wt") as deleted_log, gzip.open(
+        "new_taxa.csv.gz", "wt"
+    ) as new_taxa_log:
+        # keep track of counts of different types of taxa
+        # this allows us to spot check results without loading output file into memory
+        num_unchanged_rows = 0
+        num_new_taxa_rows = 0
+        num_updated_lineage_rows = 0
+        num_total_new_rows = 0
+        num_deprecated_rows = 0
+        num_deleted_taxa = 0
+
+        # writer for versioned output taxon lineage csv
+        versioned_csv_writer = csv.DictWriter(
+            wf, fieldnames=_fieldnames + _versioning_fieldnames
+        )
+        versioned_csv_writer.writeheader()
+
+        changed_taxa_writer = csv.writer(changed_taxa)
+        changed_taxa_writer.writerow(
+            [
+                "taxid",
+                "tax_name",
+                "changed_field",
+                "old_value",
+                "new_value",
+                "superkingdom",
+            ]
+        )
+
+        deleted_taxa_writer = csv.writer(deleted_log)
+        deleted_taxa_writer.writerow(["taxid", "tax_name", "superkingdom"])
+
+        new_taxa_writer = csv.writer(new_taxa_log)
+        new_taxa_writer.writerow(["taxid", "tax_name", "superkingdom"])
+
+        # Keeping track of taxids in the non-versioned lineage file
+        # allows us to separate taxa that have been deprecated altogether
+        # from those that have just had their lineage changed.
+        non_deprecated_taxids = set()
 
         with gzip.open(lineages_filename, "rt") as rf:
             for row in csv.DictReader(rf):
-                previous_row = previous_lineages.get(row["taxid"])
+                non_deprecated_taxids.add(row["taxid"])
 
-                if previous_row:
-                    # If we have a previous row, remove it so we can later
-                    #   iterate through only the rows from previous_lineages
-                    #   that aren't also in lineages
-                    del previous_lineages[row["taxid"]]
+                previous_row = previous_lineages.pop(
+                    (row["taxid"], previous_lineages_version), None
+                )
 
                 if previous_row and _equals(row, previous_row):
-                    # We already have this lineage, update it's version_end
+                    # We already have this exact lineage, update its version_end
                     #   to keep it from expiring
                     previous_row["version_end"] = version
                     previous_row["updated_at"] = str(datetime.now())
-                    writer.writerow(previous_row)
+                    versioned_csv_writer.writerow(previous_row)
+                    num_unchanged_rows += 1
+                    num_total_new_rows += 1
                 else:
                     # This is either a brand new lineage, or an updated
                     #   lineage. Create a new lineage, and don't update
@@ -218,17 +336,91 @@ def version_taxon_lineages(
                     row["version_end"] = version
                     row["created_at"] = str(datetime.now())
                     row["updated_at"] = str(datetime.now())
-                    writer.writerow(row)
+                    versioned_csv_writer.writerow(row)
+                    num_total_new_rows += 1
 
                     if previous_row:
-                        writer.writerow(previous_row)
+                        # this is an updated lineage
+                        (
+                            changed_field,
+                            old_val,
+                            new_val,
+                        ) = _find_lineage_change(previous_row, row)
+                        changed_taxa_writer.writerow(
+                            [
+                                row["taxid"],
+                                row["tax_name"],
+                                changed_field,
+                                old_val,
+                                new_val,
+                                row["superkingdom_name"],
+                            ]
+                        )
+                        versioned_csv_writer.writerow(previous_row)
+                        num_total_new_rows += 1
+                        num_updated_lineage_rows += 1
+                        num_deprecated_rows += 1
+                    else:
+                        # this is a new lineage
+                        new_taxa_writer.writerow(
+                            [row["taxid"], row["tax_name"], row["superkingdom_name"]]
+                        )
+                        num_new_taxa_rows += 1
 
             for previous_row in previous_lineages.values():
                 # All rows left in previous_lineages are for taxons that have
-                #   been removed. We still need to write them to the new output
-                #   file so we have them for older versions, they just won't have
-                #   their version updated so they will be considered expired.
-                writer.writerow(previous_row)
+                #   been removed or outdated lineages for existing taxa. We still need to
+                #   write them to the new output file so we have them for older versions,
+                #   they just won't have their version updated so they will be considered expired.
+                versioned_csv_writer.writerow(previous_row)
+                num_deprecated_rows += 1
+                num_total_new_rows += 1
+                if (
+                    not previous_row["taxid"] in non_deprecated_taxids
+                    and previous_row["version_end"] == previous_lineages_version
+                ):
+                    deleted_taxa_writer.writerow(
+                        [
+                            previous_row["taxid"],
+                            previous_row["tax_name"],
+                            previous_row["superkingdom_name"],
+                        ]
+                    )
+                    num_deleted_taxa += 1
+
+        summary_counts = (
+            f"Number of taxa with unchanged lineages: {num_unchanged_rows}\n"
+            f"Number of taxa with updated lineages: {num_updated_lineage_rows}\n"
+            f"Number of new taxa: {num_new_taxa_rows}\n"
+            f"Number of deprecated lineage rows (outdated lineage or deprecated taxa): {num_deprecated_rows}\n"
+            f"Number of deprecated taxa: {num_deleted_taxa}\n"
+            f"Number of total rows written to new table: {num_total_new_rows}"
+        )
+        logging.info(summary_counts)
+
+        # Assert that the correct number of rows have been written to the new table
+        # and that we've correctly calculated the number of taxa in each category
+        expected_existing_num_rows = num_unchanged_rows + num_deprecated_rows
+        if not expected_existing_num_rows == num_existing_rows:
+            logging.warning(
+                """
+                Number of expected existing rows (deprecated lineages and unchanged lineages)
+                 %s does not match number of rows in taxon lineages table %s
+                """
+                % (expected_existing_num_rows, num_existing_rows)
+            )
+
+        expected_total_new_rows = (
+            num_existing_rows + num_updated_lineage_rows + num_new_taxa_rows
+        )
+        if not expected_total_new_rows == num_total_new_rows:
+            logging.warning(
+                """
+                Expected number of rows in new table (length of old table + updated rows + new rows)
+                 %s does not match number of rows written %s
+                """
+                % (expected_total_new_rows, num_total_new_rows)
+            )
 
 
 if __name__ == "__main__":
