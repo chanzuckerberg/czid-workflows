@@ -626,8 +626,13 @@ task RunSpades {
         else
             spades.py -s ~{reduplicated_reads[0]} -o "spades/" -m 100 -t 36 --only-assembler 1>&2
         fi
-        seqtk seq -L ~{min_contig_length} spades/contigs.fasta > spades/contigs_filtered.fasta
-        mv spades/contigs_filtered.fasta spades/contigs.fasta
+
+        if [[ $(head -n 1 spades/contigs.fasta) ==  "" ]]; then
+            handle_failure
+        else
+            seqtk seq -L ~{min_contig_length} spades/contigs.fasta > spades/contigs_filtered.fasta
+            mv spades/contigs_filtered.fasta spades/contigs.fasta
+        fi
     >>>
     output { 
         File contigs = "spades/contigs.fasta"

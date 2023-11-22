@@ -4,11 +4,13 @@ CZ ID's AMR workflow implements the [Resistance Gene Identifier (RGI)](https://g
 
 # Changelog
 
+## 1.3.2 - 2023-11-21
+
+### Fixed
+
+- Samples that have valid k-mer coverage histograms but do not generate any contigs from SPAdes assembly will no longer cause an error in `RunRgiMain`, which does not allow for empty contigs files.
+
 ## 1.3.1 - 2023-11-15
-
-### Added
-
-- Added unit testing for the `RunRedup` task. This tests that the task has properly concatenated subsampled reads with their duplicates, has only added duplicates back if the original read is present in the subsampled reads, and that output is in FASTA format.
 
 ### Fixed
 
