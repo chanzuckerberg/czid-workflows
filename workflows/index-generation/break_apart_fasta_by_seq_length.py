@@ -1,7 +1,11 @@
 import argparse
+import logging
 import os
 
 from Bio import SeqIO
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s')
 
 # Function to determine the appropriate file based on sequence length
 def get_file_name(length):
@@ -28,9 +32,9 @@ def break_apart_fasta(fn, output_dir, total_seqs):
             with open(output_path, "a") as output_handle:
                 SeqIO.write(record, output_handle, "fasta")
             total_sequences_processed += 1
-            if total_sequences_processed % 10000 == 0:
+            if total_sequences_processed % 1000000 == 0:
                 percent_complete = total_sequences_processed / int(total_seqs) * 100
-                print(f" {percent_complete} of sequences processed")
+                logger.info(f" {percent_complete} of sequences processed")
 
 
 if __name__ == '__main__':
