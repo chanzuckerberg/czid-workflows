@@ -1,17 +1,19 @@
 use clap::Parser;
 
 use ncbi_compress::ncbi_compress::ncbi_compress::fasta_compress;
+use ncbi_compress::fasta_tools::fasta_tools::break_up_fasta_by_sequence_length;
+
 use ncbi_compress::logging::logging;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
     /// Path to the input fasta file
-    #[arg(short, long, required = true)]
+    #[arg(short, long, required=true)]
     input_fasta: String,
 
     /// Path to the output fasta file
-    #[arg(short, long, required = true)]
+    #[arg(short, long, required=false, default_value = "output.fa")]
     output_fasta: String,
 
     /// Path to the accession to taxid csv file
@@ -20,7 +22,7 @@ struct Args {
     accession_mapping_files: Vec<String>,
 
     /// Taxids to drop from the output
-    #[arg(long)]
+    #[arg(long, required = false)]
     taxids_to_drop: Vec<u64>,
 
     /// Scaled value for the minhash
@@ -80,6 +82,14 @@ struct Args {
     // is protein fasta
     #[arg(long, default_value = "false")]
     is_protein_fasta: bool,
+
+    // break up the fasta by sequence length
+    #[arg(long, default_value = "false")]
+    break_up_fasta_by_sequence_length: bool,
+
+    // total sequence count
+    #[arg(long, default_value = "1")]
+    total_sequence_count: usize,
 }
 
 pub fn main() {
@@ -94,23 +104,30 @@ pub fn main() {
         logging::initialize_tsv(&args.logging_contained_in_chunk_fn, vec!["discarded", "retained", "containment"]);
     }
 
-    fasta_compress(
-        args.input_fasta,
-        args.accession_mapping_files,
-        args.output_fasta,
-        args.taxids_to_drop,
-        args.scaled,
-        args.k,
-        args.seed,
-        args.similarity_threshold,
-        args.chunk_size,
-        args.branch_factor,
-        &args.temp_file_output_dir,
-        args.skip_split_by_taxid,
-        args.is_protein_fasta,
-        args.enable_sequence_retention_logging,
-        &args.logging_contained_in_tree_fn,
-        &args.logging_contained_in_chunk_fn,
-    );
-
+    if args.break_up_fasta_by_sequence_length {
+        break_up_fasta_by_sequence_length(
+            args.input_fasta,
+            args.temp_file_output_dir,
+            args.total_sequence_count,
+        );
+    } else {
+        fasta_compress(
+            args.input_fasta,
+            args.accession_mapping_files,
+            args.output_fasta,
+            args.taxids_to_drop,
+            args.scaled,
+            args.k,
+            args.seed,
+            args.similarity_threshold,
+            args.chunk_size,
+            args.branch_factor,
+            &args.temp_file_output_dir,
+            args.skip_split_by_taxid,
+            args.is_protein_fasta,
+            args.enable_sequence_retention_logging,
+            &args.logging_contained_in_tree_fn,
+            &args.logging_contained_in_chunk_fn,
+        );
+    }
 }

@@ -664,14 +664,22 @@ task SeqkitSort {
         set -euxo pipefail
 
         total_seqs=$(grep ">" ~{fasta} | wc -l)
-        python3 /usr/local/bin/break_apart_fasta_by_seq_length.py --fasta-file ~{fasta} --output-dir outputs --total-seqs ${total_seqs}
+        ncbi-compress  \
+            --break-up-fasta-by-sequence-length  \
+            --input-fasta ~{fasta}  \
+            --temp-file-output-dir outputs  \
+            --total-sequence-count ${total_seqs}
+
+        #python3 /usr/local/bin/break_apart_fasta_by_seq_length.py --fasta-file ~{fasta} --output-dir outputs --total-seqs ${total_seqs}
 
         cd outputs
-        for file in *.fa; do
-            seqkit sort --reverse --by-length --two-pass --threads ~{threads} $file -o sorted_$file
-            rm $file
-            rm $file.seqkit.fai
-        done
+        parallel 'seqkit sort --reverse --by-length --two-pass --threads ~{threads} {} -o sorted_{};' ::: *.fa
+
+        # for file in *.fa; do
+        #     seqkit sort --reverse --by-length --two-pass --threads ~{threads} $file -o sorted_$file
+        #     rm $file
+        #     rm $file.seqkit.fai
+        # done
 
         cd ..
         # Combine the sorted files with longest sequences at the top
