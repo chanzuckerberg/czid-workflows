@@ -1,6 +1,7 @@
 pub mod fasta_tools {
     use std::fs;
     use std::path::Path;
+    use std::fs::OpenOptions;
 
     use bio::io::fasta;
 
@@ -29,7 +30,13 @@ pub mod fasta_tools {
             let sequence_length = record.seq().len();
             let filename = get_filename(sequence_length);
             let output_path = format!("{}/{}", output_directory, filename);
-            let mut writer = fasta::Writer::to_file(output_path).expect("Error writing fasta file");
+            let file = OpenOptions::new()
+                .write(true)
+                .append(true)
+                .create(true)
+                .open(output_path)
+                .expect("Error opening fasta file");
+            let mut writer = fasta::Writer::new(file);
             writer.write_record(&record).expect("Error writing record");
             current_count += 1;
             if current_count % 100000 == 0 {
