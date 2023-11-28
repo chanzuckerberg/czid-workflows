@@ -39,12 +39,12 @@ pub mod fasta_tools {
         input_fasta_path: P,
         output_directory: P,
         total_sequence_count: usize,
+        chunk_size: usize,
      ) {
         let mut current_count = 0;
         fs::create_dir_all(&output_directory).expect("Error creating output directory");
         let reader = fasta::Reader::from_file(&input_fasta_path).unwrap(); 
         let mut records_iter = reader.records();
-        let chunk_size = 5;
 
         // create initial chunk of records
         let mut chunk = records_iter

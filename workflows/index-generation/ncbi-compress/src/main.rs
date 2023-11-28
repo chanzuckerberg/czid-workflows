@@ -109,6 +109,7 @@ pub fn main() {
             args.input_fasta,
             args.temp_file_output_dir,
             args.total_sequence_count,
+            args.chunk_size
         );
     } else {
         fasta_compress(
