@@ -701,6 +701,7 @@ task SplitFastaBySeqLength {
         }
 
         command <<<
+        chmod u+w ~{split_fasta_outputs}
         cd "~{split_fasta_outputs}"
         apt-get install -y parallel
         parallel -j ~{threads} 'seqkit sort --reverse --by-length --two-pass {} -o sorted_{};' ::: *.fa
