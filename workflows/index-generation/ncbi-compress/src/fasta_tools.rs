@@ -85,28 +85,32 @@ pub mod fasta_tools {
 }
 
 
-// use std::{fs, path::Path};
-// use tempfile::tempdir;
+use std::{fs, path::Path};
 
-// #[test]
-// fn test_break_up_fasta_by_sequence_lengthy() {
-//     // Setup
-//     let temp_dir = tempdir().unwrap();
-//     let test_dir_outputs = Path::new("test_data/fasta_tools/outputs");
-//     let fasta_file = Path::new("test_data/fasta_tools/inputs/nt");
+use bio::io::fasta;
+use tempfile::tempdir;
+use crate::fasta_tools::fasta_tools::break_up_fasta_by_sequence_length;
 
-//     break_up_fasta_by_sequence_length(fasta_file, temp_dir.path(), 1000, 1000);
+#[test]
+fn test_break_up_fasta_by_sequence_lengthy() {
+    // Setup
+    let temp_dir = tempdir().unwrap();
+    let test_dir_outputs = "test_data/fasta_tools/outputs";
+    let input_fasta_file = "test_data/fasta_tools/inputs/nt";
 
-//     // Compare files
-//     for entry in fs::read_dir(test_dir).unwrap() {
-//         let entry = entry.unwrap();
-//         let test_file_path = entry.path();
-//         let test_file_name = test_file_path.file_name().unwrap();
-//         let output_file_path = temp_dir.path().join(test_file_name);
+    let temp_dir_path_str = temp_dir.path().to_str().unwrap();
+    break_up_fasta_by_sequence_length(input_fasta_file, temp_dir_path_str, 1000, 1000);
 
-//         let test_data = fs::read(test_file_path).unwrap();
-//         let output_data = fs::read(output_file_path).unwrap();
+    // Compare files
+    for entry in fs::read_dir(temp_dir_path_str).unwrap() {
+        let entry = entry.unwrap();
+        let test_file_path = entry.path();
+        let test_file_name = test_file_path.file_name().unwrap().to_str().unwrap();
+        let test_data = fs::read(&test_file_path).unwrap();
 
-//         assert_eq!(test_data, output_data, "Files do not match: {:?}", test_file_name);
-//     }
-// }
+        let actual_file_path = format!("{}/{}", test_dir_outputs, test_file_name);
+        let actual_data = fs::read(&actual_file_path).unwrap();
+
+        assert_eq!(actual_data, test_data, "Files do not match: {}", test_file_name);
+    }
+}

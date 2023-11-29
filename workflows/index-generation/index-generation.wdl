@@ -651,7 +651,7 @@ task SeqkitSort {
     input {
         File fasta
         Int cpu
-        Int threads = if cpu * 0.5 < 1 then 1 else floor(cpu * 0.5)
+        Int threads = if cpu * 0.75 < 1 then 1 else floor(cpu * 0.75)
         String docker_image_id
     }
     # Sort NT/NR by length with the longer sequences first
@@ -673,7 +673,8 @@ task SeqkitSort {
         #python3 /usr/local/bin/break_apart_fasta_by_seq_length.py --fasta-file ~{fasta} --output-dir outputs --total-seqs ${total_seqs}
 
         cd outputs
-        parallel 'seqkit sort --reverse --by-length --two-pass --threads ~{threads} {} -o sorted_{};' ::: *.fa
+        apt-get install -y parallel
+        parallel -j ~{threads} 'seqkit sort --reverse --by-length --two-pass {} -o sorted_{};' ::: *.fa
 
         # for file in *.fa; do
         #     seqkit sort --reverse --by-length --two-pass --threads ~{threads} $file -o sorted_$file
