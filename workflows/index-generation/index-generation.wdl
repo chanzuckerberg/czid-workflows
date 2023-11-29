@@ -49,9 +49,15 @@ workflow index_generation {
         docker_image_id = docker_image_id
     }
     if (!skip_protein_compression) {
-        call SeqkitSort as SeqkitSortNR {
+        call SplitFastaBySeqLength as SplitFastaBySeqLengthNR {
             input:
             fasta = DownloadNR.nr,
+            cpu = 64,
+            docker_image_id = docker_image_id
+        }
+        call SeqkitSort as SeqkitSortNR {
+            input:
+            split_fasta_outputs = SplitFastaBySeqLengthNR.split_fasta_outputs,
             cpu = 64,
             docker_image_id = docker_image_id
 
@@ -70,9 +76,15 @@ workflow index_generation {
     }
 
     if (!skip_nuc_compression) {
+        call SplitFastaBySeqLength as SplitFastaBySeqLengthNT {
+            input:
+            fasta = DownloadNR.nt,
+            cpu = 64,
+            docker_image_id = docker_image_id
+        }
         call SeqkitSort as SeqkitSortNT {
             input:
-            fasta = DownloadNT.nt,
+            split_fasta_outputs = SplitFastaBySeqLengthNT.split_fasta_outputs,
             cpu = 64,
             docker_image_id = docker_image_id
         }
@@ -647,7 +659,7 @@ task GenerateIndexMinimap2 {
     }
 }
 
-task SeqkitSort {
+task SplitFastaBySeqLength {
     input {
         File fasta
         Int cpu
@@ -670,9 +682,25 @@ task SeqkitSort {
             --temp-file-output-dir outputs  \
             --total-sequence-count ${total_seqs}
 
-        #python3 /usr/local/bin/break_apart_fasta_by_seq_length.py --fasta-file ~{fasta} --output-dir outputs --total-seqs ${total_seqs}
+    >>>
+    output {
+        Directory fasta_split_outputs = "outputs"
+    }
+    runtime {
+        docker: docker_image_id
+        cpu: cpu
+    }
+}
 
-        cd outputs
+    task SeqkitSort {
+        input {
+            File split_fasta_outputs
+            Int cpu
+            Int threads = if cpu * 0.75 < 1 then 1 else floor(cpu * 0.75)
+            String docker_image_id
+        }
+
+        cd ~{split_fasta_outputs}
         apt-get install -y parallel
         parallel -j ~{threads} 'seqkit sort --reverse --by-length --two-pass {} -o sorted_{};' ::: *.fa
 
@@ -684,9 +712,7 @@ task SeqkitSort {
 
         cd ..
         # Combine the sorted files with longest sequences at the top
-        ls -r outputs/sorted*.fa | xargs cat > combined_sorted.fa
-
-
+        ls -r ~{split_fasta_outputs}/sorted*.fa | xargs cat > combined_sorted.fa
     >>>
     output {
         File sorted = "combined_sorted.fa"
