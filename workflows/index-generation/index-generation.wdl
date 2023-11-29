@@ -57,7 +57,7 @@ workflow index_generation {
         }
         call SeqkitSort as SeqkitSortNR {
             input:
-            split_fasta_outputs = SplitFastaBySeqLengthNR.split_fasta_outputs,
+            split_fasta_outputs = SplitFastaBySeqLengthNR.fasta_split_outputs,
             cpu = 64,
             docker_image_id = docker_image_id
 
@@ -78,13 +78,13 @@ workflow index_generation {
     if (!skip_nuc_compression) {
         call SplitFastaBySeqLength as SplitFastaBySeqLengthNT {
             input:
-            fasta = DownloadNR.nt,
+            fasta = DownloadNR.nr,
             cpu = 64,
             docker_image_id = docker_image_id
         }
         call SeqkitSort as SeqkitSortNT {
             input:
-            split_fasta_outputs = SplitFastaBySeqLengthNT.split_fasta_outputs,
+            split_fasta_outputs = SplitFastaBySeqLengthNT.fasta_split_outputs,
             cpu = 64,
             docker_image_id = docker_image_id
         }
@@ -694,7 +694,7 @@ task SplitFastaBySeqLength {
 
     task SeqkitSort {
         input {
-            File split_fasta_outputs
+            Directory split_fasta_outputs
             Int cpu
             Int threads = if cpu * 0.75 < 1 then 1 else floor(cpu * 0.75)
             String docker_image_id
