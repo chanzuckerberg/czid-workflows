@@ -701,8 +701,9 @@ task SplitFastaBySeqLength {
         }
 
         command <<<
-        chmod u+w ~{split_fasta_outputs}
-        cd "~{split_fasta_outputs}"
+        // copy files out to avoid RO filesystem mount
+        cp -r ~{split_fasta_outputs} outputs
+        cd outputs
         apt-get install -y parallel
         parallel -j ~{threads} 'seqkit sort --reverse --by-length --two-pass {} -o sorted_{};' ::: *.fa
 
@@ -714,7 +715,7 @@ task SplitFastaBySeqLength {
 
         cd ..
         # Combine the sorted files with longest sequences at the top
-        ls -r ~{split_fasta_outputs}/sorted*.fa | xargs cat > combined_sorted.fa
+        ls -r outputs/sorted*.fa | xargs cat > combined_sorted.fa
     >>>
     output {
         File sorted = "combined_sorted.fa"
