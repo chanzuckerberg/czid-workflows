@@ -128,7 +128,7 @@ fn create_fasta_records_from_file<P: AsRef<Path> + std::fmt::Debug>(input_fasta_
 }
 
 #[test]
-fn test_break_up_fasta_by_sequence_lengthy() {
+fn test_break_up_fasta_by_sequence_length() {
     // Setup
     let temp_dir = tempdir().unwrap();
     let truth_dir_outputs = "test_data/fasta_tools/outputs";
