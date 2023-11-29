@@ -700,7 +700,8 @@ task SplitFastaBySeqLength {
             String docker_image_id
         }
 
-        cd ~{split_fasta_outputs}
+        command <<<
+        cd "~{split_fasta_outputs}"
         apt-get install -y parallel
         parallel -j ~{threads} 'seqkit sort --reverse --by-length --two-pass {} -o sorted_{};' ::: *.fa
 
