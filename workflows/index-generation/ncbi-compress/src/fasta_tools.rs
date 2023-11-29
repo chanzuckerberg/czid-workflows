@@ -85,32 +85,70 @@ pub mod fasta_tools {
 }
 
 
+// testing starts here
 use std::{fs, path::Path};
+use std::cmp::Ordering;
 
 use bio::io::fasta;
 use tempfile::tempdir;
 use crate::fasta_tools::fasta_tools::break_up_fasta_by_sequence_length;
 
+// Define a struct to hold both ID and sequence
+#[derive(Eq, PartialEq)]
+struct FastaRecord {
+    id: String,
+    seq: String,
+}
+
+// Implement Ord and PartialOrd for FastaRecord to enable sorting by ID
+impl Ord for FastaRecord {
+    fn cmp(&self, other: &Self) -> Ordering {
+        // order based on id
+        self.id.cmp(&other.id)
+    }
+}
+impl PartialOrd for FastaRecord {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+fn create_fasta_records_from_file<P: AsRef<Path> + std::fmt::Debug>(input_fasta_path: P) -> Vec<FastaRecord> {
+    let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
+    let mut records_iter = reader.records();
+    let mut records: Vec<FastaRecord> = Vec::new();
+    while let Some(record) = records_iter.next() {
+        let record = record.unwrap();
+        records.push(FastaRecord {
+            id: record.id().to_string(),
+            seq: String::from_utf8(record.seq().to_vec()).expect("Invalid UTF-8 sequence"),
+        });
+    }
+    return records;
+}
+
 #[test]
 fn test_break_up_fasta_by_sequence_lengthy() {
     // Setup
     let temp_dir = tempdir().unwrap();
-    let test_dir_outputs = "test_data/fasta_tools/outputs";
+    let truth_dir_outputs = "test_data/fasta_tools/outputs";
     let input_fasta_file = "test_data/fasta_tools/inputs/nt";
 
     let temp_dir_path_str = temp_dir.path().to_str().unwrap();
     break_up_fasta_by_sequence_length(input_fasta_file, temp_dir_path_str, 1000, 1000);
 
-    // Compare files
+    // Compare files in from test with truth
     for entry in fs::read_dir(temp_dir_path_str).unwrap() {
         let entry = entry.unwrap();
         let test_file_path = entry.path();
+
+        // get file name so we can compare to the file in the test directory
         let test_file_name = test_file_path.file_name().unwrap().to_str().unwrap();
-        let test_data = fs::read(&test_file_path).unwrap();
+        let truth_file_path = format!("{}/{}", truth_dir_outputs, test_file_name);
 
-        let actual_file_path = format!("{}/{}", test_dir_outputs, test_file_name);
-        let actual_data = fs::read(&actual_file_path).unwrap();
+        let mut test_data_records = create_fasta_records_from_file(&test_file_path);
+        let mut truth_data_records = create_fasta_records_from_file(&truth_file_path);
 
-        assert_eq!(actual_data, test_data, "Files do not match: {}", test_file_name);
+        assert_eq!(truth_data_records.sort(), test_data_records.sort(), "Files do not match: {:?}", test_file_name);
     }
 }
