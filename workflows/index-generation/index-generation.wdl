@@ -49,22 +49,16 @@ workflow index_generation {
         docker_image_id = docker_image_id
     }
     if (!skip_protein_compression) {
-        call SplitFastaBySeqLength as SplitFastaBySeqLengthNR {
+        call SplitFastaBySeqLengthAndSort as SplitFastaBySeqLengthAndSortNR {
             input:
             fasta = DownloadNR.nr,
             cpu = 64,
             docker_image_id = docker_image_id
         }
-        call SeqkitSort as SeqkitSortNR {
-            input:
-            split_fasta_outputs = SplitFastaBySeqLengthNR.fasta_split_outputs,
-            cpu = 64,
-            docker_image_id = docker_image_id
 
-        }
         call CompressNR {
             input:
-            nr_sorted = SeqkitSortNR.sorted,
+            nr_sorted = SplitFastaBySeqLengthAndSortNR.sorted,
             accession2taxid = DownloadAccession2Taxid.accession2taxid,
             k = nr_compression_k,
             scaled = nr_compression_scaled,
@@ -76,21 +70,15 @@ workflow index_generation {
     }
 
     if (!skip_nuc_compression) {
-        call SplitFastaBySeqLength as SplitFastaBySeqLengthNT {
+        call SplitFastaBySeqLengthAndSort as SplitFastaBySeqLengthAndSortNT {
             input:
             fasta = DownloadNR.nr,
             cpu = 64,
             docker_image_id = docker_image_id
         }
-        call SeqkitSort as SeqkitSortNT {
-            input:
-            split_fasta_outputs = SplitFastaBySeqLengthNT.fasta_split_outputs,
-            cpu = 64,
-            docker_image_id = docker_image_id
-        }
         call CompressNT {
             input:
-            nt_sorted = SeqkitSortNT.sorted,
+            nt_sorted = SplitFastaBySeqLengthAndSortNT.sorted,
             accession2taxid = DownloadAccession2Taxid.accession2taxid,
             k = nt_compression_k,
             scaled = nt_compression_scaled,
@@ -659,20 +647,20 @@ task GenerateIndexMinimap2 {
     }
 }
 
-task SplitFastaBySeqLength {
+task SplitFastaBySeqLengthAndSort {
     input {
         File fasta
         Int cpu
-        Int threads = if cpu * 0.75 < 1 then 1 else floor(cpu * 0.75)
+        Int threads = if cpu * 0.6 < 1 then 1 else floor(cpu * 0.6)
         String docker_image_id
     }
-    # Sort NT/NR by length with the longer sequences first
-    #   This is needed because the downstream compression algorithm iterates through NT/NR in order only emitting
-    #   sequences if they are not contained by what it has already seen. If a shorter sequence is
-    #   contained by a longer sequence, and the shorter sequence were to come first, it would be emitted
-    #   even though it is redundant to the longer sequence.
 
     command <<<
+        # Sort NT/NR by length with the longer sequences first
+        #   This is needed because the downstream compression algorithm iterates through NT/NR in order only emitting
+        #   sequences if they are not contained by what it has already seen. If a shorter sequence is
+        #   contained by a longer sequence, and the shorter sequence were to come first, it would be emitted
+        #   even though it is redundant to the longer sequence.
         set -euxo pipefail
 
         total_seqs=$(grep ">" ~{fasta} | wc -l)
@@ -682,35 +670,8 @@ task SplitFastaBySeqLength {
             --temp-file-output-dir outputs  \
             --total-sequence-count ${total_seqs}
 
-    >>>
-    output {
-        Directory fasta_split_outputs = "outputs"
-    }
-    runtime {
-        docker: docker_image_id
-        cpu: cpu
-    }
-}
-
-    task SeqkitSort {
-        input {
-            Directory split_fasta_outputs
-            Int cpu
-            Int threads = if cpu * 0.75 < 1 then 1 else floor(cpu * 0.75)
-            String docker_image_id
-        }
-
-        command <<<
-
         apt-get install -y parallel
-        parallel -j ~{threads} 'seqkit sort --reverse --by-length --two-pass {} -o sorted_{};' ::: ~{split_fasta_outputs}/*.fa
-
-        # for file in *.fa; do
-        #     seqkit sort --reverse --by-length --two-pass --threads ~{threads} $file -o sorted_$file
-        #     rm $file
-        #     rm $file.seqkit.fai
-        # done
-
+        parallel -j ~{threads} 'seqkit sort --reverse --by-length --two-pass {} -o sorted_{};' ::: outputs/*.fa
         # Combine the sorted files with longest sequences at the top
         ls -r sorted*.fa | xargs cat > combined_sorted.fa
     >>>
@@ -721,7 +682,6 @@ task SplitFastaBySeqLength {
         docker: docker_image_id
         cpu: cpu
     }
-
 }
 
 task CompressNT {
