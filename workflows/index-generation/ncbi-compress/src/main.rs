@@ -87,9 +87,13 @@ struct Args {
     #[arg(long, default_value = "false")]
     break_up_fasta_by_sequence_length: bool,
 
-    // total sequence count
+    // total sequence count (break up the fasta by sequence length)
     #[arg(long, default_value = "1")]
     total_sequence_count: usize,
+
+    // bin size (break up the fasta by sequence length)
+    #[arg(long, default_value = "1000")]
+    bin_size: usize,
 }
 
 pub fn main() {
@@ -109,7 +113,8 @@ pub fn main() {
             args.input_fasta,
             args.temp_file_output_dir,
             args.total_sequence_count,
-            args.chunk_size
+            args.chunk_size,
+            args.bin_size as i64,
         );
     } else {
         fasta_compress(
