@@ -668,22 +668,23 @@ task SplitFastaBySeqLengthAndSort {
             --break-up-fasta-by-sequence-length  \
             --input-fasta ~{fasta}  \
             --temp-file-output-dir outputs  \
-            --total-sequence-count ${total_seqs}
+            --total-sequence-count ${total_seqs}  \
+            --bin-size 25 \
 
         # apt-get install -y parallel
         # parallel -j ~{threads} 'seqkit sort --reverse --by-length --two-pass {} -o sorted_{};' ::: outputs/*.fa
 
-        cd outputs
-        for file in *.fa; do
-            seqkit sort --reverse --by-length --two-pass --threads ~{threads} $file -o sorted_$file
-            # rm $file
-            # rm $file.seqkit.fai
-            echo "finished sorting $file"
-        done
-        cd ..
+        # cd outputs
+        # for file in *.fa; do
+        #     seqkit sort --reverse --by-length --two-pass --threads ~{threads} $file -o sorted_$file
+        #     # rm $file
+        #     # rm $file.seqkit.fai
+        #     echo "finished sorting $file"
+        # done
+        # cd ..
 
         # Combine the sorted files with longest sequences at the top
-        ls -r outputs/sorted*.fa | xargs cat > combined_sorted.fa
+        ls -r outputs/*.fa | xargs cat > combined_sorted.fa
     >>>
     output {
         File sorted = "combined_sorted.fa"
