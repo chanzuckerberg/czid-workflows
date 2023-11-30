@@ -8,7 +8,7 @@ Further documentation on how to use the CZ ID long-read-mngs workflow can be fou
 ​
 ### Changelog
 ​
-**v0.7.3** -- Nov 30, 2023 -- Expand scope of when we generate coverage vizualizations
+**v0.7.5** -- Nov 30, 2023 -- Expand scope of when we generate coverage vizualizations
 ​
  - Enable coverage vizualizations to be generated for taxa that only have loose NT reads (i.e., taxa with no contigs but that have at least 1 NT read).
 
