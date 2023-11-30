@@ -138,13 +138,13 @@ fn test_break_up_fasta_by_sequence_length() {
     // Setup
     let bin_size = 1000;
     let temp_dir = tempdir().unwrap();
-    let truth_dir_outputs = "test_data/fasta_tools/outputs";
+    let truth_dir_outputs = "test_data/fasta_tools/truth_outputs/break_up_fasta_by_sequence_length";
     let input_fasta_file = "test_data/fasta_tools/inputs/nt";
 
     let temp_dir_path_str = temp_dir.path().to_str().unwrap();
     fasta_tools::break_up_fasta_by_sequence_length(input_fasta_file, temp_dir_path_str, 1000, 1000, bin_size);
 
-    // Compare files in from test with truth
+    //Compare files in from test with truth
     for entry in fs::read_dir(temp_dir_path_str).unwrap() {
         let entry = entry.unwrap();
         let test_file_path = entry.path();
@@ -184,9 +184,10 @@ fn test_bin_number_to_floor() {
 #[test]
 fn test_process_seq_chunk() {
     let bin_size = 25;
-    let truth_directory = "test_data/fasta_tools/truth_process_seq_chunk";
+    let truth_directory = "test_data/fasta_tools/truth_outputs/process_seq_chunk/";
     let test_directory = tempdir().unwrap();
     let temp_dir_path_str = test_directory.path().to_str().unwrap();
+
 
     let record = fasta::Record::with_attrs("id", None, b"ACGT");
     fasta_tools::process_seq_chunk(&record, &temp_dir_path_str, &bin_size);
