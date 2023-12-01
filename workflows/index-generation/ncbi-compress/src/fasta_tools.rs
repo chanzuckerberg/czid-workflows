@@ -15,14 +15,14 @@ pub mod fasta_tools {
         static ref FILE_HANDLES: Mutex<HashMap<String, std::fs::File>> = Mutex::new(HashMap::new());
     }
 
-    pub fn bin_number_to_floor(sequence_length: &usize, bin_size: &i64) -> i64 {
+    pub fn bin_number_to_floor(sequence_length: &usize, bin_size: &usize) -> usize {
         let floored = (*sequence_length as f64 / *bin_size as f64).floor();
-        (floored * *bin_size as f64) as i64
+        (floored * *bin_size as f64) as usize
     }
 
-    pub fn get_filename(sequence_length: usize, bin_size: &i64) -> String {
-        let min_length = bin_number_to_floor(&sequence_length, bin_size);
-        let max_length = min_length + bin_size - 1;
+    pub fn get_filename(sequence_length: &usize, bin_size: &usize) -> String {
+        let min_length: usize = bin_number_to_floor(sequence_length, bin_size);
+        let max_length: usize = min_length + bin_size - 1;
 
 
         // pad with leading zeros so that we can concatenate the files together in order with cat later
@@ -31,9 +31,9 @@ pub mod fasta_tools {
         return format!("sequences_{}-{}.fa", min_length_padded, max_length_padded)
     }
 
-    pub fn process_seq_chunk<P: std::fmt::Display>(record: &fasta::Record, output_directory: &P, bin_size: &i64) {
+    pub fn process_seq_chunk<P: std::fmt::Display>(record: &fasta::Record, output_directory: &P, bin_size: &usize) {
         let sequence_length = record.seq().len();
-        let filename = get_filename(sequence_length, bin_size);
+        let filename = get_filename(&sequence_length, bin_size);
         let output_path = format!("{}/{}", output_directory, filename);
 
         let mut handles = FILE_HANDLES.lock().unwrap(); // Lock the mutex here
@@ -53,9 +53,9 @@ pub mod fasta_tools {
     pub fn break_up_fasta_by_sequence_length<P: AsRef<Path> + std::fmt::Debug + std::fmt::Display + std::marker::Send + std::marker::Sync>(
         input_fasta_path: P,
         output_directory: P,
-        total_sequence_count: usize,
-        chunk_size: usize,
-        bin_size: i64,
+        total_sequence_count: &usize,
+        chunk_size: &usize,
+        bin_size: &usize,
      ) {
         let mut current_count = 0;
         fs::create_dir_all(&output_directory).expect("Error creating output directory");
@@ -65,7 +65,7 @@ pub mod fasta_tools {
         // create initial chunk of records
         let mut chunk = records_iter
         .borrow_mut()
-        .take(chunk_size)
+        .take(*chunk_size)
         .collect::<Vec<_>>();
 
         while chunk.len() > 0 {
@@ -77,13 +77,13 @@ pub mod fasta_tools {
                 
             // update current count and log progress
             current_count += chunk.len();
-            let processed_percentage = (current_count as f64 / total_sequence_count as f64) * 100.0;
+            let processed_percentage = (current_count / total_sequence_count) * 100;
             log::info!("{} of sequences processed", processed_percentage);
 
             // refill chunk with new records from iterator
             chunk = records_iter
             .borrow_mut()
-            .take(chunk_size)
+            .take(*chunk_size)
             .collect::<Vec<_>>();
         }
         log::info!("all sequences processed");
