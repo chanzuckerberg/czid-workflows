@@ -38,6 +38,7 @@ _versioning_fieldnames = [
     "updated_at",
 ]
 
+phage_search_string = re.compile(r"\bphage\b", re.IGNORECASE)
 
 # We label as 'phage' all of the prokaryotic (bacterial and archaeal) virus families
 # listed here: https://en.wikipedia.org/wiki/Bacteriophage
@@ -142,7 +143,7 @@ def generate_taxon_lineage_names(
             new_row["is_phage"] = (
                 1
                 if family_name in PHAGE_FAMILIES_NAMES
-                or re.search(r"\bphage\b", tax_name)
+                or phage_search_string.search(tax_name)
                 else 0
             )
             writer.writerow(new_row)
