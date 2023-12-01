@@ -1,6 +1,6 @@
 use clap::Parser;
 
-use ncbi_compress::ncbi_compress::ncbi_compress::fasta_compress;
+use ncbi_compress::ncbi_compress::ncbi_compress::{fasta_compress_from_fasta, fasta_compress_from_taxid_dir, break_into_individual_taxids_only};
 use ncbi_compress::fasta_tools::fasta_tools::break_up_fasta_by_sequence_length;
 
 use ncbi_compress::logging::logging;
@@ -94,6 +94,18 @@ struct Args {
     // bin size (break up the fasta by sequence length)
     #[arg(long, default_value = "1000")]
     bin_size: usize,
+
+    // Path to directory of input fasta files broken up by taxids (input is a directory of taxid fasta files)
+    #[arg(long, required = false, default_value = "input_fasta_dir")]
+    input_fasta_dir: String,
+
+    // break into individual taxids
+    #[arg(long, default_value = "false")]
+    break_into_individual_taxids_only: bool,
+
+    // use individual taxid dir
+    #[arg(long, default_value = "false")]
+    taxid_dir: String,
 }
 
 pub fn main() {
@@ -110,30 +122,49 @@ pub fn main() {
 
     if args.break_up_fasta_by_sequence_length {
         break_up_fasta_by_sequence_length(
-            args.input_fasta,
-            args.temp_file_output_dir,
+            &args.input_fasta,
+            &args.temp_file_output_dir,
             args.total_sequence_count,
             args.chunk_size,
             args.bin_size as i64,
         );
-    } else {
-        fasta_compress(
-            args.input_fasta,
+    } else if args.break_into_individual_taxids_only {
+        break_into_individual_taxids_only(
+            &args.input_fasta,
             args.accession_mapping_files,
-            args.output_fasta,
-            args.taxids_to_drop,
+            &args.temp_file_output_dir,
+        );
+    } else if !args.taxid_dir.is_empty() {
+        fasta_compress_from_taxid_dir(
+            &args.taxid_dir,
+            &args.output_fasta,
             args.scaled,
             args.k,
             args.seed,
             args.similarity_threshold,
             args.chunk_size,
             args.branch_factor,
-            &args.temp_file_output_dir,
-            args.skip_split_by_taxid,
             args.is_protein_fasta,
             args.enable_sequence_retention_logging,
             &args.logging_contained_in_tree_fn,
             &args.logging_contained_in_chunk_fn,
         );
-    }
+        } else {
+            fasta_compress_from_fasta(
+                &args.input_fasta,
+                args.accession_mapping_files,
+                &args.output_fasta,
+                args.scaled,
+                args.k,
+                args.seed,
+                args.similarity_threshold,
+                args.chunk_size,
+                args.branch_factor,
+                args.is_protein_fasta,
+                args.enable_sequence_retention_logging,
+                &args.logging_contained_in_tree_fn,
+                &args.logging_contained_in_chunk_fn,
+            );
+        }
 }
+
