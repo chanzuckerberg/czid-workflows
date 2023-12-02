@@ -5,3 +5,4 @@ pub mod minhashtree;
 pub mod minhashtree_w_logging;
 pub mod trie_store;
 pub mod fasta_tools;
+pub mod commands;

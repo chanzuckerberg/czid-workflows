@@ -1,6 +1,7 @@
 use clap::{Command, Arg};
 
-use ncbi_compress::ncbi_compress::ncbi_compress::{fasta_compress_from_fasta_skip_split_by_taxid, fasta_compress_from_taxid_dir, split_accessions_by_taxid, fasta_compress_end_to_end};
+use ncbi_compress::commands::commands::{fasta_compress_from_fasta_skip_split_by_taxid, fasta_compress_from_taxid_dir, fasta_compress_end_to_end};
+use ncbi_compress::ncbi_compress::ncbi_compress::split_accessions_by_taxid;
 use ncbi_compress::fasta_tools::fasta_tools::break_up_fasta_by_sequence_length;
 
 use ncbi_compress::logging::logging;
