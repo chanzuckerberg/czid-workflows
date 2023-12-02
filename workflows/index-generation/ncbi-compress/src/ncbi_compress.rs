@@ -9,7 +9,6 @@ pub mod ncbi_compress {
     use sourmash::errors::SourmashError;
     use sourmash::signature::SigsTrait;
     use sourmash::sketch::minhash::KmerMinHash;
-    use tempdir::TempDir;
     use trie_rs::TrieBuilder;
 
     use crate::logging::logging;
@@ -335,4 +334,60 @@ pub mod ncbi_compress {
         }
     }
    
+}
+
+
+// testing starts here
+use std::{fs, path::Path};
+use std::cmp::Ordering;
+use std::path::PathBuf;
+
+use bio::io::fasta;
+use tempfile::tempdir;
+
+use crate::util::util;
+
+fn are_files_same(path1: &PathBuf, path2: &str) {
+    let content1 = fs::read(path1).unwrap();
+    let content2 = fs::read(path2).unwrap();
+
+    assert_eq!(content1, content2);
+}
+
+#[test]
+fn test_split_accessions_by_taxid() {
+    let input_fasta_path = "test_data/fasta_tools/inputs/nt";
+    let mapping_files_directory = "test_data/ncbi_compress/split_accessions_by_taxid/inputs/accession2taxid";
+    let input_mapping_file_paths = vec![
+        format!("{}/{}", mapping_files_directory, "nucl_gb.accession2taxid"),
+        format!("{}/{}", mapping_files_directory, "nucl_wgs.accession2taxid"),
+        format!("{}/{}", mapping_files_directory, "pdb.accession2taxid"),
+        format!("{}/{}", mapping_files_directory, "prot.accession2taxid.FULL"),
+    ];
+
+
+    let truth_output_dir = "test_data/ncbi_compress/split_accessions_by_taxid/truth_outputs";
+    let test_output_dir = tempdir().unwrap();
+    let test_dir_path_str = test_output_dir.path().to_str().unwrap();
+
+    ncbi_compress::split_accessions_by_taxid(
+        input_fasta_path,
+        input_mapping_file_paths,
+        test_dir_path_str
+    );
+
+    for entry in fs::read_dir(test_dir_path_str).unwrap() {
+        // get test file path
+        let entry = entry.unwrap();
+        let test_file_path = entry.path();
+        let test_file_name = test_file_path.file_name().unwrap().to_str().unwrap();
+
+        // get the truth file path
+        let truth_file_path = format!("{}/{}", truth_output_dir, test_file_name);
+        util::are_files_equal(&test_file_path.to_str().unwrap(), &truth_file_path);
+
+    }
+
+
+
 }

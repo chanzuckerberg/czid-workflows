@@ -31,7 +31,7 @@ pub mod fasta_tools {
         return format!("sequences_{}-{}.fa", min_length_padded, max_length_padded)
     }
 
-    pub fn process_seq_chunk<P: std::fmt::Display>(record: &fasta::Record, output_directory: &P, bin_size: &usize) {
+    pub fn process_seq_chunk(record: &fasta::Record, output_directory: &str, bin_size: &usize) -> () {
         let sequence_length = record.seq().len();
         let filename = get_filename(&sequence_length, bin_size);
         let output_path = format!("{}/{}", output_directory, filename);
@@ -50,9 +50,9 @@ pub mod fasta_tools {
         writer.write_record(&record).expect("Error writing record");
     }
     
-    pub fn break_up_fasta_by_sequence_length<P: AsRef<Path> + std::fmt::Debug + std::fmt::Display + std::marker::Send + std::marker::Sync>(
-        input_fasta_path: P,
-        output_directory: P,
+    pub fn break_up_fasta_by_sequence_length(
+        input_fasta_path: &str,
+        output_directory: &str,
         total_sequence_count: &usize,
         chunk_size: &usize,
         bin_size: &usize,
@@ -137,12 +137,14 @@ fn create_fasta_records_from_file<P: AsRef<Path> + std::fmt::Debug>(input_fasta_
 fn test_break_up_fasta_by_sequence_length() {
     // Setup
     let bin_size = 1000;
+    let chunk_size = 1000;
+    let total_sequence_count = 10000;
     let temp_dir = tempdir().unwrap();
     let truth_dir_outputs = "test_data/fasta_tools/truth_outputs/break_up_fasta_by_sequence_length";
     let input_fasta_file = "test_data/fasta_tools/inputs/nt";
 
     let temp_dir_path_str = temp_dir.path().to_str().unwrap();
-    fasta_tools::break_up_fasta_by_sequence_length(input_fasta_file, temp_dir_path_str, 1000, 1000, bin_size);
+    fasta_tools::break_up_fasta_by_sequence_length(input_fasta_file, temp_dir_path_str, &total_sequence_count, &chunk_size, &bin_size);
 
     //Compare files in from test with truth
     for entry in fs::read_dir(temp_dir_path_str).unwrap() {
@@ -164,7 +166,7 @@ fn test_break_up_fasta_by_sequence_length() {
 fn test_get_filename() {
     let bin_size = 25;
     let sequence_length = 1763;
-    let filename = fasta_tools::get_filename(sequence_length, &bin_size);
+    let filename = fasta_tools::get_filename(&sequence_length, &bin_size);
     assert_eq!(filename, "sequences_000000001750-000000001774.fa");
 }
 
