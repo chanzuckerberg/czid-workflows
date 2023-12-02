@@ -268,11 +268,14 @@ pub fn main() {
             let branch_factor = sub_m.get_one("branch_factor").unwrap();
             let is_protein_fasta = sub_m.get_flag("is_protein_fasta");
             let enable_sequence_retention_logging = sub_m.get_flag("enable_sequence_retention_logging");
-            let logging_contained_in_tree_fn = sub_m.get_one::<String>("logging_contained_in_tree_fn").unwrap();
-            let logging_contained_in_chunk_fn = sub_m.get_one::<String>("logging_contained_in_chunk_fn").unwrap();
+
+            let mut logging_contained_in_tree_fn = "";
+            let mut logging_contained_in_chunk_fn = "";
 
             if enable_sequence_retention_logging {
                 // log discarded, retained, containment
+                logging_contained_in_tree_fn = sub_m.get_one::<String>("logging_contained_in_tree_fn").unwrap();
+                logging_contained_in_chunk_fn = sub_m.get_one::<String>("logging_contained_in_chunk_fn").unwrap();
                 logging::initialize_tsv(logging_contained_in_tree_fn, vec!["discarded", "retained", "containment"]);
                 logging::initialize_tsv(logging_contained_in_chunk_fn, vec!["discarded", "retained", "containment"]);
             }
@@ -300,14 +303,17 @@ pub fn main() {
             let seed = sub_m.get_one("seed").unwrap();
             let similarity_threshold = sub_m.get_one("similarity_threshold").unwrap();
             let enable_sequence_retention_logging = sub_m.get_flag("enable_sequence_retention_logging");
-            let logging_contained_in_tree_fn = sub_m.get_one::<String>("logging_contained_in_tree_fn").unwrap();
-            let logging_contained_in_chunk_fn = sub_m.get_one::<String>("logging_contained_in_chunk_fn").unwrap();
             let chunk_size = sub_m.get_one("chunk_size").unwrap();
             let branch_factor = sub_m.get_one("branch_factor").unwrap();
             let is_protein_fasta = sub_m.get_one("is_protein_fasta").unwrap();
 
+            let mut logging_contained_in_tree_fn = "";
+            let mut logging_contained_in_chunk_fn = "";
+
             if enable_sequence_retention_logging {
                 // log discarded, retained, containment
+                logging_contained_in_tree_fn = sub_m.get_one::<String>("logging_contained_in_tree_fn").unwrap();
+                logging_contained_in_chunk_fn = sub_m.get_one::<String>("logging_contained_in_chunk_fn").unwrap();
                 logging::initialize_tsv(logging_contained_in_tree_fn, vec!["discarded", "retained", "containment"]);
                 logging::initialize_tsv(logging_contained_in_chunk_fn, vec!["discarded", "retained", "containment"]);
             }
@@ -342,14 +348,16 @@ pub fn main() {
             let seed = sub_m.get_one("seed").unwrap();
             let similarity_threshold = sub_m.get_one("similarity_threshold").unwrap();
             let enable_sequence_retention_logging = sub_m.get_flag("enable_sequence_retention_logging");
-            let logging_contained_in_tree_fn = sub_m.get_one::<String>("logging_contained_in_tree_fn").unwrap();
-            let logging_contained_in_chunk_fn = sub_m.get_one::<String>("logging_contained_in_chunk_fn").unwrap();
             let chunk_size = sub_m.get_one("chunk_size").unwrap();
             let branch_factor = sub_m.get_one("branch_factor").unwrap();
             let is_protein_fasta = sub_m.get_one("is_protein_fasta").unwrap();
 
+            let mut logging_contained_in_tree_fn = "";
+            let mut logging_contained_in_chunk_fn = "";
             if enable_sequence_retention_logging {
                 // log discarded, retained, containment
+                logging_contained_in_tree_fn = sub_m.get_one::<String>("logging_contained_in_tree_fn").unwrap();
+                logging_contained_in_chunk_fn = sub_m.get_one::<String>("logging_contained_in_chunk_fn").unwrap();
                 logging::initialize_tsv(logging_contained_in_tree_fn, vec!["discarded", "retained", "containment"]);
                 logging::initialize_tsv(logging_contained_in_chunk_fn, vec!["discarded", "retained", "containment"]);
             }
