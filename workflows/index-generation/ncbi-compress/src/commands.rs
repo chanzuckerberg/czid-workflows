@@ -115,7 +115,7 @@ pub mod commands {
                 logging_contained_in_tree_fn,
                 logging_contained_in_chunk_fn,
             );
-            log.info!("Finished compressing taxid {}", input_fasta_path);
+            log::info!("Finished compressing taxid {}", input_fasta_path);
         }
     }
 
