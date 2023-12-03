@@ -1,5 +1,8 @@
 pub mod commands {
     use std::fs;
+    use std::fs::File;
+    use std::io::{self, BufRead};
+    use std::path::Path;
 
     use tempdir::TempDir;
     use bio::io::fasta;
@@ -56,6 +59,21 @@ pub mod commands {
         }
     }
 
+    fn count_fasta_reads(filename: &str) -> usize
+    {
+        let file = File::open(filename).unwrap();
+        let reader = io::BufReader::new(file);
+
+        let mut count = 0;
+        for line in reader.lines() {
+            let line = line.unwrap();
+            if line.starts_with('>') {
+                count += 1;
+            }
+        }
+        count
+    }
+
     pub fn fasta_compress_from_taxid_dir (
         input_taxid_dir: &str,
         output_fasta_path: &str,
@@ -78,6 +96,9 @@ pub mod commands {
             let entry = entry.unwrap();
             let path = entry.path();
             let input_fasta_path = path.to_str().unwrap();
+            let reads_count = count_fasta_reads(input_fasta_path);
+            log::info!("Total reads for taxid {}: {}", input_fasta_path, reads_count);
+
             fasta_compress_w_logging_option(
                 input_fasta_path,
                 &mut writer,
@@ -94,14 +115,7 @@ pub mod commands {
                 logging_contained_in_tree_fn,
                 logging_contained_in_chunk_fn,
             );
-            if i % 10_000 == 0 {
-                log::info!(
-                    "  Compressed {} taxids, {} accessions, {} uniqe accessions",
-                    i,
-                    accession_count,
-                    unique_accession_count
-                );
-            }
+            log.info!("Finished compressing taxid {}", input_fasta_path);
         }
     }
 
@@ -193,14 +207,6 @@ pub mod commands {
                 logging_contained_in_tree_fn,
                 logging_contained_in_chunk_fn,
             );
-            if i % 10_000 == 0 {
-                log::info!(
-                    "  Compressed {} taxids, {} accessions, {} uniqe accessions",
-                    i,
-                    accession_count,
-                    unique_accession_count
-                );
-            }
         }
     }
 

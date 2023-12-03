@@ -12,7 +12,7 @@ pub fn main() {
         .version("1.0")
         .author("Your Name")
         .about("Does awesome things with sequences")
-        .subcommand(Command::new("break_up_fasta_by_sequence_length")
+        .subcommand(Command::new("break-up-fasta-by-sequence-length")
             .about("break_up_fasta_by_sequence_length")
             .arg(Arg::new("input_fasta")
                 .help("Input file to be sorted")
@@ -38,7 +38,7 @@ pub fn main() {
                 .value_parser(clap::value_parser!(usize))
                 .required(true))
             )
-        .subcommand(Command::new("break_into_individual_taxids_only")
+        .subcommand(Command::new("break-into-individual-taxids-only")
             .about("break_into_individual_taxids_only")
             .arg(Arg::new("input_fasta")
                 .help("Input file to be ordered")
@@ -54,7 +54,7 @@ pub fn main() {
                 .long("output-dir")
                 .required(true))
             )
-        .subcommand(Command::new("fasta_compress_from_fasta_skip_split_by_taxid")
+        .subcommand(Command::new("fasta-compress-from-fasta-skip-split-by-taxid")
             .about("fasta_compress_from_fasta_skip_split_by_taxid")
             .arg(Arg::new("input_fasta")
                 .help("Input file to be ordered")
@@ -109,7 +109,7 @@ pub fn main() {
                 .help("Logging file for containment in the chunk")
                 .long("logging-contained-in-chunk-fn"))
             )
-        .subcommand(Command::new("fasta_compress_from_taxid_dir")
+        .subcommand(Command::new("fasta-compress-from-taxid-dir")
             .about("fasta_compress_from_taxid_dir")
             .arg(Arg::new("input_fasta_dir")
                 .help("Input directory of taxid fasta files")
@@ -164,7 +164,7 @@ pub fn main() {
                 .help("Logging file for containment in the chunk")
                 .long("logging-contained-in-chunk-fn"))
             )
-        .subcommand(Command::new("fasta_compress_end_to_end")
+        .subcommand(Command::new("fasta-compress-end-to-end")
             .about("fasta_compress_end_to_end")
             .arg(Arg::new("input_fasta")
                 .help("Input file to be ordered")
@@ -231,7 +231,7 @@ pub fn main() {
         .get_matches();
 
     match matches.subcommand() {
-        Some(("break_up_fasta_by_sequence_length", sub_m)) => {
+        Some(("break-up-fasta-by-sequence-length", sub_m)) => {
             let input_fasta = sub_m.get_one::<String>("input_fasta").unwrap();
             let output_dir = sub_m.get_one::<String>("output_dir").unwrap();
             let total_sequence_count = sub_m.get_one("total_sequence_count").unwrap();
@@ -240,7 +240,7 @@ pub fn main() {
             break_up_fasta_by_sequence_length(input_fasta, output_dir, total_sequence_count, chunk_size, bin_size);
 
         },
-        Some(("break_into_individual_taxids_only", sub_m)) => {
+        Some(("break-into-individual-taxids-only", sub_m)) => {
             let input_fasta = sub_m.get_one::<String>("input_fasta").unwrap();
             let accession_mapping_files: Vec<String> = sub_m.get_many("accession_mapping_files")
                 .expect("Error getting accession mapping files")
@@ -253,7 +253,7 @@ pub fn main() {
                 output_dir,
             );
         },
-        Some(("fasta_compress_from_fasta_skip_split_by_taxid", sub_m)) => {
+        Some(("fasta-compress-from-fasta-skip-split-by-taxid", sub_m)) => {
             let input_fasta = sub_m.get_one::<String>("input_fasta").unwrap();
             let output_fasta = sub_m.get_one::<String>("output_fasta").unwrap();
             let scaled = sub_m.get_one("scaled").unwrap();
@@ -291,7 +291,7 @@ pub fn main() {
                 logging_contained_in_chunk_fn,
             );
         },
-        Some(("fasta_compress_from_taxid_dir", sub_m)) => {
+        Some(("fasta-compress-from-taxid-dir", sub_m)) => {
             let input_fasta_dir = sub_m.get_one::<String>("input_fasta_dir").unwrap();
             let output_fasta = sub_m.get_one::<String>("output_fasta").unwrap();
             let scaled = sub_m.get_one("scaled").unwrap();
@@ -329,7 +329,7 @@ pub fn main() {
                 logging_contained_in_chunk_fn,
             );
         },
-        Some(("fasta_compress_end_to_end", sub_m)) => {
+        Some(("fasta-compress-end-to-end", sub_m)) => {
             println!("fasta_compress_end_to_end");
             let input_fasta = sub_m.get_one::<String>("input_fasta").unwrap();
             println!("input_fasta: {}", input_fasta);

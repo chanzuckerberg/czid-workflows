@@ -55,11 +55,17 @@ workflow index_generation {
             cpu = 64,
             docker_image_id = docker_image_id
         }
+        call BreakApartByTaxid as BreakApartByTaxidNR {
+            input:
+            sorted_fasta = SplitFastaBySeqLengthAndSortNR.sorted,
+            accession2taxid = DownloadAccession2Taxid.accession2taxid,
+            cpu = 64,
+            docker_image_id = docker_image_id
+        }
 
         call CompressNR {
             input:
-            nr_sorted = SplitFastaBySeqLengthAndSortNR.sorted,
-            accession2taxid = DownloadAccession2Taxid.accession2taxid,
+            reads_by_taxid = BreakApartByTaxidNR.reads_by_taxid,
             k = nr_compression_k,
             scaled = nr_compression_scaled,
             similarity_threshold = nr_compression_similarity_threshold,
@@ -76,10 +82,16 @@ workflow index_generation {
             cpu = 64,
             docker_image_id = docker_image_id
         }
+        call BreakApartByTaxid as BreakApartByTaxidNT {
+            input:
+            sorted_fasta = SplitFastaBySeqLengthAndSortNT.sorted,
+            accession2taxid = DownloadAccession2Taxid.accession2taxid,
+            cpu = 64,
+            docker_image_id = docker_image_id
+        }
         call CompressNT {
             input:
-            nt_sorted = SplitFastaBySeqLengthAndSortNT.sorted,
-            accession2taxid = DownloadAccession2Taxid.accession2taxid,
+            reads_by_taxid = BreakApartByTaxidNT.reads_by_taxid,
             k = nt_compression_k,
             scaled = nt_compression_scaled,
             similarity_threshold = nt_compression_similarity_threshold,
@@ -695,10 +707,39 @@ task SplitFastaBySeqLengthAndSort {
     }
 }
 
+task BreakApartByTaxid {
+    input {
+        File sorted_fasta
+        Directory accession2taxid
+        Int cpu
+        String docker_image_id
+    }
+
+    command <<<
+        set -euxo pipefail
+
+        ncbi-compress break-into-individual-taxids-only \
+            --input-fasta ~{sorted_fasta} \
+            --accession-mapping-files \
+                ~{accession2taxid}nucl_wgs.accession2taxid \
+                ~{accession2taxid}nucl_gb.accession2taxid \
+                ~{accession2taxid}pdb.accession2taxid \
+            --output-dir "reads_by_taxid" 
+    >>>
+
+    output {
+        Directory reads_by_taxid = "reads_by_taxid"
+    }
+
+    runtime {
+        docker: docker_image_id
+        cpu: cpu
+    }
+}
+
 task CompressNT {
     input {
-        File nt_sorted
-        Directory accession2taxid
+        Directory reads_by_taxid
         Int k
         Int scaled
         Float similarity_threshold
@@ -711,11 +752,8 @@ task CompressNT {
         set -euxo pipefail
 
         if [ "~{logging_enabled}" ]; then
-            ncbi-compress \
-                --input-fasta ~{nt_sorted} \
-                --accession-mapping-files ~{accession2taxid}nucl_wgs.accession2taxid \
-                --accession-mapping-files ~{accession2taxid}nucl_gb.accession2taxid \
-                --accession-mapping-files ~{accession2taxid}pdb.accession2taxid \
+            ncbi-compress fasta-compress-from-taxid-dir \
+                --input-fasta-dir ~{reads_by_taxid} \
                 --output-fasta nt_compressed.fa \
                 --k ~{k} \
                 --scaled ~{scaled} \
@@ -724,11 +762,8 @@ task CompressNT {
                 --logging-contained-in-tree-fn nt_contained_in_tree.tsv \
                 --logging-contained-in-chunk-fn nt_contained_in_chunk.tsv
         else
-            ncbi-compress \
-                --input-fasta nt_sorted \
-                --accession-mapping-files ~{accession2taxid}nucl_wgs.accession2taxid \
-                --accession-mapping-files ~{accession2taxid}nucl_gb.accession2taxid \
-                --accession-mapping-files ~{accession2taxid}pdb.accession2taxid \
+            ncbi-compress fasta-compress-from-taxid-dir \
+                --input-fasta-dir ~{reads_by_taxid} \
                 --output-fasta nt_compressed.fa \
                 --k ~{k} \
                 --scaled ~{scaled} \
@@ -751,8 +786,7 @@ task CompressNT {
 
 task CompressNR {
     input {
-        File nr_sorted
-        Directory accession2taxid
+        Directory reads_by_taxid
         Int k
         Int scaled
         Float similarity_threshold
@@ -765,10 +799,8 @@ task CompressNR {
         set -euxo pipefail
 
         if [ "~{logging_enabled}" ]; then
-            ncbi-compress \
-                --input-fasta ~{nr_sorted} \
-                --accession-mapping-files ~{accession2taxid}prot.accession2taxid.FULL \
-                --accession-mapping-files ~{accession2taxid}pdb.accession2taxid \
+            ncbi-compress fasta-compress-from-taxid-dir \
+                --input-fasta-dir ~{reads_by_taxid} \
                 --output-fasta nr_compressed.fa \
                 --k ~{k} \
                 --scaled ~{scaled} \
@@ -778,10 +810,8 @@ task CompressNR {
                 --logging-contained-in-tree-fn nr_contained_in_tree.tsv \
                 --logging-contained-in-chunk-fn nr_contained_in_chunk.tsv
         else
-            ncbi-compress \
-                --input-fasta nr_sorted \
-                --accession-mapping-files ~{accession2taxid}prot.accession2taxid.FULL \
-                --accession-mapping-files ~{accession2taxid}pdb.accession2taxid \
+            ncbi-compress fasta-compress-from-taxid-dir \
+                --input-fasta-dir ~{reads_by_taxid} \
                 --output-fasta nr_compressed.fa \
                 --k ~{k} \
                 --scaled ~{scaled} \
