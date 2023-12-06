@@ -43,7 +43,7 @@ pub mod commands {
                 logging_contained_in_chunk_fn,
             );
         } else {
-            ncbi_compress::fasta_compress_taxid(
+            ncbi_compress::fasta_compress_taxid( 
                 input_fasta_path,
                 writer,
                 scaled,
@@ -59,19 +59,40 @@ pub mod commands {
         }
     }
 
-    fn count_fasta_reads(filename: &str) -> usize
-    {
-        let file = File::open(filename).unwrap();
-        let reader = io::BufReader::new(file);
+    pub fn count_fasta_reads(input_fasta_path: &str) -> usize {
+        let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
+        let records_iter = reader.records();
+        return records_iter.count();
+    }
 
-        let mut count = 0;
-        for line in reader.lines() {
-            let line = line.unwrap();
-            if line.starts_with('>') {
-                count += 1;
+    pub fn split_fasta_into_chunks(input_fasta_path: &str, output_dir: &str, total_sequence_count: &usize, maximum_records_per_file: &usize, taxid: &str) -> Result<(), String> {
+        fs::create_dir_all(&output_dir).expect("Error creating output directory");
+        let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
+        let records_iter = reader.records();
+
+        let total_splits = (*total_sequence_count as f32 / *maximum_records_per_file as f32).ceil();
+        let sequence_count_per_split = (*total_sequence_count as f32 / total_splits as f32).ceil();
+        println!("total_splits: {}", total_splits);
+        println!("sequence_count_per_split: {}", sequence_count_per_split);
+
+        let mut seq_count = 0;
+        let mut split_count = 1;
+        let mut writer = fasta::Writer::to_file(format!("{}/{}_{}.fa", output_dir, taxid, split_count)).unwrap();
+        for (i, record) in records_iter.enumerate() {
+            let record = record.unwrap();
+            writer.write_record(&record).unwrap();
+            seq_count += 1;
+            if seq_count as f32 == sequence_count_per_split {
+                seq_count = 0;
+                if split_count as f32 == total_splits {
+                    break;
+                }
+                split_count += 1;
+                writer = fasta::Writer::to_file(format!("{}/{}_{}.fa", output_dir, taxid, split_count)).unwrap();
             }
         }
-        count
+
+        Ok(())
     }
 
     pub fn fasta_compress_from_taxid_dir (
@@ -96,25 +117,58 @@ pub mod commands {
             let entry = entry.unwrap();
             let path = entry.path();
             let input_fasta_path = path.to_str().unwrap();
+            let taxid = path.file_name().unwrap().to_str().unwrap().split(".").collect::<Vec<&str>>()[0];
             let reads_count = count_fasta_reads(input_fasta_path);
-            log::info!("Total reads for taxid {}: {}", input_fasta_path, reads_count);
-
-            fasta_compress_w_logging_option(
-                input_fasta_path,
-                &mut writer,
-                scaled,
-                k,
-                seed,
-                similarity_threshold,
-                chunk_size,
-                branch_factor,
-                is_protein_fasta,
-                &mut accession_count,
-                &mut unique_accession_count,
-                enable_sequence_retention_logging,
-                logging_contained_in_tree_fn,
-                logging_contained_in_chunk_fn,
-            );
+            if reads_count >= 5 { //9500000 { // back of the envelope calculation for how many 50,000 character reads that we can store in 488GB of RAM 
+                log::info!("Breaking apart taxid {} into smaller chunks", taxid);
+                let input_taxid_dir = format!("{}/{}_split", input_taxid_dir, taxid);
+                split_fasta_into_chunks(&input_fasta_path, &input_taxid_dir, &reads_count, &3, taxid).expect("error splitting fasta into chunks");
+                log::info!("Finished breaking apart taxid {} into smaller chunks", taxid);
+                // remove original input fasta file since we just broke it apart into smaller chunks
+                match fs::remove_file(input_fasta_path) {
+                    Ok(()) => println!("input fasta deleted successfully"),
+                    Err(e) => println!("Error deleting input fasta : {:?}", e),
+                }
+                // recursively call fasta_compress_from_taxid_dir on the new directory containing the smaller chunks
+                for (i, entry) in fs::read_dir(input_taxid_dir).unwrap().enumerate() {
+                    let entry = entry.unwrap();
+                    let path = entry.path();
+                    let split_taxid_fasta_path = path.to_str().unwrap();
+                    fasta_compress_w_logging_option(
+                        split_taxid_fasta_path,
+                        &mut writer,
+                        scaled,
+                        k,
+                        seed,
+                        similarity_threshold,
+                        chunk_size,
+                        branch_factor,
+                        is_protein_fasta,
+                        &mut accession_count,
+                        &mut unique_accession_count,
+                        enable_sequence_retention_logging,
+                        logging_contained_in_tree_fn,
+                        logging_contained_in_chunk_fn,
+                    );
+                }
+            } else {
+                fasta_compress_w_logging_option(
+                    input_fasta_path,
+                    &mut writer,
+                    scaled,
+                    k,
+                    seed,
+                    similarity_threshold,
+                    chunk_size,
+                    branch_factor,
+                    is_protein_fasta,
+                    &mut accession_count,
+                    &mut unique_accession_count,
+                    enable_sequence_retention_logging,
+                    logging_contained_in_tree_fn,
+                    logging_contained_in_chunk_fn,
+                );
+            }
             log::info!("Finished compressing taxid {}", input_fasta_path);
         }
     }
@@ -338,4 +392,61 @@ fn test_fasta_compress_from_taxid_dir() {
     );
 
     assert!(util::are_files_equal(truth_fasta_path, &output_fasta_path));
+}
+
+#[test]
+fn test_split_fasta_into_chunks() {
+    use bio::io::fasta;
+    use crate::util::util::create_fasta_records_from_file;
+
+    use crate::commands::commands::split_fasta_into_chunks;
+    use crate::commands::commands::count_fasta_reads;
+
+    let taxid_path_name = "123.fa";
+    let mut writer = fasta::Writer::to_file(&taxid_path_name).unwrap();
+
+    let records = vec![
+        fasta::Record::with_attrs("1", None, b"ACGT"),
+        fasta::Record::with_attrs("2", None, b"ACGT"),
+        fasta::Record::with_attrs("3", None, b"ACGT"),
+        fasta::Record::with_attrs("4", None, b"ACGT"),
+        fasta::Record::with_attrs("5", None, b"ACGT"),
+        fasta::Record::with_attrs("6", None, b"ACGT"),
+        fasta::Record::with_attrs("7", None, b"ACGT"),
+    ];
+
+    for rec in records {
+        writer.write_record(&rec).expect("error writing to file");
+    }
+    writer.flush().expect("error flushing file");
+
+    let reads_count = count_fasta_reads(&taxid_path_name);
+    assert_eq!(reads_count, 7);
+
+
+    let test_directory = tempdir().unwrap();
+    let temp_dir_path_str = test_directory.path().to_str().unwrap();
+
+    let maximum_records_per_file = 5;
+    split_fasta_into_chunks(&taxid_path_name, &temp_dir_path_str, &reads_count, &maximum_records_per_file, "123");
+
+    let mut chunk_0_reader = create_fasta_records_from_file(format!("{}/123_0.fa", temp_dir_path_str).as_str());
+    let mut chunk_1_reader = create_fasta_records_from_file(format!("{}/123_1.fa", temp_dir_path_str).as_str());
+
+    let mut expected_chunk_0_records = vec![
+        fasta::Record::with_attrs("1", None, b"ACGT"),
+        fasta::Record::with_attrs("2", None, b"ACGT"),
+        fasta::Record::with_attrs("3", None, b"ACGT"),
+        fasta::Record::with_attrs("4", None, b"ACGT"),
+    ];
+
+    let mut expected_chunk_1_records = vec![
+        fasta::Record::with_attrs("5", None, b"ACGT"),
+        fasta::Record::with_attrs("6", None, b"ACGT"),
+        fasta::Record::with_attrs("7", None, b"ACGT"),
+    ];
+
+    assert_eq!(expected_chunk_0_records.sort(), chunk_0_reader.sort());
+    assert_eq!(expected_chunk_1_records.sort(), chunk_1_reader.sort());
+
 }

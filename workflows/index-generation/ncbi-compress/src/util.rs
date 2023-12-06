@@ -3,7 +3,19 @@ pub mod util {
     use std::io::Read;
     use std::io::Write;
 
+    use bio::io::fasta;
     use rand::Rng;
+
+    pub fn create_fasta_records_from_file(input_fasta_path: &str) -> Vec<fasta::Record> {
+        let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
+        let mut records_iter = reader.records();
+        let mut records: Vec<fasta::Record> = Vec::new();
+        while let Some(record) = records_iter.next() {
+            let record = record.unwrap();
+            records.push(record);
+        }
+        return records;
+    }
 
     pub fn are_files_equal(file_path1: &str, file_path2: &str) -> bool {
         if let Ok(contents1) = fs::read(file_path1) {

@@ -745,7 +745,6 @@ task CompressNT {
         Float similarity_threshold
         Boolean logging_enabled
         String docker_image_id
-        Int cpu
     }
 
     command <<< 
@@ -792,7 +791,6 @@ task CompressNR {
         Float similarity_threshold
         Boolean logging_enabled
         String docker_image_id
-        Int cpu
     }
 
     command <<<

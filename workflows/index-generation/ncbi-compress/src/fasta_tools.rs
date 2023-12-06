@@ -24,7 +24,6 @@ pub mod fasta_tools {
         let min_length: usize = bin_number_to_floor(sequence_length, bin_size);
         let max_length: usize = min_length + bin_size - 1;
 
-
         // pad with leading zeros so that we can concatenate the files together in order with cat later
         let min_length_padded = format!("{:0>12}", min_length);
         let max_length_padded = format!("{:0>12}", max_length);
@@ -119,22 +118,9 @@ impl PartialOrd for FastaRecord {
     }
 }
 
-fn create_fasta_records_from_file<P: AsRef<Path> + std::fmt::Debug>(input_fasta_path: P) -> Vec<FastaRecord> {
-    let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
-    let mut records_iter = reader.records();
-    let mut records: Vec<FastaRecord> = Vec::new();
-    while let Some(record) = records_iter.next() {
-        let record = record.unwrap();
-        records.push(FastaRecord {
-            id: record.id().to_string(),
-            seq: String::from_utf8(record.seq().to_vec()).expect("Invalid UTF-8 sequence"),
-        });
-    }
-    return records;
-}
-
 #[test]
 fn test_break_up_fasta_by_sequence_length() {
+    use crate::util::util::create_fasta_records_from_file;
     // Setup
     let bin_size = 1000;
     let chunk_size = 1000;
@@ -144,7 +130,13 @@ fn test_break_up_fasta_by_sequence_length() {
     let input_fasta_file = "test_data/fasta_tools/inputs/nt";
 
     let temp_dir_path_str = temp_dir.path().to_str().unwrap();
-    fasta_tools::break_up_fasta_by_sequence_length(input_fasta_file, temp_dir_path_str, &total_sequence_count, &chunk_size, &bin_size);
+    fasta_tools::break_up_fasta_by_sequence_length(
+        input_fasta_file, 
+        temp_dir_path_str, 
+        &total_sequence_count, 
+        &chunk_size,
+        &bin_size
+    );
 
     //Compare files in from test with truth
     for entry in fs::read_dir(temp_dir_path_str).unwrap() {
@@ -155,7 +147,7 @@ fn test_break_up_fasta_by_sequence_length() {
         let test_file_name = test_file_path.file_name().unwrap().to_str().unwrap();
         let truth_file_path = format!("{}/{}", truth_dir_outputs, test_file_name);
 
-        let mut test_data_records = create_fasta_records_from_file(&test_file_path);
+        let mut test_data_records = create_fasta_records_from_file(&test_file_path.to_str().unwrap());
         let mut truth_data_records = create_fasta_records_from_file(&truth_file_path);
 
         assert_eq!(truth_data_records.sort(), test_data_records.sort(), "Files do not match: {:?}", test_file_name);
@@ -185,6 +177,8 @@ fn test_bin_number_to_floor() {
 
 #[test]
 fn test_process_seq_chunk() {
+    use crate::util::util::create_fasta_records_from_file;
+
     let bin_size = 25;
     let truth_directory = "test_data/fasta_tools/truth_outputs/process_seq_chunk/";
     let test_directory = tempdir().unwrap();

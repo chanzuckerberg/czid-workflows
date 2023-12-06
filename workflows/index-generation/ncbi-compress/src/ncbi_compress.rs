@@ -69,9 +69,9 @@ pub mod ncbi_compress {
                 .unwrap();
             let mut added = 0;
             reader.into_records().enumerate().for_each(|(i, result)| {
-                if i % 10_000 == 0 {
-                    log::info!("  Processed {} mappings, added {}", i, added);
-                }
+                // if i % 10_000 == 0 {
+                //     log::info!("  Processed {} mappings, added {}", i, added);
+                // }
 
                 let record = result.unwrap();
                 let accession = &record[0];
@@ -387,7 +387,5 @@ fn test_split_accessions_by_taxid() {
         util::are_files_equal(&test_file_path.to_str().unwrap(), &truth_file_path);
 
     }
-
-
 
 }
