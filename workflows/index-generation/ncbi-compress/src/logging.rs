@@ -48,9 +48,7 @@ pub mod logging {
             Ok(()) => {
                 println!("File removed successfully.");
             }
-            Err(e) => {
-                println!("Error while removing file: {}", e);
-            }
+            Err(e) => {} // logging file doesn't exist so we don't need to remove it
         };
 
         let file = OpenOptions::new()

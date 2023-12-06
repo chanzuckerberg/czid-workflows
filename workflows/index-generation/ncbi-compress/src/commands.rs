@@ -1,8 +1,6 @@
 pub mod commands {
     use std::fs;
-    use std::fs::File;
-    use std::io::{self, BufRead};
-    use std::path::Path;
+    //use std::io::{self, BufRead};
 
     use tempdir::TempDir;
     use bio::io::fasta;
@@ -78,7 +76,7 @@ pub mod commands {
         let mut seq_count = 0;
         let mut split_count = 1;
         let mut writer = fasta::Writer::to_file(format!("{}/{}_{}.fa", output_dir, taxid, split_count)).unwrap();
-        for (i, record) in records_iter.enumerate() {
+        for (_i, record) in records_iter.enumerate() {
             let record = record.unwrap();
             writer.write_record(&record).unwrap();
             seq_count += 1;
@@ -113,13 +111,13 @@ pub mod commands {
         let mut accession_count = 0;
         let mut unique_accession_count = 0;
         let mut writer = fasta::Writer::to_file(output_fasta_path).unwrap();
-        for (i, entry) in fs::read_dir(input_taxid_dir).unwrap().enumerate() {
+        for (_i, entry) in fs::read_dir(input_taxid_dir).unwrap().enumerate() {
             let entry = entry.unwrap();
             let path = entry.path();
             let input_fasta_path = path.to_str().unwrap();
             let taxid = path.file_name().unwrap().to_str().unwrap().split(".").collect::<Vec<&str>>()[0];
             let reads_count = count_fasta_reads(input_fasta_path);
-            if reads_count >= 5 { //9500000 { // back of the envelope calculation for how many 50,000 character reads that we can store in 488GB of RAM 
+            if reads_count >= 9500000 { // back of the envelope calculation for how many 50,000 character reads we can store in 488GB of RAM 
                 log::info!("Breaking apart taxid {} into smaller chunks", taxid);
                 let input_taxid_dir = format!("{}/{}_split", input_taxid_dir, taxid);
                 split_fasta_into_chunks(&input_fasta_path, &input_taxid_dir, &reads_count, &3, taxid).expect("error splitting fasta into chunks");
@@ -130,7 +128,7 @@ pub mod commands {
                     Err(e) => println!("Error deleting input fasta : {:?}", e),
                 }
                 // recursively call fasta_compress_from_taxid_dir on the new directory containing the smaller chunks
-                for (i, entry) in fs::read_dir(input_taxid_dir).unwrap().enumerate() {
+                for (_i, entry) in fs::read_dir(input_taxid_dir).unwrap().enumerate() {
                     let entry = entry.unwrap();
                     let path = entry.path();
                     let split_taxid_fasta_path = path.to_str().unwrap();
@@ -241,7 +239,7 @@ pub mod commands {
         let mut accession_count = 0;
         let mut unique_accession_count = 0;
         let mut writer = fasta::Writer::to_file(output_fasta_path).unwrap();
-        for (i, entry) in fs::read_dir(taxid_dir).unwrap().enumerate() {
+        for (_i, entry) in fs::read_dir(taxid_dir).unwrap().enumerate() {
             let entry = entry.unwrap();
             let path = entry.path();
             let input_fasta_path = path.to_str().unwrap();

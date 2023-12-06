@@ -68,7 +68,7 @@ pub mod ncbi_compress {
                 .from_path(mapping_file_path)
                 .unwrap();
             let mut added = 0;
-            reader.into_records().enumerate().for_each(|(i, result)| {
+            reader.into_records().enumerate().for_each(|(_i, result)| {
                 // if i % 10_000 == 0 {
                 //     log::info!("  Processed {} mappings, added {}", i, added);
                 // }
@@ -246,8 +246,6 @@ pub mod ncbi_compress {
                 }
             }
             for (hash, accession_id) in tmp {
-                // only insert accession_id into tree if logging is enabled
-
                 tree.insert(hash, accession_id).unwrap();
             }
             chunk = records_iter

@@ -676,7 +676,7 @@ task SplitFastaBySeqLengthAndSort {
         total_seqs=$(grep ">" ~{fasta} | wc -l)
         ncbi-compress  break-up-fasta-by-sequence-length  \
             --input-fasta ~{fasta}  \
-            --temp-file-output-dir outputs  \
+            --output-dir outputs  \
             --total-sequence-count ${total_seqs}  \
             --bin-size 25 \
 
