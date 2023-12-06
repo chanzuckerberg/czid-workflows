@@ -71,7 +71,6 @@ workflow index_generation {
             similarity_threshold = nr_compression_similarity_threshold,
             logging_enabled = logging_enabled,
             docker_image_id = docker_image_id,
-            cpu = 64
         }
     }
 
@@ -97,7 +96,6 @@ workflow index_generation {
             similarity_threshold = nt_compression_similarity_threshold,
             logging_enabled = logging_enabled,
             docker_image_id = docker_image_id,
-            cpu = 64
         }
     }
 
