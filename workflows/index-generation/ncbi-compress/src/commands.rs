@@ -428,23 +428,23 @@ fn test_split_fasta_into_chunks() {
     let maximum_records_per_file = 5;
     split_fasta_into_chunks(&taxid_path_name, &temp_dir_path_str, &reads_count, &maximum_records_per_file, "123");
 
-    let mut chunk_0_reader = create_fasta_records_from_file(format!("{}/123_0.fa", temp_dir_path_str).as_str());
     let mut chunk_1_reader = create_fasta_records_from_file(format!("{}/123_1.fa", temp_dir_path_str).as_str());
+    let mut chunk_2_reader = create_fasta_records_from_file(format!("{}/123_2.fa", temp_dir_path_str).as_str());
 
-    let mut expected_chunk_0_records = vec![
+    let mut expected_chunk_1_records = vec![
         fasta::Record::with_attrs("1", None, b"ACGT"),
         fasta::Record::with_attrs("2", None, b"ACGT"),
         fasta::Record::with_attrs("3", None, b"ACGT"),
         fasta::Record::with_attrs("4", None, b"ACGT"),
     ];
 
-    let mut expected_chunk_1_records = vec![
+    let mut expected_chunk_2_records = vec![
         fasta::Record::with_attrs("5", None, b"ACGT"),
         fasta::Record::with_attrs("6", None, b"ACGT"),
         fasta::Record::with_attrs("7", None, b"ACGT"),
     ];
 
-    assert_eq!(expected_chunk_0_records.sort(), chunk_0_reader.sort());
     assert_eq!(expected_chunk_1_records.sort(), chunk_1_reader.sort());
+    assert_eq!(expected_chunk_2_records.sort(), chunk_2_reader.sort());
 
 }
