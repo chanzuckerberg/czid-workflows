@@ -59,6 +59,7 @@ workflow index_generation {
             input:
             sorted_fasta = SplitFastaBySeqLengthAndSortNR.sorted,
             accession2taxid = DownloadAccession2Taxid.accession2taxid,
+            reads_by_taxid_path = "reads_by_taxid_nr",
             cpu = 64,
             docker_image_id = docker_image_id
         }
@@ -85,6 +86,7 @@ workflow index_generation {
             input:
             sorted_fasta = SplitFastaBySeqLengthAndSortNT.sorted,
             accession2taxid = DownloadAccession2Taxid.accession2taxid,
+            reads_by_taxid_path = "reads_by_taxid_nt",
             cpu = 64,
             docker_image_id = docker_image_id
         }
@@ -708,6 +710,7 @@ task BreakApartByTaxid {
     input {
         File sorted_fasta
         Directory accession2taxid
+        String reads_by_taxid_path
         Int cpu
         String docker_image_id
     }
@@ -721,11 +724,11 @@ task BreakApartByTaxid {
                 ~{accession2taxid}nucl_wgs.accession2taxid \
                 ~{accession2taxid}nucl_gb.accession2taxid \
                 ~{accession2taxid}pdb.accession2taxid \
-            --output-dir "reads_by_taxid" 
+            --output-dir ~{reads_by_taxid_path}
     >>>
 
     output {
-        Directory reads_by_taxid = "reads_by_taxid"
+        Directory reads_by_taxid = reads_by_taxid_path
     }
 
     runtime {
