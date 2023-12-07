@@ -52,6 +52,7 @@ workflow index_generation {
         call SplitFastaBySeqLengthAndSort as SplitFastaBySeqLengthAndSortNR {
             input:
             fasta = DownloadNR.nr,
+            combined_sorted_path = "combined_sorted_nr.fa",
             cpu = 64,
             docker_image_id = docker_image_id
         }
@@ -78,7 +79,8 @@ workflow index_generation {
     if (!skip_nuc_compression) {
         call SplitFastaBySeqLengthAndSort as SplitFastaBySeqLengthAndSortNT {
             input:
-            fasta = DownloadNR.nr,
+            fasta = DownloadNT.nt,
+            combined_sorted_path = "combined_sorted_nt.fa",
             cpu = 64,
             docker_image_id = docker_image_id
         }
@@ -662,6 +664,7 @@ task GenerateIndexMinimap2 {
 task SplitFastaBySeqLengthAndSort {
     input {
         File fasta
+        String combined_sorted_path
         Int cpu
         Int threads = if cpu * 0.6 < 1 then 1 else floor(cpu * 0.6)
         String docker_image_id
@@ -695,10 +698,10 @@ task SplitFastaBySeqLengthAndSort {
         # cd ..
 
         # Combine the sorted files with longest sequences at the top
-        ls -r outputs/*.fa | xargs cat > combined_sorted.fa
+        ls -r outputs/*.fa | xargs cat > ~{combined_sorted_path}
     >>>
     output {
-        File sorted = "combined_sorted.fa"
+        File sorted = combined_sorted_path
     }
     runtime {
         docker: docker_image_id
