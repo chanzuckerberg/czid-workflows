@@ -117,7 +117,7 @@ pub mod ncbi_compress {
             let taxid = if let Some(taxid) = accession_to_taxid.get(accession_no_version) {
                 taxid
             } else {
-                continue;
+                0 // no taxid found
             };
             let file_path = taxid_path.join(format!("{}.fasta", taxid));
             // let file_path = taxid_dir.path().join(format!("{}.fasta", taxid));

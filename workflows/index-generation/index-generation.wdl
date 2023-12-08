@@ -727,6 +727,7 @@ task BreakApartByTaxid {
                 ~{accession2taxid}nucl_wgs.accession2taxid \
                 ~{accession2taxid}nucl_gb.accession2taxid \
                 ~{accession2taxid}pdb.accession2taxid \
+                ~{accession2taxid}prot.accession2taxid.FULL \
             --output-dir ~{reads_by_taxid_path}
     >>>
 
@@ -739,6 +740,7 @@ task BreakApartByTaxid {
         cpu: cpu
     }
 }
+
 
 task CompressNT {
     input {
