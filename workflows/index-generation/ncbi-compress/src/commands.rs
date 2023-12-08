@@ -103,6 +103,7 @@ pub mod commands {
         chunk_size: usize,
         branch_factor: usize,
         is_protein_fasta: bool,
+        split_apart_taxid_dir: &str,
         enable_sequence_retention_logging: bool,
         logging_contained_in_tree_fn: &str,
         logging_contained_in_chunk_fn: &str,
@@ -117,16 +118,16 @@ pub mod commands {
             let input_fasta_path = path.to_str().unwrap();
             let taxid = path.file_name().unwrap().to_str().unwrap().split(".").collect::<Vec<&str>>()[0];
             let reads_count = count_fasta_reads(input_fasta_path);
-            if reads_count >= 3 { //9500000 { // back of the envelope calculation for how many 50,000 character reads we can store in 488GB of RAM 
+            if reads_count >= 5 { //9500000 { // back of the envelope calculation for how many 50,000 character reads we can store in 488GB of RAM 
                 log::info!("Breaking apart taxid {} into smaller chunks", taxid);
-                let input_taxid_dir = format!("{}/{}_split", input_taxid_dir, taxid);
+                let input_taxid_dir = format!("{}/{}_split", split_apart_taxid_dir, taxid);
                 split_fasta_into_chunks(&input_fasta_path, &input_taxid_dir, &reads_count, &3, taxid).expect("error splitting fasta into chunks");
                 log::info!("Finished breaking apart taxid {} into smaller chunks", taxid);
                 // remove original input fasta file since we just broke it apart into smaller chunks
-                match fs::remove_file(input_fasta_path) {
-                    Ok(()) => println!("input fasta deleted successfully"),
-                    Err(e) => println!("Error deleting input fasta : {:?}", e),
-                }
+                // match fs::remove_file(input_fasta_path) {
+                //     Ok(()) => println!("input fasta deleted successfully"),
+                //     Err(e) => println!("Error deleting input fasta : {:?}", e),
+                // }
                 // recursively call fasta_compress_from_taxid_dir on the new directory containing the smaller chunks
                 for (_i, entry) in fs::read_dir(input_taxid_dir).unwrap().enumerate() {
                     let entry = entry.unwrap();

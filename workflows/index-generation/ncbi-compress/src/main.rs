@@ -149,6 +149,10 @@ pub fn main() {
                 .long("branch-factor")
                 .value_parser(clap::value_parser!(usize))
                 .default_value("1000"))
+            .arg(Arg::new("split_apart_taxid_dir_name")
+                .help("split_apart_taxid_dir_name")
+                .long("split-apart-taxid-dir-name")
+                .default_value("split_taxid_dir"))
             .arg(Arg::new("is_protein_fasta")
                 .help("Is protein fasta")
                 .long("is-protein-fasta")
@@ -298,6 +302,7 @@ pub fn main() {
             let k = sub_m.get_one("k").unwrap();
             let seed = sub_m.get_one("seed").unwrap();
             let similarity_threshold = sub_m.get_one("similarity_threshold").unwrap();
+            let split_apart_taxid_dir_name = sub_m.get_one::<String>("split_apart_taxid_dir_name").unwrap();
             let enable_sequence_retention_logging = sub_m.get_flag("enable_sequence_retention_logging");
             let chunk_size = sub_m.get_one("chunk_size").unwrap();
             let branch_factor = sub_m.get_one("branch_factor").unwrap();
@@ -324,6 +329,7 @@ pub fn main() {
                 *chunk_size,
                 *branch_factor,
                 *is_protein_fasta,
+                split_apart_taxid_dir_name,
                 enable_sequence_retention_logging,
                 logging_contained_in_tree_fn,
                 logging_contained_in_chunk_fn,

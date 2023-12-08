@@ -745,6 +745,7 @@ task BreakApartByTaxid {
 task CompressNT {
     input {
         Directory reads_by_taxid
+        String split_apart_taxid_dir_name = "split_taxid_dir_nt"
         Int k
         Int scaled
         Float similarity_threshold
@@ -762,6 +763,7 @@ task CompressNT {
                 --k ~{k} \
                 --scaled ~{scaled} \
                 --similarity-threshold ~{similarity_threshold} \
+                --split-apart-taxid-dir-name ~{split_apart_taxid_dir_name} \
                 --enable-sequence-retention-logging \
                 --logging-contained-in-tree-fn nt_contained_in_tree.tsv \
                 --logging-contained-in-chunk-fn nt_contained_in_chunk.tsv
@@ -771,7 +773,8 @@ task CompressNT {
                 --output-fasta nt_compressed.fa \
                 --k ~{k} \
                 --scaled ~{scaled} \
-                --similarity-threshold ~{similarity_threshold}
+                --similarity-threshold ~{similarity_threshold} \
+                --split-apart-taxid-dir-name ~{split_apart_taxid_dir_name}
         fi
     >>>
 
@@ -779,6 +782,7 @@ task CompressNT {
         File nt_compressed = "nt_compressed.fa"
         File nt_contained_in_tree = "nt_contained_in_tree.tsv"
         File nt_contained_in_chunk = "nt_contained_in_chunk.tsv"
+        Directory split_taxid_dir = split_apart_taxid_dir_name
     }
 
     runtime {
@@ -791,6 +795,7 @@ task CompressNT {
 task CompressNR {
     input {
         Directory reads_by_taxid
+        String split_apart_taxid_dir_name = "split_taxid_dir_nr"
         Int k
         Int scaled
         Float similarity_threshold
@@ -808,6 +813,7 @@ task CompressNR {
                 --k ~{k} \
                 --scaled ~{scaled} \
                 --similarity-threshold ~{similarity_threshold} \
+                --split-apart-taxid-dir-name ~{split_apart_taxid_dir_name} \
                 --is-protein-fasta \
                 --enable-sequence-retention-logging \
                 --logging-contained-in-tree-fn nr_contained_in_tree.tsv \
@@ -819,6 +825,7 @@ task CompressNR {
                 --k ~{k} \
                 --scaled ~{scaled} \
                 --similarity-threshold ~{similarity_threshold} \
+                --split-apart-taxid-dir-name ~{split_apart_taxid_dir_name} \
                 --is-protein-fasta
         fi
     >>>
@@ -827,6 +834,7 @@ task CompressNR {
         File nr_compressed = "nr_compressed.fa"
         File nr_contained_in_tree = "nr_contained_in_tree.tsv"
         File nr_contained_in_chunk = "nr_contained_in_chunk.tsv"
+        Directory split_taxid_dir = split_apart_taxid_dir_name
     }
 
     runtime {
