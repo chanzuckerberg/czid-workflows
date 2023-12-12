@@ -400,7 +400,6 @@ task GenerateNTDB {
 
     runtime {
         docker: docker_image_id
-        cpu: 48
     }
 }
 
@@ -421,7 +420,6 @@ task GenerateNRDB {
 
     runtime {
         docker: docker_image_id
-        cpu: 48
     }
 }
 
@@ -668,7 +666,6 @@ task GenerateIndexMinimap2 {
 
     runtime {
         docker: docker_image_id
-        cpu: 48
     }
 }
 
@@ -716,6 +713,7 @@ task SplitFastaBySeqLengthAndSort {
     }
     runtime {
         docker: docker_image_id
+        disks: "local-disk 1900 SSD"
         cpu: cpu
     }
 }
@@ -748,6 +746,7 @@ task BreakApartByTaxid {
 
     runtime {
         docker: docker_image_id
+        disks: "local-disk 1900 SSD"
         cpu: cpu
     }
 }
@@ -801,6 +800,7 @@ task CompressNT {
     runtime {
         docker: docker_image_id
         cpu: 64
+        disks: "local-disk 1900 SSD"
         memory: "488G"
     }
 }
@@ -855,6 +855,7 @@ task CompressNR {
     runtime {
         docker: docker_image_id
         cpu: 64
+        disks: "local-disk 1900 SSD"
         memory: "488G"
     }
 }
