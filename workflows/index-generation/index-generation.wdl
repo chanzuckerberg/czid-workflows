@@ -264,6 +264,7 @@ task DownloadNR {
 
     runtime {
         docker: docker_image_id
+        cpu: 36
     }
 }
 
@@ -289,6 +290,7 @@ task DownloadNT {
 
     runtime {
         docker: docker_image_id
+        cpu: 36
     }
 }
 
@@ -325,6 +327,7 @@ task DownloadAccession2Taxid {
 
     runtime {
         docker: docker_image_id
+        cpu: 36
     }
 }
 
@@ -344,6 +347,7 @@ task DownloadTaxdump {
 
     runtime {
         docker: docker_image_id
+        cpu: 36
     }
 }
 
@@ -375,6 +379,7 @@ task GenerateIndexAccessions {
 
     runtime {
         docker: docker_image_id
+        cpu: 36
     }
 }
 
@@ -395,6 +400,7 @@ task GenerateNTDB {
 
     runtime {
         docker: docker_image_id
+        cpu: 48
     }
 }
 
@@ -415,6 +421,7 @@ task GenerateNRDB {
 
     runtime {
         docker: docker_image_id
+        cpu: 48
     }
 }
 
@@ -452,6 +459,7 @@ task GenerateIndexDiamond {
 
     runtime {
         docker: docker_image_id
+        cpu: 48
     }
 }
 
@@ -514,6 +522,7 @@ task GenerateIndexLineages {
 
     runtime {
         docker: docker_image_id
+        cpu: 48
     }
 }
 
@@ -620,6 +629,7 @@ task LoadTaxonLineages {
 
     runtime {
         docker: docker_image_id
+        cpu: 8
     }
 }
 
@@ -658,6 +668,7 @@ task GenerateIndexMinimap2 {
 
     runtime {
         docker: docker_image_id
+        cpu: 48
     }
 }
 
