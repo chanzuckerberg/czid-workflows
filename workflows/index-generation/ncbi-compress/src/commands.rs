@@ -111,6 +111,7 @@ pub mod commands {
         log::info!("Starting compression by taxid");
         let mut accession_count = 0;
         let mut unique_accession_count = 0;
+
         let mut writer = fasta::Writer::to_file(output_fasta_path).unwrap();
         for (_i, entry) in fs::read_dir(input_taxid_dir).unwrap().enumerate() {
             let entry = entry.unwrap();
@@ -385,6 +386,7 @@ fn test_fasta_compress_from_taxid_dir() {
         chunk_size,
         branch_factor,
         is_protein_fasta,
+        temp_dir_path_str,
         enable_sequence_retention_logging,
         logging_contained_in_tree_fn,
         logging_contained_in_chunk_fn,

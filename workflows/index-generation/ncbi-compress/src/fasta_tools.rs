@@ -30,23 +30,34 @@ pub mod fasta_tools {
         return format!("sequences_{}-{}.fa", min_length_padded, max_length_padded)
     }
 
-    pub fn process_seq_chunk(record: &fasta::Record, output_directory: &str, bin_size: &usize) -> () {
+    pub fn process_seq_chunk(record: &fasta::Record, output_directory: &str, bin_size: &usize) -> Result<(), String> {
         let sequence_length = record.seq().len();
         let filename = get_filename(&sequence_length, bin_size);
         let output_path = format!("{}/{}", output_directory, filename);
 
-        let mut handles = FILE_HANDLES.lock().unwrap(); // Lock the mutex here
+        // Attempt to acquire the lock
+        let mut handles = match FILE_HANDLES.lock() {
+            Ok(handle) => handle,
+            Err(e) => return Err(format!("Failed to acquire lock: {}", e)),
+        };
+
         let file = handles.entry(output_path.clone()).or_insert_with(|| {
             OpenOptions::new()
                 .write(true)
                 .append(true)
                 .create(true)
                 .open(&output_path)
-                .expect("Error opening fasta file")
+                .map_err(|e| format!("Error opening fasta file: {}", e))
+                .unwrap()
         });
 
         let mut writer = fasta::Writer::new(file);
-        writer.write_record(&record).expect("Error writing record");
+
+        writer.write_record(&record)
+        .map_err(|e| format!("Error writing record: {}", e))
+        .unwrap();
+
+        Ok(())
     }
     
     pub fn break_up_fasta_by_sequence_length(
