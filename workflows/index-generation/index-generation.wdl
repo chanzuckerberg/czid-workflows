@@ -264,7 +264,7 @@ task DownloadNR {
 
     runtime {
         docker: docker_image_id
-        cpu: 36
+        cpu: 16
     }
 }
 
@@ -290,7 +290,7 @@ task DownloadNT {
 
     runtime {
         docker: docker_image_id
-        cpu: 36
+        cpu: 16
     }
 }
 
@@ -327,7 +327,7 @@ task DownloadAccession2Taxid {
 
     runtime {
         docker: docker_image_id
-        cpu: 36
+        cpu: 16
     }
 }
 
@@ -347,7 +347,7 @@ task DownloadTaxdump {
 
     runtime {
         docker: docker_image_id
-        cpu: 36
+        cpu: 16
     }
 }
 
@@ -379,7 +379,7 @@ task GenerateIndexAccessions {
 
     runtime {
         docker: docker_image_id
-        cpu: 36
+        cpu: 8
     }
 }
 
@@ -400,6 +400,7 @@ task GenerateNTDB {
 
     runtime {
         docker: docker_image_id
+        cpu: 8
     }
 }
 
@@ -420,6 +421,7 @@ task GenerateNRDB {
 
     runtime {
         docker: docker_image_id
+        cpu: 8
     }
 }
 
@@ -457,7 +459,7 @@ task GenerateIndexDiamond {
 
     runtime {
         docker: docker_image_id
-        cpu: 48
+        cpu: 16
     }
 }
 
@@ -520,7 +522,7 @@ task GenerateIndexLineages {
 
     runtime {
         docker: docker_image_id
-        cpu: 48
+        cpu: 8
     }
 }
 
@@ -627,7 +629,7 @@ task LoadTaxonLineages {
 
     runtime {
         docker: docker_image_id
-        cpu: 8
+        cpu: 4
     }
 }
 
@@ -666,6 +668,7 @@ task GenerateIndexMinimap2 {
 
     runtime {
         docker: docker_image_id
+        cpu: 16
     }
 }
 
@@ -713,7 +716,6 @@ task SplitFastaBySeqLengthAndSort {
     }
     runtime {
         docker: docker_image_id
-        disks: "local-disk 1900 SSD"
         cpu: cpu
     }
 }
@@ -746,7 +748,6 @@ task BreakApartByTaxid {
 
     runtime {
         docker: docker_image_id
-        disks: "local-disk 1900 SSD"
         cpu: cpu
     }
 }
@@ -800,7 +801,6 @@ task CompressNT {
     runtime {
         docker: docker_image_id
         cpu: 64
-        disks: "local-disk 1900 SSD"
         memory: "488G"
     }
 }
@@ -855,7 +855,6 @@ task CompressNR {
     runtime {
         docker: docker_image_id
         cpu: 64
-        disks: "local-disk 1900 SSD"
         memory: "488G"
     }
 }
