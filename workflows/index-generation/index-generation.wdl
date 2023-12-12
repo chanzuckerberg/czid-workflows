@@ -767,6 +767,8 @@ task CompressNT {
     command <<< 
         set -euxo pipefail
 
+        mkdir ~{split_apart_taxid_dir_name}
+
         if [ "~{logging_enabled}" ]; then
             ncbi-compress fasta-compress-from-taxid-dir \
                 --input-fasta-dir ~{reads_by_taxid} \
@@ -816,6 +818,8 @@ task CompressNR {
 
     command <<<
         set -euxo pipefail
+
+        mkdir ~{split_apart_taxid_dir_name}
 
         if [ "~{logging_enabled}" ]; then
             ncbi-compress fasta-compress-from-taxid-dir \
