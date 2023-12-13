@@ -694,7 +694,7 @@ task SplitFastaBySeqLengthAndSort {
             --input-fasta ~{fasta}  \
             --output-dir outputs  \
             --total-sequence-count ${total_seqs}  \
-            --bin-size 25 \
+            --bin-size 50
 
         # apt-get install -y parallel
         # parallel -j ~{threads} 'seqkit sort --reverse --by-length --two-pass {} -o sorted_{};' ::: outputs/*.fa
