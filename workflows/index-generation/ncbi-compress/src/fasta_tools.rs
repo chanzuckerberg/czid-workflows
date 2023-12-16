@@ -15,6 +15,17 @@ pub mod fasta_tools {
         static ref FILE_HANDLES: Mutex<HashMap<String, std::fs::File>> = Mutex::new(HashMap::new());
     }
 
+    fn check_and_remove_handle(max_handles: usize) {
+        let mut handles = FILE_HANDLES.lock().unwrap(); // Acquire lock
+
+        if handles.len() >= max_handles {
+            if let Some((key, _)) = handles.iter().next().map(|(k, v)| (k.clone(), v)) {
+                handles.remove(&key); // Remove an arbitrary file handle
+                // The file is automatically closed here when the `File` object is dropped
+            }
+        }
+    }
+
     pub fn bin_number_to_floor(sequence_length: &usize, bin_size: &usize) -> usize {
         let floored = (*sequence_length as f64 / *bin_size as f64).floor();
         (floored * *bin_size as f64) as usize
@@ -34,6 +45,8 @@ pub mod fasta_tools {
         let sequence_length = record.seq().len();
         let filename = get_filename(&sequence_length, bin_size);
         let output_path = format!("{}/{}", output_directory, filename);
+
+        check_and_remove_handle(65000 as usize); // 65000 is the max number of open file handles on linux
 
         // Attempt to acquire the lock
         let mut handles = match FILE_HANDLES.lock() {
