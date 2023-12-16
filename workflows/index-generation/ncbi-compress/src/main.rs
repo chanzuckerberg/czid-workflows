@@ -8,6 +8,7 @@ use ncbi_compress::logging::logging;
 
 
 pub fn main() {
+    env_logger::init();
     let matches = Command::new("ncbi-compress")
         .version("1.0")
         .author("Your Name")
