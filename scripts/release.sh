@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -euo pipefail
+set -euxo pipefail
 
 if [[ $# != 3 ]]; then
     echo "This script creates and pushes a git tag representing a new workflow release."
