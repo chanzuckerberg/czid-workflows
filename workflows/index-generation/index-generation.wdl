@@ -692,7 +692,7 @@ task SplitFastaBySeqLengthAndSort {
         total_seqs=$(grep ">" ~{fasta} | wc -l)
         ncbi-compress  sort-fasta-by-sequence-length  \
             --input-fasta ~{fasta}  \
-            --output outputs ~{combined_sorted_path}
+            --output ~{combined_sorted_path}
     >>>
     output {
         File sorted = combined_sorted_path
