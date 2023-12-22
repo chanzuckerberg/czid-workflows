@@ -45,6 +45,7 @@ echo "$RELEASE_NOTES" >> $TAG_MSG
 git log --pretty=format:%s ${OLD_TAG}..HEAD >> $TAG_MSG || true
 if ! git config --get user.name ; then
     git config user.name "CZ ID release action triggered by ${GITHUB_ACTOR:-$(whoami)}"
+    git config user.email "${GITHUB_ACTOR:-$(whoami)}@users.noreply.github.com"
 fi
 git config --get user.name
 git tag --annotate --file $TAG_MSG "$TAG"
