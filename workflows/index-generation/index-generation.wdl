@@ -235,8 +235,8 @@ workflow index_generation {
         File? nt_loc_db = if (skip_nuc_compression) then GenerateNTDBNoCompression.nt_loc_db else GenerateNTDBWCompression.nt_loc_db
         File? nt_info_db = if (skip_nuc_compression) then GenerateNTDBNoCompression.nt_info_db else GenerateNTDBWCompression.nt_info_db
         File? nr_loc_db = if (skip_protein_compression) then GenerateNRDBNoCompression.nr_loc_db else GenerateNRDBWCompression.nr_loc_db
-        Directory minimap2_index? = if (skip_nuc_compression) then GenerateIndexMinimap2NoCompression.minimap2_index else GenerateIndexMinimap2WCompression.minimap2_index
-        Directory diamond_index? = if (skip_protein_compression) then GenerateIndexDiamondNoCompression.diamond_index else GenerateIndexDiamondWCompression.diamond_index
+        Directory? minimap2_index = if (skip_nuc_compression) then GenerateIndexMinimap2NoCompression.minimap2_index else GenerateIndexMinimap2WCompression.minimap2_index
+        Directory? diamond_index = if (skip_protein_compression) then GenerateIndexDiamondNoCompression.diamond_index else GenerateIndexDiamondWCompression.diamond_index
         File taxid_lineages_db = GenerateIndexLineages.taxid_lineages_db
         File versioned_taxid_lineages_csv = GenerateIndexLineages.versioned_taxid_lineages_csv
         File deuterostome_taxids = GenerateIndexLineages.deuterostome_taxids
