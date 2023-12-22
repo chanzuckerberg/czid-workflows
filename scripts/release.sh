@@ -47,6 +47,7 @@ if ! git config --get user.name ; then
     git config user.name "CZ ID release action triggered by ${GITHUB_ACTOR:-$(whoami)}"
 fi
 git config --get user.name
+git config --get user.email
 git tag --annotate --file $TAG_MSG "$TAG"
 git push origin "$TAG"
 
