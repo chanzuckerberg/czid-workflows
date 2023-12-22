@@ -12,6 +12,7 @@ use ncbi_compress::ncbi_compress::ncbi_compress::split_accessions_by_taxid;
 use ncbi_compress::logging::logging;
 
 pub fn main() {
+    logging::init_stdout_logging();
     let matches = Command::new("ncbi-compress")
         .version("1.0")
         .author("Your Name")
@@ -548,4 +549,3 @@ pub fn main() {
 }
 
 // #[test]
-

@@ -25,7 +25,15 @@ RUN apt-get update && \
     ## minimap2
     build-essential \
     libz-dev \
-    zip
+    zip \
+    ## rocksdb
+    libgflags-dev \
+    libsnappy-dev \
+    zlib1g-dev \
+    libbz2-dev \
+    liblz4-dev \
+    libzstd-dev \
+    clang
 
 # install aria2
 RUN curl -L https://github.com/aria2/aria2/releases/download/release-${ARIA2_VERSION}/aria2-${ARIA2_VERSION}.tar.gz -o aria2-${ARIA2_VERSION}.tar.gz && \
