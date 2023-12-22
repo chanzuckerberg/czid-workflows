@@ -4,6 +4,8 @@ pub mod ncbi_compress {
     use std::{borrow::BorrowMut, fs};
 
     use bio::io::fasta;
+    use rand::distributions::Alphanumeric;
+    use rand::Rng;
     use rayon::prelude::*;
     use sourmash::encodings::HashFunctions;
     use sourmash::errors::SourmashError;
@@ -34,8 +36,17 @@ pub mod ncbi_compress {
         // based on taxid in the mapping files (input fasta does not have taxid in header)
 
         log::info!("Splitting accessions by taxid");
-        let dir = tempfile::tempdir().unwrap();
-        let accession_to_taxid = rocksdb::DB::open_default(dir).unwrap();
+        // Use a random string for the rocksdb directoru name
+        // A tempdir can be removed by the operating system before we are done with it which
+        // break the rocksdb. We need a random name so we can call this function multiple
+        // times from different threads during testing.
+        let rng = rand::thread_rng();
+        let dir: String = rng
+            .sample_iter(&Alphanumeric)
+            .take(20)
+            .map(char::from)
+            .collect();
+        let accession_to_taxid = rocksdb::DB::open_default(&dir).unwrap();
         fs::create_dir_all(&output_dir).expect("Error creating output directory");
 
         log::info!("Creating accession to taxid db");
@@ -128,6 +139,7 @@ pub mod ncbi_compress {
             let mut writer = fasta::Writer::new(file);
             writer.write_record(&record).unwrap();
         }
+        fs::remove_dir_all(dir).expect("Error removing db");
         log::info!("Finished splitting accessions by taxid");
         taxid_path.to_path_buf()
     }
