@@ -25,15 +25,7 @@ RUN apt-get update && \
     ## minimap2
     build-essential \
     libz-dev \
-    zip \
-    ## rocksdb
-    libgflags-dev \
-    libsnappy-dev \
-    zlib1g-dev \
-    libbz2-dev \
-    liblz4-dev \
-    libzstd-dev \
-    clang
+    zip
 
 # install aria2
 RUN curl -L https://github.com/aria2/aria2/releases/download/release-${ARIA2_VERSION}/aria2-${ARIA2_VERSION}.tar.gz -o aria2-${ARIA2_VERSION}.tar.gz && \
@@ -62,7 +54,15 @@ FROM ubuntu:22.04 AS ncbi_compress_builder
 RUN apt-get update && \
     apt-get install -y \
     build-essential \
-    wget
+    wget \
+    ## rocksdb
+    libgflags-dev \
+    libsnappy-dev \
+    zlib1g-dev \
+    libbz2-dev \
+    liblz4-dev \
+    libzstd-dev \
+    clang
 
 # based on https://github.com/rust-lang/docker-rust/blob/dcb74d779e8a74263dc8b91d58d8ce7f3c0c805b/1.70.0/buster/Dockerfile
 ENV RUSTUP_HOME=/usr/local/rustup \
