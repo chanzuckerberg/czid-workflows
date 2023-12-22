@@ -1,3 +1,4 @@
+pub mod bloomset;
 pub mod commands;
 pub mod fasta_tools;
 pub mod logging;

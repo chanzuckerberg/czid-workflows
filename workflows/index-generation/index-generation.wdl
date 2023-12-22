@@ -4,7 +4,7 @@ workflow index_generation {
     input {
         String index_name
         String ncbi_server = "https://ftp.ncbi.nih.gov"
-        # Boolean write_to_db = false
+        Boolean write_to_db = false
         String? environ
         # TODO: (alignment_config) remove after alignment config table is removed
         String? s3_dir
@@ -203,36 +203,40 @@ workflow index_generation {
     }
 
 
-    # if (write_to_db && defined(environ) && defined(s3_dir)) {
-    call LoadTaxonLineages {
-            input:
-            environ = environ,
-            index_name = index_name,
-            s3_dir = s3_dir,
-            minimap2_index = if (skip_nuc_compression) then GenerateIndexMinimap2NoCompression.minimap2_index else GenerateIndexMinimap2WCompression.minimap2_index,
-            diamond_index = if (skip_protein_compression) then GenerateIndexDiamondNoCompression.diamond_index else GenerateIndexDiamondWCompression.diamond_index,
-            nt = if (skip_nuc_compression) then DownloadNT.nt else CompressNT.nt_compressed,
-            nr = if (skip_protein_compression) then DownloadNR.nr else CompressNR.nr_compressed,
-            nt_loc_db = if (skip_nuc_compression) then GenerateNTDBNoCompression.nt_loc_db else GenerateNTDBWCompression.nt_loc_db,
-            nt_info_db = if (skip_nuc_compression) then GenerateNTDBNoCompression.nt_info_db else GenerateNTDBWCompression.nt_info_db,
-            nr_loc_db = if (skip_protein_compression) then GenerateNRDBNoCompression.nr_loc_db else GenerateNRDBWCompression.nr_loc_db,
-            accession2taxid_db = if (skip_protein_compression && !skip_nuc_compression) then GenerateIndexAccessionsNoCompressProtein.accession2taxid_db
-                        else if (!skip_protein_compression && skip_nuc_compression) then GenerateIndexAccessionsNoCompressNuc.accession2taxid_db
-                        else if (!skip_nuc_compression && !skip_protein_compression)then GenerateIndexAccessionsWCompression.accession2taxid_db
-                        else GenerateIndexAccessionsNoCompression.accession2taxid_db,
-            docker_image_id = docker_image_id,
+    if (write_to_db && defined(environ) && defined(s3_dir)) {
+        call LoadTaxonLineages {
+                input:
+                environ = environ,
+                index_name = index_name,
+                s3_dir = s3_dir,
+                minimap2_index = if (skip_nuc_compression) then GenerateIndexMinimap2NoCompression.minimap2_index else GenerateIndexMinimap2WCompression.minimap2_index,
+                diamond_index = if (skip_protein_compression) then GenerateIndexDiamondNoCompression.diamond_index else GenerateIndexDiamondWCompression.diamond_index,
+                nt = if (skip_nuc_compression) then DownloadNT.nt else CompressNT.nt_compressed,
+                nr = if (skip_protein_compression) then DownloadNR.nr else CompressNR.nr_compressed,
+                nt_loc_db = if (skip_nuc_compression) then GenerateNTDBNoCompression.nt_loc_db else GenerateNTDBWCompression.nt_loc_db,
+                nt_info_db = if (skip_nuc_compression) then GenerateNTDBNoCompression.nt_info_db else GenerateNTDBWCompression.nt_info_db,
+                nr_loc_db = if (skip_protein_compression) then GenerateNRDBNoCompression.nr_loc_db else GenerateNRDBWCompression.nr_loc_db,
+                accession2taxid_db = if (skip_protein_compression && !skip_nuc_compression) then GenerateIndexAccessionsNoCompressProtein.accession2taxid_db
+                            else if (!skip_protein_compression && skip_nuc_compression) then GenerateIndexAccessionsNoCompressNuc.accession2taxid_db
+                            else if (!skip_nuc_compression && !skip_protein_compression)then GenerateIndexAccessionsWCompression.accession2taxid_db
+                            else GenerateIndexAccessionsNoCompression.accession2taxid_db,
+                docker_image_id = docker_image_id,
 
+        }
     }
 
     output {
-        File? nr = LoadTaxonLineages.nr_
-        File? nt = LoadTaxonLineages.nt_
-        File? accession2taxid_db = LoadTaxonLineages.accession2taxid_db_
-        File? nt_loc_db = LoadTaxonLineages.nt_loc_db_
-        File? nt_info_db = LoadTaxonLineages.nt_info_db_
-        File? nr_loc_db = LoadTaxonLineages.nr_loc_db_
-        Directory? minimap2_index = LoadTaxonLineages.minimap2_index_
-        Directory? diamond_index = LoadTaxonLineages.diamond_index_
+        File nr = if (skip_nuc_compression) then DownloadNT.nt else CompressNT.nt_compressed
+        File nt = if (skip_protein_compression) then DownloadNR.nr else CompressNR.nr_compressed
+        File accession2taxid_db = if (skip_protein_compression && !skip_nuc_compression) then GenerateIndexAccessionsNoCompressProtein.accession2taxid_db
+                            else if (!skip_protein_compression && skip_nuc_compression) then GenerateIndexAccessionsNoCompressNuc.accession2taxid_db
+                            else if (!skip_nuc_compression && !skip_protein_compression)then GenerateIndexAccessionsWCompression.accession2taxid_db
+                            else GenerateIndexAccessionsNoCompression.accession2taxid_db
+        File nt_loc_db = if (skip_nuc_compression) then GenerateNTDBNoCompression.nt_loc_db else GenerateNTDBWCompression.nt_loc_db
+        File nt_info_db = if (skip_nuc_compression) then GenerateNTDBNoCompression.nt_info_db else GenerateNTDBWCompression.nt_info_db
+        File nr_loc_db = if (skip_protein_compression) then GenerateNRDBNoCompression.nr_loc_db else GenerateNRDBWCompression.nr_loc_db
+        Directory minimap2_index = if (skip_nuc_compression) then GenerateIndexMinimap2NoCompression.minimap2_index else GenerateIndexMinimap2WCompression.minimap2_index
+        Directory diamond_index = if (skip_protein_compression) then GenerateIndexDiamondNoCompression.diamond_index else GenerateIndexDiamondWCompression.diamond_index
         File taxid_lineages_db = GenerateIndexLineages.taxid_lineages_db
         File versioned_taxid_lineages_csv = GenerateIndexLineages.versioned_taxid_lineages_csv
         File deuterostome_taxids = GenerateIndexLineages.deuterostome_taxids
