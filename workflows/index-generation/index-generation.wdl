@@ -226,17 +226,17 @@ workflow index_generation {
     }
 
     output {
-        File nr = if (skip_nuc_compression) then DownloadNT.nt else CompressNT.nt_compressed
-        File nt = if (skip_protein_compression) then DownloadNR.nr else CompressNR.nr_compressed
-        File accession2taxid_db = if (skip_protein_compression && !skip_nuc_compression) then GenerateIndexAccessionsNoCompressProtein.accession2taxid_db
+        File? nr = if (skip_nuc_compression) then DownloadNT.nt else CompressNT.nt_compressed
+        File? nt = if (skip_protein_compression) then DownloadNR.nr else CompressNR.nr_compressed
+        File? accession2taxid_db = if (skip_protein_compression && !skip_nuc_compression) then GenerateIndexAccessionsNoCompressProtein.accession2taxid_db
                             else if (!skip_protein_compression && skip_nuc_compression) then GenerateIndexAccessionsNoCompressNuc.accession2taxid_db
                             else if (!skip_nuc_compression && !skip_protein_compression)then GenerateIndexAccessionsWCompression.accession2taxid_db
                             else GenerateIndexAccessionsNoCompression.accession2taxid_db
-        File nt_loc_db = if (skip_nuc_compression) then GenerateNTDBNoCompression.nt_loc_db else GenerateNTDBWCompression.nt_loc_db
-        File nt_info_db = if (skip_nuc_compression) then GenerateNTDBNoCompression.nt_info_db else GenerateNTDBWCompression.nt_info_db
-        File nr_loc_db = if (skip_protein_compression) then GenerateNRDBNoCompression.nr_loc_db else GenerateNRDBWCompression.nr_loc_db
-        Directory minimap2_index = if (skip_nuc_compression) then GenerateIndexMinimap2NoCompression.minimap2_index else GenerateIndexMinimap2WCompression.minimap2_index
-        Directory diamond_index = if (skip_protein_compression) then GenerateIndexDiamondNoCompression.diamond_index else GenerateIndexDiamondWCompression.diamond_index
+        File? nt_loc_db = if (skip_nuc_compression) then GenerateNTDBNoCompression.nt_loc_db else GenerateNTDBWCompression.nt_loc_db
+        File? nt_info_db = if (skip_nuc_compression) then GenerateNTDBNoCompression.nt_info_db else GenerateNTDBWCompression.nt_info_db
+        File? nr_loc_db = if (skip_protein_compression) then GenerateNRDBNoCompression.nr_loc_db else GenerateNRDBWCompression.nr_loc_db
+        Directory minimap2_index? = if (skip_nuc_compression) then GenerateIndexMinimap2NoCompression.minimap2_index else GenerateIndexMinimap2WCompression.minimap2_index
+        Directory diamond_index? = if (skip_protein_compression) then GenerateIndexDiamondNoCompression.diamond_index else GenerateIndexDiamondWCompression.diamond_index
         File taxid_lineages_db = GenerateIndexLineages.taxid_lineages_db
         File versioned_taxid_lineages_csv = GenerateIndexLineages.versioned_taxid_lineages_csv
         File deuterostome_taxids = GenerateIndexLineages.deuterostome_taxids
