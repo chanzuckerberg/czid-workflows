@@ -1,5 +1,6 @@
 #!/bin/bash
 
+
 set -euxo pipefail
 
 if [[ $# != 3 ]]; then
