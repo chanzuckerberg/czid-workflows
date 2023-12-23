@@ -126,7 +126,11 @@ pub mod ncbi_compress {
             let accession_id = record.id().split_whitespace().next().unwrap();
             let accession_no_version = remove_accession_version(accession_id);
             let taxid = if let Some(taxid) = accession_to_taxid.get(accession_no_version).unwrap() {
-                u64::from_be_bytes(taxid.as_slice().try_into().unwrap())
+                if taxid.len() == 0 {
+                    0 // no taxid found
+                } else {
+                    u64::from_be_bytes(taxid.as_slice().try_into().unwrap())
+                }
             } else {
                 0 // no taxid found
             };
@@ -405,7 +409,6 @@ mod tests {
     use crate::ncbi_compress::ncbi_compress;
     use crate::util::util;
     use std::fs;
-    use std::path::PathBuf;
 
     #[test]
     fn test_split_accessions_by_taxid() {
@@ -442,5 +445,19 @@ mod tests {
             let truth_file_path = format!("{}/{}", truth_output_dir, test_file_name);
             util::are_files_equal(&test_file_path.to_str().unwrap(), &truth_file_path);
         }
+    }
+
+    #[test]
+    fn test_conversion() {
+        let taxid: u64 = 123;
+
+        let dir = tempdir().unwrap();
+        let db = rocksdb::DB::open_default(&dir).unwrap();
+        db.put(b"test", taxid.to_be_bytes()).unwrap();
+
+        let result = db.get(b"test").unwrap().unwrap();
+        let second_taxid = u64::from_be_bytes(result.as_slice().try_into().unwrap());
+
+        assert_eq!(taxid, second_taxid);
     }
 }

@@ -61,7 +61,7 @@ workflow index_generation {
             sorted_fasta = SplitFastaBySeqLengthAndSortNR.sorted,
             accession2taxid = DownloadAccession2Taxid.accession2taxid,
             reads_by_taxid_path = "reads_by_taxid_nr",
-            cpu = 64,
+            cpu = 96,
             docker_image_id = docker_image_id
         }
 
@@ -89,7 +89,7 @@ workflow index_generation {
             sorted_fasta = SplitFastaBySeqLengthAndSortNT.sorted,
             accession2taxid = DownloadAccession2Taxid.accession2taxid,
             reads_by_taxid_path = "reads_by_taxid_nt",
-            cpu = 64,
+            cpu = 96,
             docker_image_id = docker_image_id
         }
         call CompressNT {
