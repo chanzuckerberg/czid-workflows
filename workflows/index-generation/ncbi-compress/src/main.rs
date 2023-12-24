@@ -4,9 +4,7 @@ use ncbi_compress::commands::commands::{
     fasta_compress_end_to_end, fasta_compress_from_fasta_skip_split_by_taxid,
     fasta_compress_from_taxid_dir,
 };
-use ncbi_compress::fasta_tools::fasta_tools::{
-    break_up_fasta_by_sequence_length, sort_fasta_by_sequence_length,
-};
+use ncbi_compress::fasta_tools::fasta_tools::sort_fasta_by_sequence_length;
 use ncbi_compress::ncbi_compress::ncbi_compress::split_accessions_by_taxid;
 
 use ncbi_compress::logging::logging;
@@ -17,43 +15,6 @@ pub fn main() {
         .version("1.0")
         .author("Your Name")
         .about("Does awesome things with sequences")
-        .subcommand(
-            Command::new("break-up-fasta-by-sequence-length")
-                .about("break_up_fasta_by_sequence_length")
-                .arg(
-                    Arg::new("input_fasta")
-                        .help("Input file to be sorted")
-                        .long("input-fasta")
-                        .required(true),
-                )
-                .arg(
-                    Arg::new("output_dir")
-                        .help("Output directory for the split fasta files")
-                        .long("output-dir")
-                        .required(true),
-                )
-                .arg(
-                    Arg::new("total_sequence_count")
-                        .help("Total sequence count")
-                        .long("total-sequence-count")
-                        .value_parser(clap::value_parser!(usize))
-                        .required(true),
-                )
-                .arg(
-                    Arg::new("chunk_size")
-                        .help("Chunk size")
-                        .long("chunk-size")
-                        .value_parser(clap::value_parser!(usize))
-                        .default_value("10000"),
-                )
-                .arg(
-                    Arg::new("bin_size")
-                        .help("Bin size")
-                        .long("bin-size")
-                        .value_parser(clap::value_parser!(usize))
-                        .required(true),
-                ),
-        )
         .subcommand(
             Command::new("sort-fasta-by-sequence-length")
                 .about("sort_fasta_by_sequence_length")
@@ -355,20 +316,6 @@ pub fn main() {
         .get_matches();
 
     match matches.subcommand() {
-        Some(("break-up-fasta-by-sequence-length", sub_m)) => {
-            let input_fasta = sub_m.get_one::<String>("input_fasta").unwrap();
-            let output_dir = sub_m.get_one::<String>("output_dir").unwrap();
-            let total_sequence_count = sub_m.get_one("total_sequence_count").unwrap();
-            let chunk_size = sub_m.get_one("chunk_size").unwrap();
-            let bin_size = sub_m.get_one("bin_size").unwrap();
-            break_up_fasta_by_sequence_length(
-                input_fasta,
-                output_dir,
-                total_sequence_count,
-                chunk_size,
-                bin_size,
-            );
-        }
         Some(("sort-fasta-by-sequence-length", sub_m)) => {
             let input_fasta = sub_m.get_one::<String>("input_fasta").unwrap();
             let output_fasta = sub_m.get_one::<String>("output_fasta").unwrap();
