@@ -61,7 +61,7 @@ workflow index_generation {
             input:
             database_type = "nt",
             sorted_fasta = SortFastaNR.sorted,
-            accession2taxid = DownloadAccession2Taxid.accession2taxid,
+            accession2taxid_files = [DownloadAccession2Taxid.pdb, DownloadAccession2Taxid.prot],
             k = nr_compression_k,
             scaled = nr_compression_scaled,
             similarity_threshold = nr_compression_similarity_threshold,
@@ -82,7 +82,7 @@ workflow index_generation {
             input:
             database_type = "nt",
             sorted_fasta = SortFastaNT.sorted,
-            accession2taxid = DownloadAccession2Taxid.accession2taxid,
+            accession2taxid_files = [DownloadAccession2Taxid.nucl_wgs, DownloadAccession2Taxid.nucl_gb],
             k = nt_compression_k,
             scaled = nt_compression_scaled,
             similarity_threshold = nt_compression_similarity_threshold,
@@ -147,7 +147,12 @@ workflow index_generation {
             input:
             nr = DownloadNR.nr,
             nt = select_first([CompressNT.compressed]),
-            accession2taxid = DownloadAccession2Taxid.accession2taxid,
+            accession2taxid_files = [
+                DownloadAccession2Taxid.nucl_wgs,
+                DownloadAccession2Taxid.nucl_gb,
+                DownloadAccession2Taxid.pdb,
+                DownloadAccession2Taxid.prot,
+            ]
             docker_image_id = docker_image_id
         }
     }
@@ -157,7 +162,12 @@ workflow index_generation {
             input:
             nr = select_first([CompressNR.compressed]),
             nt = DownloadNT.nt,
-            accession2taxid = DownloadAccession2Taxid.accession2taxid,
+            accession2taxid_files = [
+                DownloadAccession2Taxid.nucl_wgs,
+                DownloadAccession2Taxid.nucl_gb,
+                DownloadAccession2Taxid.pdb,
+                DownloadAccession2Taxid.prot,
+            ]
             docker_image_id = docker_image_id
         }
     }
@@ -166,7 +176,12 @@ workflow index_generation {
             input:
             nr = select_first([CompressNR.compressed]),
             nt = select_first([CompressNT.compressed]),
-            accession2taxid = DownloadAccession2Taxid.accession2taxid,
+            accession2taxid_files = [
+                DownloadAccession2Taxid.nucl_wgs,
+                DownloadAccession2Taxid.nucl_gb,
+                DownloadAccession2Taxid.pdb,
+                DownloadAccession2Taxid.prot,
+            ]
             docker_image_id = docker_image_id
         }
     }
@@ -176,7 +191,12 @@ workflow index_generation {
             input:
             nr = DownloadNR.nr,
             nt = DownloadNT.nt,
-            accession2taxid = DownloadAccession2Taxid.accession2taxid,
+            accession2taxid_files = [
+                DownloadAccession2Taxid.nucl_wgs,
+                DownloadAccession2Taxid.nucl_gb,
+                DownloadAccession2Taxid.pdb,
+                DownloadAccession2Taxid.prot,
+            ]
             docker_image_id = docker_image_id
         }
     }
@@ -318,6 +338,10 @@ task DownloadAccession2Taxid {
     >>>
 
     output {
+        File nucl_gb = "pub/taxonomy/accession2taxid/nucl_gb.accession2taxid"
+        File nucl_wgs = "pub/taxonomy/accession2taxid/nucl_wgs.accession2taxid"
+        File pdb = "pub/taxonomy/accession2taxid/pdb.accession2taxid"
+        File prot = "pub/taxonomy/accession2taxid/prot.accession2taxid.FULL"
         Directory accession2taxid = "pub/taxonomy/accession2taxid"
     }
 
@@ -351,7 +375,7 @@ task GenerateIndexAccessions {
     input {
         File nr
         File nt
-        Directory accession2taxid
+        Array[File] accession2taxid_files
         String docker_image_id
     }
 
@@ -359,14 +383,10 @@ task GenerateIndexAccessions {
         set -euxo pipefail
 
         # Build index
-        python3 /usr/local/bin/generate_accession2taxid.py \
-            ~{accession2taxid}/nucl_wgs.accession2taxid \
-            ~{accession2taxid}/nucl_gb.accession2taxid \
-            ~{accession2taxid}/pdb.accession2taxid \
-            ~{accession2taxid}/prot.accession2taxid.FULL \
+        python3 /usr/local/bin/generate_accession2taxid.py ~{sep=" " accession2taxid_files} \
             --nt_file ~{nt} \
             --nr_file ~{nr} \
-            --accession2taxid_db accession2taxid.marisa \
+            --accession2taxid_db accession2taxid.marisa
     >>>
 
     output {
@@ -702,7 +722,7 @@ task CompressDatabase {
     input {
         String database_type = "nt" # nt or nr
         File sorted_fasta
-        Directory accession2taxid
+        Array[File] accession2taxid_files
         Int k
         Int scaled
         Float similarity_threshold
@@ -721,11 +741,7 @@ task CompressDatabase {
         # If the directory is a step output it will be uploaded, which takes an enormous amount of time
         ncbi-compress break-into-individual-taxids-only \
             --input-fasta ~{sorted_fasta} \
-            --accession-mapping-files \
-                ~{if database_type == "nt" then "~{accession2taxid}nucl_wgs.accession2taxid \\" else ""}
-                ~{if database_type == "nt" then "~{accession2taxid}nucl_gb.accession2taxid \\" else ""}
-                ~{if database_type == "nr" then "~{accession2taxid}pdb.accession2taxid  \\" else ""}
-                ~{if database_type == "nr" then "~{accession2taxid}prot.accession2taxid.FULL \\" else ""}
+            --accession-mapping-files ~{sep=" " accession2taxid_files} \
             --output-dir $READS_BY_TAXID_PATH
 
         mkdir $SPLIT_APART_TAXID_DIR_NAME
