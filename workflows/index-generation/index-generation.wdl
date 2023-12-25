@@ -700,7 +700,7 @@ task SortFasta {
 
 task CompressDatabase {
     input {
-        String database_type = "nt"
+        String database_type = "nt" # nt or nr
         File sorted_fasta
         Directory accession2taxid
         Int k
@@ -722,16 +722,17 @@ task CompressDatabase {
         ncbi-compress break-into-individual-taxids-only \
             --input-fasta ~{sorted_fasta} \
             --accession-mapping-files \
-                ~{accession2taxid}nucl_wgs.accession2taxid \
-                ~{accession2taxid}nucl_gb.accession2taxid \
-                ~{accession2taxid}pdb.accession2taxid \
-                ~{accession2taxid}prot.accession2taxid.FULL \
+                ~{if database_type == "nt" then "~{accession2taxid}nucl_wgs.accession2taxid \\" else ""}
+                ~{if database_type == "nt" then "~{accession2taxid}nucl_gb.accession2taxid \\" else ""}
+                ~{if database_type == "nr" then "~{accession2taxid}pdb.accession2taxid  \\" else ""}
+                ~{if database_type == "nr" then "~{accession2taxid}prot.accession2taxid.FULL \\" else ""}
             --output-dir $READS_BY_TAXID_PATH
 
         mkdir $SPLIT_APART_TAXID_DIR_NAME
 
         if [ "~{logging_enabled}" ]; then
             ncbi-compress fasta-compress-from-taxid-dir \
+                ~{if database_type == "nr" then "--is-protein-fasta \\" else ""}
                 --input-fasta-dir $READS_BY_TAXID_PATH \
                 --output-fasta ~{database_type}_compressed.fa \
                 --k ~{k} \
@@ -741,16 +742,15 @@ task CompressDatabase {
                 --enable-sequence-retention-logging \
                 --logging-contained-in-tree-fn ~{database_type}_contained_in_tree.tsv \
                 --logging-contained-in-chunk-fn ~{database_type}_contained_in_chunk.tsv
-                --is-protein-fasta
         else
             ncbi-compress fasta-compress-from-taxid-dir \
+                ~{if database_type == "nr" then "--is-protein-fasta \\" else ""}
                 --input-fasta-dir $READS_BY_TAXID_PATH \
                 --output-fasta ~{database_type}_compressed.fa \
                 --k ~{k} \
                 --scaled ~{scaled} \
                 --similarity-threshold ~{similarity_threshold} \
                 --split-apart-taxid-dir-name $SPLIT_APART_TAXID_DIR_NAME
-                --is-protein-fasta
         fi
 
         # Remove to save space, intermediate files are not cleaned up within a run
