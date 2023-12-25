@@ -142,65 +142,18 @@ workflow index_generation {
         }
     }
 
-    if (skip_protein_compression && !skip_nuc_compression) {
-        call GenerateIndexAccessions as GenerateIndexAccessionsNoCompressProtein {
-            input:
-            nr = DownloadNR.nr,
-            nt = select_first([CompressNT.compressed]),
-            accession2taxid_files = [
-                DownloadAccession2Taxid.nucl_wgs,
-                DownloadAccession2Taxid.nucl_gb,
-                DownloadAccession2Taxid.pdb,
-                DownloadAccession2Taxid.prot,
-            ]
-            docker_image_id = docker_image_id
-        }
+    call GenerateIndexAccessions {
+        input:
+        nr = select_first([CompressNR.compressed, DownloadNR.nr]),
+        nt = select_first([CompressNT.compressed, DownloadNT.nt]),
+        accession2taxid_files = [
+            DownloadAccession2Taxid.nucl_wgs,
+            DownloadAccession2Taxid.nucl_gb,
+            DownloadAccession2Taxid.pdb,
+            DownloadAccession2Taxid.prot,
+        ]
+        docker_image_id = docker_image_id
     }
-
-    if (!skip_protein_compression && skip_nuc_compression) {
-        call GenerateIndexAccessions as GenerateIndexAccessionsNoCompressNuc {
-            input:
-            nr = select_first([CompressNR.compressed]),
-            nt = DownloadNT.nt,
-            accession2taxid_files = [
-                DownloadAccession2Taxid.nucl_wgs,
-                DownloadAccession2Taxid.nucl_gb,
-                DownloadAccession2Taxid.pdb,
-                DownloadAccession2Taxid.prot,
-            ]
-            docker_image_id = docker_image_id
-        }
-    }
-    if (!skip_nuc_compression && !skip_protein_compression) {
-        call GenerateIndexAccessions as GenerateIndexAccessionsWCompression {
-            input:
-            nr = select_first([CompressNR.compressed]),
-            nt = select_first([CompressNT.compressed]),
-            accession2taxid_files = [
-                DownloadAccession2Taxid.nucl_wgs,
-                DownloadAccession2Taxid.nucl_gb,
-                DownloadAccession2Taxid.pdb,
-                DownloadAccession2Taxid.prot,
-            ]
-            docker_image_id = docker_image_id
-        }
-    }
-
-    if (skip_nuc_compression && skip_protein_compression) {
-        call GenerateIndexAccessions as GenerateIndexAccessionsNoCompression {
-            input:
-            nr = DownloadNR.nr,
-            nt = DownloadNT.nt,
-            accession2taxid_files = [
-                DownloadAccession2Taxid.nucl_wgs,
-                DownloadAccession2Taxid.nucl_gb,
-                DownloadAccession2Taxid.pdb,
-                DownloadAccession2Taxid.prot,
-            ]
-            docker_image_id = docker_image_id
-        }
-    }
-
 
     call GenerateIndexLineages {
         input:
@@ -224,10 +177,7 @@ workflow index_generation {
                 nt_loc_db = if (skip_nuc_compression) then GenerateNTDBNoCompression.nt_loc_db else GenerateNTDBWCompression.nt_loc_db,
                 nt_info_db = if (skip_nuc_compression) then GenerateNTDBNoCompression.nt_info_db else GenerateNTDBWCompression.nt_info_db,
                 nr_loc_db = if (skip_protein_compression) then GenerateNRDBNoCompression.nr_loc_db else GenerateNRDBWCompression.nr_loc_db,
-                accession2taxid_db = if (skip_protein_compression && !skip_nuc_compression) then GenerateIndexAccessionsNoCompressProtein.accession2taxid_db
-                            else if (!skip_protein_compression && skip_nuc_compression) then GenerateIndexAccessionsNoCompressNuc.accession2taxid_db
-                            else if (!skip_nuc_compression && !skip_protein_compression)then GenerateIndexAccessionsWCompression.accession2taxid_db
-                            else GenerateIndexAccessionsNoCompression.accession2taxid_db,
+                accession2taxid_db = GenerateIndexAccessions.accession2taxid_db,
                 docker_image_id = docker_image_id,
 
         }
@@ -236,10 +186,7 @@ workflow index_generation {
     output {
         File? nr = if (skip_protein_compression) then DownloadNR.nr else CompressNR.compressed
         File? nt = if (skip_nuc_compression) then DownloadNT.nt else CompressNT.compressed
-        File? accession2taxid_db = if (skip_protein_compression && !skip_nuc_compression) then GenerateIndexAccessionsNoCompressProtein.accession2taxid_db
-                            else if (!skip_protein_compression && skip_nuc_compression) then GenerateIndexAccessionsNoCompressNuc.accession2taxid_db
-                            else if (!skip_nuc_compression && !skip_protein_compression)then GenerateIndexAccessionsWCompression.accession2taxid_db
-                            else GenerateIndexAccessionsNoCompression.accession2taxid_db
+        File? accession2taxid_db = GenerateIndexAccessions.accession2taxid_db
         File? nt_loc_db = if (skip_nuc_compression) then GenerateNTDBNoCompression.nt_loc_db else GenerateNTDBWCompression.nt_loc_db
         File? nt_info_db = if (skip_nuc_compression) then GenerateNTDBNoCompression.nt_info_db else GenerateNTDBWCompression.nt_info_db
         File? nr_loc_db = if (skip_protein_compression) then GenerateNRDBNoCompression.nr_loc_db else GenerateNRDBWCompression.nr_loc_db
