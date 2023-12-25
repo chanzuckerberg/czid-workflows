@@ -693,8 +693,7 @@ task CompressDatabase {
         mkdir $SPLIT_APART_TAXID_DIR_NAME
 
         if [ "~{logging_enabled}" ]; then
-            ncbi-compress fasta-compress-from-taxid-dir \
-                ~{if database_type == "nr" then "--is-protein-fasta \\" else ""}
+            ncbi-compress fasta-compress-from-taxid-dir ~{if database_type == "nr" then "--is-protein-fasta" else ""} \
                 --input-fasta-dir $READS_BY_TAXID_PATH \
                 --output-fasta ~{database_type}_compressed.fa \
                 --k ~{k} \
@@ -705,8 +704,7 @@ task CompressDatabase {
                 --logging-contained-in-tree-fn ~{database_type}_contained_in_tree.tsv \
                 --logging-contained-in-chunk-fn ~{database_type}_contained_in_chunk.tsv
         else
-            ncbi-compress fasta-compress-from-taxid-dir \
-                ~{if database_type == "nr" then "--is-protein-fasta \\" else ""}
+            ncbi-compress fasta-compress-from-taxid-dir  ~{if database_type == "nr" then "--is-protein-fasta" else ""} \
                 --input-fasta-dir $READS_BY_TAXID_PATH \
                 --output-fasta ~{database_type}_compressed.fa \
                 --k ~{k} \
