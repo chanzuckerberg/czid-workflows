@@ -673,7 +673,6 @@ task CompressDatabase {
         Int scaled
         Float similarity_threshold
         Boolean logging_enabled
-        Int cpu
         String docker_image_id
     }
 
