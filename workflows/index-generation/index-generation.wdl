@@ -151,7 +151,7 @@ workflow index_generation {
             DownloadAccession2Taxid.nucl_gb,
             DownloadAccession2Taxid.pdb,
             DownloadAccession2Taxid.prot,
-        ]
+        ],
         docker_image_id = docker_image_id
     }
 
@@ -179,7 +179,6 @@ workflow index_generation {
                 nr_loc_db = if (skip_protein_compression) then GenerateNRDBNoCompression.nr_loc_db else GenerateNRDBWCompression.nr_loc_db,
                 accession2taxid_db = GenerateIndexAccessions.accession2taxid_db,
                 docker_image_id = docker_image_id,
-
         }
     }
 
