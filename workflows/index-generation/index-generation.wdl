@@ -49,25 +49,19 @@ workflow index_generation {
         docker_image_id = docker_image_id
     }
     if (!skip_protein_compression) {
-        call SplitFastaBySeqLengthAndSort as SplitFastaBySeqLengthAndSortNR {
+        call SortFasta as SortFastaNR {
             input:
             fasta = DownloadNR.nr,
             combined_sorted_path = "combined_sorted_nr.fa",
             cpu = 64,
             docker_image_id = docker_image_id
         }
-        call BreakApartByTaxid as BreakApartByTaxidNR {
-            input:
-            sorted_fasta = SplitFastaBySeqLengthAndSortNR.sorted,
-            accession2taxid = DownloadAccession2Taxid.accession2taxid,
-            reads_by_taxid_path = "reads_by_taxid_nr",
-            cpu = 96,
-            docker_image_id = docker_image_id
-        }
 
-        call CompressNR {
+        call CompressDatabase as CompressNR {
             input:
-            reads_by_taxid = BreakApartByTaxidNR.reads_by_taxid,
+            database_type = "nt",
+            sorted_fasta = SortFastaNR.sorted,
+            accession2taxid = DownloadAccession2Taxid.accession2taxid,
             k = nr_compression_k,
             scaled = nr_compression_scaled,
             similarity_threshold = nr_compression_similarity_threshold,
@@ -77,24 +71,18 @@ workflow index_generation {
     }
 
     if (!skip_nuc_compression) {
-        call SplitFastaBySeqLengthAndSort as SplitFastaBySeqLengthAndSortNT {
+        call SortFasta as SortFastaNT {
             input:
             fasta = DownloadNT.nt,
             combined_sorted_path = "combined_sorted_nt.fa",
             cpu = 64,
             docker_image_id = docker_image_id
         }
-        call BreakApartByTaxid as BreakApartByTaxidNT {
+        call CompressDatabase as CompressNT {
             input:
-            sorted_fasta = SplitFastaBySeqLengthAndSortNT.sorted,
+            database_type = "nt",
+            sorted_fasta = SortFastaNT.sorted,
             accession2taxid = DownloadAccession2Taxid.accession2taxid,
-            reads_by_taxid_path = "reads_by_taxid_nt",
-            cpu = 96,
-            docker_image_id = docker_image_id
-        }
-        call CompressNT {
-            input:
-            reads_by_taxid = BreakApartByTaxidNT.reads_by_taxid,
             k = nt_compression_k,
             scaled = nt_compression_scaled,
             similarity_threshold = nt_compression_similarity_threshold,
@@ -119,12 +107,12 @@ workflow index_generation {
     if (!skip_nuc_compression) {
         call GenerateNTDB as GenerateNTDBWCompression {
             input:
-            nt = select_first([CompressNT.nt_compressed]),
+            nt = select_first([CompressNT.compressed]),
             docker_image_id = docker_image_id
         }
         call GenerateIndexMinimap2 as GenerateIndexMinimap2WCompression {
             input:
-            nt = select_first([CompressNT.nt_compressed]),
+            nt = select_first([CompressNT.compressed]),
             docker_image_id = docker_image_id
         }
     }
@@ -144,12 +132,12 @@ workflow index_generation {
     if (!skip_protein_compression) {
         call GenerateNRDB as GenerateNRDBWCompression {
             input:
-            nr = select_first([CompressNR.nr_compressed]),
+            nr = select_first([CompressNR.compressed]),
             docker_image_id = docker_image_id
         }
         call GenerateIndexDiamond as GenerateIndexDiamondWCompression{
             input:
-            nr = select_first([CompressNR.nr_compressed]),
+            nr = select_first([CompressNR.compressed]),
             docker_image_id = docker_image_id
         }
     }
@@ -158,7 +146,7 @@ workflow index_generation {
         call GenerateIndexAccessions as GenerateIndexAccessionsNoCompressProtein {
             input:
             nr = DownloadNR.nr,
-            nt = select_first([CompressNT.nt_compressed]),
+            nt = select_first([CompressNT.compressed]),
             accession2taxid = DownloadAccession2Taxid.accession2taxid,
             docker_image_id = docker_image_id
         }
@@ -167,7 +155,7 @@ workflow index_generation {
     if (!skip_protein_compression && skip_nuc_compression) {
         call GenerateIndexAccessions as GenerateIndexAccessionsNoCompressNuc {
             input:
-            nr = select_first([CompressNR.nr_compressed]),
+            nr = select_first([CompressNR.compressed]),
             nt = DownloadNT.nt,
             accession2taxid = DownloadAccession2Taxid.accession2taxid,
             docker_image_id = docker_image_id
@@ -176,8 +164,8 @@ workflow index_generation {
     if (!skip_nuc_compression && !skip_protein_compression) {
         call GenerateIndexAccessions as GenerateIndexAccessionsWCompression {
             input:
-            nr = select_first([CompressNR.nr_compressed]),
-            nt = select_first([CompressNT.nt_compressed]),
+            nr = select_first([CompressNR.compressed]),
+            nt = select_first([CompressNT.compressed]),
             accession2taxid = DownloadAccession2Taxid.accession2taxid,
             docker_image_id = docker_image_id
         }
@@ -211,8 +199,8 @@ workflow index_generation {
                 s3_dir = s3_dir,
                 minimap2_index = if (skip_nuc_compression) then GenerateIndexMinimap2NoCompression.minimap2_index else GenerateIndexMinimap2WCompression.minimap2_index,
                 diamond_index = if (skip_protein_compression) then GenerateIndexDiamondNoCompression.diamond_index else GenerateIndexDiamondWCompression.diamond_index,
-                nt = if (skip_nuc_compression) then DownloadNT.nt else CompressNT.nt_compressed,
-                nr = if (skip_protein_compression) then DownloadNR.nr else CompressNR.nr_compressed,
+                nt = if (skip_nuc_compression) then DownloadNT.nt else CompressNT.compressed,
+                nr = if (skip_protein_compression) then DownloadNR.nr else CompressNR.compressed,
                 nt_loc_db = if (skip_nuc_compression) then GenerateNTDBNoCompression.nt_loc_db else GenerateNTDBWCompression.nt_loc_db,
                 nt_info_db = if (skip_nuc_compression) then GenerateNTDBNoCompression.nt_info_db else GenerateNTDBWCompression.nt_info_db,
                 nr_loc_db = if (skip_protein_compression) then GenerateNRDBNoCompression.nr_loc_db else GenerateNRDBWCompression.nr_loc_db,
@@ -226,8 +214,8 @@ workflow index_generation {
     }
 
     output {
-        File? nr = if (skip_nuc_compression) then DownloadNT.nt else CompressNT.nt_compressed
-        File? nt = if (skip_protein_compression) then DownloadNR.nr else CompressNR.nr_compressed
+        File? nr = if (skip_protein_compression) then DownloadNR.nr else CompressNR.compressed
+        File? nt = if (skip_nuc_compression) then DownloadNT.nt else CompressNT.compressed
         File? accession2taxid_db = if (skip_protein_compression && !skip_nuc_compression) then GenerateIndexAccessionsNoCompressProtein.accession2taxid_db
                             else if (!skip_protein_compression && skip_nuc_compression) then GenerateIndexAccessionsNoCompressNuc.accession2taxid_db
                             else if (!skip_nuc_compression && !skip_protein_compression)then GenerateIndexAccessionsWCompression.accession2taxid_db
@@ -244,6 +232,10 @@ workflow index_generation {
         File changed_taxa_log = GenerateIndexLineages.changed_taxa_log
         File deleted_taxa_log = GenerateIndexLineages.deleted_taxa_log
         File new_taxa_log = GenerateIndexLineages.new_taxa_log
+        File? nr_contained_in_tree = CompressNR.contained_in_tree
+        File? nr_contained_in_chunk = CompressNR.contained_in_chunk
+        File? nt_contained_in_tree = CompressNT.contained_in_tree
+        File? nt_contained_in_chunk = CompressNT.contained_in_chunk
     }
 }
 
@@ -676,7 +668,7 @@ task GenerateIndexMinimap2 {
     }
 }
 
-task SplitFastaBySeqLengthAndSort {
+task SortFasta {
     input {
         File fasta
         String combined_sorted_path
@@ -706,18 +698,27 @@ task SplitFastaBySeqLengthAndSort {
     }
 }
 
-task BreakApartByTaxid {
+task CompressDatabase {
     input {
+        String database_type = "nt"
         File sorted_fasta
         Directory accession2taxid
-        String reads_by_taxid_path
+        Int k
+        Int scaled
+        Float similarity_threshold
+        Boolean logging_enabled
         Int cpu
         String docker_image_id
     }
 
-    command <<<
+    command <<< 
         set -euxo pipefail
 
+        READS_BY_TAXID_PATH=reads_by_taxid
+        SPLIT_APART_TAXID_DIR_NAME=split_apart_taxid
+
+        # It is critical that this split happens in the same step as the compression
+        # If the directory is a step output it will be uploaded, which takes an enormous amount of time
         ncbi-compress break-into-individual-taxids-only \
             --input-fasta ~{sorted_fasta} \
             --accession-mapping-files \
@@ -725,122 +726,48 @@ task BreakApartByTaxid {
                 ~{accession2taxid}nucl_gb.accession2taxid \
                 ~{accession2taxid}pdb.accession2taxid \
                 ~{accession2taxid}prot.accession2taxid.FULL \
-            --output-dir ~{reads_by_taxid_path}
-    >>>
+            --output-dir $READS_BY_TAXID_PATH
 
-    output {
-        Directory reads_by_taxid = reads_by_taxid_path
-    }
-
-    runtime {
-        docker: docker_image_id
-        cpu: cpu
-    }
-}
-
-
-task CompressNT {
-    input {
-        Directory reads_by_taxid
-        String split_apart_taxid_dir_name = "split_taxid_dir_nt"
-        Int k
-        Int scaled
-        Float similarity_threshold
-        Boolean logging_enabled
-        String docker_image_id
-    }
-
-    command <<< 
-        set -euxo pipefail
-
-        mkdir ~{split_apart_taxid_dir_name}
+        mkdir $SPLIT_APART_TAXID_DIR_NAME
 
         if [ "~{logging_enabled}" ]; then
             ncbi-compress fasta-compress-from-taxid-dir \
-                --input-fasta-dir ~{reads_by_taxid} \
-                --output-fasta nt_compressed.fa \
+                --input-fasta-dir $READS_BY_TAXID_PATH \
+                --output-fasta ~{database_type}_compressed.fa \
                 --k ~{k} \
                 --scaled ~{scaled} \
                 --similarity-threshold ~{similarity_threshold} \
-                --split-apart-taxid-dir-name ~{split_apart_taxid_dir_name} \
+                --split-apart-taxid-dir-name $SPLIT_APART_TAXID_DIR_NAME \
                 --enable-sequence-retention-logging \
-                --logging-contained-in-tree-fn nt_contained_in_tree.tsv \
-                --logging-contained-in-chunk-fn nt_contained_in_chunk.tsv
+                --logging-contained-in-tree-fn ~{database_type}_contained_in_tree.tsv \
+                --logging-contained-in-chunk-fn ~{database_type}_contained_in_chunk.tsv
+                --is-protein-fasta
         else
             ncbi-compress fasta-compress-from-taxid-dir \
-                --input-fasta-dir ~{reads_by_taxid} \
-                --output-fasta nt_compressed.fa \
+                --input-fasta-dir $READS_BY_TAXID_PATH \
+                --output-fasta ~{database_type}_compressed.fa \
                 --k ~{k} \
                 --scaled ~{scaled} \
                 --similarity-threshold ~{similarity_threshold} \
-                --split-apart-taxid-dir-name ~{split_apart_taxid_dir_name}
-        fi
-    >>>
-
-    output {
-        File nt_compressed = "nt_compressed.fa"
-        File nt_contained_in_tree = "nt_contained_in_tree.tsv"
-        File nt_contained_in_chunk = "nt_contained_in_chunk.tsv"
-        Directory split_taxid_dir = split_apart_taxid_dir_name
-    }
-
-    runtime {
-        docker: docker_image_id
-        cpu: 64
-        memory: "488G"
-    }
-}
-
-task CompressNR {
-    input {
-        Directory reads_by_taxid
-        String split_apart_taxid_dir_name = "split_taxid_dir_nr"
-        Int k
-        Int scaled
-        Float similarity_threshold
-        Boolean logging_enabled
-        String docker_image_id
-    }
-
-    command <<<
-        set -euxo pipefail
-
-        mkdir ~{split_apart_taxid_dir_name}
-
-        if [ "~{logging_enabled}" ]; then
-            ncbi-compress fasta-compress-from-taxid-dir \
-                --input-fasta-dir ~{reads_by_taxid} \
-                --output-fasta nr_compressed.fa \
-                --k ~{k} \
-                --scaled ~{scaled} \
-                --similarity-threshold ~{similarity_threshold} \
-                --split-apart-taxid-dir-name ~{split_apart_taxid_dir_name} \
-                --is-protein-fasta \
-                --enable-sequence-retention-logging \
-                --logging-contained-in-tree-fn nr_contained_in_tree.tsv \
-                --logging-contained-in-chunk-fn nr_contained_in_chunk.tsv
-        else
-            ncbi-compress fasta-compress-from-taxid-dir \
-                --input-fasta-dir ~{reads_by_taxid} \
-                --output-fasta nr_compressed.fa \
-                --k ~{k} \
-                --scaled ~{scaled} \
-                --similarity-threshold ~{similarity_threshold} \
-                --split-apart-taxid-dir-name ~{split_apart_taxid_dir_name} \
+                --split-apart-taxid-dir-name $SPLIT_APART_TAXID_DIR_NAME
                 --is-protein-fasta
         fi
+
+        # Remove to save space, intermediate files are not cleaned up within a run
+        rm -rf $READS_BY_TAXID_PATH
+        rm -rf $SPLIT_APART_TAXID_DIR_NAME
     >>>
 
     output {
-        File nr_compressed = "nr_compressed.fa"
-        File nr_contained_in_tree = "nr_contained_in_tree.tsv"
-        File nr_contained_in_chunk = "nr_contained_in_chunk.tsv"
-        Directory split_taxid_dir = split_apart_taxid_dir_name
+        File compressed = "~{database_type}_compressed.fa"
+        File? contained_in_tree = "~{database_type}_contained_in_tree.tsv"
+        File? contained_in_chunk = "~{database_type}_contained_in_chunk.tsv"
     }
 
     runtime {
         docker: docker_image_id
-        cpu: 64
+        cpu: 96
         memory: "488G"
     }
 }
+
