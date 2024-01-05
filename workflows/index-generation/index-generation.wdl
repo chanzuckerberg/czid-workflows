@@ -725,8 +725,7 @@ task CompressDatabase {
 
     runtime {
         docker: docker_image_id
-        cpu: 96
-        memory: "488G"
+        cpu: 88
     }
 }
 
