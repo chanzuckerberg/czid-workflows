@@ -59,7 +59,7 @@ workflow index_generation {
 
         call CompressDatabase as CompressNR {
             input:
-            database_type = "nt",
+            database_type = "nr",
             sorted_fasta = SortFastaNR.sorted,
             accession2taxid_files = [DownloadAccession2Taxid.pdb, DownloadAccession2Taxid.prot],
             k = nr_compression_k,

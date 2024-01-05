@@ -5,6 +5,7 @@ pub mod fasta_tools {
     use std::os::unix::prelude::FileExt;
 
     use bio::io::fasta;
+    use rayon::slice::ParallelSliceMut;
 
     struct OffsetWriter<'a> {
         file: &'a mut fs::File,
@@ -62,7 +63,8 @@ pub mod fasta_tools {
         let mut sorted_lengths: Vec<usize> = n_bytes_by_sequence_length.keys().cloned().collect();
 
         // sort lengths in descending order
-        sorted_lengths.sort_by(|a, b| b.cmp(a));
+        // subtracting a usize from the largest possible usize inverts the order
+        sorted_lengths.par_sort_unstable_by_key(|n| usize::MAX - n);
 
         // Save memory by creating our offset map in place on top of our n_bytes map
         let mut offset_by_sequence_length = n_bytes_by_sequence_length;

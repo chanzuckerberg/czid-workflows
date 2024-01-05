@@ -2,7 +2,7 @@ use rayon::prelude::*;
 
 pub struct BloomSet<const N: usize> {
     set: [u64; N],
-    n_adds: u64,
+    maxed_out: bool,
 }
 
 impl<const N: usize> BloomSet<N> {
@@ -11,7 +11,7 @@ impl<const N: usize> BloomSet<N> {
     pub fn new() -> Self {
         BloomSet {
             set: [0; N],
-            n_adds: 0,
+            maxed_out: false,
         }
     }
 
@@ -24,39 +24,40 @@ impl<const N: usize> BloomSet<N> {
     }
 
     pub fn add(&mut self, key: u64) {
-        // Add to the count of items
-        self.n_adds += 1;
-
         // Mod the hash by the total number of bits we have to get which bit we want to set
-        let pos = key % (self.set.len() as u64 * 64);
-
-        // This corresponds to which number contains the bit we want to set
-        let which_number = pos / 64;
-        // This corresponds to which bit in that number we want to set
-        let which_bit = pos % 64;
-        // Set the bit
-        self.set[which_number as usize] |= 1 << which_bit;
+        let pos = (key % self.set.len() as u64) as usize;
+        // Increment this bucket's count
+        if self.set[pos] == u64::MAX {
+            self.maxed_out = true;
+            return;
+        }
+        self.set[pos] += 1
     }
 
     pub fn union_mut(&mut self, other: &BloomSet<N>) {
         // OR each from other into self
         for (i, other) in other.set.iter().enumerate() {
-            self.set[i] |= other;
+            if self.set[i] > u64::MAX - *other {
+                self.maxed_out = true;
+                return;
+            }
+            self.set[i] += other;
         }
     }
 
     pub fn size(&self) -> u64 {
-        self.set
-            .iter()
-            .fold(0, |acc, s| acc + (s.count_ones() as u64))
+        if self.maxed_out {
+            u64::MAX
+        } else {
+            self.set.iter().sum()
+        }
     }
 
     pub fn intersection_size(&self, other: &BloomSet<N>) -> u64 {
-        self.set
-            .iter()
-            .zip(other.set)
-            .map(|(a, b)| a & b)
-            .fold(0, |acc, s| acc + (s.count_ones() as u64))
+        if self.maxed_out || other.maxed_out {
+            return self.size().min(other.size());
+        }
+        self.set.iter().zip(other.set).map(|(a, b)| b.min(*a)).sum()
     }
 }
 

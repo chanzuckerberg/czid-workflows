@@ -332,6 +332,7 @@ pub mod ncbi_compress {
             .borrow_mut()
             .take(chunk_size)
             .collect::<Vec<_>>();
+        accession_count.add_assign(chunk.len() as u64);
         while chunk.len() > 0 {
             let chunk_signatures = chunk
                 .par_iter()
@@ -371,7 +372,6 @@ pub mod ncbi_compress {
 
             let mut tmp: Vec<KMerMinHashWrapper> = Vec::with_capacity(chunk_signatures.len() / 2);
             for (record, hash) in chunk_signatures {
-                accession_count.add_assign(1);
                 // Perform a faster similarity check over just this chunk because we may have similarities within a chunk
                 let similar = tmp.par_iter().any(|other| {
                     containment(&hash.sketch, &other.sketch).unwrap() >= similarity_threshold
