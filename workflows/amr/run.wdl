@@ -530,7 +530,6 @@ task RunRgiKmerBwt {
     }
     command <<<
         set -exuo pipefail
-        rgi main -v 1>&2
         time rgi load \
             -i "~{card_json}" \
             --wildcard_annotation "~{wildcard_data}" \
@@ -586,7 +585,6 @@ task RunRgiBwtKma {
 
     command <<<
         set -exuo pipefail
-        rgi main -v 1>&2
         rgi bwt -1 ~{sep=' -2 ' non_host_reads_fa} -a kma -o sr_amr_report --clean
     >>>
 
