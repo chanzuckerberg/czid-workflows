@@ -4,18 +4,20 @@ pub mod ncbi_compress {
     use std::{borrow::BorrowMut, fs};
 
     use bio::io::fasta;
+    use rand::distributions::Alphanumeric;
+    use rand::Rng;
     use rayon::prelude::*;
     use sourmash::encodings::HashFunctions;
     use sourmash::errors::SourmashError;
     use sourmash::signature::SigsTrait;
     use sourmash::sketch::minhash::KmerMinHash;
-    use trie_rs::TrieBuilder;
 
+    use crate::bloomset::{BloomSetTree, BloomSetTreeable};
     use crate::logging::logging;
-    use crate::minhashtree::minhashtree::{MinHashTree, MinHashTreeFunctionality};
-    use crate::minhashtree_w_logging::minhashtree_w_logging::{MinHashTreeWithLogging, MinHashTreeWithLoggingFunctionality};
-    use crate::trie_store::trie_store::TrieStoreBuilder;
- 
+    use crate::minhashtree_w_logging::minhashtree_w_logging::{
+        MinHashTreeWithLogging, MinHashTreeWithLoggingFunctionality,
+    };
+
     pub fn containment(needle: &KmerMinHash, haystack: &KmerMinHash) -> Result<f64, SourmashError> {
         let (intersect_size, _) = needle.intersection_size(haystack)?;
         Ok(intersect_size as f64 / needle.mins().len() as f64)
@@ -28,16 +30,26 @@ pub mod ncbi_compress {
     pub fn split_accessions_by_taxid(
         input_fasta_path: &str,
         mapping_file_path: Vec<String>,
-        output_dir: &str
-
+        output_dir: &str,
     ) -> std::path::PathBuf {
         // create a temp dir containing one file per taxid that input fasta accessions are sorted into
         // based on taxid in the mapping files (input fasta does not have taxid in header)
 
         log::info!("Splitting accessions by taxid");
+        // Use a random string for the rocksdb directoru name
+        // A tempdir can be removed by the operating system before we are done with it which
+        // break the rocksdb. We need a random name so we can call this function multiple
+        // times from different threads during testing.
+        let rng = rand::thread_rng();
+        let dir: String = rng
+            .sample_iter(&Alphanumeric)
+            .take(20)
+            .map(char::from)
+            .collect();
+        let accession_to_taxid = rocksdb::DB::open_default(&dir).unwrap();
         fs::create_dir_all(&output_dir).expect("Error creating output directory");
 
-        log::info!("Creating accession to taxid mapping");
+        log::info!("Creating accession to taxid db");
 
         //let taxid_dir = TempDir::new_in(temp_file_output_dir, "accessions_by_taxid").unwrap();
         // let taxid_path_str = format!("{}/accessions_by_taxid", temp_file_output_dir);
@@ -45,23 +57,18 @@ pub mod ncbi_compress {
         log::info!("Creating taxid dir {:?}", taxid_path);
         let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
         // Build a trie of the accessions in the input fasta
-        let mut builder = TrieBuilder::new(); 
         reader.records().enumerate().for_each(|(i, result)| {
             let record = result.unwrap();
             let accession_id = record.id().split_whitespace().next().unwrap();
             let accession_no_version = remove_accession_version(accession_id);
-            builder.push(accession_no_version);
-            if i % 10_000 == 0 {
+            accession_to_taxid.put(accession_no_version, b"").unwrap();
+            if i % 1_000_000 == 0 {
                 log::info!("  Processed {} accessions", i);
             }
         });
-        log::info!(" Started building accession trie");
-        let accessions_trie = builder.build();
-        log::info!(" Finished building accession trie");
+        log::info!(" Finished loading accessions");
 
-        // Build a trie of the accessions in the mapping files
-        let mut builder = TrieStoreBuilder::new();
-        mapping_file_path.iter().for_each(|mapping_file_path| {
+        mapping_file_path.par_iter().for_each(|mapping_file_path| {
             log::info!(" Processing mapping file {:?}", mapping_file_path);
             let reader = csv::ReaderBuilder::new()
                 .delimiter(b'\t')
@@ -78,7 +85,11 @@ pub mod ncbi_compress {
                 let accession_no_version = remove_accession_version(accession);
 
                 // Only output mappings if the accession is in the source fasta file
-                if !accessions_trie.exact_match(accession_no_version) {
+                if accession_to_taxid
+                    .get(accession_no_version)
+                    .unwrap()
+                    .is_none()
+                {
                     return;
                 }
 
@@ -91,8 +102,10 @@ pub mod ncbi_compress {
                     record[2].parse::<u64>().unwrap()
                 };
                 added += 1;
-                builder.push(accession_no_version, taxid);
-
+                // convert taxid to u64_vec
+                accession_to_taxid
+                    .put(accession_no_version, taxid.to_be_bytes())
+                    .unwrap();
             });
             log::info!(
                 " Finished Processing mapping file {:?}, added {} mappings",
@@ -100,9 +113,7 @@ pub mod ncbi_compress {
                 added
             );
         });
-        log::info!(" Started building accession to taxid trie");
-        let accession_to_taxid = builder.build();
-        log::info!("Finished building accession to taxid trie");
+        log::info!("Finished building accession to taxid db");
 
         log::info!("Splitting accessions by taxid");
         let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
@@ -114,13 +125,16 @@ pub mod ncbi_compress {
             let record = record.unwrap();
             let accession_id = record.id().split_whitespace().next().unwrap();
             let accession_no_version = remove_accession_version(accession_id);
-            let taxid = if let Some(taxid) = accession_to_taxid.get(accession_no_version) {
-                taxid
+            let taxid = if let Some(taxid) = accession_to_taxid.get(accession_no_version).unwrap() {
+                if taxid.len() == 0 {
+                    0 // no taxid found
+                } else {
+                    u64::from_be_bytes(taxid.as_slice().try_into().unwrap())
+                }
             } else {
                 0 // no taxid found
             };
             let file_path = taxid_path.join(format!("{}.fasta", taxid));
-            // let file_path = taxid_dir.path().join(format!("{}.fasta", taxid));
             let file = fs::OpenOptions::new()
                 .create(true)
                 .append(true)
@@ -129,16 +143,9 @@ pub mod ncbi_compress {
             let mut writer = fasta::Writer::new(file);
             writer.write_record(&record).unwrap();
         }
-        log::info!("Finished splitting accessions by taxid");
-        // remove input fasta file
-        // match fs::remove_file(input_fasta_path) {
-        //     Ok(()) => println!("input fasta deleted successfully"),
-        //     Err(e) => println!("Error deleting input fasta : {:?}", e),
-        // }
-        // taxid_dir
+        fs::remove_dir_all(dir).expect("Error removing db");
         log::info!("Finished splitting accessions by taxid");
         taxid_path.to_path_buf()
-
     }
 
     pub fn fasta_compress_taxid_w_logging(
@@ -172,11 +179,24 @@ pub mod ncbi_compress {
                     let record = r.as_ref().unwrap();
                     let mut hash;
                     if is_protein_fasta {
-                        hash = KmerMinHash::new(scaled, k, HashFunctions::murmur64_protein, seed, false, 0);
+                        hash = KmerMinHash::new(
+                            scaled,
+                            k,
+                            HashFunctions::murmur64_protein,
+                            seed,
+                            false,
+                            0,
+                        );
                         hash.add_protein(record.seq()).unwrap();
                     } else {
-                        hash =
-                        KmerMinHash::new(scaled, k, HashFunctions::murmur64_DNA, seed, false, 0);
+                        hash = KmerMinHash::new(
+                            scaled,
+                            k,
+                            HashFunctions::murmur64_DNA,
+                            seed,
+                            false,
+                            0,
+                        );
                         hash.add_sequence(record.seq(), true).unwrap();
                     }
                     // Run an initial similarity check here against the full tree, this is slow so we can parallelize it
@@ -189,11 +209,21 @@ pub mod ncbi_compress {
                         Ok(Some(found_accessions)) => {
                             // log when tree already contains hash
                             let accession_id = record.id().split_whitespace().next().unwrap();
-                            let found_accession_ids: Vec<String> = found_accessions.iter().map(|(accession_id, _)| accession_id.to_string()).collect::<Vec<_>>();
-                            let found_accession_containments: Vec<String> = found_accessions.iter().map(|(_, containment)| containment.to_string()).collect::<Vec<_>>();
+                            let found_accession_ids: Vec<String> = found_accessions
+                                .iter()
+                                .map(|(accession_id, _)| accession_id.to_string())
+                                .collect::<Vec<_>>();
+                            let found_accession_containments: Vec<String> = found_accessions
+                                .iter()
+                                .map(|(_, containment)| containment.to_string())
+                                .collect::<Vec<_>>();
                             logging::write_to_file(
                                 // log discarded, retained, containment
-                                vec![accession_id, &found_accession_ids.join(", "), &found_accession_containments.join(", ")],
+                                vec![
+                                    accession_id,
+                                    &found_accession_ids.join(", "),
+                                    &found_accession_containments.join(", "),
+                                ],
                                 logging_contained_in_tree_fn,
                             );
                             None
@@ -211,7 +241,7 @@ pub mod ncbi_compress {
             for (hash, record) in chunk_signatures {
                 let accession_id = record.id().split_whitespace().next().unwrap();
                 accession_count.add_assign(1); // += 1, used for logging
-                // Perform a faster similarity check over just this chunk because we may have similarities within a chunk
+                                               // Perform a faster similarity check over just this chunk because we may have similarities within a chunk
                 let similar_seqs = tmp
                     .par_iter()
                     .filter_map(|(other, accession_id)| {
@@ -221,7 +251,8 @@ pub mod ncbi_compress {
                         } else {
                             None
                         }
-                    }).collect::<Vec<_>>();
+                    })
+                    .collect::<Vec<_>>();
 
                 let similar = !similar_seqs.is_empty();
                 if !similar {
@@ -237,10 +268,20 @@ pub mod ncbi_compress {
                         );
                     }
                 } else {
-                    let similar_accession_ids: Vec<String> = similar_seqs.iter().map(|(accession_id, _)| accession_id.to_string()).collect::<Vec<_>>();
-                    let similar_accession_containments: Vec<String> = similar_seqs.iter().map(|(_, containment)| containment.to_string()).collect::<Vec<_>>();
+                    let similar_accession_ids: Vec<String> = similar_seqs
+                        .iter()
+                        .map(|(accession_id, _)| accession_id.to_string())
+                        .collect::<Vec<_>>();
+                    let similar_accession_containments: Vec<String> = similar_seqs
+                        .iter()
+                        .map(|(_, containment)| containment.to_string())
+                        .collect::<Vec<_>>();
                     logging::write_to_file(
-                        vec![accession_id, &similar_accession_ids.join(","), &similar_accession_containments.join(",")],
+                        vec![
+                            accession_id,
+                            &similar_accession_ids.join(","),
+                            &similar_accession_containments.join(","),
+                        ],
                         logging_contained_in_chunk_fn,
                     );
                 }
@@ -252,6 +293,21 @@ pub mod ncbi_compress {
                 .borrow_mut()
                 .take(chunk_size)
                 .collect::<Vec<_>>();
+        }
+    }
+
+    struct KMerMinHashWrapper {
+        sketch: KmerMinHash,
+    }
+
+    impl BloomSetTreeable for KMerMinHashWrapper {
+        fn hashes(&self) -> Vec<u64> {
+            self.sketch.mins()
+        }
+
+        fn containment(&self, haystack: &Self) -> f64 {
+            let (common, _) = self.sketch.intersection_size(&haystack.sketch).unwrap();
+            common as f64 / usize::max(1, self.sketch.size()) as f64
         }
     }
 
@@ -269,13 +325,14 @@ pub mod ncbi_compress {
         unique_accession_count: &mut u64,
     ) {
         let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
-        let mut tree = MinHashTree::new(branch_factor);
-    
+        let mut tree: BloomSetTree<_, 64> = BloomSetTree::new(branch_factor);
+
         let mut records_iter = reader.records();
         let mut chunk = records_iter
             .borrow_mut()
             .take(chunk_size)
             .collect::<Vec<_>>();
+        accession_count.add_assign(chunk.len() as u64);
         while chunk.len() > 0 {
             let chunk_signatures = chunk
                 .par_iter()
@@ -283,37 +340,49 @@ pub mod ncbi_compress {
                     let record = r.as_ref().unwrap();
                     let mut hash;
                     if is_protein_fasta {
-                        hash =
-                        KmerMinHash::new(scaled, k, HashFunctions::murmur64_protein, seed, false, 0);
+                        hash = KmerMinHash::new(
+                            scaled,
+                            k,
+                            HashFunctions::murmur64_protein,
+                            seed,
+                            false,
+                            0,
+                        );
                         hash.add_protein(record.seq()).unwrap();
                     } else {
-                        hash =
-                        KmerMinHash::new(scaled, k, HashFunctions::murmur64_DNA, seed, false, 0);
+                        hash = KmerMinHash::new(
+                            scaled,
+                            k,
+                            HashFunctions::murmur64_DNA,
+                            seed,
+                            false,
+                            0,
+                        );
                         hash.add_sequence(record.seq(), true).unwrap();
                     }
+                    let hash = KMerMinHashWrapper { sketch: hash };
                     // Run an initial similarity check here against the full tree, this is slow so we can parallelize it
-                    if tree.contains(&hash, similarity_threshold).unwrap() {
+                    if tree.search(&hash, similarity_threshold).is_some() {
                         None
                     } else {
                         Some((record, hash))
                     }
                 })
                 .collect::<Vec<_>>();
-    
-            let mut tmp = Vec::with_capacity(chunk_signatures.len() / 2);
+
+            let mut tmp: Vec<KMerMinHashWrapper> = Vec::with_capacity(chunk_signatures.len() / 2);
             for (record, hash) in chunk_signatures {
-                accession_count.add_assign(1);
                 // Perform a faster similarity check over just this chunk because we may have similarities within a chunk
-                let similar = tmp
-                    .par_iter()
-                    .any(|other| containment(&hash, other).unwrap() >= similarity_threshold);
-    
+                let similar = tmp.par_iter().any(|other| {
+                    containment(&hash.sketch, &other.sketch).unwrap() >= similarity_threshold
+                });
+
                 if !similar {
                     unique_accession_count.add_assign(1);
                     tmp.push(hash);
                     writer.write_record(record).unwrap();
-    
-                    if *unique_accession_count % 10_000 == 0 {
+
+                    if *unique_accession_count % 1_000_000 == 0 {
                         log::info!(
                             "Processed {} accessions, {} unique",
                             accession_count,
@@ -323,7 +392,7 @@ pub mod ncbi_compress {
                 }
             }
             for hash in tmp {
-                tree.insert(hash).unwrap();
+                tree.insert(hash);
             }
             chunk = records_iter
                 .borrow_mut()
@@ -331,59 +400,64 @@ pub mod ncbi_compress {
                 .collect::<Vec<_>>();
         }
     }
-   
 }
 
+#[cfg(test)]
+mod tests {
+    use tempfile::tempdir;
 
-// testing starts here
-use std::{fs, path::Path};
-use std::cmp::Ordering;
-use std::path::PathBuf;
+    use crate::ncbi_compress::ncbi_compress;
+    use crate::util::util;
+    use std::fs;
 
-use bio::io::fasta;
-use tempfile::tempdir;
+    #[test]
+    fn test_split_accessions_by_taxid() {
+        let input_fasta_path = "test_data/fasta_tools/inputs/nt";
+        let mapping_files_directory =
+            "test_data/ncbi_compress/split_accessions_by_taxid/inputs/accession2taxid";
+        let input_mapping_file_paths = vec![
+            format!("{}/{}", mapping_files_directory, "nucl_gb.accession2taxid"),
+            format!("{}/{}", mapping_files_directory, "nucl_wgs.accession2taxid"),
+            format!("{}/{}", mapping_files_directory, "pdb.accession2taxid"),
+            format!(
+                "{}/{}",
+                mapping_files_directory, "prot.accession2taxid.FULL"
+            ),
+        ];
 
-use crate::util::util;
+        let truth_output_dir = "test_data/ncbi_compress/split_accessions_by_taxid/truth_outputs";
+        let test_output_dir = tempdir().unwrap();
+        let test_dir_path_str = test_output_dir.path().to_str().unwrap();
 
-fn are_files_same(path1: &PathBuf, path2: &str) {
-    let content1 = fs::read(path1).unwrap();
-    let content2 = fs::read(path2).unwrap();
+        ncbi_compress::split_accessions_by_taxid(
+            input_fasta_path,
+            input_mapping_file_paths,
+            test_dir_path_str,
+        );
 
-    assert_eq!(content1, content2);
-}
+        for entry in fs::read_dir(test_dir_path_str).unwrap() {
+            // get test file path
+            let entry = entry.unwrap();
+            let test_file_path = entry.path();
+            let test_file_name = test_file_path.file_name().unwrap().to_str().unwrap();
 
-#[test]
-fn test_split_accessions_by_taxid() {
-    let input_fasta_path = "test_data/fasta_tools/inputs/nt";
-    let mapping_files_directory = "test_data/ncbi_compress/split_accessions_by_taxid/inputs/accession2taxid";
-    let input_mapping_file_paths = vec![
-        format!("{}/{}", mapping_files_directory, "nucl_gb.accession2taxid"),
-        format!("{}/{}", mapping_files_directory, "nucl_wgs.accession2taxid"),
-        format!("{}/{}", mapping_files_directory, "pdb.accession2taxid"),
-        format!("{}/{}", mapping_files_directory, "prot.accession2taxid.FULL"),
-    ];
-
-
-    let truth_output_dir = "test_data/ncbi_compress/split_accessions_by_taxid/truth_outputs";
-    let test_output_dir = tempdir().unwrap();
-    let test_dir_path_str = test_output_dir.path().to_str().unwrap();
-
-    ncbi_compress::split_accessions_by_taxid(
-        input_fasta_path,
-        input_mapping_file_paths,
-        test_dir_path_str
-    );
-
-    for entry in fs::read_dir(test_dir_path_str).unwrap() {
-        // get test file path
-        let entry = entry.unwrap();
-        let test_file_path = entry.path();
-        let test_file_name = test_file_path.file_name().unwrap().to_str().unwrap();
-
-        // get the truth file path
-        let truth_file_path = format!("{}/{}", truth_output_dir, test_file_name);
-        util::are_files_equal(&test_file_path.to_str().unwrap(), &truth_file_path);
-
+            // get the truth file path
+            let truth_file_path = format!("{}/{}", truth_output_dir, test_file_name);
+            util::are_files_equal(&test_file_path.to_str().unwrap(), &truth_file_path);
+        }
     }
 
+    #[test]
+    fn test_conversion() {
+        let taxid: u64 = 123;
+
+        let dir = tempdir().unwrap();
+        let db = rocksdb::DB::open_default(&dir).unwrap();
+        db.put(b"test", taxid.to_be_bytes()).unwrap();
+
+        let result = db.get(b"test").unwrap().unwrap();
+        let second_taxid = u64::from_be_bytes(result.as_slice().try_into().unwrap());
+
+        assert_eq!(taxid, second_taxid);
+    }
 }

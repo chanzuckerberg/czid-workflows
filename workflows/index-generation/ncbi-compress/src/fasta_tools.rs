@@ -1,222 +1,163 @@
 pub mod fasta_tools {
-    use std::path::Path;
-    use std::fs::OpenOptions;
-    use std::{borrow::BorrowMut, fs};
     use std::collections::HashMap;
-    use std::sync::Mutex;
-
+    use std::fs;
+    use std::io::Write;
+    use std::os::unix::prelude::FileExt;
 
     use bio::io::fasta;
-    use rayon::prelude::*;
-    use lazy_static::lazy_static;
+    use rayon::slice::ParallelSliceMut;
 
-    // Mutex-protected HashMap for file handles
-    lazy_static! {
-        static ref FILE_HANDLES: Mutex<HashMap<String, std::fs::File>> = Mutex::new(HashMap::new());
+    struct OffsetWriter<'a> {
+        file: &'a mut fs::File,
+        global_offset: u64,
+        local_offset: u64,
     }
 
-    fn check_and_remove_handle(max_handles: usize) {
-        let mut handles = FILE_HANDLES.lock().unwrap(); // Acquire lock
-
-        if handles.len() >= max_handles {
-            if let Some((key, _)) = handles.iter().next().map(|(k, v)| (k.clone(), v)) {
-                handles.remove(&key); // Remove an arbitrary file handle
-                // The file is automatically closed here when the `File` object is dropped
+    impl<'a> OffsetWriter<'a> {
+        pub fn new(file: &'a mut fs::File, offset: u64) -> Self {
+            Self {
+                file,
+                global_offset: offset,
+                local_offset: 0,
             }
         }
     }
 
-    pub fn bin_number_to_floor(sequence_length: &usize, bin_size: &usize) -> usize {
-        let floored = (*sequence_length as f64 / *bin_size as f64).floor();
-        (floored * *bin_size as f64) as usize
+    impl Write for OffsetWriter<'_> {
+        fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+            let n = self
+                .file
+                .write_at(buf, self.global_offset + self.local_offset)?;
+            self.local_offset += n as u64;
+            Ok(n)
+        }
+
+        fn flush(&mut self) -> std::io::Result<()> {
+            self.file.flush()
+        }
     }
 
-    pub fn get_filename(sequence_length: &usize, bin_size: &usize) -> String {
-        let min_length: usize = bin_number_to_floor(sequence_length, bin_size);
-        let max_length: usize = min_length + bin_size - 1;
+    pub fn sort_fasta_by_sequence_length(
+        input_fasta_path: &str,
+        output_fasta_path: &str,
+    ) -> std::io::Result<()> {
+        let mut n_bytes_by_sequence_length = HashMap::new();
+        // pre-allocate scratch space to write to so we know how many bytes a sequence is when
+        // written. pre-allocate it so we can clear it and we don't need a fresh allocation for
+        // every record.
+        let mut scratch = Vec::new();
 
-        // pad with leading zeros so that we can concatenate the files together in order with cat later
-        let min_length_padded = format!("{:0>12}", min_length);
-        let max_length_padded = format!("{:0>12}", max_length);
-        return format!("sequences_{}-{}.fa", min_length_padded, max_length_padded)
-    }
+        let mut records = fasta::Reader::from_file(&input_fasta_path)
+            .unwrap() // unwrap left here because this is an anyhow error
+            .records();
+        while let Some(Ok(record)) = records.next() {
+            fasta::Writer::new(&mut scratch).write_record(&record)?;
+            let sequence_length = record.seq().len();
+            let existing = n_bytes_by_sequence_length
+                .get(&sequence_length)
+                .unwrap_or(&0);
+            n_bytes_by_sequence_length.insert(sequence_length, existing + scratch.len() as u64);
+            // Clear the scratch space so we can re-use it for the next record
+            scratch.clear()
+        }
+        let mut sorted_lengths: Vec<usize> = n_bytes_by_sequence_length.keys().cloned().collect();
 
-    pub fn process_seq_chunk(record: &fasta::Record, output_directory: &str, bin_size: &usize) -> Result<(), String> {
-        let sequence_length = record.seq().len();
-        let filename = get_filename(&sequence_length, bin_size);
-        let output_path = format!("{}/{}", output_directory, filename);
+        // sort lengths in descending order
+        // subtracting a usize from the largest possible usize inverts the order
+        sorted_lengths.par_sort_unstable_by_key(|n| usize::MAX - n);
 
-        check_and_remove_handle(65000 as usize); // 65000 is the max number of open file handles on linux
+        // Save memory by creating our offset map in place on top of our n_bytes map
+        let mut offset_by_sequence_length = n_bytes_by_sequence_length;
+        let mut offset = 0;
+        // For each length in descending order
+        for length in sorted_lengths {
+            // Save how many bytes we will need for it
+            // it is safe to unwrap here because sorted_lengths are the keys of this map
+            let n_bytes = *offset_by_sequence_length.get(&length).unwrap();
+            // Overwrite the length with the offset
+            offset_by_sequence_length.insert(length, offset);
+            // Add the saved number of bytes to the offset, so the next offset starts at the end of
+            // the space that this sequence will occupy
+            offset += n_bytes;
 
-        // Attempt to acquire the lock
-        let mut handles = match FILE_HANDLES.lock() {
-            Ok(handle) => handle,
-            Err(e) => return Err(format!("Failed to acquire lock: {}", e)),
-        };
+            // for example if our longest sequences needs 100 bytes it will be at offset 0 since
+            // they will come first, but our second longest sequences will start at offset 100
+            // because the longest sequences will occupy the first 100 bytes
+        }
 
-        let file = handles.entry(output_path.clone()).or_insert_with(|| {
-            OpenOptions::new()
-                .write(true)
-                .append(true)
-                .create(true)
-                .open(&output_path)
-                .map_err(|e| format!("Error opening fasta file: {}", e))
-                .unwrap()
-        });
+        let records = fasta::Reader::from_file(&input_fasta_path)
+            .unwrap() // unwrap left here because this is an anyhow error
+            .records();
+        let mut writer = fs::File::create(&output_fasta_path)?;
+        for maybe_record in records {
+            let record = maybe_record?;
+            let sequence_length = record.seq().len();
+            // It is safe to unwrap here because all lengths in the file are in the map from the
+            // first pass
+            let offset = offset_by_sequence_length.get(&sequence_length).unwrap();
+            let mut offset_writer = OffsetWriter::new(&mut writer, *offset);
 
-        let mut writer = fasta::Writer::new(file);
-
-        writer.write_record(&record)
-        .map_err(|e| format!("Error writing record: {}", e))
-        .unwrap();
-
+            // This scope lets us create a fasta_writer from borrowing offset_writer then drops
+            // fasta_writer so we can get offset_writer back and read it's local offset
+            {
+                let mut fasta_writer = fasta::Writer::new(&mut offset_writer);
+                fasta_writer.write_record(&record)?;
+            }
+            // Add the local offset from the writer to the sequence lengths offset so the next
+            // sequence of the same length will be written after this sequence
+            offset_by_sequence_length.insert(sequence_length, offset + offset_writer.local_offset);
+        }
         Ok(())
     }
-    
-    pub fn break_up_fasta_by_sequence_length(
-        input_fasta_path: &str,
-        output_directory: &str,
-        total_sequence_count: &usize,
-        chunk_size: &usize,
-        bin_size: &usize,
-     ) {
-        let mut current_count = 0;
-        fs::create_dir_all(&output_directory).expect("Error creating output directory");
-        let reader = fasta::Reader::from_file(&input_fasta_path).unwrap(); 
-        let mut records_iter = reader.records();
+}
 
-        // create initial chunk of records
-        let mut chunk = records_iter
-        .borrow_mut()
-        .take(*chunk_size)
-        .collect::<Vec<_>>();
+#[cfg(test)]
+mod tests {
+    use std::cmp::Ordering;
 
-        while chunk.len() > 0 {
-            chunk.par_iter().filter_map(|r| {
-                let rec = r.as_ref().expect("Error reading record");
-                process_seq_chunk(rec, &output_directory, &bin_size);
-                Some(())
-            }).collect::<Vec<_>>();
-                
-            // update current count and log progress
-            current_count += chunk.len();
-            let processed_percentage = (current_count / total_sequence_count) * 100;
-            log::info!("{} of sequences processed", processed_percentage);
+    use tempfile::tempdir;
 
-            // refill chunk with new records from iterator
-            chunk = records_iter
-            .borrow_mut()
-            .take(*chunk_size)
-            .collect::<Vec<_>>();
+    use crate::fasta_tools::fasta_tools;
+
+    // Define a struct to hold both ID and sequence
+    #[derive(Eq, PartialEq)]
+    struct FastaRecord {
+        id: String,
+        seq: String,
+    }
+
+    // Implement Ord and PartialOrd for FastaRecord to enable sorting by ID
+    impl Ord for FastaRecord {
+        fn cmp(&self, other: &Self) -> Ordering {
+            // order based on id
+            self.id.cmp(&other.id)
         }
-        log::info!("all sequences processed");
+    }
+    impl PartialOrd for FastaRecord {
+        fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+            Some(self.cmp(other))
+        }
+    }
+
+    #[test]
+    fn test_sort_fasta_by_sequence_length() {
+        use crate::util::util::create_fasta_records_from_file;
+        let temp_dir = tempdir().unwrap();
+        let temp_file = temp_dir.path().join("sorted.fa");
+        let output_truth_fasta_file = "test_data/fasta_tools/truth_outputs/nt.sorted";
+        let input_fasta_file = "test_data/fasta_tools/inputs/nt";
+
+        let temp_file_path_str = temp_file.to_str().unwrap();
+        fasta_tools::sort_fasta_by_sequence_length(input_fasta_file, temp_file_path_str).unwrap();
+
+        let mut test_data_records = create_fasta_records_from_file(&temp_file_path_str);
+        let mut truth_data_records = create_fasta_records_from_file(&output_truth_fasta_file);
+
+        assert_eq!(
+            truth_data_records.sort(),
+            test_data_records.sort(),
+            "Files do not match: {:?}",
+            temp_file_path_str
+        );
     }
 }
-
-
-// testing starts here
-use std::{fs, path::Path};
-use std::cmp::Ordering;
-
-use bio::io::fasta;
-use tempfile::tempdir;
-// use crate::fasta_tools::fasta_tools;
-
-// Define a struct to hold both ID and sequence
-#[derive(Eq, PartialEq)]
-struct FastaRecord {
-    id: String,
-    seq: String,
-}
-
-// Implement Ord and PartialOrd for FastaRecord to enable sorting by ID
-impl Ord for FastaRecord {
-    fn cmp(&self, other: &Self) -> Ordering {
-        // order based on id
-        self.id.cmp(&other.id)
-    }
-}
-impl PartialOrd for FastaRecord {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-#[test]
-fn test_break_up_fasta_by_sequence_length() {
-    use crate::util::util::create_fasta_records_from_file;
-    // Setup
-    let bin_size = 1000;
-    let chunk_size = 1000;
-    let total_sequence_count = 10000;
-    let temp_dir = tempdir().unwrap();
-    let truth_dir_outputs = "test_data/fasta_tools/truth_outputs/break_up_fasta_by_sequence_length";
-    let input_fasta_file = "test_data/fasta_tools/inputs/nt";
-
-    let temp_dir_path_str = temp_dir.path().to_str().unwrap();
-    fasta_tools::break_up_fasta_by_sequence_length(
-        input_fasta_file, 
-        temp_dir_path_str, 
-        &total_sequence_count, 
-        &chunk_size,
-        &bin_size
-    );
-
-    //Compare files in from test with truth
-    for entry in fs::read_dir(temp_dir_path_str).unwrap() {
-        let entry = entry.unwrap();
-        let test_file_path = entry.path();
-
-        // get file name so we can compare to the file in the test directory
-        let test_file_name = test_file_path.file_name().unwrap().to_str().unwrap();
-        let truth_file_path = format!("{}/{}", truth_dir_outputs, test_file_name);
-
-        let mut test_data_records = create_fasta_records_from_file(&test_file_path.to_str().unwrap());
-        let mut truth_data_records = create_fasta_records_from_file(&truth_file_path);
-
-        assert_eq!(truth_data_records.sort(), test_data_records.sort(), "Files do not match: {:?}", test_file_name);
-    }
-}
-
-#[test]
-fn test_get_filename() {
-    let bin_size = 25;
-    let sequence_length = 1763;
-    let filename = fasta_tools::get_filename(&sequence_length, &bin_size);
-    assert_eq!(filename, "sequences_000000001750-000000001774.fa");
-}
-
-#[test]
-fn test_bin_number_to_floor() {
-    let bin_size = 25;
-
-    let sequence_length_short = 1763;
-    let floored_short = fasta_tools::bin_number_to_floor(&sequence_length_short, &bin_size);
-    assert_eq!(floored_short, 1750);
-
-    let sequence_length_long = 1774;
-    let floored_long = fasta_tools::bin_number_to_floor(&sequence_length_long, &bin_size);
-    assert_eq!(floored_long, 1750);
-}
-
-#[test]
-fn test_process_seq_chunk() {
-    use crate::util::util::create_fasta_records_from_file;
-
-    let bin_size = 25;
-    let truth_directory = "test_data/fasta_tools/truth_outputs/process_seq_chunk/";
-    let test_directory = tempdir().unwrap();
-    let temp_dir_path_str = test_directory.path().to_str().unwrap();
-
-
-    let record = fasta::Record::with_attrs("id", None, b"ACGT");
-    fasta_tools::process_seq_chunk(&record, &temp_dir_path_str, &bin_size);
-
-    let test_file_name = "sequences_000000000000-000000000024.fa";
-    let test_file_path = format!("{}/{}", temp_dir_path_str, test_file_name);
-    let truth_file_path = format!("{}/{}", truth_directory, test_file_name);
-    let mut test_data_records = create_fasta_records_from_file(&test_file_path);
-    let mut truth_data_records = create_fasta_records_from_file(&truth_file_path);
-    assert_eq!(truth_data_records.sort(), test_data_records.sort(), "Files do not match: {:?}", test_file_name);
-}
-
