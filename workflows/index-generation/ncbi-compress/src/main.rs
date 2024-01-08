@@ -109,7 +109,7 @@ pub fn main() {
                         .help("Branching factor for the tree")
                         .long("branch-factor")
                         .value_parser(clap::value_parser!(usize))
-                        .default_value("1000"),
+                        .default_value("64"),
                 )
                 .arg(
                     Arg::new("is_protein_fasta")
@@ -189,7 +189,7 @@ pub fn main() {
                         .help("Branching factor for the tree")
                         .long("branch-factor")
                         .value_parser(clap::value_parser!(usize))
-                        .default_value("1000"),
+                        .default_value("64"),
                 )
                 .arg(
                     Arg::new("split_apart_taxid_dir_name")
@@ -288,7 +288,7 @@ pub fn main() {
                         .help("Branching factor for the tree")
                         .long("branch-factor")
                         .value_parser(clap::value_parser!(usize))
-                        .default_value("1000"),
+                        .default_value("64"),
                 )
                 .arg(
                     Arg::new("is_protein_fasta")

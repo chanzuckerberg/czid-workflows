@@ -325,7 +325,7 @@ pub mod ncbi_compress {
         unique_accession_count: &mut u64,
     ) {
         let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
-        let mut tree: BloomSetTree<_, 64> = BloomSetTree::new(branch_factor);
+        let mut tree: BloomSetTree<_, 4096> = BloomSetTree::new(branch_factor);
 
         let mut records_iter = reader.records();
         let mut chunk = records_iter
