@@ -12,7 +12,6 @@ pub mod ncbi_compress {
     use sourmash::signature::SigsTrait;
     use sourmash::sketch::minhash::KmerMinHash;
 
-    use crate::bloomset::{BloomSetTree, BloomSetTreeable};
     use crate::logging::logging;
     use crate::minhashtree_w_logging::minhashtree_w_logging::{
         MinHashTreeWithLogging, MinHashTreeWithLoggingFunctionality,
@@ -296,20 +295,21 @@ pub mod ncbi_compress {
         }
     }
 
-    struct KMerMinHashWrapper {
-        sketch: KmerMinHash,
-    }
+    // struct KMerMinHashWrapper {
+    //     sketch: KmerMinHash,
+    // }
 
-    impl BloomSetTreeable for KMerMinHashWrapper {
-        fn hashes(&self) -> Vec<u64> {
-            self.sketch.mins()
-        }
+    // impl BloomSetTreeable for KMerMinHashWrapper {
+    //     fn hashes(&self) -> Vec<u64> {
+    //         self.sketch.mins()
+    //     }
 
-        fn containment(&self, haystack: &Self) -> f64 {
-            let (common, _) = self.sketch.intersection_size(&haystack.sketch).unwrap();
-            common as f64 / usize::max(1, self.sketch.size()) as f64
-        }
-    }
+    //     fn containment(&self, haystack: &Self) -> f64 {
+    //         let (common, _) = self.sketch.intersection_size(&haystack.sketch).unwrap();
+    //         common as f64 / usize::max(1, self.sketch.size()) as f64
+    //     }
+    // }
+    //
 
     pub fn fasta_compress_taxid(
         input_fasta_path: &str,
@@ -319,13 +319,17 @@ pub mod ncbi_compress {
         seed: u64,
         similarity_threshold: f64,
         chunk_size: usize,
-        branch_factor: usize,
+        _branch_factor: usize,
         is_protein_fasta: bool,
         accession_count: &mut u64,
         unique_accession_count: &mut u64,
     ) {
         let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
-        let mut tree: BloomSetTree<_, 4096> = BloomSetTree::new(branch_factor);
+        // let mut tree: BloomSetTree<_, 4096> = BloomSetTree::new(branch_factor);
+        let mut sketches = Vec::new();
+
+        // Initialize a temporary vector to store the unique items from each chunk
+        let mut tmp: Vec<KmerMinHash> = Vec::with_capacity(chunk_size);
 
         let mut records_iter = reader.records();
         let mut chunk = records_iter
@@ -334,6 +338,7 @@ pub mod ncbi_compress {
             .collect::<Vec<_>>();
         accession_count.add_assign(chunk.len() as u64);
         while chunk.len() > 0 {
+            // Take a chunk of accessions and return the ones that are not already in sketches
             let chunk_signatures = chunk
                 .par_iter()
                 .filter_map(|r| {
@@ -360,9 +365,18 @@ pub mod ncbi_compress {
                         );
                         hash.add_sequence(record.seq(), true).unwrap();
                     }
-                    let hash = KMerMinHashWrapper { sketch: hash };
-                    // Run an initial similarity check here against the full tree, this is slow so we can parallelize it
-                    if tree.search(&hash, similarity_threshold).is_some() {
+                    // Do a parallel search over the sketches to see if any are similar don't
+                    // return the item if you find a similar item. We are implementing this
+                    // manually instead of using the linear index built into sourmash because
+                    // we want to give up after finding the first hit while the linear index
+                    // will return them all.
+                    if sketches
+                        .par_iter()
+                        .find_any(|other| {
+                            containment(&hash, other).unwrap() >= similarity_threshold
+                        })
+                        .is_some()
+                    {
                         None
                     } else {
                         Some((record, hash))
@@ -370,12 +384,15 @@ pub mod ncbi_compress {
                 })
                 .collect::<Vec<_>>();
 
-            let mut tmp: Vec<KMerMinHashWrapper> = Vec::with_capacity(chunk_signatures.len() / 2);
+            // Now we have a chunk of signatures that aren't in sketches, we just need to make sure
+            // they don't duplicate each other then we can add them. Breaking it up this way
+            // enables a bit more parallelism on the big search, it makes more sense if we have a
+            // more efficient search structure for all of the sketches.
             for (record, hash) in chunk_signatures {
                 // Perform a faster similarity check over just this chunk because we may have similarities within a chunk
-                let similar = tmp.par_iter().any(|other| {
-                    containment(&hash.sketch, &other.sketch).unwrap() >= similarity_threshold
-                });
+                let similar = tmp
+                    .par_iter()
+                    .any(|other| containment(&hash, &other).unwrap() >= similarity_threshold);
 
                 if !similar {
                     unique_accession_count.add_assign(1);
@@ -391,9 +408,11 @@ pub mod ncbi_compress {
                     }
                 }
             }
-            for hash in tmp {
-                tree.insert(hash);
-            }
+            // for hash in tmp {
+            //     tree.insert(hash);
+            // }
+            sketches.extend_from_slice(&tmp);
+            tmp.clear();
             chunk = records_iter
                 .borrow_mut()
                 .take(chunk_size)
