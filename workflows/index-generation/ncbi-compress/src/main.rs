@@ -4,7 +4,7 @@ use ncbi_compress::commands::commands::{
     fasta_compress_end_to_end, fasta_compress_from_fasta_skip_split_by_taxid,
     fasta_compress_from_taxid_dir,
 };
-use ncbi_compress::fasta_tools::fasta_tools::sort_fasta_by_sequence_length;
+use ncbi_compress::fasta_tools::fasta_tools::{sort_fasta_by_sequence_length, count_accessions_by_taxid};
 use ncbi_compress::ncbi_compress::ncbi_compress::split_accessions_by_taxid;
 
 use ncbi_compress::logging::logging;
@@ -53,6 +53,22 @@ pub fn main() {
                         .long("output-dir")
                         .required(true),
                 ),
+        )
+        .subcommand(
+            Command::new("count-accessions-by-taxid")
+                .about("count-accessions-by-taxid")
+                .arg(
+                    Arg::new("input-taxid-dir")
+                        .help("input directory for fasta files broken into taxids")
+                        .long("input-taxid-dir")
+                        .required(true),
+                )
+                .arg(
+                    Arg::new("output-summary-path")
+                        .help("output-summary-path")
+                        .long("output-summary-path")
+                        .required(true)
+                )
         )
         .subcommand(
             Command::new("fasta-compress-from-fasta-skip-split-by-taxid")
@@ -330,6 +346,11 @@ pub fn main() {
                 .collect();
             let output_dir = sub_m.get_one::<String>("output_dir").unwrap();
             split_accessions_by_taxid(input_fasta, accession_mapping_files, output_dir);
+        }
+        Some(("count-accessions-by-taxid", sub_m)) => {
+            let input_taxid_dir = sub_m.get_one::<String>("input-taxid-dir").unwrap();
+            let output_summary_path = sub_m.get_one::<String>("output-summary-path").unwrap();
+            count_accessions_by_taxid(input_taxid_dir, output_summary_path).unwrap();
         }
         Some(("fasta-compress-from-fasta-skip-split-by-taxid", sub_m)) => {
             let input_fasta = sub_m.get_one::<String>("input_fasta").unwrap();

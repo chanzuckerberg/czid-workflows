@@ -37,6 +37,39 @@ pub mod fasta_tools {
         }
     }
 
+    pub fn count_accessions_by_taxid(
+        input_taxid_dir: &str,
+        output_tsv_path: &str,
+    ) -> std::io::Result<()> {
+        // loop through all files in the input_taxid_dir
+        for entry in fs::read_dir(input_taxid_dir)? {
+            let entry = entry?;
+            let path = entry.path();
+            // get the taxid from the filename:
+            // the filename is the taxid with a .fasta extension
+            let taxid = path
+                .file_stem()
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .parse::<u32>()
+                .unwrap();
+            // for each file, get the number of sequences in it
+            let records = fasta::Reader::from_file(&path)
+                .unwrap() // unwrap left here because this is an anyhow error
+                .records();
+
+            // write taxid and number of sequences to output_tsv_path
+            let mut writer = fs::OpenOptions::new()
+                .append(true)
+                .create(true)
+                .open(&output_tsv_path)?;
+
+            writer.write_all(format!("{}\t{}\n", taxid, records.count()).as_bytes())?;
+        }
+        Ok(())
+    }
+
     pub fn sort_fasta_by_sequence_length(
         input_fasta_path: &str,
         output_fasta_path: &str,
@@ -160,4 +193,21 @@ mod tests {
             temp_file_path_str
         );
     }
+
+    #[test]
+    fn test_count_accessions_by_taxid() {
+        use crate::util::util::are_files_equal;
+        let output_truth_tsv_file = "test_data/fasta_tools/truth_outputs/count_accessions_by_taxid/output_counts.tsv";
+
+        let test_truth_tsv_file = tempfile::NamedTempFile::new().unwrap();
+        let test_truth_tsv_file_path_str = test_truth_tsv_file.path().to_str().unwrap();
+
+        let _ = fasta_tools::count_accessions_by_taxid(
+            "test_data/commands/fasta_compress_from_taxid_dir/inputs",
+            test_truth_tsv_file_path_str,
+        );
+
+        are_files_equal(output_truth_tsv_file, test_truth_tsv_file_path_str);
+    }
+
 }
