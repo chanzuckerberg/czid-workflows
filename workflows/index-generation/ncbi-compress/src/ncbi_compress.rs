@@ -55,9 +55,13 @@ pub mod ncbi_compress {
         let taxid_path = Path::new(output_dir);
         log::info!("Creating taxid dir {:?}", taxid_path);
         let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
+        let records: Vec<_> = reader
+            .records()
+            .enumerate()
+            .collect();
         // Build a trie of the accessions in the input fasta
-        reader.records().enumerate().for_each(|(i, result)| {
-            let record = result.unwrap();
+        records.par_iter().for_each(|(i, result)| {
+            let record = result.as_ref().unwrap();
             let accession_id = record.id().split_whitespace().next().unwrap();
             let accession_no_version = remove_accession_version(accession_id);
             accession_to_taxid.put(accession_no_version, b"").unwrap();
@@ -117,11 +121,15 @@ pub mod ncbi_compress {
         log::info!("Splitting accessions by taxid");
         let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
         // Split the input fasta accessions into one file per taxid
-        for (i, record) in reader.records().enumerate() {
+        let records: Vec<_> = reader
+            .records()
+            .enumerate()
+            .collect();
+        records.par_iter().for_each(|(i, record)| {
             if i % 10_000 == 0 {
                 log::info!("  Split {} accessions", i);
             }
-            let record = record.unwrap();
+            let record = record.as_ref().unwrap();
             let accession_id = record.id().split_whitespace().next().unwrap();
             let accession_no_version = remove_accession_version(accession_id);
             let taxid = if let Some(taxid) = accession_to_taxid.get(accession_no_version).unwrap() {
@@ -141,7 +149,7 @@ pub mod ncbi_compress {
                 .unwrap();
             let mut writer = fasta::Writer::new(file);
             writer.write_record(&record).unwrap();
-        }
+        });
         fs::remove_dir_all(dir).expect("Error removing db");
         log::info!("Finished splitting accessions by taxid");
         taxid_path.to_path_buf()
