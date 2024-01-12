@@ -12,6 +12,7 @@ pub mod ncbi_compress {
     use sourmash::signature::SigsTrait;
     use sourmash::sketch::minhash::KmerMinHash;
 
+    use crate::fasta_tools::fasta_tools::sort_fasta_by_sequence_length;
     use crate::logging::logging;
     use crate::minhashtree_w_logging::minhashtree_w_logging::{
         MinHashTreeWithLogging, MinHashTreeWithLoggingFunctionality,
@@ -61,6 +62,7 @@ pub mod ncbi_compress {
             .collect();
         // Build a trie of the accessions in the input fasta
         records.par_iter().for_each(|(i, result)| {
+        // reader.records().enumerate().for_each(|(i, result)| {
             let record = result.as_ref().unwrap();
             let accession_id = record.id().split_whitespace().next().unwrap();
             let accession_no_version = remove_accession_version(accession_id);
@@ -126,6 +128,7 @@ pub mod ncbi_compress {
             .enumerate()
             .collect();
         records.par_iter().for_each(|(i, record)| {
+        // for (i, record) in reader.records().enumerate() {
             if i % 10_000 == 0 {
                 log::info!("  Split {} accessions", i);
             }
@@ -149,6 +152,7 @@ pub mod ncbi_compress {
                 .unwrap();
             let mut writer = fasta::Writer::new(file);
             writer.write_record(&record).unwrap();
+        // });
         });
         fs::remove_dir_all(dir).expect("Error removing db");
         log::info!("Finished splitting accessions by taxid");
@@ -454,7 +458,8 @@ mod tests {
 
         let truth_output_dir = "test_data/ncbi_compress/split_accessions_by_taxid/truth_outputs";
         let test_output_dir = tempdir().unwrap();
-        let test_dir_path_str = test_output_dir.path().to_str().unwrap();
+        let test_dir_path_str = "split_accessions_by_taxid";
+        // let test_dir_path_str = test_output_dir.path().to_str().unwrap();
 
         ncbi_compress::split_accessions_by_taxid(
             input_fasta_path,
@@ -470,7 +475,7 @@ mod tests {
 
             // get the truth file path
             let truth_file_path = format!("{}/{}", truth_output_dir, test_file_name);
-            util::are_files_equal(&test_file_path.to_str().unwrap(), &truth_file_path);
+            assert!(util::are_files_equal(&test_file_path.to_str().unwrap(), &truth_file_path));
         }
     }
 

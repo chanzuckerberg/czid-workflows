@@ -83,6 +83,8 @@ pub mod fasta_tools {
         let mut records = fasta::Reader::from_file(&input_fasta_path)
             .unwrap() // unwrap left here because this is an anyhow error
             .records();
+
+
         while let Some(Ok(record)) = records.next() {
             fasta::Writer::new(&mut scratch).write_record(&record)?;
             let sequence_length = record.seq().len();
@@ -142,6 +144,21 @@ pub mod fasta_tools {
         }
         Ok(())
     }
+
+    pub fn sort_taxid_dir_by_sequence_length(input_taxid_dir: &str, output_taxid_dir: &str) {
+        fs::create_dir_all(&output_taxid_dir).expect("Error creating output directory");
+        for (_i, entry) in fs::read_dir(input_taxid_dir).unwrap().enumerate() {
+            let entry = entry.unwrap();
+            let path = entry.path();
+            let input_fasta_path = path.to_str().unwrap();
+            let input_fasta_basename = path.file_name().unwrap().to_str().unwrap();
+            let output_fasta_path = format!("{}/{}", output_taxid_dir, input_fasta_basename);
+            let _ = sort_fasta_by_sequence_length(
+                input_fasta_path,
+                &output_fasta_path,
+            );
+        }
+    }
 }
 
 #[cfg(test)]
@@ -151,6 +168,7 @@ mod tests {
     use tempfile::tempdir;
 
     use crate::fasta_tools::fasta_tools;
+    use crate::util::util;
 
     // Define a struct to hold both ID and sequence
     #[derive(Eq, PartialEq)]
@@ -174,29 +192,19 @@ mod tests {
 
     #[test]
     fn test_sort_fasta_by_sequence_length() {
-        use crate::util::util::create_fasta_records_from_file;
         let temp_dir = tempdir().unwrap();
         let temp_file = temp_dir.path().join("sorted.fa");
-        let output_truth_fasta_file = "test_data/fasta_tools/truth_outputs/nt.sorted";
-        let input_fasta_file = "test_data/fasta_tools/inputs/nt";
+        let output_truth_fasta_file = "test_data/fasta_tools/truth_outputs/sorted_taxids/9771.fasta";
+        let input_fasta_file = "test_data/fasta_tools/inputs/unordered_taxids/9771.fasta";
 
         let temp_file_path_str = temp_file.to_str().unwrap();
         fasta_tools::sort_fasta_by_sequence_length(input_fasta_file, temp_file_path_str).unwrap();
 
-        let mut test_data_records = create_fasta_records_from_file(&temp_file_path_str);
-        let mut truth_data_records = create_fasta_records_from_file(&output_truth_fasta_file);
-
-        assert_eq!(
-            truth_data_records.sort(),
-            test_data_records.sort(),
-            "Files do not match: {:?}",
-            temp_file_path_str
-        );
+        util::compare_fasta_records_from_files(output_truth_fasta_file, temp_file_path_str);
     }
 
     #[test]
     fn test_count_accessions_by_taxid() {
-        use crate::util::util::are_files_equal;
         let output_truth_tsv_file = "test_data/fasta_tools/truth_outputs/count_accessions_by_taxid/output_counts.tsv";
 
         let test_truth_tsv_file = tempfile::NamedTempFile::new().unwrap();
@@ -207,7 +215,25 @@ mod tests {
             test_truth_tsv_file_path_str,
         );
 
-        are_files_equal(output_truth_tsv_file, test_truth_tsv_file_path_str);
+        assert!(util::are_files_equal(output_truth_tsv_file, test_truth_tsv_file_path_str))
     }
 
+    #[test]
+    fn test_sort_taxid_dir_by_sequence_length() {
+        use crate::util::util::compare_fasta_records_from_files;
+        let temp_dir = tempdir().unwrap();
+        let temp_dir_path_str = temp_dir.path().to_str().unwrap();
+        let output_truth_taxid_dir = "test_data/fasta_tools/truth_outputs/sorted_taxids";
+        let input_taxid_dir = "test_data/fasta_tools/inputs/unordered_taxids";
+
+        fasta_tools::sort_taxid_dir_by_sequence_length(input_taxid_dir, temp_dir_path_str);
+
+        for entry in std::fs::read_dir(temp_dir_path_str).unwrap() {
+            let entry = entry.unwrap();
+            let path = entry.path();
+            let output_fasta_file = path.to_str().unwrap();
+            let truth_fasta_file = format!("{}/{}", output_truth_taxid_dir, path.file_name().unwrap().to_str().unwrap());
+            assert!(util::are_files_equal(output_fasta_file, &truth_fasta_file));
+        }
+    }
 }

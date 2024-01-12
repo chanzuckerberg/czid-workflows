@@ -4,7 +4,11 @@ use ncbi_compress::commands::commands::{
     fasta_compress_end_to_end, fasta_compress_from_fasta_skip_split_by_taxid,
     fasta_compress_from_taxid_dir,
 };
-use ncbi_compress::fasta_tools::fasta_tools::{sort_fasta_by_sequence_length, count_accessions_by_taxid};
+use ncbi_compress::fasta_tools::fasta_tools::{
+    sort_fasta_by_sequence_length,
+    count_accessions_by_taxid,
+    sort_taxid_dir_by_sequence_length
+};
 use ncbi_compress::ncbi_compress::ncbi_compress::split_accessions_by_taxid;
 
 use ncbi_compress::logging::logging;
@@ -28,6 +32,22 @@ pub fn main() {
                     Arg::new("output_fasta")
                         .help("Output file for the sorted fasta")
                         .long("output")
+                        .required(true),
+                ),
+        )
+        .subcommand(
+            Command::new("sort-taxid-dir-by-sequence-length")
+                .about("sort_taxid_dir_by_sequence_length")
+                .arg(
+                    Arg::new("input_taxid_dir")
+                        .help("Input directory of taxid fasta files")
+                        .long("input-taxid-dir")
+                        .required(true),
+                )
+                .arg(
+                    Arg::new("output_taxid_dir")
+                        .help("Output directory for the sorted taxid fasta files")
+                        .long("output-taxid-dir")
                         .required(true),
                 ),
         )
@@ -336,6 +356,11 @@ pub fn main() {
             let input_fasta = sub_m.get_one::<String>("input_fasta").unwrap();
             let output_fasta = sub_m.get_one::<String>("output_fasta").unwrap();
             sort_fasta_by_sequence_length(input_fasta, output_fasta).unwrap();
+        }
+        Some(("sort-taxid-dir-by-sequence-length", sub_m)) => {
+            let input_taxid_dir = sub_m.get_one::<String>("input_taxid_dir").unwrap();
+            let output_taxid_dir = sub_m.get_one::<String>("output_taxid_dir").unwrap();
+            sort_taxid_dir_by_sequence_length(&input_taxid_dir, &output_taxid_dir);
         }
         Some(("break-into-individual-taxids-only", sub_m)) => {
             let input_fasta = sub_m.get_one::<String>("input_fasta").unwrap();

@@ -1,10 +1,34 @@
+// sequence and file utility functions, mainly for testing purposes
+
 pub mod util {
+    
     use std::fs;
+    use std::cmp::Ordering;
     use std::io::Read;
     use std::io::Write;
 
     use bio::io::fasta;
     use rand::Rng;
+
+    // Define a struct to hold both ID and sequence
+    #[derive(Eq, PartialEq)]
+    struct FastaRecord {
+        id: String,
+        seq: String,
+    }
+
+    // Implement Ord and PartialOrd for FastaRecord to enable sorting by ID
+    impl Ord for FastaRecord {
+        fn cmp(&self, other: &Self) -> Ordering {
+            // order based on id
+            self.id.cmp(&other.id)
+        }
+    }
+    impl PartialOrd for FastaRecord {
+        fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+            Some(self.cmp(other))
+        }
+    }
 
     pub fn create_fasta_records_from_file(input_fasta_path: &str) -> Vec<fasta::Record> {
         let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
@@ -20,14 +44,51 @@ pub mod util {
     pub fn are_files_equal(file_path1: &str, file_path2: &str) -> bool {
         if let Ok(contents1) = fs::read(file_path1) {
             if let Ok(contents2) = fs::read(file_path2) {
+                println!("Comparing files: {} and {}", file_path1, file_path2); 
                 return contents1 == contents2;
             }
         }
         false
     }
 
+    pub fn are_file_records_similar(file1: &str, file2: &str) -> f64 {
+
+        println!("Comparing files: {} and {}", file1, file2);
+        let mut records1 = create_fasta_records_from_file(file1);
+        let mut records2 = create_fasta_records_from_file(file2);
+
+        records1.sort();
+        records2.sort();
+    
+        let total_elements = records1.len();
+        let mut similar_elements = 0;
+    
+        for (elem1, elem2) in records1.iter().zip(records2.iter()) {
+            if elem1 == elem2 {
+                similar_elements += 1;
+            }
+        }
+    
+        let similarity = similar_elements as f64 / total_elements as f64;
+        similarity
+    }
+
+    pub fn compare_fasta_records_from_files(file1: &str, file2: &str) {
+
+        let mut records1 = create_fasta_records_from_file(file1);
+        let mut records2 = create_fasta_records_from_file(file2);
+
+        records1.sort();
+        records2.sort();
+
+        assert_eq!(
+            records1,
+            records2,
+            "Records do not match",
+        );
+    }
+
     pub fn write_to_file(filename: &str, content: &str) -> std::io::Result<()> {
-        println!("starting write to file in write_to_file");
         let mut file = fs::File::create(filename)?;
         println!("{}", format!("Wrote to file: {}", filename));
         file.write_all(content.as_bytes())?;
@@ -39,10 +100,10 @@ pub mod util {
         let mut file = std::fs::File::open(&input_fasta_path).expect("Failed to open file");
         file.read_to_string(&mut file_content)
             .expect("Failed to read from file");
-        return file_content
+        file_content
     }
 
-    pub fn read_and_write_to_file(input_fasta_path: &str, output_fasta_path: &str) -> () {
+    pub fn read_and_write_to_file(input_fasta_path: &str, output_fasta_path: &str) {
             let file_content = read_contents(input_fasta_path);
             println!("{}", format!("writing to file: {}", output_fasta_path));
             let _ = write_to_file(&output_fasta_path, &file_content);
@@ -87,7 +148,7 @@ pub mod util {
                 sequence.push_str(&kmer);
             }
         }
-        return sequence
+        sequence
     }
 
     pub fn create_random_kmer(ksize: usize) -> String {
@@ -98,7 +159,7 @@ pub mod util {
             let random_letter = letters[rng.gen_range(0..letters.len())];
             sequence.push(random_letter);
         }
-        return sequence
+        sequence
     }
 
     pub fn create_random_sequence(ksize: usize, total_kmers: u32) -> String {
@@ -107,7 +168,7 @@ pub mod util {
             let random_kmer = create_random_kmer(ksize);
             sequence.push_str(&random_kmer);
         }
-        return sequence
+        sequence
     }
 }
 

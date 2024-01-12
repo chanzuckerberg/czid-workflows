@@ -49,18 +49,11 @@ workflow index_generation {
         docker_image_id = docker_image_id
     }
     if (!skip_protein_compression) {
-        call SortFasta as SortFastaNR {
-            input:
-            fasta = DownloadNR.nr,
-            combined_sorted_path = "combined_sorted_nr.fa",
-            cpu = 64,
-            docker_image_id = docker_image_id
-        }
 
         call CompressDatabase as CompressNR {
             input:
             database_type = "nr",
-            sorted_fasta = SortFastaNR.sorted,
+            fasta = DownloadNR.nr,
             accession2taxid_files = [DownloadAccession2Taxid.pdb, DownloadAccession2Taxid.prot],
             k = nr_compression_k,
             scaled = nr_compression_scaled,
@@ -71,17 +64,10 @@ workflow index_generation {
     }
 
     if (!skip_nuc_compression) {
-        call SortFasta as SortFastaNT {
-            input:
-            fasta = DownloadNT.nt,
-            combined_sorted_path = "combined_sorted_nt.fa",
-            cpu = 64,
-            docker_image_id = docker_image_id
-        }
         call CompressDatabase as CompressNT {
             input:
             database_type = "nt",
-            sorted_fasta = SortFastaNT.sorted,
+            fasta = DownloadNT.nt,
             accession2taxid_files = [DownloadAccession2Taxid.nucl_wgs, DownloadAccession2Taxid.nucl_gb],
             k = nt_compression_k,
             scaled = nt_compression_scaled,
@@ -634,40 +620,10 @@ task GenerateIndexMinimap2 {
     }
 }
 
-task SortFasta {
-    input {
-        File fasta
-        String combined_sorted_path
-        Int cpu
-        Int threads = if cpu * 0.6 < 1 then 1 else floor(cpu * 0.6)
-        String docker_image_id
-    }
-
-    command <<<
-        # Sort NT/NR by length with the longer sequences first
-        #   This is needed because the downstream compression algorithm iterates through NT/NR in order only emitting
-        #   sequences if they are not contained by what it has already seen. If a shorter sequence is
-        #   contained by a longer sequence, and the shorter sequence were to come first, it would be emitted
-        #   even though it is redundant to the longer sequence.
-        set -euxo pipefail
-
-        ncbi-compress  sort-fasta-by-sequence-length  \
-            --input-fasta ~{fasta}  \
-            --output ~{combined_sorted_path}
-    >>>
-    output {
-        File sorted = combined_sorted_path
-    }
-    runtime {
-        docker: docker_image_id
-        cpu: cpu
-    }
-}
-
 task CompressDatabase {
     input {
         String database_type = "nt" # nt or nr
-        File sorted_fasta
+        File fasta
         Array[File] accession2taxid_files
         Int k
         Int scaled
@@ -681,19 +637,24 @@ task CompressDatabase {
 
         READS_BY_TAXID_PATH=reads_by_taxid
         SPLIT_APART_TAXID_DIR_NAME=split_apart_taxid
+        SORTED_TAXID_DIR_NAME=sorted_taxid
 
         # It is critical that this split happens in the same step as the compression
         # If the directory is a step output it will be uploaded, which takes an enormous amount of time
         ncbi-compress break-into-individual-taxids-only \
-            --input-fasta ~{sorted_fasta} \
+            --input-fasta ~{fasta} \
             --accession-mapping-files ~{sep=" " accession2taxid_files} \
             --output-dir $READS_BY_TAXID_PATH
+
+        ncbi-compress sort-taxid-dir-by-sequence-length \
+            --input-taxid-dir $READS_BY_TAXID_PATH \
+            --output-taxid-dir $SORTED_TAXID_DIR_NAME
 
         mkdir $SPLIT_APART_TAXID_DIR_NAME
 
         if [ "~{logging_enabled}" ]; then
             ncbi-compress fasta-compress-from-taxid-dir ~{if database_type == "nr" then "--is-protein-fasta" else ""} \
-                --input-fasta-dir $READS_BY_TAXID_PATH \
+                --input-fasta-dir $SORTED_TAXID_DIR_NAME \
                 --output-fasta ~{database_type}_compressed.fa \
                 --k ~{k} \
                 --scaled ~{scaled} \
