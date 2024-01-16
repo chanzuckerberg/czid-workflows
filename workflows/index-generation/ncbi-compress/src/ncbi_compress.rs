@@ -469,7 +469,6 @@ mod tests {
 
         let truth_output_dir = "test_data/ncbi_compress/split_accessions_by_taxid/truth_outputs";
         let test_output_dir = tempdir().unwrap();
-        // let test_dir_path_str = "split_accessions_by_taxid";
         let test_dir_path_str = test_output_dir.path().to_str().unwrap();
 
         ncbi_compress::split_accessions_by_taxid(

@@ -44,7 +44,6 @@ pub mod util {
     pub fn are_files_equal(file_path1: &str, file_path2: &str) -> bool {
         if let Ok(contents1) = fs::read(file_path1) {
             if let Ok(contents2) = fs::read(file_path2) {
-                println!("Comparing files: {} and {}", file_path1, file_path2); 
                 return contents1 == contents2;
             }
         }
@@ -53,7 +52,6 @@ pub mod util {
 
     pub fn are_file_records_similar(file1: &str, file2: &str) -> f64 {
 
-        println!("Comparing files: {} and {}", file1, file2);
         let mut records1 = create_fasta_records_from_file(file1);
         let mut records2 = create_fasta_records_from_file(file2);
 
