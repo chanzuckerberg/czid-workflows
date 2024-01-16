@@ -6,6 +6,8 @@ pub mod fasta_tools {
 
     use bio::io::fasta;
     use rayon::slice::ParallelSliceMut;
+    use rayon::prelude::*;
+
 
     struct OffsetWriter<'a> {
         file: &'a mut fs::File,
@@ -147,8 +149,14 @@ pub mod fasta_tools {
 
     pub fn sort_taxid_dir_by_sequence_length(input_taxid_dir: &str, output_taxid_dir: &str) {
         fs::create_dir_all(&output_taxid_dir).expect("Error creating output directory");
-        for (_i, entry) in fs::read_dir(input_taxid_dir).unwrap().enumerate() {
-            let entry = entry.unwrap();
+
+        // Read the directory and collect entries
+        let entries: Vec<_> = fs::read_dir(input_taxid_dir)
+        .expect("Failed to read directory")
+        .filter_map(Result::ok)
+        .collect();
+
+        entries.par_iter().for_each(|entry| {
             let path = entry.path();
             let input_fasta_path = path.to_str().unwrap();
             let input_fasta_basename = path.file_name().unwrap().to_str().unwrap();
@@ -157,7 +165,7 @@ pub mod fasta_tools {
                 input_fasta_path,
                 &output_fasta_path,
             );
-        }
+        });
     }
 }
 
