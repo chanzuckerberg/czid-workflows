@@ -339,7 +339,6 @@ mod tests {
 
     #[test]
     fn test_fasta_compress_from_fasta_end_to_end() {
-        use crate::util::util::are_file_records_similar;
 
         let input_fasta_path = "test_data/fasta_tools/inputs/nt";
         let truth_fasta_path = "test_data/commands/common_truth_output/nt_out.fa";
@@ -391,7 +390,6 @@ mod tests {
 
     #[test]
     fn test_fasta_compress_from_taxid_dir() {
-        use crate::util::util::compare_fasta_records_from_files;
         let input_taxid_dir = "test_data/commands/fasta_compress_from_taxid_dir/inputs";
         let truth_fasta_path = "test_data/commands/common_truth_output/nt_out.fa";
 
@@ -426,12 +424,11 @@ mod tests {
             logging_contained_in_chunk_fn,
         );
 
-        compare_fasta_records_from_files(truth_fasta_path, &output_fasta_path);
+        util::compare_fasta_records_from_files(truth_fasta_path, &output_fasta_path);
     }
 
     #[test]
     fn test_split_fasta_into_chunks() {
-        use crate::util::util::create_fasta_records_from_file;
         use bio::io::fasta;
 
         use crate::commands::commands::count_fasta_reads;
@@ -472,9 +469,9 @@ mod tests {
         .unwrap();
 
         let mut chunk_1_reader =
-            create_fasta_records_from_file(format!("{}/123_1.fa", temp_dir_path_str).as_str());
+            util::create_fasta_records_from_file(format!("{}/123_1.fa", temp_dir_path_str).as_str());
         let mut chunk_2_reader =
-            create_fasta_records_from_file(format!("{}/123_2.fa", temp_dir_path_str).as_str());
+            util::create_fasta_records_from_file(format!("{}/123_2.fa", temp_dir_path_str).as_str());
 
         let mut expected_chunk_1_records = vec![
             fasta::Record::with_attrs("1", None, b"ACGT"),

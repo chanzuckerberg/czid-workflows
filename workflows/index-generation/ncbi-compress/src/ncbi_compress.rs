@@ -59,8 +59,6 @@ pub mod ncbi_compress {
 
         log::info!("Creating accession to taxid db");
 
-        //let taxid_dir = TempDir::new_in(temp_file_output_dir, "accessions_by_taxid").unwrap();
-        // let taxid_path_str = format!("{}/accessions_by_taxid", temp_file_output_dir);
         let taxid_path = Path::new(output_dir);
         log::info!("Creating taxid dir {:?}", taxid_path);
         let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
@@ -152,7 +150,6 @@ pub mod ncbi_compress {
             };
             let mut handles = FILE_HANDLES.lock().unwrap(); // Lock the mutex here
             let file_path = format!("{}/{}.fasta", output_dir, taxid);
-            // let file_path_str = file_path.file_name().unwrap().to_str().unwrap().to_string();
             let file = handles.entry(file_path.clone()).or_insert_with(|| {
                 fs::OpenOptions::new()
                     .write(true)
