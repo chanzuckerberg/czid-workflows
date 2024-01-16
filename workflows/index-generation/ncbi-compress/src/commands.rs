@@ -303,8 +303,7 @@ mod tests {
     #[test]
     fn test_fasta_compress_from_fasta_skip_split_by_taxid() {
         let input_fasta_path = "test_data/fasta_tools/inputs/nt";
-        let truth_fasta_path =
-        "test_data/commands/fasta_compress_from_fasta_skip_split_by_taxid/truth-ouputs/nt_out.fa";
+        let truth_fasta_path = "test_data/commands/common_truth_output/nt_out.fa";
         let test_directory = tempdir().unwrap();
         let temp_dir_path_str = test_directory.path().to_str().unwrap();
         let test_fasta_path = format!("{}/nt.fa", temp_dir_path_str);
@@ -343,9 +342,7 @@ mod tests {
         use crate::util::util::are_file_records_similar;
 
         let input_fasta_path = "test_data/fasta_tools/inputs/nt";
-        // let truth_fasta_path = "test_data/commands/common_truth_output/nt_out.fa";
-        let truth_fasta_path =
-            "test_data/commands/fasta_compress_from_fasta_skip_split_by_taxid/truth-ouputs/nt_out.fa";
+        let truth_fasta_path = "test_data/commands/common_truth_output/nt_out.fa";
         let test_directory = tempdir().unwrap();
         let temp_dir_path_str = test_directory.path().to_str().unwrap();
         let test_fasta_path = format!("{}/nt.fa", temp_dir_path_str);
@@ -396,9 +393,7 @@ mod tests {
     fn test_fasta_compress_from_taxid_dir() {
         use crate::util::util::compare_fasta_records_from_files;
         let input_taxid_dir = "test_data/commands/fasta_compress_from_taxid_dir/inputs";
-        // let truth_fasta_path = "test_data/commands/common_truth_output/nt_out.fa";
-
-        let truth_fasta_path = "test_data/commands/fasta_compress_from_fasta_skip_split_by_taxid/truth-ouputs/nt_out.fa";
+        let truth_fasta_path = "test_data/commands/common_truth_output/nt_out.fa";
 
         let test_directory = tempdir().unwrap();
         let temp_dir_path_str = test_directory.path().to_str().unwrap();
