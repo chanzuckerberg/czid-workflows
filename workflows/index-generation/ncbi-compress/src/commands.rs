@@ -255,7 +255,6 @@ pub mod commands {
         fs::create_dir_all(&temp_file_output_dir).expect("Error creating output directory");
         let temp_taxid_dir = TempDir::new_in(temp_file_output_dir, "accessions_by_taxid")
             .expect("Error creating tempdir");
-        let temp_taxid_dir_str = temp_taxid_dir.path().to_str().unwrap();
         let temp_taxid_dir_str = format!("{}/accessions_by_taxid", temp_file_output_dir);
 ;
         ncbi_compress::split_accessions_by_taxid(
@@ -344,10 +343,11 @@ mod tests {
         use crate::util::util::are_file_records_similar;
 
         let input_fasta_path = "test_data/fasta_tools/inputs/nt";
-        let truth_fasta_path = "test_data/commands/common_truth_output/nt_out.fa";
+        // let truth_fasta_path = "test_data/commands/common_truth_output/nt_out.fa";
+        let truth_fasta_path =
+            "test_data/commands/fasta_compress_from_fasta_skip_split_by_taxid/truth-ouputs/nt_out.fa";
         let test_directory = tempdir().unwrap();
         let temp_dir_path_str = test_directory.path().to_str().unwrap();
-        let temp_dir_path_str = "fasta_compress_from_fasta_end_to_end";
         let test_fasta_path = format!("{}/nt.fa", temp_dir_path_str);
 
         let mapping_files_directory =
@@ -388,19 +388,17 @@ mod tests {
             logging_contained_in_tree_fn,
             logging_contained_in_chunk_fn,
         );
+        util::compare_fasta_records_from_files(&truth_fasta_path, &test_fasta_path);
 
-        let are_files_similar = are_file_records_similar(truth_fasta_path, &test_fasta_path);
-        println!("are_files_similar: {}", are_files_similar);
-        // assert!(similarity >= 0.95);
-        // assert!(util::are_files_equal(truth_fasta_path, &test_fasta_path));
-        // compare_fasta_records_from_files(truth_fasta_path, &test_fasta_path);
     }
 
     #[test]
     fn test_fasta_compress_from_taxid_dir() {
         use crate::util::util::compare_fasta_records_from_files;
         let input_taxid_dir = "test_data/commands/fasta_compress_from_taxid_dir/inputs";
-        let truth_fasta_path = "test_data/commands/common_truth_output/nt_out.fa";
+        // let truth_fasta_path = "test_data/commands/common_truth_output/nt_out.fa";
+
+        let truth_fasta_path = "test_data/commands/fasta_compress_from_fasta_skip_split_by_taxid/truth-ouputs/nt_out.fa";
 
         let test_directory = tempdir().unwrap();
         let temp_dir_path_str = test_directory.path().to_str().unwrap();
