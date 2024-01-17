@@ -42,3 +42,4 @@ RUN curl -LO https://czid-public-references.s3.us-west-2.amazonaws.com/card/2023
 
 
 COPY empty-main-header.txt /tmp/empty-main-header.txt 
+COPY scripts/ /scripts/

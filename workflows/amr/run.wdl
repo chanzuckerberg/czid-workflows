@@ -617,6 +617,49 @@ task RunSpades {
         {
             echo ";ASSEMBLY FAILED" > spades/contigs.fasta
             echo ";ASSEMBLY FAILED" > spades/scaffolds.fasta
+
+            python3 <<CODE
+    import csv
+    import os
+
+    WARNINGS_LOG = "spades/warnings.log"
+    SPADES_LOG = "spades/spades.log"
+
+    failure_info = {
+        "log_present": False,
+        "warnings_present": False,
+        "warnings": None,
+        "stack_trace": None,
+        "errors": None,
+    }
+
+    if os.path.isfile(WARNINGS_LOG):
+        failure_info["warnings_present"] = True
+        with open(WARNINGS_LOG) as warnings_file:
+            failure_info["warnings"] = "".join(warnings_file.readlines()).encode("unicode_escape").decode("utf-8")
+
+    if os.path.isfile(SPADES_LOG):
+        failure_info["log_present"] = True
+        with open(SPADES_LOG) as log_file:
+            log = log_file.readlines()
+            error_lines = [line.replace("== Error ==", "*") for line in log if line.startswith("== Error ==")]
+            if len(error_lines) > 0:
+                failure_info["errors"] = "".join(error_lines).encode("unicode_escape").decode("utf-8")
+            try:
+                stack_trace_line_no = log.index("=== Stack Trace ===\n")
+                stack_trace_end = log.index("\n", stack_trace_line_no)
+                stack_trace = "".join(log[stack_trace_line_no:stack_trace_end])
+                failure_info["stack_trace"] = stack_trace.encode("unicode_escape").decode("utf-8")
+            except ValueError:
+                pass
+
+    with open("spades_failure.tsv", "w") as tsvfile:
+        fieldnames = list(failure_info.keys())
+        writer = csv.DictWriter(tsvfile, delimiter="\t", fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerow(failure_info)
+    CODE
+
             exit 0
 
         }
@@ -637,6 +680,7 @@ task RunSpades {
     output { 
         File contigs = "spades/contigs.fasta"
         File? scaffolds = "spades/scaffolds.fasta"
+        File? failure_log = "spades_failure.tsv"
     }
     runtime { 
         docker: docker_image_id
