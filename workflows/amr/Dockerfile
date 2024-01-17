@@ -18,7 +18,7 @@ RUN apt-get update && apt-get -y install ncbi-blast+=2.9.0-2 prodigal=1:2.6.3-4 
 
 
 COPY requirements.txt requirements.txt
-RUN pip3 install --cache-dir=/var/tmp/ --build /var/tmp/  -r requirements.txt
+RUN pip3 install -r requirements.txt
 
 # RGI version 6.0.3
 RUN pip3 install git+https://github.com/lvreynoso/rgi.git@a14f8dd5457a6220a06024b6aebd05e8cb6181d7
