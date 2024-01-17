@@ -4,27 +4,27 @@ workflow bulk_download {
     input {
         String action
         Array[File] files
-        String docker_image_id
+        String docker_image_id = "czid-bulk-download"
     }
 
     if (action == "concatenate") {
         call concatenate { 
             input:
-                files = files
-                docker_image_id = host_filtering_docker_image_id,
+                files = files,
+                docker_image_id = docker_image_id
         }
     }
 
-    if (action == "group") {
-        call group { 
+    if (action == "zip") {
+        call zip { 
             input:
-                files = files
-                docker_image_id = host_filtering_docker_image_id,
+                files = files,
+                docker_image_id = docker_image_id
         }
     }
 
     output {
-        File? file = select_first([ concatenate.file, group.file ])
+        File? file = select_first([ concatenate.file, zip.file ])
     }
 }
 
@@ -45,17 +45,19 @@ task concatenate {
     }
 }
 
-task group {
+task zip {
     input {
         String docker_image_id
         Array[File] files
     }
     command <<<
         set -euxo pipefail
-        zip ~{sep=" " files} > group.zip
+
+        # Don't store full path of original files in the .zip file
+        zip --junk-paths result.zip ~{sep=" " files}
     >>>
     output {
-        File file = "group.zip"
+        File file = "result.zip"
     }
     runtime {
         docker: docker_image_id

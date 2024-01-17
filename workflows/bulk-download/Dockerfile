@@ -3,7 +3,7 @@ FROM ubuntu:20.04
 
 LABEL maintainer="CZ ID Team <idseq-tech@chanzuckerberg.com>"
 
-RUN apt-get update && apt-get -y install curl git python3 python3-pip gcc make libz-dev libncurses-dev libbz2-dev liblzma-dev g++ zip
+RUN apt-get update && apt-get -y install curl git python3 python3-pip make zip
 RUN ln -s /usr/bin/python3 /usr/bin/python
 
 COPY requirements.txt requirements.txt
