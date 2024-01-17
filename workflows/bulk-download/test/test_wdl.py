@@ -2,6 +2,7 @@ import os
 import zipfile
 from test_util import WDLTestCase
 
+
 def relpath(*args):
     """ helper to get a filepath relative to the current file """
     return os.path.join(os.path.dirname(__file__), *args)
