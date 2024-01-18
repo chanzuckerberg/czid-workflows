@@ -22,7 +22,7 @@ def _accession_id_and_name(header_line):
     return accession_id, accession_name
 
 
-Accession = namedtuple('Accession', 'accession_id accession_name seq_offset header_len seq_len seq_bp_len')
+Accession = namedtuple('Accession', ['accession_id', 'accession_name', 'seq_offset', 'header_len', 'seq_len', 'seq_bp_len'])
 
 
 def _extract_accessions(db_file: str):
