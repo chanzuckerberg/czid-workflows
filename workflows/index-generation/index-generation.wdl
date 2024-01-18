@@ -52,7 +52,6 @@ workflow index_generation {
         docker_image_id = docker_image_id
     }
     
-    File nr = DownloadNR.nr
     if (!skip_protein_compression) {
         call SortFasta as SortFastaNR {
             input:
@@ -73,11 +72,10 @@ workflow index_generation {
             logging_enabled = logging_enabled,
             docker_image_id = docker_image_id,
         }
-
-        File nr = CompressNR.compressed
     }
 
-    File nt = DownloadNT.nt
+    File nr = select_first([CompressNR, DownloadNR.nr])
+
     if (!skip_nuc_compression) {
         call SortFasta as SortFastaNT {
             input:
@@ -98,9 +96,9 @@ workflow index_generation {
             logging_enabled = logging_enabled,
             docker_image_id = docker_image_id,
         }
-
-        File nt = CompressNT.compressed
     }
+
+    File nt = select_first([CompressNT.compressed, DownloadNT.nt])
 
     call GenerateLocDB as GenerateNTLocDB {
         input:
