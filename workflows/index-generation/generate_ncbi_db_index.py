@@ -22,7 +22,14 @@ def _accession_id_and_name(header_line):
     return accession_id, accession_name
 
 
-Accession = namedtuple('Accession', ['accession_id', 'accession_name', 'seq_offset', 'header_len', 'seq_len', 'seq_bp_len'])
+Accession = namedtuple('Accession', [
+    'accession_id',
+    'accession_name',
+    'seq_offset',
+    'header_len',
+    'seq_len',
+    'seq_bp_len',
+])
 
 
 def _extract_accessions(db_file: str):
@@ -56,6 +63,8 @@ def _extract_accessions(db_file: str):
 
 def generate_loc_db(db_file, loc_db_file):
     loc_dict = marisa_trie.RecordTrie(
+        # unsigned long (8 bytes) followed by 2 unsigned integers (4 bytes)
+        # https://docs.python.org/3/library/struct.html#format-characters
         "QII",
         ((a.accession_id, (a.seq_offset, a.header_len, a.seq_len)) for a in _extract_accessions(db_file)),
     )
@@ -64,6 +73,8 @@ def generate_loc_db(db_file, loc_db_file):
 
 def generate_info_db(db_file, info_db_file):
     info_dict = marisa_trie.RecordTrie(
+        # 256 character string followed by an unsigned integer (4 bytes)
+        # https://docs.python.org/3/library/struct.html#format-characters
         "256pI",
         ((a.accession_id, (a.accession_name.rstrip().encode(), a.seq_bp_len)) for a in _extract_accessions(db_file)),
     )
