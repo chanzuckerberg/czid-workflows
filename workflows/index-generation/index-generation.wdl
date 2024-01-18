@@ -691,7 +691,7 @@ task CompressDatabase {
 
         mkdir $SPLIT_APART_TAXID_DIR_NAME
 
-        if [ "~{logging_enabled}" ]; then
+        if [ "~{logging_enabled}" == "true" ]; then
             ncbi-compress fasta-compress-from-taxid-dir ~{if database_type == "nr" then "--is-protein-fasta" else ""} \
                 --input-fasta-dir $READS_BY_TAXID_PATH \
                 --output-fasta ~{database_type}_compressed.fa \
