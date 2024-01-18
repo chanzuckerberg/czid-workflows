@@ -5,6 +5,7 @@ pub mod commands {
     use tempdir::TempDir;
 
     use crate::ncbi_compress::ncbi_compress;
+    use crate::fasta_tools::fasta_tools;
 
     fn fasta_compress_w_logging_option(
         input_fasta_path: &str,
@@ -254,19 +255,21 @@ pub mod commands {
         fs::create_dir_all(&temp_file_output_dir).expect("Error creating output directory");
         let temp_taxid_dir = TempDir::new_in(temp_file_output_dir, "accessions_by_taxid")
             .expect("Error creating tempdir");
-        let temp_taxid_dir_str = temp_taxid_dir.path().to_str().unwrap();
-
-        // let taxid_dir_str = format!("{}/accessions_by_taxid", temp_file_output_dir);
-        let taxid_dir = ncbi_compress::split_accessions_by_taxid(
+        let temp_taxid_dir_str = format!("{}/accessions_by_taxid", temp_file_output_dir);
+;
+        ncbi_compress::split_accessions_by_taxid(
             input_fasta_path,
             accession_mapping_files,
             &temp_taxid_dir_str,
         );
 
+        let sorted_taxid_dir = format!("{}/sorted_taxid_dir", temp_file_output_dir);
+        fasta_tools::sort_taxid_dir_by_sequence_length(&temp_taxid_dir_str, &sorted_taxid_dir);
+
         let mut accession_count = 0;
         let mut unique_accession_count = 0;
         let mut writer = fasta::Writer::to_file(output_fasta_path).unwrap();
-        for (_i, entry) in fs::read_dir(taxid_dir).unwrap().enumerate() {
+        for (_i, entry) in fs::read_dir(sorted_taxid_dir).unwrap().enumerate() {
             let entry = entry.unwrap();
             let path = entry.path();
             let input_fasta_path = path.to_str().unwrap();
@@ -300,8 +303,7 @@ mod tests {
     #[test]
     fn test_fasta_compress_from_fasta_skip_split_by_taxid() {
         let input_fasta_path = "test_data/fasta_tools/inputs/nt";
-        let truth_fasta_path =
-        "test_data/commands/fasta_compress_from_fasta_skip_split_by_taxid/truth-ouputs/nt_out.fa";
+        let truth_fasta_path = "test_data/commands/common_truth_output/nt_out.fa";
         let test_directory = tempdir().unwrap();
         let temp_dir_path_str = test_directory.path().to_str().unwrap();
         let test_fasta_path = format!("{}/nt.fa", temp_dir_path_str);
@@ -337,6 +339,7 @@ mod tests {
 
     #[test]
     fn test_fasta_compress_from_fasta_end_to_end() {
+
         let input_fasta_path = "test_data/fasta_tools/inputs/nt";
         let truth_fasta_path = "test_data/commands/common_truth_output/nt_out.fa";
         let test_directory = tempdir().unwrap();
@@ -365,7 +368,6 @@ mod tests {
         let enable_sequence_retention_logging = false;
         let logging_contained_in_tree_fn = "";
         let logging_contained_in_chunk_fn = "";
-
         commands::fasta_compress_end_to_end(
             input_fasta_path,
             input_mapping_file_paths,
@@ -382,8 +384,8 @@ mod tests {
             logging_contained_in_tree_fn,
             logging_contained_in_chunk_fn,
         );
+        util::compare_fasta_records_from_files(&truth_fasta_path, &test_fasta_path);
 
-        assert!(util::are_files_equal(truth_fasta_path, &test_fasta_path));
     }
 
     #[test]
@@ -422,12 +424,11 @@ mod tests {
             logging_contained_in_chunk_fn,
         );
 
-        assert!(util::are_files_equal(truth_fasta_path, &output_fasta_path));
+        util::compare_fasta_records_from_files(truth_fasta_path, &output_fasta_path);
     }
 
     #[test]
     fn test_split_fasta_into_chunks() {
-        use crate::util::util::create_fasta_records_from_file;
         use bio::io::fasta;
 
         use crate::commands::commands::count_fasta_reads;
@@ -469,9 +470,9 @@ mod tests {
         .unwrap();
 
         let mut chunk_1_reader =
-            create_fasta_records_from_file(format!("{}/123_1.fa", temp_dir_path_str).as_str());
+            util::create_fasta_records_from_file(format!("{}/123_1.fa", temp_dir_path_str).as_str());
         let mut chunk_2_reader =
-            create_fasta_records_from_file(format!("{}/123_2.fa", temp_dir_path_str).as_str());
+            util::create_fasta_records_from_file(format!("{}/123_2.fa", temp_dir_path_str).as_str());
 
         let mut expected_chunk_1_records = vec![
             fasta::Record::with_attrs("1", None, b"ACGT"),

@@ -1,9 +1,12 @@
 pub mod ncbi_compress {
+    use std::collections::HashMap;
     use std::ops::AddAssign;
     use std::path::Path;
     use std::{borrow::BorrowMut, fs};
+    use std::sync::Mutex;
 
     use bio::io::fasta;
+    use lazy_static::lazy_static;
     use rand::distributions::Alphanumeric;
     use rand::Rng;
     use rayon::prelude::*;
@@ -12,6 +15,7 @@ pub mod ncbi_compress {
     use sourmash::signature::SigsTrait;
     use sourmash::sketch::minhash::KmerMinHash;
 
+    use crate::fasta_tools::fasta_tools::sort_fasta_by_sequence_length;
     use crate::logging::logging;
     use crate::minhashtree_w_logging::minhashtree_w_logging::{
         MinHashTreeWithLogging, MinHashTreeWithLoggingFunctionality,
@@ -24,6 +28,11 @@ pub mod ncbi_compress {
 
     fn remove_accession_version(accession: &str) -> &str {
         accession.splitn(2, |c| c == '.').next().unwrap()
+    }
+
+    // Mutex-protected HashMap for file handles
+    lazy_static! {
+        static ref FILE_HANDLES: Mutex<HashMap<String, std::fs::File>> = Mutex::new(HashMap::new());
     }
 
     pub fn split_accessions_by_taxid(
@@ -50,14 +59,16 @@ pub mod ncbi_compress {
 
         log::info!("Creating accession to taxid db");
 
-        //let taxid_dir = TempDir::new_in(temp_file_output_dir, "accessions_by_taxid").unwrap();
-        // let taxid_path_str = format!("{}/accessions_by_taxid", temp_file_output_dir);
         let taxid_path = Path::new(output_dir);
         log::info!("Creating taxid dir {:?}", taxid_path);
         let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
+        let records: Vec<_> = reader
+            .records()
+            .enumerate()
+            .collect();
         // Build a trie of the accessions in the input fasta
-        reader.records().enumerate().for_each(|(i, result)| {
-            let record = result.unwrap();
+        records.par_iter().for_each(|(i, result)| {
+            let record = result.as_ref().unwrap();
             let accession_id = record.id().split_whitespace().next().unwrap();
             let accession_no_version = remove_accession_version(accession_id);
             accession_to_taxid.put(accession_no_version, b"").unwrap();
@@ -117,11 +128,15 @@ pub mod ncbi_compress {
         log::info!("Splitting accessions by taxid");
         let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
         // Split the input fasta accessions into one file per taxid
-        for (i, record) in reader.records().enumerate() {
+        let records: Vec<_> = reader
+            .records()
+            .enumerate()
+            .collect();
+        records.par_iter().for_each(|(i, record)| {
             if i % 10_000 == 0 {
                 log::info!("  Split {} accessions", i);
             }
-            let record = record.unwrap();
+            let record = record.as_ref().unwrap();
             let accession_id = record.id().split_whitespace().next().unwrap();
             let accession_no_version = remove_accession_version(accession_id);
             let taxid = if let Some(taxid) = accession_to_taxid.get(accession_no_version).unwrap() {
@@ -133,15 +148,20 @@ pub mod ncbi_compress {
             } else {
                 0 // no taxid found
             };
-            let file_path = taxid_path.join(format!("{}.fasta", taxid));
-            let file = fs::OpenOptions::new()
-                .create(true)
-                .append(true)
-                .open(file_path)
-                .unwrap();
+            let mut handles = FILE_HANDLES.lock().unwrap(); // Lock the mutex here
+            let file_path = format!("{}/{}.fasta", output_dir, taxid);
+            let file = handles.entry(file_path.clone()).or_insert_with(|| {
+                fs::OpenOptions::new()
+                    .write(true)
+                    .append(true)
+                    .create(true)
+                    .open(file_path)
+                    .expect("Error opening fasta file")
+            });
+
             let mut writer = fasta::Writer::new(file);
             writer.write_record(&record).unwrap();
-        }
+        });
         fs::remove_dir_all(dir).expect("Error removing db");
         log::info!("Finished splitting accessions by taxid");
         taxid_path.to_path_buf()
@@ -454,15 +474,26 @@ mod tests {
             test_dir_path_str,
         );
 
-        for entry in fs::read_dir(test_dir_path_str).unwrap() {
+        let entries = fs::read_dir(test_dir_path_str)
+        .expect("Failed to read directory");
+
+        let entries: Vec<_> = entries
+        .filter_map(Result::ok)
+        .collect();
+
+        // Assert that the directory is not empty
+        assert!(!entries.is_empty(), "Directory is empty");
+
+        // for entry in fs::read_dir(test_dir_path_str).unwrap() {
+        for entry in fs::read_dir(truth_output_dir).unwrap() {
             // get test file path
             let entry = entry.unwrap();
-            let test_file_path = entry.path();
-            let test_file_name = test_file_path.file_name().unwrap().to_str().unwrap();
+            let truth_file_path = entry.path();
+            let truth_file_name = truth_file_path.file_name().unwrap().to_str().unwrap();
 
-            // get the truth file path
-            let truth_file_path = format!("{}/{}", truth_output_dir, test_file_name);
-            util::are_files_equal(&test_file_path.to_str().unwrap(), &truth_file_path);
+            // get the test file path
+            let test_file_path = format!("{}/{}", test_dir_path_str, truth_file_name);
+            util::compare_fasta_records_from_files(&test_file_path, &truth_file_path.to_str().unwrap());
         }
     }
 
