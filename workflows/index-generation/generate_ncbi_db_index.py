@@ -33,6 +33,12 @@ Accession = namedtuple('Accession', [
 
 
 def _extract_accessions(db_file: str):
+    """
+    Extracts ID, name, length, and offset information from an NCBI database fasta (NR/NT).
+
+    Biopython's fasta parser is not used here because it might remove line break and
+    spacing information that is critical to getting the correct offset.
+    """
     with open(db_file) as dbf:
         seq_offset = 0
         seq_len = 0
