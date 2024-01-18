@@ -228,7 +228,6 @@ mod tests {
 
     #[test]
     fn test_sort_taxid_dir_by_sequence_length() {
-        use crate::util::util::compare_fasta_records_from_files;
         let temp_dir = tempdir().unwrap();
         let temp_dir_path_str = temp_dir.path().to_str().unwrap();
         let output_truth_taxid_dir = "test_data/fasta_tools/truth_outputs/sorted_taxids";
