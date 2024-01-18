@@ -74,7 +74,7 @@ workflow index_generation {
         }
     }
 
-    File nr = select_first([CompressNR, DownloadNR.nr])
+    File nr_or_compressed = select_first([CompressNR.compressed, DownloadNR.nr])
 
     if (!skip_nuc_compression) {
         call SortFasta as SortFastaNT {
@@ -98,45 +98,45 @@ workflow index_generation {
         }
     }
 
-    File nt = select_first([CompressNT.compressed, DownloadNT.nt])
+    File nt_or_compressed = select_first([CompressNT.compressed, DownloadNT.nt])
 
     call GenerateLocDB as GenerateNTLocDB {
         input:
-        nt = nt,
+        db_fasta = nt_or_compressed,
         database_type = "nt",
         docker_image_id = docker_image_id
     }
 
     call GenerateInfoDB as GenerateNTInfoDB {
         input:
-        nt = DownloadNT.nt,
+        db_fasta = nt_or_compressed,
         database_type = "nt",
         docker_image_id = docker_image_id
     }
 
     call GenerateIndexMinimap2 as GenerateIndexMinimap2 {
         input:
-        nt = nt,
+        nt = nt_or_compressed,
         docker_image_id = docker_image_id
     }
 
     call GenerateLocDB as GenerateNRLocDB {
         input:
-        nr = nr,
+        db_fasta = nr_or_compressed,
         database_type = "nr",
         docker_image_id = docker_image_id
     }
 
-    call GenerateIndexDiamond as GenerateIndexDiamondNoCompression {
+    call GenerateIndexDiamond as GenerateIndexDiamond {
         input:
-        nr = DownloadNR.nr,
+        nr = nr_or_compressed,
         docker_image_id = docker_image_id
     }
 
     call GenerateIndexAccessions {
         input:
-        nr = nr,
-        nt = nt,
+        nr = nr_or_compressed,
+        nt = nt_or_compressed,
         accession2taxid_files = [
             DownloadAccession2Taxid.nucl_wgs,
             DownloadAccession2Taxid.nucl_gb,
@@ -163,23 +163,23 @@ workflow index_generation {
                 s3_dir = s3_dir,
                 minimap2_index = GenerateIndexMinimap2.minimap2_index,
                 diamond_index = GenerateIndexDiamond.diamond_index,
-                nt = nt,
-                nr = nr,
-                nt_loc_db = GenerateNTLocDBNoCompression.loc_db,
-                nt_info_db = GenerateNTLocDB.info_db,
-                nr_loc_db = GenerateNRInfoDB.loc_db,
+                nt = nt_or_compressed,
+                nr = nr_or_compressed,
+                nt_loc_db = GenerateNTLocDB.loc_db,
+                nt_info_db = GenerateNTInfoDB.info_db,
+                nr_loc_db = GenerateNRLocDB.loc_db,
                 accession2taxid_db = GenerateIndexAccessions.accession2taxid_db,
                 docker_image_id = docker_image_id,
         }
     }
 
     output {
-        File nr = nr 
-        File nt = nt
+        File nr = nr_or_compressed
+        File nt = nt_or_compressed
         File accession2taxid_db = GenerateIndexAccessions.accession2taxid_db
-        File nt_loc_db = GenerateNTLocDBNoCompression.loc_db
-        File nt_info_db = GenerateNTLocDB.info_db
-        File nr_loc_db = GenerateNRInfoDB.loc_db
+        File nt_loc_db = GenerateNTLocDB.loc_db
+        File nt_info_db = GenerateNTInfoDB.info_db
+        File nr_loc_db = GenerateNRLocDB.loc_db
         Directory minimap2_index = GenerateIndexMinimap2.minimap2_index
         Directory diamond_index = GenerateIndexDiamond.diamond_index
         File taxid_lineages_db = GenerateIndexLineages.taxid_lineages_db
@@ -338,12 +338,12 @@ task GenerateIndexAccessions {
 
 task GenerateLocDB {
     input {
-        File fasta
+        File db_fasta
         String database_type # nt or nr
         String docker_image_id
     }
     command <<<
-        python3 /usr/local/bin/generate_ncbi_db_index.py loc ~{fasta} ~{database_type}_loc.marisa
+        python3 /usr/local/bin/generate_ncbi_db_index.py loc ~{db_fasta} ~{database_type}_loc.marisa
     >>>
     output {
         File loc_db = "~{database_type}_loc.marisa"
@@ -355,12 +355,12 @@ task GenerateLocDB {
 
 task GenerateInfoDB {
     input {
-        File fasta
+        File db_fasta
         String database_type # nt or nr
         String docker_image_id
     }
     command <<<
-        python3 /usr/local/bin/generate_ncbi_db_index.py loc ~{fasta} ~{database_type}_info.marisa
+        python3 /usr/local/bin/generate_ncbi_db_index.py loc ~{db_fasta} ~{database_type}_info.marisa
     >>>
     output {
         File info_db = "~{database_type}_info.marisa"
