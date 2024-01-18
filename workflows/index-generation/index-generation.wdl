@@ -30,12 +30,14 @@ workflow index_generation {
         docker_image_id = docker_image_id,
         old_nr_s3_path = old_nr_s3_path
     }
+
     call DownloadNT {
         input:
         ncbi_server = ncbi_server,
         docker_image_id = docker_image_id,
         old_nt_s3_path = old_nt_s3_path
     }
+
     call DownloadAccession2Taxid {
         input:
         ncbi_server = ncbi_server,
@@ -43,11 +45,13 @@ workflow index_generation {
         s3_accession_mapping_prefix = s3_accession_mapping_prefix
 
     }
+
     call DownloadTaxdump {
         input:
         ncbi_server = ncbi_server,
         docker_image_id = docker_image_id
     }
+    
     if (!skip_protein_compression) {
 
         call CompressDatabase as CompressNR {
@@ -63,6 +67,8 @@ workflow index_generation {
         }
     }
 
+    File nr_or_compressed = select_first([CompressNR.compressed, DownloadNR.nr])
+
     if (!skip_nuc_compression) {
         call CompressDatabase as CompressNT {
             input:
@@ -77,61 +83,45 @@ workflow index_generation {
         }
     }
 
-    if (skip_nuc_compression) {
-        call GenerateNTDB as GenerateNTDBNoCompression {
-            input:
-            nt = DownloadNT.nt,
-            docker_image_id = docker_image_id
-        }
-        call GenerateIndexMinimap2 as GenerateIndexMinimap2NoCompression {
-            input:
-            nt = DownloadNT.nt,
-            docker_image_id = docker_image_id
-        }
+    File nt_or_compressed = select_first([CompressNT.compressed, DownloadNT.nt])
+
+    call GenerateLocDB as GenerateNTLocDB {
+        input:
+        db_fasta = nt_or_compressed,
+        database_type = "nt",
+        docker_image_id = docker_image_id
     }
 
-    if (!skip_nuc_compression) {
-        call GenerateNTDB as GenerateNTDBWCompression {
-            input:
-            nt = select_first([CompressNT.compressed]),
-            docker_image_id = docker_image_id
-        }
-        call GenerateIndexMinimap2 as GenerateIndexMinimap2WCompression {
-            input:
-            nt = select_first([CompressNT.compressed]),
-            docker_image_id = docker_image_id
-        }
+    call GenerateInfoDB as GenerateNTInfoDB {
+        input:
+        db_fasta = nt_or_compressed,
+        database_type = "nt",
+        docker_image_id = docker_image_id
     }
 
-    if (skip_protein_compression) {
-        call GenerateNRDB as GenerateNRDBNoCompression {
-            input:
-            nr = DownloadNR.nr,
-            docker_image_id = docker_image_id
-        }
-        call GenerateIndexDiamond as GenerateIndexDiamondNoCompression {
-            input:
-            nr = DownloadNR.nr,
-            docker_image_id = docker_image_id
-        }
+    call GenerateIndexMinimap2 as GenerateIndexMinimap2 {
+        input:
+        nt = nt_or_compressed,
+        docker_image_id = docker_image_id
     }
-    if (!skip_protein_compression) {
-        call GenerateNRDB as GenerateNRDBWCompression {
-            input:
-            nr = select_first([CompressNR.compressed]),
-            docker_image_id = docker_image_id
-        }
-        call GenerateIndexDiamond as GenerateIndexDiamondWCompression{
-            input:
-            nr = select_first([CompressNR.compressed]),
-            docker_image_id = docker_image_id
-        }
+
+    call GenerateLocDB as GenerateNRLocDB {
+        input:
+        db_fasta = nr_or_compressed,
+        database_type = "nr",
+        docker_image_id = docker_image_id
+    }
+
+    call GenerateIndexDiamond as GenerateIndexDiamond {
+        input:
+        nr = nr_or_compressed,
+        docker_image_id = docker_image_id
     }
 
     call GenerateIndexAccessions {
         input:
-        nr = select_first([CompressNR.compressed, DownloadNR.nr]),
-        nt = select_first([CompressNT.compressed, DownloadNT.nt]),
+        nr = nr_or_compressed,
+        nt = nt_or_compressed,
         accession2taxid_files = [
             DownloadAccession2Taxid.nucl_wgs,
             DownloadAccession2Taxid.nucl_gb,
@@ -156,27 +146,27 @@ workflow index_generation {
                 environ = environ,
                 index_name = index_name,
                 s3_dir = s3_dir,
-                minimap2_index = if (skip_nuc_compression) then GenerateIndexMinimap2NoCompression.minimap2_index else GenerateIndexMinimap2WCompression.minimap2_index,
-                diamond_index = if (skip_protein_compression) then GenerateIndexDiamondNoCompression.diamond_index else GenerateIndexDiamondWCompression.diamond_index,
-                nt = if (skip_nuc_compression) then DownloadNT.nt else CompressNT.compressed,
-                nr = if (skip_protein_compression) then DownloadNR.nr else CompressNR.compressed,
-                nt_loc_db = if (skip_nuc_compression) then GenerateNTDBNoCompression.nt_loc_db else GenerateNTDBWCompression.nt_loc_db,
-                nt_info_db = if (skip_nuc_compression) then GenerateNTDBNoCompression.nt_info_db else GenerateNTDBWCompression.nt_info_db,
-                nr_loc_db = if (skip_protein_compression) then GenerateNRDBNoCompression.nr_loc_db else GenerateNRDBWCompression.nr_loc_db,
+                minimap2_index = GenerateIndexMinimap2.minimap2_index,
+                diamond_index = GenerateIndexDiamond.diamond_index,
+                nt = nt_or_compressed,
+                nr = nr_or_compressed,
+                nt_loc_db = GenerateNTLocDB.loc_db,
+                nt_info_db = GenerateNTInfoDB.info_db,
+                nr_loc_db = GenerateNRLocDB.loc_db,
                 accession2taxid_db = GenerateIndexAccessions.accession2taxid_db,
                 docker_image_id = docker_image_id,
         }
     }
 
     output {
-        File? nr = if (skip_protein_compression) then DownloadNR.nr else CompressNR.compressed
-        File? nt = if (skip_nuc_compression) then DownloadNT.nt else CompressNT.compressed
-        File? accession2taxid_db = GenerateIndexAccessions.accession2taxid_db
-        File? nt_loc_db = if (skip_nuc_compression) then GenerateNTDBNoCompression.nt_loc_db else GenerateNTDBWCompression.nt_loc_db
-        File? nt_info_db = if (skip_nuc_compression) then GenerateNTDBNoCompression.nt_info_db else GenerateNTDBWCompression.nt_info_db
-        File? nr_loc_db = if (skip_protein_compression) then GenerateNRDBNoCompression.nr_loc_db else GenerateNRDBWCompression.nr_loc_db
-        Directory? minimap2_index = if (skip_nuc_compression) then GenerateIndexMinimap2NoCompression.minimap2_index else GenerateIndexMinimap2WCompression.minimap2_index
-        Directory? diamond_index = if (skip_protein_compression) then GenerateIndexDiamondNoCompression.diamond_index else GenerateIndexDiamondWCompression.diamond_index
+        File nr = nr_or_compressed
+        File nt = nt_or_compressed
+        File accession2taxid_db = GenerateIndexAccessions.accession2taxid_db
+        File nt_loc_db = GenerateNTLocDB.loc_db
+        File nt_info_db = GenerateNTInfoDB.info_db
+        File nr_loc_db = GenerateNRLocDB.loc_db
+        Directory minimap2_index = GenerateIndexMinimap2.minimap2_index
+        Directory diamond_index = GenerateIndexDiamond.diamond_index
         File taxid_lineages_db = GenerateIndexLineages.taxid_lineages_db
         File versioned_taxid_lineages_csv = GenerateIndexLineages.versioned_taxid_lineages_csv
         File deuterostome_taxids = GenerateIndexLineages.deuterostome_taxids
@@ -331,45 +321,37 @@ task GenerateIndexAccessions {
     }
 }
 
-task GenerateNTDB {
+task GenerateLocDB {
     input {
-        File nt
+        File db_fasta
+        String database_type # nt or nr
         String docker_image_id
     }
-
     command <<<
-        python3 /usr/local/bin/generate_loc_db.py ~{nt} nt_loc.marisa nt_info.marisa
+        python3 /usr/local/bin/generate_ncbi_db_index.py loc ~{db_fasta} ~{database_type}_loc.marisa
     >>>
-
     output {
-        File nt_loc_db = "nt_loc.marisa"
-        File nt_info_db = "nt_info.marisa"
+        File loc_db = "~{database_type}_loc.marisa"
     }
-
     runtime {
         docker: docker_image_id
-        cpu: 8
     }
 }
 
-task GenerateNRDB {
+task GenerateInfoDB {
     input {
-        File nr
+        File db_fasta
+        String database_type # nt or nr
         String docker_image_id
     }
-
     command <<<
-        python3 /usr/local/bin/generate_loc_db.py ~{nr} nr_loc.marisa nr_info.marisa
+        python3 /usr/local/bin/generate_ncbi_db_index.py loc ~{db_fasta} ~{database_type}_info.marisa
     >>>
-
     output {
-        File nr_loc_db = "nr_loc.marisa"
-        # File nr_info_db = "nr_info.marisa"
+        File info_db = "~{database_type}_info.marisa"
     }
-
     runtime {
         docker: docker_image_id
-        cpu: 8
     }
 }
 
@@ -652,7 +634,7 @@ task CompressDatabase {
 
         mkdir $SPLIT_APART_TAXID_DIR_NAME
 
-        if [ "~{logging_enabled}" ]; then
+        if [ "~{logging_enabled}" == "true" ]; then
             ncbi-compress fasta-compress-from-taxid-dir ~{if database_type == "nr" then "--is-protein-fasta" else ""} \
                 --input-fasta-dir $SORTED_TAXID_DIR_NAME \
                 --output-fasta ~{database_type}_compressed.fa \

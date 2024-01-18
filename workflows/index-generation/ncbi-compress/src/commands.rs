@@ -434,8 +434,9 @@ mod tests {
         use crate::commands::commands::count_fasta_reads;
         use crate::commands::commands::split_fasta_into_chunks;
 
-        let taxid_path_name = "123.fa";
-        let mut writer = fasta::Writer::to_file(&taxid_path_name).unwrap();
+        let taxid_path_name = tempfile::NamedTempFile::new().unwrap();
+        let taxid_path_name_str = taxid_path_name.path().to_str().unwrap();
+        let mut writer = fasta::Writer::to_file(&taxid_path_name_str).unwrap();
 
         let records = vec![
             fasta::Record::with_attrs("1", None, b"ACGT"),
@@ -452,7 +453,7 @@ mod tests {
         }
         writer.flush().expect("error flushing file");
 
-        let reads_count = count_fasta_reads(&taxid_path_name);
+        let reads_count = count_fasta_reads(&taxid_path_name_str);
         assert_eq!(reads_count, 7);
 
         let test_directory = tempdir().unwrap();
@@ -460,7 +461,7 @@ mod tests {
 
         let maximum_records_per_file = 5;
         split_fasta_into_chunks(
-            &taxid_path_name,
+            &taxid_path_name_str,
             &temp_dir_path_str,
             &reads_count,
             &maximum_records_per_file,
