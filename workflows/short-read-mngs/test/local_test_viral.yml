@@ -18,11 +18,11 @@ host_filter.human_hisat2_index_tar: s3://czid-public-references/host_filter/ercc
 host_filter.max_input_fragments: 9000
 host_filter.max_subsample_fragments: 9000
 non_host_alignment.accession2taxid_db: s3://czid-public-references/mini-database/alignment_indexes/2020-08-20-viral/viral_accessions2taxid.marisa
-non_host_alignment.alignment_scalability: true
 minimap2_local_db_path: s3://czid-public-references/test/viral-alignment-indexes/viral_nt
 diamond_local_db_path: s3://czid-public-references/test/viral-alignment-indexes/viral_nr
 diamond_args: "mid-sensitive"
 postprocess.nt_db: s3://czid-public-references/test/viral-alignment-indexes/viral_nt
+postprocess.output_results_csv: true
 postprocess.nt_loc_db: s3://czid-public-references/test/viral-alignment-indexes/viral_nt_loc.marisa
 postprocess.nr_db: s3://czid-public-references/test/viral-alignment-indexes/viral_nr
 postprocess.nr_loc_db: s3://czid-public-references/test/viral-alignment-indexes/viral_nr_loc.marisa

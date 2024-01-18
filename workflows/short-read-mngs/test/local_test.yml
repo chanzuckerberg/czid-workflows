@@ -19,6 +19,7 @@ non_host_alignment.accession2taxid_db: s3://czid-public-references/ncbi-indexes-
 minimap2_local_db_path: s3://czid-public-references/ncbi-indexes-prod/2021-01-22/index-generation-2/nt
 diamond_local_db_path: s3://czid-public-references/ncbi-indexes-prod/2021-01-22/index-generation-2/nr
 diamond_args: "mid-sensitive"
+postprocess.output_results_csv: true
 postprocess.nt_db: s3://czid-public-references/ncbi-indexes-prod/2021-01-22/index-generation-2/nt
 postprocess.nt_loc_db: s3://czid-public-references/ncbi-indexes-prod/2021-01-22/index-generation-2/nt_loc.marisa
 postprocess.nr_db: s3://czid-public-references/ncbi-indexes-prod/2021-01-22/index-generation-2/nr
