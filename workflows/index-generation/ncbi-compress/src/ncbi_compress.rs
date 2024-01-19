@@ -346,17 +346,13 @@ pub mod ncbi_compress {
         let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
         // let mut tree: BloomSetTree<_, 4096> = BloomSetTree::new(branch_factor);
         let mut sketches: Vec<KmerMinHash> = Vec::new();
-
-        let writer = Mutex::new(writer);
-
         let mut records_iter = reader.records();
 
+        // Initialize a temporary vector to store the unique items from each chunk
+        let mut unique_in_chunk: Vec<(KmerMinHash, fasta::Record)> = Vec::with_capacity(chunk_size);
+        let mut unique_in_tree_and_chunk: Vec<(KmerMinHash, &fasta::Record)> = Vec::with_capacity(chunk_size);
 
         loop {
-            // Initialize a temporary vector to store the unique items from each chunk
-            let mut unique_in_chunk: Vec<(KmerMinHash, &fasta::Record)> = Vec::with_capacity(chunk_size);
-            let mut unique_in_tree_and_chunk: Vec<KmerMinHash> = Vec::with_capacity(chunk_size);
-
             let chunk = records_iter
                 .borrow_mut()
                 .take(chunk_size)
@@ -384,7 +380,7 @@ pub mod ncbi_compress {
                         0,
                     );
                     hash.add_protein(record.seq()).unwrap();
-                    (hash, record)
+                    (hash, record.clone())
                 } else {
                     hash = KmerMinHash::new(
                         scaled,
@@ -395,7 +391,7 @@ pub mod ncbi_compress {
                         0,
                     );
                     hash.add_sequence(record.seq(), true).unwrap();
-                    (hash, record)
+                    (hash, record.clone())
                 }
             }).collect::<Vec<_>>();
 
@@ -407,21 +403,12 @@ pub mod ncbi_compress {
                     .any(|(other, _record)| containment(&hash, &other).unwrap() >= similarity_threshold);
 
                 if !similar {
-                    unique_accession_count.add_assign(1);
                     unique_in_chunk.push((hash, record));
-
-                    if *unique_accession_count % 1_000_000 == 0 {
-                        log::info!(
-                            "Processed {} accessions, {} unique",
-                            accession_count,
-                            unique_accession_count
-                        );
-                    }
                 }
             }
 
             // Check if any of unique hashes in the chunk have similarity to the ones already in the tree
-            unique_in_tree_and_chunk = unique_in_chunk
+            let mut unique_in_tree_and_chunk = unique_in_chunk
                 .par_iter()
                 .filter_map(|(hash, record)| {
                     // Take a chunk of accessions and return the ones that are not already in sketches
@@ -440,18 +427,33 @@ pub mod ncbi_compress {
                     {
                         None
                     } else {
-                        let mut writer = writer.lock().unwrap();
-                        writer.write_record(record).unwrap();
-                        Some(hash.clone())
+                        Some((hash.clone(), record))
                     }
                 })
                 .collect::<Vec<_>>();
+
+            for (hash, record) in unique_in_tree_and_chunk.iter() {
+                unique_accession_count.add_assign(1);
+                if *unique_accession_count % 1_000_000 == 0 {
+                    log::info!(
+                        "Processed {} accessions, {} unique",
+                        accession_count,
+                        unique_accession_count
+                    );
+                }
+
+                writer.write_record(record).unwrap();
+                sketches.push(hash.clone());
+            }
+
+            // need to clear the vectors in this order because of the borrow checker
+            unique_in_tree_and_chunk.clear();
+            unique_in_chunk.clear();
 
             // for hash in tmp {
             //     tree.insert(hash);
             // }
 
-            sketches.extend_from_slice(unique_in_tree_and_chunk.as_slice());
         }
     }
 }
