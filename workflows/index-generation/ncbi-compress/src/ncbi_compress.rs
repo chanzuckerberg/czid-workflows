@@ -15,7 +15,6 @@ pub mod ncbi_compress {
     use sourmash::signature::SigsTrait;
     use sourmash::sketch::minhash::KmerMinHash;
 
-    use crate::fasta_tools::fasta_tools::sort_fasta_by_sequence_length;
     use crate::logging::logging;
     use crate::minhashtree_w_logging::minhashtree_w_logging::{
         MinHashTreeWithLogging, MinHashTreeWithLoggingFunctionality,
@@ -346,45 +345,74 @@ pub mod ncbi_compress {
     ) {
         let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
         // let mut tree: BloomSetTree<_, 4096> = BloomSetTree::new(branch_factor);
-        let mut sketches = Vec::new();
+        let mut sketches: Vec<KmerMinHash> = Vec::new();
+        let mut records_iter = reader.records();
 
         // Initialize a temporary vector to store the unique items from each chunk
-        let mut tmp: Vec<KmerMinHash> = Vec::with_capacity(chunk_size);
+        let mut unique_in_chunk: Vec<(KmerMinHash, fasta::Record)> = Vec::with_capacity(chunk_size);
+        let mut unique_in_tree_and_chunk: Vec<(KmerMinHash, &fasta::Record)> = Vec::with_capacity(chunk_size);
 
-        let mut records_iter = reader.records();
-        let mut chunk = records_iter
-            .borrow_mut()
-            .take(chunk_size)
-            .collect::<Vec<_>>();
-        accession_count.add_assign(chunk.len() as u64);
-        while chunk.len() > 0 {
-            // Take a chunk of accessions and return the ones that are not already in sketches
+        loop {
+            let chunk = records_iter
+                .borrow_mut()
+                .take(chunk_size)
+                .collect::<Vec<_>>();
+
+            accession_count.add_assign(chunk.len() as u64);
+
+            if chunk.len() == 0 {
+                break;
+            }
+
+            // create signatures for each record in the chunk
             let chunk_signatures = chunk
+            .par_iter()
+            .map(|r| {
+                let record = r.as_ref().unwrap();
+                let mut hash;
+                if is_protein_fasta {
+                    hash = KmerMinHash::new(
+                        scaled,
+                        k,
+                        HashFunctions::murmur64_protein,
+                        seed,
+                        false,
+                        0,
+                    );
+                    hash.add_protein(record.seq()).unwrap();
+                    (hash, record.clone())
+                } else {
+                    hash = KmerMinHash::new(
+                        scaled,
+                        k,
+                        HashFunctions::murmur64_DNA,
+                        seed,
+                        false,
+                        0,
+                    );
+                    hash.add_sequence(record.seq(), true).unwrap();
+                    (hash, record.clone())
+                }
+            }).collect::<Vec<_>>();
+
+            // we need to make sure records within the chunk arn't similar to each other before
+            // we check them against the larger tree
+            for (hash, record) in chunk_signatures {
+                let similar = unique_in_chunk
+                    .par_iter()
+                    .any(|(other, _record)| containment(&hash, &other).unwrap() >= similarity_threshold);
+
+                if !similar {
+                    unique_in_chunk.push((hash, record));
+                }
+            }
+
+            // Check if any of unique hashes in the chunk have similarity to the ones already in the tree
+            let mut unique_in_tree_and_chunk = unique_in_chunk
                 .par_iter()
-                .filter_map(|r| {
-                    let record = r.as_ref().unwrap();
-                    let mut hash;
-                    if is_protein_fasta {
-                        hash = KmerMinHash::new(
-                            scaled,
-                            k,
-                            HashFunctions::murmur64_protein,
-                            seed,
-                            false,
-                            0,
-                        );
-                        hash.add_protein(record.seq()).unwrap();
-                    } else {
-                        hash = KmerMinHash::new(
-                            scaled,
-                            k,
-                            HashFunctions::murmur64_DNA,
-                            seed,
-                            false,
-                            0,
-                        );
-                        hash.add_sequence(record.seq(), true).unwrap();
-                    }
+                .filter_map(|(hash, record)| {
+                    // Take a chunk of accessions and return the ones that are not already in sketches
+
                     // Do a parallel search over the sketches to see if any are similar don't
                     // return the item if you find a similar item. We are implementing this
                     // manually instead of using the linear index built into sourmash because
@@ -399,44 +427,33 @@ pub mod ncbi_compress {
                     {
                         None
                     } else {
-                        Some((record, hash))
+                        Some((hash.clone(), record))
                     }
                 })
                 .collect::<Vec<_>>();
 
-            // Now we have a chunk of signatures that aren't in sketches, we just need to make sure
-            // they don't duplicate each other then we can add them. Breaking it up this way
-            // enables a bit more parallelism on the big search, it makes more sense if we have a
-            // more efficient search structure for all of the sketches.
-            for (record, hash) in chunk_signatures {
-                // Perform a faster similarity check over just this chunk because we may have similarities within a chunk
-                let similar = tmp
-                    .par_iter()
-                    .any(|other| containment(&hash, &other).unwrap() >= similarity_threshold);
-
-                if !similar {
-                    unique_accession_count.add_assign(1);
-                    tmp.push(hash);
-                    writer.write_record(record).unwrap();
-
-                    if *unique_accession_count % 1_000_000 == 0 {
-                        log::info!(
-                            "Processed {} accessions, {} unique",
-                            accession_count,
-                            unique_accession_count
-                        );
-                    }
+            for (hash, record) in unique_in_tree_and_chunk.iter() {
+                unique_accession_count.add_assign(1);
+                if *unique_accession_count % 1_000_000 == 0 {
+                    log::info!(
+                        "Processed {} accessions, {} unique",
+                        accession_count,
+                        unique_accession_count
+                    );
                 }
+
+                writer.write_record(record).unwrap();
+                sketches.push(hash.clone());
             }
+
+            // need to clear the vectors in this order because of the borrow checker
+            unique_in_tree_and_chunk.clear();
+            unique_in_chunk.clear();
+
             // for hash in tmp {
             //     tree.insert(hash);
             // }
-            sketches.extend_from_slice(&tmp);
-            tmp.clear();
-            chunk = records_iter
-                .borrow_mut()
-                .take(chunk_size)
-                .collect::<Vec<_>>();
+
         }
     }
 }

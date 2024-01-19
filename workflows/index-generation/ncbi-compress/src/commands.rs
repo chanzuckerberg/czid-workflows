@@ -2,7 +2,6 @@ pub mod commands {
     use std::fs;
 
     use bio::io::fasta;
-    use tempdir::TempDir;
 
     use crate::ncbi_compress::ncbi_compress;
     use crate::fasta_tools::fasta_tools;
@@ -253,10 +252,7 @@ pub mod commands {
 
         // create a temp dir containing one file per taxid that input fasta accessions are sorted into
         fs::create_dir_all(&temp_file_output_dir).expect("Error creating output directory");
-        let temp_taxid_dir = TempDir::new_in(temp_file_output_dir, "accessions_by_taxid")
-            .expect("Error creating tempdir");
         let temp_taxid_dir_str = format!("{}/accessions_by_taxid", temp_file_output_dir);
-;
         ncbi_compress::split_accessions_by_taxid(
             input_fasta_path,
             accession_mapping_files,
@@ -333,8 +329,7 @@ mod tests {
             logging_contained_in_tree_fn,
             logging_contained_in_chunk_fn,
         );
-
-        assert!(util::are_files_equal(truth_fasta_path, &test_fasta_path));
+        util::compare_fasta_records_from_files(&truth_fasta_path, &test_fasta_path);
     }
 
     #[test]
