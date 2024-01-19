@@ -148,6 +148,15 @@ pub mod ncbi_compress {
                 0 // no taxid found
             };
             let mut handles = FILE_HANDLES.lock().unwrap(); // Lock the mutex here
+            // Check if the HashMap size exceeds the threshold
+            if handles.len() >= 65000 { // 65k is the max number of open files
+                if let Some(key_to_remove) = handles.keys().next().cloned() {
+                    if let Some(file) = handles.remove(&key_to_remove) {
+                        drop(file); // Close the file
+                    }
+                }
+            }
+
             let file_path = format!("{}/{}.fasta", output_dir, taxid);
             let file = handles.entry(file_path.clone()).or_insert_with(|| {
                 fs::OpenOptions::new()
