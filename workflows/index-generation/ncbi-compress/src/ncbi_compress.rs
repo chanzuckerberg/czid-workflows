@@ -371,7 +371,7 @@ pub mod ncbi_compress {
             // create signatures for each record in the chunk
             let chunk_signatures = chunk
             .par_iter()
-            .filter_map(|r| {
+            .map(|r| {
                 let record = r.as_ref().unwrap();
                 let mut hash;
                 if is_protein_fasta {
@@ -384,7 +384,7 @@ pub mod ncbi_compress {
                         0,
                     );
                     hash.add_protein(record.seq()).unwrap();
-                    Some((hash, record))
+                    (hash, record)
                 } else {
                     hash = KmerMinHash::new(
                         scaled,
@@ -395,7 +395,7 @@ pub mod ncbi_compress {
                         0,
                     );
                     hash.add_sequence(record.seq(), true).unwrap();
-                    Some((hash, record))
+                    (hash, record)
                 }
             }).collect::<Vec<_>>();
 
