@@ -149,7 +149,7 @@ pub mod ncbi_compress {
             };
             let mut handles = FILE_HANDLES.lock().unwrap(); // Lock the mutex here
             // Check if the HashMap size exceeds the threshold
-            if handles.len() >= 65000 { // 65k is the max number of open files
+            if handles.len() >= 2000 { // 65k is the max number of open files
                 if let Some(key_to_remove) = handles.keys().next().cloned() {
                     if let Some(file) = handles.remove(&key_to_remove) {
                         drop(file); // Close the file
