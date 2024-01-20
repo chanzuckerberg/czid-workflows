@@ -619,7 +619,7 @@ task RunSpades {
             echo ";ASSEMBLY FAILED" > spades/scaffolds.fasta
 
             python3 <<CODE
-    import csv
+    import json
     import os
 
     WARNINGS_LOG = "spades/warnings.log"
@@ -636,7 +636,7 @@ task RunSpades {
     if os.path.isfile(WARNINGS_LOG):
         failure_info["warnings_present"] = True
         with open(WARNINGS_LOG) as warnings_file:
-            failure_info["warnings"] = "".join(warnings_file.readlines()).encode("unicode_escape").decode("utf-8")
+            failure_info["warnings"] = "".join(warnings_file.readlines())
 
     if os.path.isfile(SPADES_LOG):
         failure_info["log_present"] = True
@@ -644,20 +644,16 @@ task RunSpades {
             log = log_file.readlines()
             error_lines = [line.replace("== Error ==", "*") for line in log if line.startswith("== Error ==")]
             if len(error_lines) > 0:
-                failure_info["errors"] = "".join(error_lines).encode("unicode_escape").decode("utf-8")
+                failure_info["errors"] = "".join(error_lines)
             try:
                 stack_trace_line_no = log.index("=== Stack Trace ===\n")
                 stack_trace_end = log.index("\n", stack_trace_line_no)
-                stack_trace = "".join(log[stack_trace_line_no:stack_trace_end])
-                failure_info["stack_trace"] = stack_trace.encode("unicode_escape").decode("utf-8")
+                failure_info["stack_trace"] = "".join(log[stack_trace_line_no:stack_trace_end])
             except ValueError:
                 pass
 
-    with open("spades_failure.tsv", "w") as tsvfile:
-        fieldnames = list(failure_info.keys())
-        writer = csv.DictWriter(tsvfile, delimiter="\t", fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerow(failure_info)
+    with open("spades_failure.json", "w") as output_file:
+        output_file.write(json.dumps(failure_info))
     CODE
 
             exit 0
