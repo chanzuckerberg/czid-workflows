@@ -185,8 +185,12 @@ task RunRedup {
     }
     command <<<
         set -euxo pipefail
-        # exit if no duplicate reads
-        if [[ ! $(grep -v "^1\t" "~{cluster_sizes}") ]]; then
+        # extract duplicate read ids from the cluster sizes tsv; awk looks at the first column and prints
+        # the second column if the former is larger than 1
+        awk -F "\t" '{ if( $1 > 1 ) print $2 }' "~{cluster_sizes}" > duplicated_reads.txt
+
+        # if there are no duplicates, output the subsampled sequences and exit
+        if [[ $(head -n 1 duplicated_reads.txt) ==  "" ]]; then
             counter=1
             for fasta in ~{sep=' ' subsampled_reads}; do
                 cp $fasta redups_$counter.fa
@@ -195,8 +199,8 @@ task RunRedup {
             exit 0
         fi
 
-        grep -v "^1\t" "~{cluster_sizes}" | cut -f2 > duplicated-reads.txt
-        grep -h ">" ~{sep=' ' subsampled_reads} | sed "s/^>//" > passed_filters.txt
+        # extract read ids from the subsampled fasta files
+        awk 'index($1, ">") == 1 { print substr($1, 2) }' ~{sep=' ' subsampled_reads} > passed_filters.txt
 
         python3 <<CODE
         pair_values = []
@@ -204,7 +208,7 @@ task RunRedup {
         duplicates = set()
         with open("passed_filters.txt", "r") as pf:
             passed_filters.update(pf.read().splitlines())
-        with open("duplicated-reads.txt", "r") as dr:
+        with open("duplicated_reads.txt", "r") as dr:
             duplicates.update(dr.read().splitlines())
         with open("~{clusters}", "r") as clusters:
             for line in clusters:
@@ -212,7 +216,7 @@ task RunRedup {
                 if key in duplicates and key in passed_filters and key != value:
                     pair_values.append(value)
 
-        with open("duplicated-pairs.txt", "w+") as f:
+        with open("duplicated_pairs.txt", "w+") as f:
             for value in pair_values:
                 f.write(value)
                 f.write("\n")
@@ -224,12 +228,13 @@ task RunRedup {
         export SUBSAMPLED_READS_FILES=(~{sep=' ' subsampled_reads})
 
         for index in ${!HOST_FILTERED_READS_FILES[@]}; do
-            seqkit grep -f duplicated-pairs.txt ${HOST_FILTERED_READS_FILES[$index]} | seqkit fq2fa -o duplicate_reads_$index.fasta
-            cat ${SUBSAMPLED_READS_FILES[$index]} duplicate_reads_$index.fasta > redups_$index.fasta
+            part=$(($index + 1))
+            seqkit grep -f duplicated_pairs.txt ${HOST_FILTERED_READS_FILES[$index]} | seqkit fq2fa -o duplicate_reads_$part.fa
+            cat ${SUBSAMPLED_READS_FILES[$index]} duplicate_reads_$part.fa > redups_$part.fa
         done
     >>>
     output {
-        Array[File]+ redups_fa = glob("redups*.fasta")
+        Array[File]+ redups_fa = glob("redups*.fa")
     }
     runtime {
         docker: docker_image_id
