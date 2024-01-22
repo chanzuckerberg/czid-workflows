@@ -535,7 +535,6 @@ task RunRgiKmerBwt {
     }
     command <<<
         set -exuo pipefail
-        
         time rgi load \
             -i "~{card_json}" \
             --wildcard_annotation "~{wildcard_data}" \

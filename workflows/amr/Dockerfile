@@ -14,16 +14,14 @@ RUN curl -L https://github.com/samtools/samtools/releases/download/1.9/samtools-
 RUN curl -L https://github.com/lh3/bwa/releases/download/v0.7.17/bwa-0.7.17.tar.bz2 | tar xj && cd bwa-0.7.17/ && make &&  mv bwa /usr/local/bin/
 RUN curl -L  https://bitbucket.org/genomicepidemiology/kma/get/1.4.3.tar.gz | tar xz && cd genomicepidemiology-kma-47505a7dd4eb/ && make && mv kma kma_index kma_shm kma_update /usr/local/bin/
 
-RUN apt-get update && apt-get -y install  ncbi-blast+=2.9.0-2 prodigal=1:2.6.3-4 bamtools=2.5.1+dfsg-5build1 bowtie2=2.3.5.1-6build1 bedtools=2.27.1+dfsg-4ubuntu1
+RUN apt-get update && apt-get -y install ncbi-blast+=2.9.0-2 prodigal=1:2.6.3-4 bamtools=2.5.1+dfsg-5build1 bowtie2=2.3.5.1-6build1 bedtools=2.27.1+dfsg-4ubuntu1
 
 
 COPY requirements.txt requirements.txt
 RUN pip3 install -r requirements.txt
 
-
-RUN git clone https://github.com/rzlim08/rgi.git
-RUN mkdir -p rgi/inputs/heatmap_inputs
-RUN cd rgi/ && git checkout 20b22dab2676e6cdfd16245dd15b9af3d266cb1b && python setup.py build && python setup.py test && python setup.py install
+# RGI version 6.0.3
+RUN pip3 install git+https://github.com/lvreynoso/rgi.git@a14f8dd5457a6220a06024b6aebd05e8cb6181d7
 
 # Install seqfu (used for interleaving input files)
 ARG SEQFU_VER="1.16.0"
