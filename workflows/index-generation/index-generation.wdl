@@ -44,10 +44,10 @@ workflow index_generation {
     # Download files if they are not provided
     scatter (file in possibly_zipped_files) {
         # if filename ends with gz
-        if (sub(path, "\\.gz$", "") != file)
+        if (sub(basename(file), "\\.gz$", "") != basename(file)) {
             call UnzipFile {
                 input:
-                file = file,
+                zipped_file = file,
                 cpu = 8,
                 docker_image_id = docker_image_id,
             }
@@ -66,8 +66,8 @@ workflow index_generation {
         call CompressDatabase as CompressNR {
             input:
             database_type = "nr",
-            fasta = downloaded_nr,
-            accession2taxid_files = [downloaded_accession2taxid_pdb , downloaded_accession2taxid_prot],
+            fasta = unzipped_nr,
+            accession2taxid_files = [unzipped_accession2taxid_pdb, unzipped_accession2taxid_prot],
             k = nr_compression_k,
             scaled = nr_compression_scaled,
             similarity_threshold = nr_compression_similarity_threshold,
@@ -75,14 +75,14 @@ workflow index_generation {
             docker_image_id = docker_image_id,
         }
     }
-    File nr_or_compressed = select_first([CompressNR.compressed, downloaded_nr])
+    File nr_or_compressed = select_first([CompressNR.compressed, unzipped_nr])
 
     if (!skip_nuc_compression) {
         call CompressDatabase as CompressNT {
             input:
             database_type = "nt",
-            fasta = downloaded_nt,
-            accession2taxid_files = [downloaded_accession2taxid_nucl_wgs, downloaded_accession2taxid_nucl_gb],
+            fasta = unzipped_nt,
+            accession2taxid_files = [unzipped_accession2taxid_nucl_wgs, unzipped_accession2taxid_nucl_gb],
             k = nt_compression_k,
             scaled = nt_compression_scaled,
             similarity_threshold = nt_compression_similarity_threshold,
@@ -90,7 +90,7 @@ workflow index_generation {
             docker_image_id = docker_image_id,
         }
     }
-    File nt_or_compressed = select_first([CompressNT.compressed, downloaded_nt])
+    File nt_or_compressed = select_first([CompressNT.compressed, unzipped_nt])
 
     call GenerateLocDB as GenerateNTLocDB {
         input:
@@ -130,17 +130,17 @@ workflow index_generation {
         nr = nr_or_compressed,
         nt = nt_or_compressed,
         accession2taxid_files = [
-            downloaded_accession2taxid_nucl_wgs,
-            downloaded_accession2taxid_nucl_gb,
-            downloaded_accession2taxid_pdb,
-            downloaded_accession2taxid_prot,
+            unzipped_accession2taxid_nucl_wgs,
+            unzipped_accession2taxid_nucl_gb,
+            unzipped_accession2taxid_pdb,
+            unzipped_accession2taxid_prot,
         ],
         docker_image_id = docker_image_id
     }
 
     call GenerateIndexLineages {
         input:
-        taxdump = downloaded_taxdump,
+        taxdump = unzipped_taxdump,
         index_name = index_name,
         previous_lineages = previous_lineages,
         docker_image_id = docker_image_id
@@ -149,10 +149,10 @@ workflow index_generation {
     output {
         File nr = nr_or_compressed
         File nt = nt_or_compressed
-        File accession2taxid_nucl_wgs = downloaded_accession2taxid_nucl_wgs
-        File accession2taxid_nucl_gb = downloaded_accession2taxid_nucl_gb
-        File accession2taxid_pdb = downloaded_accession2taxid_pdb
-        File accession2taxid_prot = downloaded_accession2taxid_prot
+        File accession2taxid_nucl_wgs = unzipped_accession2taxid_nucl_wgs
+        File accession2taxid_nucl_gb = unzipped_accession2taxid_nucl_gb
+        File accession2taxid_pdb = unzipped_accession2taxid_pdb
+        File accession2taxid_prot = unzipped_accession2taxid_prot
         File nt_loc_db = GenerateNTLocDB.loc_db
         File nt_info_db = GenerateNTInfoDB.info_db
         File nr_loc_db = GenerateNRLocDB.loc_db
@@ -172,7 +172,7 @@ workflow index_generation {
     }
 }
 
-task Unzip {
+task UnzipFile {
     input {
         File zipped_file
         Int cpu
@@ -184,12 +184,12 @@ task Unzip {
     >>>
 
     output {
-        File file = basename(sub(path, "\\.gz$", ""))
+        File file = sub(basename(zipped_file), "\\.gz$", "")
     }
 
     runtime {
         docker: docker_image_id
-        cpu: ~{cpu}
+        cpu: cpu
     }
 }
 
