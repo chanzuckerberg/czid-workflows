@@ -78,7 +78,6 @@ RUN cd /ncbi-compress && cargo build --release
 
 
 FROM ubuntu:22.04
-ARG ARIA2_VERSION
 ARG DEBIAN_FRONTEND
 # Install dependencies
 RUN apt-get update && \
@@ -92,7 +91,6 @@ RUN apt-get update && \
 
 COPY --from=builder /diamond/build/diamond /usr/local/bin
 COPY --from=builder /minimap2/minimap2 /usr/local/bin/
-COPY --from=builder /aria2-${ARIA2_VERSION}/src/aria2c /usr/local/bin/
 COPY --from=builder /seqkit /usr/local/bin/
 COPY --from=ncbi_compress_builder /ncbi-compress/target/release/ncbi-compress /usr/local/bin
 
