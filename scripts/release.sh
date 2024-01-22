@@ -28,10 +28,6 @@ else
     exit 1
 fi
 
-if [[ $WORKFLOW_NAME == amr ]]; then
-    TAG="amr-v1.3.2-patch-grephang"
-fi
-
 if [[ $( git branch --show-current) != "main" ]]; then 
     COMMIT=$(git rev-parse --short HEAD)
     TAG=$TAG"-$COMMIT"
