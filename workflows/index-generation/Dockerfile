@@ -100,6 +100,5 @@ COPY requirements.txt requirements.txt
 RUN pip3 install -r requirements.txt
 
 COPY *.py /usr/local/bin/
-COPY ncbi_download /usr/local/bin/
 
 WORKDIR /workspace
