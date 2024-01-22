@@ -11,6 +11,7 @@ class TestIndexGeneration(WDLTestCase):
 
     wdl = os.path.join(os.path.dirname(__file__), "..", "index-generation.wdl")
     common_inputs = {
+        "index_name": "2020-04-20",
         "ncbi_server": "https://idseq-samples-test.s3-us-west-2.amazonaws.com/index-generation/inputs",
     }
 

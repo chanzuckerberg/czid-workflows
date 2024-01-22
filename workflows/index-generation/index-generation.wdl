@@ -1,11 +1,6 @@
 version development
 
 
-struct DownloadableFile {
-    String path
-    File? file
-}
-
 workflow index_generation {
     input {
         String index_name
@@ -25,48 +20,47 @@ workflow index_generation {
         Boolean skip_nuc_compression = false
         Boolean logging_enabled = false
 
-        File? provided_nt # provide nt if you want to skip downloading
-        File? provided_nr # provide nr if you want to skip downloading
-        File? provided_accession2taxid_nucl_gb # provide accession2taxid nucl gb file if you want to skip downloading
-        File? provided_accession2taxid_nucl_wgs # provide accession2taxid nucl wgs file if you want to skip downloading
-        File? provided_accession2taxid_pdb # provide accession2taxid pdb file if you want to skip downloading
-        File? provided_accession2taxid_prot # provide accession2taxid prot file if you want to skip downloading
-        File? provided_taxdump # provide taxdump if you want to skip downloading
-
-        String s3_accession_mapping_prefix = "" # old accession mapping files
+        File provided_nt = "~{ncbi_server}/blast/db/FASTA/nt.gz"
+        File provided_nr = "~{ncbi_server}/blast/db/FASTA/nr.gz"
+        File provided_accession2taxid_nucl_gb = "~{ncbi_server}/pub/taxonomy/accession2taxid/nucl_gb.accession2taxid.gz"
+        File provided_accession2taxid_nucl_wgs = "~{ncbi_server}/pub/taxonomy/accession2taxid/nucl_wgs.accession2taxid.gz" 
+        File provided_accession2taxid_pdb = "~{ncbi_server}/pub/taxonomy/accession2taxid/pdb.accession2taxid.gz"
+        File provided_accession2taxid_prot = "~{ncbi_server}/pub/taxonomy/accession2taxid/prot.accession2taxid.FULL.gz"
+        File provided_taxdump = "~{ncbi_server}/pub/taxonomy/taxdump.tar.gz"
 
         String docker_image_id
     }
 
-    Array[DownloadableFile] downloadable_files = [
-        DownloadableFile { path: "blast/db/FASTA/nr.gz", file: provided_nr },
-        DownloadableFile { path: "blast/db/FASTA/nt.gz", file: provided_nt },
-        DownloadableFile { path: "pub/taxonomy/accession2taxid/nucl_gb.accession2taxid.gz", file: provided_accession2taxid_nucl_gb },
-        DownloadableFile { path: "pub/taxonomy/accession2taxid/nucl_wgs.accession2taxid.gz", file: provided_accession2taxid_nucl_wgs },
-        DownloadableFile { path: "pub/taxonomy/accession2taxid/pdb.accession2taxid.gz", file: provided_accession2taxid_pdb },
-        DownloadableFile { path: "pub/taxonomy/accession2taxid/prot.accession2taxid.FULL.gz", file: provided_accession2taxid_prot },
-        DownloadableFile { path: "pub/taxonomy/taxdump.tar.gz", file: provided_taxdump },
+    Array[File] possibly_zipped_files = [
+        provided_nr,
+        provided_nt,
+        provided_accession2taxid_nucl_gb,
+        provided_accession2taxid_nucl_wgs,
+        provided_accession2taxid_pdb,
+        provided_accession2taxid_prot,
+        provided_taxdump,
     ]
 
     # Download files if they are not provided
-    scatter (file in downloadable_files) {
-        if (!defined(file.file)) {
-            call NCBIDownload as DownloadFile {
+    scatter (file in possibly_zipped_files) {
+        # if filename ends with gz
+        if (sub(path, "\\.gz$", "") != file)
+            call UnzipFile {
                 input:
-                ncbi_server = ncbi_server,
-                path = file.path,
+                file = file,
+                cpu = 8,
                 docker_image_id = docker_image_id,
             }
         }
-        File downloaded_file = select_first([DownloadFile.file, file.file])
+        File unzipped_file = select_first([UnzipFile.file, file])
     }
-    File downloaded_nr = downloaded_file[0]
-    File downloaded_nt = downloaded_file[1]
-    File downloaded_accession2taxid_nucl_gb = downloaded_file[2]
-    File downloaded_accession2taxid_nucl_wgs = downloaded_file[3]
-    File downloaded_accession2taxid_pdb = downloaded_file[4]
-    File downloaded_accession2taxid_prot = downloaded_file[5]
-    File downloaded_taxdump = downloaded_file[6]
+    File unzipped_nr = unzipped_file[0]
+    File unzipped_nt = unzipped_file[1]
+    File unzipped_accession2taxid_nucl_gb = unzipped_file[2]
+    File unzipped_accession2taxid_nucl_wgs = unzipped_file[3]
+    File unzipped_accession2taxid_pdb = unzipped_file[4]
+    File unzipped_accession2taxid_prot = unzipped_file[5]
+    File unzipped_taxdump = unzipped_file[6]
 
     if (!skip_protein_compression) {
         call CompressDatabase as CompressNR {
@@ -178,24 +172,24 @@ workflow index_generation {
     }
 }
 
-task NCBIDownload {
+task Unzip {
     input {
-        String ncbi_server
-        String path
+        File zipped_file
+        Int cpu
         String docker_image_id
     }
 
     command <<<
-        ncbi_download "~{ncbi_server}" "~{path}"
+        pigz -p ~{cpu} -d ~{zipped_file}
     >>>
 
     output {
-        File file = sub(path, "\\.gz$", "")
+        File file = basename(sub(path, "\\.gz$", ""))
     }
 
     runtime {
         docker: docker_image_id
-        cpu: 16
+        cpu: ~{cpu}
     }
 }
 
