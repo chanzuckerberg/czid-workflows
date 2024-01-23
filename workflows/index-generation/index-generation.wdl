@@ -180,7 +180,7 @@ task UnzipFile {
     }
 
     command <<<
-        pigz -p ~{cpu} -d ~{zipped_file}
+        pigz -p ~{cpu} -d ~{zipped_file} > ~{file}
     >>>
 
     output {
