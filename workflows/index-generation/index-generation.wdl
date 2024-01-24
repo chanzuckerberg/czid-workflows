@@ -180,7 +180,7 @@ task UnzipFile {
     }
 
     command <<<
-        pigz -p ~{cpu} -d ~{zipped_file} > ~{file}
+        pigz -p ~{cpu} -d ~{zipped_file} > ~{sub(basename(zipped_file), "\\.gz$", "")}
     >>>
 
     output {
