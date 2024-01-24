@@ -53,15 +53,13 @@ pub mod ncbi_compress {
         let taxid_path = Path::new(output_dir);
         log::info!("Creating taxid dir {:?}", taxid_path);
         let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
-        let records: Vec<_> = reader
-            .records()
-            .enumerate()
-            .collect();
         // Build a trie of the accessions in the input fasta
-        records.par_iter().for_each(|(i, result)| {
+        reader.records().enumerate().par_bridge().for_each(|(i, result)| {
+        // records.par_iter().for_each(|(i, result)| {
             let record = result.as_ref().unwrap();
             let accession_id = record.id().split_whitespace().next().unwrap();
             let accession_no_version = remove_accession_version(accession_id);
+            // RocksDB supports concurrent reads and writes so this is safe
             accession_to_taxid.put(accession_no_version, b"").unwrap();
             if i % 1_000_000 == 0 {
                 log::info!("  Processed {} accessions", i);
