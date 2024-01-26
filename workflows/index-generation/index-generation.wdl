@@ -180,7 +180,7 @@ task UnzipFile {
     }
 
     command <<<
-        pigz -p ~{cpu} -d ~{zipped_file} > ~{sub(basename(zipped_file), "\\.gz$", "")}
+        pigz -p ~{cpu} -dc ~{zipped_file} > ~{sub(basename(zipped_file), "\\.gz$", "")}
     >>>
 
     output {
@@ -245,7 +245,7 @@ task GenerateInfoDB {
         String docker_image_id
     }
     command <<<
-        python3 /usr/local/bin/generate_ncbi_db_index.py loc ~{db_fasta} ~{database_type}_info.marisa
+        python3 /usr/local/bin/generate_ncbi_db_index.py info ~{db_fasta} ~{database_type}_info.marisa
     >>>
     output {
         File info_db = "~{database_type}_info.marisa"
