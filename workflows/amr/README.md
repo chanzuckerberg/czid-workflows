@@ -6,8 +6,14 @@ CZ ID's AMR workflow implements the [Resistance Gene Identifier (RGI)](https://g
 
 ## 1.3.3 - Tentative
 
+### Fixed
+
+- Fixes an issue where the `RunRedup` task would hang when processing samples with large amounts of duplicate sequence data. `grep` has been replaced with `awk` when processing the duplicate cluster sizes tsv and clusters csv files.
+- Fixes an issue where `RunRedup` output fasta files were inconsistently named.
+
 ### Changed
 
+- Harmonizes file naming in `RunRedup` to use underscores (_) instead of dashes (-).
 - Now uses [a fork](https://github.com/lvreynoso/rgi/commit/a14f8dd5457a6220a06024b6aebd05e8cb6181d7) of rgi version 6.0.3, with changes to fix an issue with parsing BAM files. Previously the AMR workflow used a fork of rgi version 6.0.0.
 
 ## 1.3.2 - 2023-11-21
