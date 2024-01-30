@@ -169,6 +169,10 @@ workflow index_generation {
         File? nr_contained_in_chunk = CompressNR.contained_in_chunk
         File? nt_contained_in_tree = CompressNT.contained_in_tree
         File? nt_contained_in_chunk = CompressNT.contained_in_chunk
+        Directory? nt_split_apart_taxid_dir = CompressNT.split_apart_taxid_dir
+        Directory? nt_sorted_taxid_dir = CompressNT.sorted_taxid_dir
+        Directory? nr_split_apart_taxid_dir = CompressNR.split_apart_taxid_dir
+        Directory? nr_sorted_taxid_dir = CompressNR.sorted_taxid_dir
     }
 }
 
@@ -411,8 +415,8 @@ task CompressDatabase {
         set -euxo pipefail
 
         READS_BY_TAXID_PATH=reads_by_taxid
-        SPLIT_APART_TAXID_DIR_NAME=split_apart_taxid
-        SORTED_TAXID_DIR_NAME=sorted_taxid
+        SPLIT_APART_TAXID_DIR_NAME="split_apart_taxid_~{database_type}"
+        SORTED_TAXID_DIR_NAME="sorted_taxid_~{database_type}"
 
         # It is critical that this split happens in the same step as the compression
         # If the directory is a step output it will be uploaded, which takes an enormous amount of time
@@ -449,14 +453,16 @@ task CompressDatabase {
         fi
 
         # Remove to save space, intermediate files are not cleaned up within a run
-        rm -rf $READS_BY_TAXID_PATH
-        rm -rf $SPLIT_APART_TAXID_DIR_NAME
+        # rm -rf $READS_BY_TAXID_PATH
+        # rm -rf $SPLIT_APART_TAXID_DIR_NAME
     >>>
 
     output {
         File compressed = "~{database_type}_compressed.fa"
         File? contained_in_tree = "~{database_type}_contained_in_tree.tsv"
         File? contained_in_chunk = "~{database_type}_contained_in_chunk.tsv"
+        Directory split_apart_taxid_dir = "split_apart_taxid_~{database_type}"
+        Directory sorted_taxid_dir = "sorted_taxid_~{database_type}"
     }
 
     runtime {
