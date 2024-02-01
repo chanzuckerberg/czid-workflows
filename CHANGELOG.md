@@ -19,7 +19,7 @@ In addition, if a modification is made that may affect the results of a pipeline
 ### short-read-mngs-v8.3.0
 - Convert Kallisto gene count to transcript count
 ### short-read-mngs-v8.2.7
-- Use unique refined unidentified file
+- Use unique unmapped reads file in nonhost fastq
 ### short-read-mngs-v8.2.6
 - Mapped+Unmapped fix for short-read-mngs
 ### short-read-mngs-v8.2.5
@@ -46,7 +46,7 @@ In addition, if a modification is made that may affect the results of a pipeline
 ### short-read-mngs-v8.1.1
 - Bugfix: Get bowtie2 ercc counts
 ### short-read-mngs-v8.0.0
-- Modern host filtering -- fill in here
+- Updates host filtering and QC steps -- specifically, replaces STAR and GSNAP aligners with Bowtie2, HISAT2, and Kallisto; and a number of disparate QC steps with fastp 
 ### short-read-mngs-v7.1.13
 - Bugfix: Handle empty annotated fasta file
 ### short-read-mngs-v7.1.12
