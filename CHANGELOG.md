@@ -16,6 +16,41 @@ In addition, if a modification is made that may affect the results of a pipeline
 
 ### Unreleased
 
+### short-read-mngs-v8.3.0
+- Convert Kallisto gene count to transcript count
+### short-read-mngs-v8.2.7
+- Use unique unmapped reads file in nonhost fastq
+### short-read-mngs-v8.2.6
+- Mapped+Unmapped fix for short-read-mngs
+### short-read-mngs-v8.2.5
+- Fix host gene count breaking; add rRNA count
+### short-read-mngs-v8.2.4
+- Output the Spades.log file
+### short-read-mngs-v8.2.3
+- Sort input to insert_size_metrics
+### short-read-mngs-v8.2.2
+- Ensure kallisto is run single-threaded with a fixed seed
+### short-read-mngs-v8.2.1
+- Update ERCC count output name (doesn't affect short-read-mngs)
+### short-read-mngs-v8.2.0
+### short-read-mngs-v8.1.6
+- ERCC filter separation - adds a seaparte step to filter out the ERCC reads before fastp
+### short-read-mngs-v8.1.5
+- add logic to stitch together hsps (doesn't affect short-read-mngs)
+### short-read-mngs-v8.1.4
+- Bugfix: interleaved fastq inputs - adds search for full header with /1 and /2 if original search fails. STAR used to strip this out, but with modern host filtering, it does not get stripped out anymore.
+### short-read-mngs-v8.1.3
+- Bump fastp version
+### short-read-mngs-v8.1.2
+- Add ERCC files to outputs
+### short-read-mngs-v8.1.1
+- Bugfix: Get bowtie2 ercc counts
+### short-read-mngs-v8.0.0
+- Updates host filtering and QC steps -- specifically, replaces STAR and GSNAP aligners with Bowtie2, HISAT2, and Kallisto; and a number of disparate QC steps with fastp 
+### short-read-mngs-v7.1.13
+- Bugfix: Handle empty annotated fasta file
+### short-read-mngs-v7.1.12
+- Remove non-functioning glue job from experimental workflow
 ### short-read-mngs-v7.1.11
 - Reduce memory usage of generating the alignment viz
 
