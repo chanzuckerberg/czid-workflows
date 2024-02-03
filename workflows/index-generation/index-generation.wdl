@@ -444,7 +444,7 @@ task CompressDatabase {
                 --logging-contained-in-chunk-fn ~{database_type}_contained_in_chunk.tsv
         else
             ncbi-compress fasta-compress-from-taxid-dir  ~{if database_type == "nr" then "--is-protein-fasta" else ""} \
-                --input-fasta-dir $READS_BY_TAXID_PATH \
+                --input-fasta-dir $SORTED_TAXID_DIR_NAME \
                 --output-fasta ~{database_type}_compressed.fa \
                 --k ~{k} \
                 --scaled ~{scaled} \
