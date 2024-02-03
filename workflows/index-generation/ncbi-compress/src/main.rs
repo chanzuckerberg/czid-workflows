@@ -382,7 +382,7 @@ pub fn main() {
         Some(("shuffle-fasta", sub_m)) => {
             let input_fasta = sub_m.get_one::<String>("input_fasta").unwrap();
             let output_fasta = sub_m.get_one::<String>("output_fasta").unwrap();
-            shuffle_fasta_by_sequence_index(&input_fasta, &output_fasta);
+            let _ = shuffle_fasta_by_sequence_index(&input_fasta, &output_fasta);
         }
         Some(("break-into-individual-taxids-only", sub_m)) => {
             let input_fasta = sub_m.get_one::<String>("input_fasta").unwrap();

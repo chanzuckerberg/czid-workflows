@@ -2,10 +2,9 @@ pub mod fasta_tools {
     use std::collections::HashMap;
     use std::fs;
     use std::io::Write;
-    use std::fs::File;
     use std::os::unix::prelude::FileExt;
 
-    use rand::{thread_rng, Rng};
+    use rand::thread_rng;
     use rand::seq::SliceRandom;
 
     use bio::io::fasta;
@@ -86,7 +85,7 @@ pub mod fasta_tools {
         // every record.
         let mut scratch = Vec::new();
 
-        let mut reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
+        let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
 
         for (index, record) in reader.records().enumerate() {
             let record = record.unwrap();
@@ -118,7 +117,7 @@ pub mod fasta_tools {
 
         let mut writer = fs::File::create(&output_fasta_path)?;
 
-        let mut reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
+        let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
         for (index, record) in reader.records().enumerate()  {
             let record = record.unwrap();
             // It is safe to unwrap here because all indexes in the file are in the map from the
@@ -235,7 +234,6 @@ pub mod fasta_tools {
 
 #[cfg(test)]
 mod tests {
-    use bio::io::fasta;
     use std::cmp::Ordering;
     use std::fs::File;
 
@@ -320,7 +318,7 @@ mod tests {
         let temp_file_path_str = temp_file.to_str().unwrap();
 
 
-        fasta_tools::shuffle_fasta_by_sequence_index(
+        let _ = fasta_tools::shuffle_fasta_by_sequence_index(
             input_fasta_file,
             temp_file_path_str,
         );
