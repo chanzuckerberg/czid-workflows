@@ -444,7 +444,7 @@ task CompressDatabase {
                 --logging-contained-in-chunk-fn ~{database_type}_contained_in_chunk.tsv
         else
             ncbi-compress fasta-compress-from-taxid-dir  ~{if database_type == "nr" then "--is-protein-fasta" else ""} \
-                --input-fasta-dir $READS_BY_TAXID_PATH \
+                --input-fasta-dir $SORTED_TAXID_DIR_NAME \
                 --output-fasta ~{database_type}_compressed.fa \
                 --k ~{k} \
                 --scaled ~{scaled} \
@@ -452,13 +452,20 @@ task CompressDatabase {
                 --split-apart-taxid-dir-name $SPLIT_APART_TAXID_DIR_NAME
         fi
 
+        // shuffle compressed fasta to distribute the accessions evenly across the file
+        // this is important for spreading SC2 accessions (and any other large taxid) over
+        // the chunked minimap2 and diamond indexes which impacts alignment time.
+        ncbi-compress shuffle-fasta \
+            --input-fasta ~{database_type}_compressed.fa \
+            --output-fasta ~{database_type}_compressed_shuffled.fa
+
         # Remove to save space, intermediate files are not cleaned up within a run
         # rm -rf $READS_BY_TAXID_PATH
         # rm -rf $SPLIT_APART_TAXID_DIR_NAME
     >>>
 
     output {
-        File compressed = "~{database_type}_compressed.fa"
+        File compressed = "~{database_type}_compressed_shuffled.fa"
         File? contained_in_tree = "~{database_type}_contained_in_tree.tsv"
         File? contained_in_chunk = "~{database_type}_contained_in_chunk.tsv"
         Directory split_apart_taxid_dir = "split_apart_taxid_~{database_type}"

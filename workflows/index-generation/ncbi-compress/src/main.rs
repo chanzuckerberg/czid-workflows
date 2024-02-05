@@ -7,7 +7,8 @@ use ncbi_compress::commands::commands::{
 use ncbi_compress::fasta_tools::fasta_tools::{
     sort_fasta_by_sequence_length,
     count_accessions_by_taxid,
-    sort_taxid_dir_by_sequence_length
+    sort_taxid_dir_by_sequence_length,
+    shuffle_fasta_by_sequence_index
 };
 use ncbi_compress::ncbi_compress::ncbi_compress::split_accessions_by_taxid;
 
@@ -48,6 +49,22 @@ pub fn main() {
                     Arg::new("output_taxid_dir")
                         .help("Output directory for the sorted taxid fasta files")
                         .long("output-taxid-dir")
+                        .required(true),
+                ),
+        )
+        .subcommand(
+            Command::new("shuffle-fasta")
+                .about("shuffle-fasta")
+                .arg(
+                    Arg::new("input_fasta")
+                        .help("Input fasta file to be shuffled")
+                        .long("input-fasta")
+                        .required(true),
+                )
+                .arg(
+                    Arg::new("output_fasta")
+                        .help("Output fasta file for the shuffled fasta")
+                        .long("output-fasta")
                         .required(true),
                 ),
         )
@@ -361,6 +378,11 @@ pub fn main() {
             let input_taxid_dir = sub_m.get_one::<String>("input_taxid_dir").unwrap();
             let output_taxid_dir = sub_m.get_one::<String>("output_taxid_dir").unwrap();
             sort_taxid_dir_by_sequence_length(&input_taxid_dir, &output_taxid_dir);
+        }
+        Some(("shuffle-fasta", sub_m)) => {
+            let input_fasta = sub_m.get_one::<String>("input_fasta").unwrap();
+            let output_fasta = sub_m.get_one::<String>("output_fasta").unwrap();
+            let _ = shuffle_fasta_by_sequence_index(&input_fasta, &output_fasta);
         }
         Some(("break-into-individual-taxids-only", sub_m)) => {
             let input_fasta = sub_m.get_one::<String>("input_fasta").unwrap();

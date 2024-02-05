@@ -96,8 +96,7 @@ pub mod ncbi_compress {
 
         log::info!("Creating accession to taxid db");
 
-        let taxid_path = Path::new(output_dir);
-        log::info!("Creating taxid dir {:?}", taxid_path);
+        log::info!("Creating taxid dir {:?}", output_dir);
         let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
         // Build a trie of the accessions in the input fasta
         reader
@@ -164,6 +163,12 @@ pub mod ncbi_compress {
         });
         log::info!("Finished building accession to taxid db");
 
+        let outpath = write_accessions_to_taxid(input_fasta_path, &accession_to_taxid, output_dir);
+        fs::remove_dir_all(dir).expect("Error removing db");
+        outpath
+    }
+
+    pub fn write_accessions_to_taxid(input_fasta_path: &str, accession_to_taxid: &rocksdb::DB, output_dir: &str) -> std::path::PathBuf {
         log::info!("Splitting accessions by taxid");
         let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
         // Split the input fasta accessions into one file per taxid
@@ -183,7 +188,7 @@ pub mod ncbi_compress {
             } else {
                 0 // no taxid found
             };
-            let file_path = taxid_path.join(format!("{}.fasta", taxid));
+            let file_path = format!("{}/{}.fasta", output_dir, taxid);
             let file = fs::OpenOptions::new()
                 .create(true)
                 .append(true)
@@ -192,9 +197,8 @@ pub mod ncbi_compress {
             let mut writer = fasta::Writer::new(file);
             writer.write_record(&record).unwrap();
         }
-        fs::remove_dir_all(dir).expect("Error removing db");
         log::info!("Finished splitting accessions by taxid");
-        taxid_path.to_path_buf()
+        Path::new(output_dir).to_path_buf()
     }
 
     pub fn fasta_compress_taxid_w_logging(

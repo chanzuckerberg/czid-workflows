@@ -4,6 +4,9 @@ pub mod fasta_tools {
     use std::io::Write;
     use std::os::unix::prelude::FileExt;
 
+    use rand::thread_rng;
+    use rand::seq::SliceRandom;
+
     use bio::io::fasta;
     use rayon::slice::ParallelSliceMut;
     use rayon::prelude::*;
@@ -68,6 +71,66 @@ pub mod fasta_tools {
                 .open(&output_tsv_path)?;
 
             writer.write_all(format!("{}\t{}\n", taxid, records.count()).as_bytes())?;
+        }
+        Ok(())
+    }
+
+    pub fn shuffle_fasta_by_sequence_index(
+        input_fasta_path: &str,
+        output_fasta_path: &str,
+    ) -> std::io::Result<()> {
+        let mut n_bytes_by_sequence_index = HashMap::new();
+        // pre-allocate scratch space to write to so we know how many bytes a sequence is when
+        // written. pre-allocate it so we can clear it and we don't need a fresh allocation for
+        // every record.
+        let mut scratch = Vec::new();
+
+        let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
+
+        for (index, record) in reader.records().enumerate() {
+            let record = record.unwrap();
+            fasta::Writer::new(&mut scratch).write_record(&record)?;
+            n_bytes_by_sequence_index.insert(index, scratch.len() as u64);
+            // Clear the scratch space so we can re-use it for the next record
+            scratch.clear();
+        }
+
+        let mut shuffled_indexes: Vec<usize> = n_bytes_by_sequence_index.keys().cloned().collect();
+        // set seed for testing purposes. This should be a parameter
+        let mut rng = thread_rng();
+        shuffled_indexes.shuffle(&mut rng);
+
+        // Save memory by creating our offset map in place on top of our n_bytes map
+        let mut offset_by_sequence_index = n_bytes_by_sequence_index;
+
+        let mut offset = 0;
+        for index in shuffled_indexes {
+            // Save how many bytes we will need for it
+            // it is safe to unwrap here because sorted_lengths are the keys of this map
+            let n_bytes = *offset_by_sequence_index.get(&index).unwrap();
+            // Overwrite the length with the offset
+            offset_by_sequence_index.insert(index, offset);
+            // Add the saved number of bytes to the offset, so the next offset starts at the end of
+            // the space that this sequence will occupy
+            offset += n_bytes;
+        }
+
+        let mut writer = fs::File::create(&output_fasta_path)?;
+
+        let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
+        for (index, record) in reader.records().enumerate()  {
+            let record = record.unwrap();
+            // It is safe to unwrap here because all indexes in the file are in the map from the
+            // first pass
+            let offset = offset_by_sequence_index.get(&index).unwrap();
+            let mut offset_writer = OffsetWriter::new(&mut writer, *offset);
+
+            // This scope lets us create a fasta_writer from borrowing offset_writer then drops
+            // fasta_writer so we can get offset_writer back and read it's local offset
+            {
+                let mut fasta_writer = fasta::Writer::new(&mut offset_writer);
+                fasta_writer.write_record(&record)?;
+            }
         }
         Ok(())
     }
@@ -172,6 +235,7 @@ pub mod fasta_tools {
 #[cfg(test)]
 mod tests {
     use std::cmp::Ordering;
+    use std::fs::File;
 
     use tempfile::tempdir;
 
@@ -242,5 +306,30 @@ mod tests {
             let truth_fasta_file = format!("{}/{}", output_truth_taxid_dir, path.file_name().unwrap().to_str().unwrap());
             assert!(util::are_files_equal(output_fasta_file, &truth_fasta_file));
         }
+    }
+
+    #[test]
+    fn test_shuffle_fasta() {
+
+        let input_fasta_file = "test_data/fasta_tools/inputs/nt";
+
+        let temp_dir = tempdir().unwrap();
+        let temp_file = temp_dir.path().join("shuffled.fa");
+        let temp_file_path_str = temp_file.to_str().unwrap();
+
+
+        let _ = fasta_tools::shuffle_fasta_by_sequence_index(
+            input_fasta_file,
+            temp_file_path_str,
+        );
+
+        // make sure the shuffled file contains the same records as the original
+        util::compare_fasta_records_from_files(input_fasta_file, temp_file_path_str);
+
+        // test that the shuffled file has accessions out of order compared to the input
+        let input_records = util::create_fasta_records_from_file(input_fasta_file);
+        let shuffled_records = util::create_fasta_records_from_file(temp_file_path_str);
+        // the test file has 201 records so the chance is very small that the ordering will be the same
+        assert_ne!(input_records, shuffled_records);
     }
 }
