@@ -20,6 +20,9 @@ task RunAssembly {
     --additional-files '{}' \
     --additional-attributes '{"memory": 200, "min_contig_length": ~{min_contig_length}}'
   spades.py -v > assembly_version.txt
+  if [[ $(head -n 1 assembly/contigs.fasta) ==  "" || $(head -n 1 assembly/contigs.fasta) ==  ";ASSEMBLY FAILED" ]]; then
+    cd assembly && python3 /usr/local/bin/spades_failure_track.py
+  fi
   >>>
   output {
     String step_description_md = read_string("assembly_out.description.md")
