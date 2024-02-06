@@ -286,6 +286,8 @@ pub mod commands {
                 logging_contained_in_chunk_fn,
             );
         }
+        // shuffle output_fasta_path
+        fasta_tools::shuffle_fasta_by_sequence_index(output_fasta_path, &format!("shuffled_{}", output_fasta_path));
     }
 }
 
