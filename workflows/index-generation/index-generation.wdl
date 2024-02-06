@@ -452,9 +452,9 @@ task CompressDatabase {
                 --split-apart-taxid-dir-name $SPLIT_APART_TAXID_DIR_NAME
         fi
 
-        // shuffle compressed fasta to distribute the accessions evenly across the file
-        // this is important for spreading SC2 accessions (and any other large taxid) over
-        // the chunked minimap2 and diamond indexes which impacts alignment time.
+        # shuffle compressed fasta to distribute the accessions evenly across the file
+        # this is important for spreading SC2 accessions (and any other large taxid) over
+        # the chunked minimap2 and diamond indexes which impacts alignment time.
         ncbi-compress shuffle-fasta \
             --input-fasta ~{database_type}_compressed.fa \
             --output-fasta ~{database_type}_compressed_shuffled.fa
