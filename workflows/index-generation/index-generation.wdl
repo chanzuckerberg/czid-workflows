@@ -17,7 +17,9 @@ workflow index_generation {
         Float nr_compression_similarity_threshold = 0.5
 
         Boolean skip_protein_compression = false
+        Boolean skip_generate_nr_assets = false
         Boolean skip_nuc_compression = false
+        Boolean skip_generate_nt_assets = false
         Boolean logging_enabled = false
 
         File provided_nt = "~{ncbi_server}/blast/db/FASTA/nt.gz"
@@ -92,37 +94,41 @@ workflow index_generation {
     }
     File nt_or_compressed = select_first([CompressNT.compressed, unzipped_nt])
 
-    call GenerateLocDB as GenerateNTLocDB {
-        input:
-        db_fasta = nt_or_compressed,
-        database_type = "nt",
-        docker_image_id = docker_image_id
+    if (!skip_generate_nt_assets) {
+        call GenerateLocDB as GenerateNTLocDB {
+            input:
+            db_fasta = nt_or_compressed,
+            database_type = "nt",
+            docker_image_id = docker_image_id
+        }
+
+        call GenerateInfoDB as GenerateNTInfoDB {
+            input:
+            db_fasta = nt_or_compressed,
+            database_type = "nt",
+            docker_image_id = docker_image_id
+        }
+
+        call GenerateIndexMinimap2 as GenerateIndexMinimap2 {
+            input:
+            nt = nt_or_compressed,
+            docker_image_id = docker_image_id
+        }
     }
 
-    call GenerateInfoDB as GenerateNTInfoDB {
-        input:
-        db_fasta = nt_or_compressed,
-        database_type = "nt",
-        docker_image_id = docker_image_id
-    }
+    if (!skip_generate_nr_assets) {
+        call GenerateLocDB as GenerateNRLocDB {
+            input:
+            db_fasta = nr_or_compressed,
+            database_type = "nr",
+            docker_image_id = docker_image_id
+        }
 
-    call GenerateIndexMinimap2 as GenerateIndexMinimap2 {
-        input:
-        nt = nt_or_compressed,
-        docker_image_id = docker_image_id
-    }
-
-    call GenerateLocDB as GenerateNRLocDB {
-        input:
-        db_fasta = nr_or_compressed,
-        database_type = "nr",
-        docker_image_id = docker_image_id
-    }
-
-    call GenerateIndexDiamond as GenerateIndexDiamond {
-        input:
-        nr = nr_or_compressed,
-        docker_image_id = docker_image_id
+        call GenerateIndexDiamond as GenerateIndexDiamond {
+            input:
+            nr = nr_or_compressed,
+            docker_image_id = docker_image_id
+        }
     }
 
     call GenerateIndexAccessions {
@@ -153,11 +159,11 @@ workflow index_generation {
         File accession2taxid_nucl_gb = unzipped_accession2taxid_nucl_gb
         File accession2taxid_pdb = unzipped_accession2taxid_pdb
         File accession2taxid_prot = unzipped_accession2taxid_prot
-        File nt_loc_db = GenerateNTLocDB.loc_db
-        File nt_info_db = GenerateNTInfoDB.info_db
-        File nr_loc_db = GenerateNRLocDB.loc_db
-        Directory minimap2_index = GenerateIndexMinimap2.minimap2_index
-        Directory diamond_index = GenerateIndexDiamond.diamond_index
+        File? nt_loc_db = GenerateNTLocDB.loc_db
+        File? nt_info_db = GenerateNTInfoDB.info_db
+        File? nr_loc_db = GenerateNRLocDB.loc_db
+        Directory? minimap2_index = GenerateIndexMinimap2.minimap2_index
+        Directory? diamond_index = GenerateIndexDiamond.diamond_index
         File taxid_lineages_db = GenerateIndexLineages.taxid_lineages_db
         File versioned_taxid_lineages_csv = GenerateIndexLineages.versioned_taxid_lineages_csv
         File deuterostome_taxids = GenerateIndexLineages.deuterostome_taxids
