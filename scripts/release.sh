@@ -32,6 +32,10 @@ if [[ $WORKFLOW_NAME == amr ]]; then
     TAG="amr-v1.3.2-patch-spadestrack"
 fi
 
+if [[ $WORKFLOW_NAME == short-read-mngs ]]; then
+    TAG="short-read-mngs-v8.3.0-patch-spadestrack"
+fi
+
 if [[ $( git branch --show-current) != "main" ]]; then 
     COMMIT=$(git rev-parse --short HEAD)
     TAG=$TAG"-$COMMIT"
