@@ -643,7 +643,7 @@ task RunSpades {
     output { 
         File contigs = "spades/contigs.fasta"
         File? scaffolds = "spades/scaffolds.fasta"
-        File? failure_log = "spades_failure.tsv"
+        File? failure_log = "spades_failure.json"
     }
     runtime { 
         docker: docker_image_id
