@@ -178,40 +178,45 @@ class TestAMR(WDLTestCase):
             assert read_id in host_filter_2
             assert read_sequence == host_filter_2[read_id]
 
-    # def testRunSpadesAssemblyFailedNonUniformCoverage(self):
-    #     inputs = {
-    #         "reduplicated_reads": [
-    #             relpath("RunSpades", "subsampled_1.fa"),
-    #             relpath("RunSpades", "subsampled_2.fa")
-    #             ],
-    #         "min_contig_length": 100,
-    #     }
 
-    #     res = self.run_miniwdl(
-    #         task="RunSpades",
-    #         task_input=inputs,
-    #         docker_image_id="ghcr.io/chanzuckerberg/czid-workflows/czid-short-read-mngs-public"
-    #     )
+    # NOTE: These two tests rely on the short-read-mngs docker image. An issue with this is that
+    # any PR that makes a change to AMR's RunSpades task that depends on a change also made to
+    # the short-read-mngs docker image will cause these tests to fail, because they can't use the
+    # updated image with our current setup.
+    def testRunSpadesAssemblyFailedNonUniformCoverage(self):
+        inputs = {
+            "reduplicated_reads": [
+                relpath("RunSpades", "subsampled_1.fa"),
+                relpath("RunSpades", "subsampled_2.fa")
+                ],
+            "min_contig_length": 100,
+        }
 
-    #     with open(res["outputs"]["RunSpades.contigs"]) as contigs_fa:
-    #         lines = contigs_fa.readlines()
-    #         assert lines[0].startswith(";ASSEMBLY FAILED")
+        res = self.run_miniwdl(
+            task="RunSpades",
+            task_input=inputs,
+            docker_image_id="ghcr.io/chanzuckerberg/czid-workflows/czid-short-read-mngs-public"
+        )
 
-    # def testRunSpadesAssemblyFailedExitCodeZero(self):
-    #     inputs = {
-    #         "reduplicated_reads": [
-    #             relpath("RunSpades", "redups_1.fa"),
-    #             relpath("RunSpades", "redups_2.fa")
-    #             ],
-    #         "min_contig_length": 100,
-    #     }
+        with open(res["outputs"]["RunSpades.contigs"]) as contigs_fa:
+            lines = contigs_fa.readlines()
+            assert lines[0].startswith(";ASSEMBLY FAILED")
 
-    #     res = self.run_miniwdl(
-    #         task="RunSpades",
-    #         task_input=inputs,
-    #         docker_image_id="ghcr.io/chanzuckerberg/czid-workflows/czid-short-read-mngs-public"
-    #     )
+    def testRunSpadesAssemblyFailedExitCodeZero(self):
+        inputs = {
+            "reduplicated_reads": [
+                relpath("RunSpades", "redups_1.fa"),
+                relpath("RunSpades", "redups_2.fa")
+                ],
+            "min_contig_length": 100,
+        }
 
-    #     with open(res["outputs"]["RunSpades.contigs"]) as contigs_fa:
-    #         lines = contigs_fa.readlines()
-    #         assert lines[0].startswith(";ASSEMBLY FAILED")
+        res = self.run_miniwdl(
+            task="RunSpades",
+            task_input=inputs,
+            docker_image_id="ghcr.io/chanzuckerberg/czid-workflows/czid-short-read-mngs-public"
+        )
+
+        with open(res["outputs"]["RunSpades.contigs"]) as contigs_fa:
+            lines = contigs_fa.readlines()
+            assert lines[0].startswith(";ASSEMBLY FAILED")

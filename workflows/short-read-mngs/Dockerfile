@@ -210,6 +210,4 @@ RUN pip3 install /tmp/idseq_utils && rm -rf /tmp/idseq_utils
 
 COPY --from=lib /bin/raise_error /usr/local/bin/raise_error
 
-COPY --from=lib /bin/spades_failure_track.py /usr/local/bin/spades_failure_track.py
-
 COPY --from=s3quilt /usr/lib/python3/dist-packages/s3quilt/ /usr/lib/python3/dist-packages/s3quilt/
