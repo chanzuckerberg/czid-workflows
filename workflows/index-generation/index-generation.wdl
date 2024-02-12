@@ -373,7 +373,7 @@ task GenerateIndexMinimap2 {
         Int w = 8 # Minimizer window size default is 11 for short reads option
         String I = "9999G" # Load at most NUM target bases into RAM for indexing
         Int t = 20 # number of threads, doesn't really work for indexing I don't think
-        Int n_chunks = 20
+        Int n_chunks = 50
         String docker_image_id
     }
 
