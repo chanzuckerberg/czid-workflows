@@ -1,6 +1,6 @@
 workflow_name: consensus-genome 
 specification_language: WDL
-description: Build consensus genomes for SARS-CoV-2. Supports nanopore and illumina.
+description: Build consensus genomes. Supports nanopore and illumina.
 entity_inputs:
   sample:
     name: Sample
