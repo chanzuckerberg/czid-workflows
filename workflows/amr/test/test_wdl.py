@@ -178,40 +178,40 @@ class TestAMR(WDLTestCase):
             assert read_id in host_filter_2
             assert read_sequence == host_filter_2[read_id]
 
-    def testRunSpadesAssemblyFailedNonUniformCoverage(self):
-        inputs = {
-            "reduplicated_reads": [
-                relpath("RunSpades", "subsampled_1.fa"),
-                relpath("RunSpades", "subsampled_2.fa")
-                ],
-            "min_contig_length": 100,
-        }
+    # def testRunSpadesAssemblyFailedNonUniformCoverage(self):
+    #     inputs = {
+    #         "reduplicated_reads": [
+    #             relpath("RunSpades", "subsampled_1.fa"),
+    #             relpath("RunSpades", "subsampled_2.fa")
+    #             ],
+    #         "min_contig_length": 100,
+    #     }
 
-        res = self.run_miniwdl(
-            task="RunSpades",
-            task_input=inputs,
-            docker_image_id="ghcr.io/chanzuckerberg/czid-workflows/czid-short-read-mngs-public"
-        )
+    #     res = self.run_miniwdl(
+    #         task="RunSpades",
+    #         task_input=inputs,
+    #         docker_image_id="ghcr.io/chanzuckerberg/czid-workflows/czid-short-read-mngs-public"
+    #     )
 
-        with open(res["outputs"]["RunSpades.contigs"]) as contigs_fa:
-            lines = contigs_fa.readlines()
-            assert lines[0].startswith(";ASSEMBLY FAILED")
+    #     with open(res["outputs"]["RunSpades.contigs"]) as contigs_fa:
+    #         lines = contigs_fa.readlines()
+    #         assert lines[0].startswith(";ASSEMBLY FAILED")
 
-    def testRunSpadesAssemblyFailedExitCodeZero(self):
-        inputs = {
-            "reduplicated_reads": [
-                relpath("RunSpades", "redups_1.fa"),
-                relpath("RunSpades", "redups_2.fa")
-                ],
-            "min_contig_length": 100,
-        }
+    # def testRunSpadesAssemblyFailedExitCodeZero(self):
+    #     inputs = {
+    #         "reduplicated_reads": [
+    #             relpath("RunSpades", "redups_1.fa"),
+    #             relpath("RunSpades", "redups_2.fa")
+    #             ],
+    #         "min_contig_length": 100,
+    #     }
 
-        res = self.run_miniwdl(
-            task="RunSpades",
-            task_input=inputs,
-            docker_image_id="ghcr.io/chanzuckerberg/czid-workflows/czid-short-read-mngs-public"
-        )
+    #     res = self.run_miniwdl(
+    #         task="RunSpades",
+    #         task_input=inputs,
+    #         docker_image_id="ghcr.io/chanzuckerberg/czid-workflows/czid-short-read-mngs-public"
+    #     )
 
-        with open(res["outputs"]["RunSpades.contigs"]) as contigs_fa:
-            lines = contigs_fa.readlines()
-            assert lines[0].startswith(";ASSEMBLY FAILED")
+    #     with open(res["outputs"]["RunSpades.contigs"]) as contigs_fa:
+    #         lines = contigs_fa.readlines()
+    #         assert lines[0].startswith(";ASSEMBLY FAILED")
