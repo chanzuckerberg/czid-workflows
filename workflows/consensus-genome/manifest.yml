@@ -19,6 +19,7 @@ entity_inputs:
   taxon:
     name: Taxon
     description: "Your taxon, optional if sars_cov_2 is true"
+    entity_type: taxon
   reference_genome:
     name: Reference Genome
     description: Your reference genome, if ommitted it can be generated based on accession
@@ -52,10 +53,10 @@ input_loaders:
     inputs:
       ncbi_index_version: ~
     outputs:
-      nr_loc_db: ~
-      nr_s3_path: ~
-      nt_loc_db: ~
-      nt_s3_path: ~
+      nr_loc: nr_loc_db
+      nr: nr_s3_path
+      nt_loc: nt_loc_db
+      nt: nt_s3_path
   - name: consensus_genome
     version: ">=0.0.1"
     inputs:
