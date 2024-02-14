@@ -45,7 +45,9 @@ RUN apt-get update && \
     libbz2-dev \
     liblz4-dev \
     libzstd-dev \
-    clang
+    clang \
+    # needed to download ncbi-blast
+    alien
 
 # based on https://github.com/rust-lang/docker-rust/blob/dcb74d779e8a74263dc8b91d58d8ce7f3c0c805b/1.70.0/buster/Dockerfile
 ENV RUSTUP_HOME=/usr/local/rustup \
@@ -76,6 +78,16 @@ RUN set -eux; \
 COPY ncbi-compress /ncbi-compress
 RUN cd /ncbi-compress && cargo build --release
 
+# ncbi blast
+RUN wget https://ftp.ncbi.nlm.nih.gov/blast/executables/LATEST/ncbi-blast-2.15.0+-3.x86_64.rpm
+RUN wget https://ftp.ncbi.nlm.nih.gov/blast/executables/LATEST/ncbi-blast-2.15.0+-3.x86_64.rpm.md5
+
+RUN md5sum -c ncbi-blast-2.15.0+-3.x86_64.rpm.md5
+
+
+RUN alien ncbi-blast-2.15.0+-3.x86_64.rpm
+RUN dpkg -i ncbi-blast_2.15.0+-4_amd64.deb
+RUN which blastn
 
 FROM ubuntu:22.04
 ARG DEBIAN_FRONTEND

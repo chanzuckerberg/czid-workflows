@@ -22,8 +22,8 @@ workflow index_generation {
         Boolean skip_generate_nt_assets = false
         Boolean logging_enabled = false
 
-        File provided_nt = "~{ncbi_server}/blast/db/FASTA/nt.gz"
-        File provided_nr = "~{ncbi_server}/blast/db/FASTA/nr.gz"
+        File? provided_nt = ""
+        File? provided_nr = ""
         File provided_accession2taxid_nucl_gb = "~{ncbi_server}/pub/taxonomy/accession2taxid/nucl_gb.accession2taxid.gz"
         File provided_accession2taxid_nucl_wgs = "~{ncbi_server}/pub/taxonomy/accession2taxid/nucl_wgs.accession2taxid.gz" 
         File provided_accession2taxid_pdb = "~{ncbi_server}/pub/taxonomy/accession2taxid/pdb.accession2taxid.gz"
@@ -34,8 +34,6 @@ workflow index_generation {
     }
 
     Array[File] possibly_zipped_files = [
-        provided_nr,
-        provided_nt,
         provided_accession2taxid_nucl_gb,
         provided_accession2taxid_nucl_wgs,
         provided_accession2taxid_pdb,
@@ -54,21 +52,41 @@ workflow index_generation {
                 docker_image_id = docker_image_id,
             }
         }
+        
         File unzipped_file = select_first([UnzipFile.file, file])
     }
-    File unzipped_nr = unzipped_file[0]
-    File unzipped_nt = unzipped_file[1]
-    File unzipped_accession2taxid_nucl_gb = unzipped_file[2]
-    File unzipped_accession2taxid_nucl_wgs = unzipped_file[3]
-    File unzipped_accession2taxid_pdb = unzipped_file[4]
-    File unzipped_accession2taxid_prot = unzipped_file[5]
-    File unzipped_taxdump = unzipped_file[6]
+    File unzipped_accession2taxid_nucl_gb = unzipped_file[0]
+    File unzipped_accession2taxid_nucl_wgs = unzipped_file[1]
+    File unzipped_accession2taxid_pdb = unzipped_file[2]
+    File unzipped_accession2taxid_prot = unzipped_file[3]
+    File unzipped_taxdump = unzipped_file[4]
+
+    Boolean is_nt_provided = defined(provided_nt)
+    Boolean is_nr_provided = defined(provided_nr)
+
+    if (!is_nt_provided) {
+        call DownloadDatabase as DownloadNT {
+            input:
+            database_type = "nt",
+            docker_image_id = docker_image_id
+        }
+    }
+    if (!is_nr_provided) {
+        call DownloadDatabase as DownloadNR {
+            input:
+            database_type = "nr",
+            docker_image_id = docker_image_id
+        }
+    }
+
+    File nt_download = select_first([provided_nt, DownloadNT.database])
+    File nr_download = select_first([provided_nr, DownloadNR.database])
 
     if (!skip_protein_compression) {
         call CompressDatabase as CompressNR {
             input:
             database_type = "nr",
-            fasta = unzipped_nr,
+            fasta = nr_download,
             accession2taxid_files = [unzipped_accession2taxid_pdb, unzipped_accession2taxid_prot],
             k = nr_compression_k,
             scaled = nr_compression_scaled,
@@ -77,13 +95,13 @@ workflow index_generation {
             docker_image_id = docker_image_id,
         }
     }
-    File nr_or_compressed = select_first([CompressNR.compressed, unzipped_nr])
+    File nr_or_compressed = select_first([CompressNR.compressed, nr_download])
 
     if (!skip_nuc_compression) {
         call CompressDatabase as CompressNT {
             input:
             database_type = "nt",
-            fasta = unzipped_nt,
+            fasta = nt,
             accession2taxid_files = [unzipped_accession2taxid_nucl_wgs, unzipped_accession2taxid_nucl_gb],
             k = nt_compression_k,
             scaled = nt_compression_scaled,
@@ -92,7 +110,7 @@ workflow index_generation {
             docker_image_id = docker_image_id,
         }
     }
-    File nt_or_compressed = select_first([CompressNT.compressed, unzipped_nt])
+    File nt_or_compressed = select_first([CompressNT.compressed, nt_download])
 
     if (!skip_generate_nt_assets) {
         call GenerateLocDB as GenerateNTLocDB {
@@ -129,6 +147,12 @@ workflow index_generation {
             nr = nr_or_compressed,
             docker_image_id = docker_image_id
         }
+    }
+
+    call DownloadDatabase {
+        input:
+        database_type = "nt",
+        docker_image_id = docker_image_id
     }
 
     call GenerateIndexAccessions {
@@ -180,6 +204,30 @@ workflow index_generation {
     #     Directory? nr_split_apart_taxid_dir = CompressNR.split_apart_taxid_dir
     #     Directory? nr_sorted_taxid_dir = CompressNR.sorted_taxid_dir
     }
+}
+
+task DownloadDatabase {
+    input {
+        String database_type # nt or nr
+        String docker_image_id
+    }
+
+    command <<<
+        set -euxo pipefail
+
+        update_blastdb.pl --decompress ~{database_type} --num_threads 32
+        blastdbcmd -db ~{database_type} -entry all -out ~{database_type}.fsa
+
+    >>>
+
+    output {
+        File database = "~{database_type}.fsa"
+    }
+
+    runtime {
+        docker: docker_image_id
+    }
+
 }
 
 task UnzipFile {
