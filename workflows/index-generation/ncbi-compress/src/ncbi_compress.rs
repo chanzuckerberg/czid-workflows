@@ -1,5 +1,4 @@
 pub mod ncbi_compress {
-    use std::cmp::Ordering;
     use std::ops::AddAssign;
     use std::path::Path;
     use std::{borrow::BorrowMut, fs};
@@ -21,51 +20,6 @@ pub mod ncbi_compress {
     pub fn containment(needle: &KmerMinHash, haystack: &KmerMinHash) -> Result<f64, SourmashError> {
         let (intersect_size, _) = needle.intersection_size(haystack)?;
         Ok(intersect_size as f64 / needle.mins().len() as f64)
-    }
-
-    // check if the needle KmerMinHash is contained in the haystack KmerMinHash by some threshold,
-    // this is slighly more efficient than using the sourmash implementation of containment and
-    // comparing it to the threshold because it stops early if containment by the threshold is not
-    // possible. For high thresholds this should reduce the number of iterations.
-    pub fn contains(
-        needle: &KmerMinHash,
-        haystack: &KmerMinHash,
-        similarity_threshold: f64,
-    ) -> Result<bool, SourmashError> {
-        needle.check_compatible(haystack)?;
-        let mut needle_n = 0;
-        let mut haystack_n = 0;
-        let mut intersect = 0;
-        let target_size = (needle.mins().len() as f64 * similarity_threshold).ceil() as usize;
-
-        // Step through the mins of needle and haystack in order, weaving together
-        while needle_n < needle.mins().len()
-            && haystack_n < haystack.mins().len()
-            // If there aren't enough mins in needle to bring the intersection up to the target
-            // size then we can stop early. In theory haystack could be smaller than needle so you
-            // could replace needle.mins().len() - needle_n with the minimum of that and the haystack
-            // equivalent but because we pre-sort sequences by length that will never happen. Even
-            // then it would not be wrong it would just iterate slightly more.
-            && intersect + needle.mins().len() - needle_n < target_size
-        {
-            let needle = needle.mins()[needle_n];
-            let haystack = haystack.mins()[haystack_n];
-
-            match needle.cmp(&haystack) {
-                Ordering::Less => {
-                    needle_n += 1;
-                }
-                Ordering::Greater => {
-                    haystack_n += 1;
-                }
-                Ordering::Equal => {
-                    intersect += 1;
-                    needle_n += 1;
-                    haystack_n += 1;
-                }
-            };
-        }
-        Ok(intersect >= target_size)
     }
 
     fn remove_accession_version(accession: &str) -> &str {
@@ -96,24 +50,21 @@ pub mod ncbi_compress {
 
         log::info!("Creating accession to taxid db");
 
-        log::info!("Creating taxid dir {:?}", output_dir);
+        //let taxid_dir = TempDir::new_in(temp_file_output_dir, "accessions_by_taxid").unwrap();
+        // let taxid_path_str = format!("{}/accessions_by_taxid", temp_file_output_dir);
+        let taxid_path = Path::new(output_dir);
+        log::info!("Creating taxid dir {:?}", taxid_path);
         let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
         // Build a trie of the accessions in the input fasta
-        reader
-            .records()
-            .enumerate()
-            .par_bridge()
-            .for_each(|(i, result)| {
-                // records.par_iter().for_each(|(i, result)| {
-                let record = result.as_ref().unwrap();
-                let accession_id = record.id().split_whitespace().next().unwrap();
-                let accession_no_version = remove_accession_version(accession_id);
-                // RocksDB supports concurrent reads and writes so this is safe
-                accession_to_taxid.put(accession_no_version, b"").unwrap();
-                if i % 1_000_000 == 0 {
-                    log::info!("  Processed {} accessions", i);
-                }
-            });
+        reader.records().enumerate().for_each(|(i, result)| {
+            let record = result.unwrap();
+            let accession_id = record.id().split_whitespace().next().unwrap();
+            let accession_no_version = remove_accession_version(accession_id);
+            accession_to_taxid.put(accession_no_version, b"").unwrap();
+            if i % 1_000_000 == 0 {
+                log::info!("  Processed {} accessions", i);
+            }
+        });
         log::info!(" Finished loading accessions");
 
         mapping_file_path.par_iter().for_each(|mapping_file_path| {
@@ -163,12 +114,6 @@ pub mod ncbi_compress {
         });
         log::info!("Finished building accession to taxid db");
 
-        let outpath = write_accessions_to_taxid(input_fasta_path, &accession_to_taxid, output_dir);
-        fs::remove_dir_all(dir).expect("Error removing db");
-        outpath
-    }
-
-    pub fn write_accessions_to_taxid(input_fasta_path: &str, accession_to_taxid: &rocksdb::DB, output_dir: &str) -> std::path::PathBuf {
         log::info!("Splitting accessions by taxid");
         let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
         // Split the input fasta accessions into one file per taxid
@@ -188,7 +133,7 @@ pub mod ncbi_compress {
             } else {
                 0 // no taxid found
             };
-            let file_path = format!("{}/{}.fasta", output_dir, taxid);
+            let file_path = taxid_path.join(format!("{}.fasta", taxid));
             let file = fs::OpenOptions::new()
                 .create(true)
                 .append(true)
@@ -197,8 +142,9 @@ pub mod ncbi_compress {
             let mut writer = fasta::Writer::new(file);
             writer.write_record(&record).unwrap();
         }
+        fs::remove_dir_all(dir).expect("Error removing db");
         log::info!("Finished splitting accessions by taxid");
-        Path::new(output_dir).to_path_buf()
+        taxid_path.to_path_buf()
     }
 
     pub fn fasta_compress_taxid_w_logging(
@@ -380,30 +326,22 @@ pub mod ncbi_compress {
     ) {
         let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
         // let mut tree: BloomSetTree<_, 4096> = BloomSetTree::new(branch_factor);
-        let mut sketches: Vec<KmerMinHash> = Vec::new();
-        let mut records_iter = reader.records();
+        let mut sketches = Vec::new();
 
         // Initialize a temporary vector to store the unique items from each chunk
-        let mut unique_in_chunk: Vec<(KmerMinHash, fasta::Record)> = Vec::with_capacity(chunk_size);
-        let mut unique_in_tree_and_chunk: Vec<(KmerMinHash, &fasta::Record)> =
-            Vec::with_capacity(chunk_size);
+        let mut tmp: Vec<KmerMinHash> = Vec::with_capacity(chunk_size);
 
-        loop {
-            let chunk = records_iter
-                .borrow_mut()
-                .take(chunk_size)
-                .collect::<Vec<_>>();
-
-            accession_count.add_assign(chunk.len() as u64);
-
-            if chunk.len() == 0 {
-                break;
-            }
-
-            // create signatures for each record in the chunk
+        let mut records_iter = reader.records();
+        let mut chunk = records_iter
+            .borrow_mut()
+            .take(chunk_size)
+            .collect::<Vec<_>>();
+        accession_count.add_assign(chunk.len() as u64);
+        while chunk.len() > 0 {
+            // Take a chunk of accessions and return the ones that are not already in sketches
             let chunk_signatures = chunk
                 .par_iter()
-                .map(|r| {
+                .filter_map(|r| {
                     let record = r.as_ref().unwrap();
                     let mut hash;
                     if is_protein_fasta {
@@ -416,7 +354,6 @@ pub mod ncbi_compress {
                             0,
                         );
                         hash.add_protein(record.seq()).unwrap();
-                        (hash, record.clone())
                     } else {
                         hash = KmerMinHash::new(
                             scaled,
@@ -427,29 +364,7 @@ pub mod ncbi_compress {
                             0,
                         );
                         hash.add_sequence(record.seq(), true).unwrap();
-                        (hash, record.clone())
                     }
-                })
-                .collect::<Vec<_>>();
-
-            // we need to make sure records within the chunk arn't similar to each other before
-            // we check them against the larger tree
-            for (hash, record) in chunk_signatures {
-                let similar = unique_in_chunk
-                    .par_iter()
-                    .any(|(other, _record)| contains(&hash, &other, similarity_threshold).unwrap());
-
-                if !similar {
-                    unique_in_chunk.push((hash, record));
-                }
-            }
-
-            // Check if any of unique hashes in the chunk have similarity to the ones already in the tree
-            let mut unique_in_tree_and_chunk = unique_in_chunk
-                .par_iter()
-                .filter_map(|(hash, record)| {
-                    // Take a chunk of accessions and return the ones that are not already in sketches
-
                     // Do a parallel search over the sketches to see if any are similar don't
                     // return the item if you find a similar item. We are implementing this
                     // manually instead of using the linear index built into sourmash because
@@ -457,37 +372,51 @@ pub mod ncbi_compress {
                     // will return them all.
                     if sketches
                         .par_iter()
-                        .find_any(|other| contains(&hash, other, similarity_threshold).unwrap())
+                        .find_any(|other| {
+                            containment(&hash, other).unwrap() >= similarity_threshold
+                        })
                         .is_some()
                     {
                         None
                     } else {
-                        Some((hash.clone(), record))
+                        Some((record, hash))
                     }
                 })
                 .collect::<Vec<_>>();
 
-            for (hash, record) in unique_in_tree_and_chunk.iter() {
-                unique_accession_count.add_assign(1);
-                if *unique_accession_count % 1_000_000 == 0 {
-                    log::info!(
-                        "Processed {} accessions, {} unique",
-                        accession_count,
-                        unique_accession_count
-                    );
+            // Now we have a chunk of signatures that aren't in sketches, we just need to make sure
+            // they don't duplicate each other then we can add them. Breaking it up this way
+            // enables a bit more parallelism on the big search, it makes more sense if we have a
+            // more efficient search structure for all of the sketches.
+            for (record, hash) in chunk_signatures {
+                // Perform a faster similarity check over just this chunk because we may have similarities within a chunk
+                let similar = tmp
+                    .par_iter()
+                    .any(|other| containment(&hash, &other).unwrap() >= similarity_threshold);
+
+                if !similar {
+                    unique_accession_count.add_assign(1);
+                    tmp.push(hash);
+                    writer.write_record(record).unwrap();
+
+                    if *unique_accession_count % 1_000_000 == 0 {
+                        log::info!(
+                            "Processed {} accessions, {} unique",
+                            accession_count,
+                            unique_accession_count
+                        );
+                    }
                 }
-
-                writer.write_record(record).unwrap();
-                sketches.push(hash.clone());
             }
-
-            // need to clear the vectors in this order because of the borrow checker
-            unique_in_tree_and_chunk.clear();
-            unique_in_chunk.clear();
-
             // for hash in tmp {
             //     tree.insert(hash);
             // }
+            sketches.extend_from_slice(&tmp);
+            tmp.clear();
+            chunk = records_iter
+                .borrow_mut()
+                .take(chunk_size)
+                .collect::<Vec<_>>();
         }
     }
 }
@@ -525,26 +454,15 @@ mod tests {
             test_dir_path_str,
         );
 
-        let entries = fs::read_dir(test_dir_path_str).expect("Failed to read directory");
-
-        let entries: Vec<_> = entries.filter_map(Result::ok).collect();
-
-        // Assert that the directory is not empty
-        assert!(!entries.is_empty(), "Directory is empty");
-
-        // for entry in fs::read_dir(test_dir_path_str).unwrap() {
-        for entry in fs::read_dir(truth_output_dir).unwrap() {
+        for entry in fs::read_dir(test_dir_path_str).unwrap() {
             // get test file path
             let entry = entry.unwrap();
-            let truth_file_path = entry.path();
-            let truth_file_name = truth_file_path.file_name().unwrap().to_str().unwrap();
+            let test_file_path = entry.path();
+            let test_file_name = test_file_path.file_name().unwrap().to_str().unwrap();
 
-            // get the test file path
-            let test_file_path = format!("{}/{}", test_dir_path_str, truth_file_name);
-            util::compare_fasta_records_from_files(
-                &test_file_path,
-                &truth_file_path.to_str().unwrap(),
-            );
+            // get the truth file path
+            let truth_file_path = format!("{}/{}", truth_output_dir, test_file_name);
+            util::are_files_equal(&test_file_path.to_str().unwrap(), &truth_file_path);
         }
     }
 
