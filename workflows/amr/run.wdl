@@ -616,65 +616,65 @@ task RunSpades {
         String docker_image_id
     }
     command <<< 
-        set -euxo pipefail
-        function handle_failure() 
-        {
-            echo ";ASSEMBLY FAILED" > spades/contigs.fasta
-            echo ";ASSEMBLY FAILED" > spades/scaffolds.fasta
+    set -euxo pipefail
+    function handle_failure()
+    {
+        echo ";ASSEMBLY FAILED" > spades/contigs.fasta
+        echo ";ASSEMBLY FAILED" > spades/scaffolds.fasta
 
-            python3 <<CODE
-            import json
-            import os
+        python3 <<CODE
+    import json
+    import os
 
-            WARNINGS_LOG = "spades/warnings.log"
-            SPADES_LOG = "spades/spades.log"
+    WARNINGS_LOG = "spades/warnings.log"
+    SPADES_LOG = "spades/spades.log"
 
-            failure_info = {
-                "log_present": False,
-                "warnings_present": False,
-                "warnings": None,
-                "stack_trace": None,
-                "errors": None,
-            }
+    failure_info = {
+        "log_present": False,
+        "warnings_present": False,
+        "warnings": None,
+        "stack_trace": None,
+        "errors": None,
+    }
 
-            if os.path.isfile(WARNINGS_LOG):
-                failure_info["warnings_present"] = True
-                with open(WARNINGS_LOG) as warnings_file:
-                    failure_info["warnings"] = "".join(warnings_file.readlines())
+    if os.path.isfile(WARNINGS_LOG):
+        failure_info["warnings_present"] = True
+        with open(WARNINGS_LOG) as warnings_file:
+            failure_info["warnings"] = "".join(warnings_file.readlines())
 
-            if os.path.isfile(SPADES_LOG):
-                failure_info["log_present"] = True
-                with open(SPADES_LOG) as log_file:
-                    log = log_file.readlines()
-                    error_lines = [line.replace("== Error ==", "*") for line in log if line.startswith("== Error ==")]
-                    if len(error_lines) > 0:
-                        failure_info["errors"] = "".join(error_lines)
-                    try:
-                        stack_trace_line_no = log.index("=== Stack Trace ===\n")
-                        stack_trace_end = log.index("\n", stack_trace_line_no)
-                        failure_info["stack_trace"] = "".join(log[stack_trace_line_no:stack_trace_end])
-                    except ValueError:
-                        pass
+    if os.path.isfile(SPADES_LOG):
+        failure_info["log_present"] = True
+        with open(SPADES_LOG) as log_file:
+            log = log_file.readlines()
+            error_lines = [line.replace("== Error ==", "*") for line in log if line.startswith("== Error ==")]
+            if len(error_lines) > 0:
+                failure_info["errors"] = "".join(error_lines)
+            try:
+                stack_trace_line_no = log.index("=== Stack Trace ===\n")
+                stack_trace_end = log.index("\n", stack_trace_line_no)
+                failure_info["stack_trace"] = "".join(log[stack_trace_line_no:stack_trace_end])
+            except ValueError:
+                pass
 
-            with open("spades_failure.json", "w") as output_file:
-                output_file.write(json.dumps(failure_info))
-            CODE
+    with open("spades_failure.json", "w") as output_file:
+        output_file.write(json.dumps(failure_info))
+    CODE
 
-            exit 0
-        }
-        trap handle_failure ERR
-        if [[ "~{length(reduplicated_reads)}" -gt 1 ]]; then
-            spades.py -1 ~{sep=" -2 " reduplicated_reads} -o "spades/" -m 100 -t 36 --only-assembler 1>&2
-        else
-            spades.py -s ~{reduplicated_reads[0]} -o "spades/" -m 100 -t 36 --only-assembler 1>&2
-        fi
+        exit 0
+    }
+    trap handle_failure ERR
+    if [[ "~{length(reduplicated_reads)}" -gt 1 ]]; then
+        spades.py -1 ~{sep=" -2 " reduplicated_reads} -o "spades/" -m 100 -t 36 --only-assembler 1>&2
+    else
+        spades.py -s ~{reduplicated_reads[0]} -o "spades/" -m 100 -t 36 --only-assembler 1>&2
+    fi
 
-        if [[ $(head -n 1 spades/contigs.fasta) ==  "" ]]; then
-            handle_failure
-        else
-            seqtk seq -L ~{min_contig_length} spades/contigs.fasta > spades/contigs_filtered.fasta
-            mv spades/contigs_filtered.fasta spades/contigs.fasta
-        fi
+    if [[ $(head -n 1 spades/contigs.fasta) ==  "" ]]; then
+        handle_failure
+    else
+        seqtk seq -L ~{min_contig_length} spades/contigs.fasta > spades/contigs_filtered.fasta
+        mv spades/contigs_filtered.fasta spades/contigs.fasta
+    fi
     >>>
     output { 
         File contigs = "spades/contigs.fasta"
