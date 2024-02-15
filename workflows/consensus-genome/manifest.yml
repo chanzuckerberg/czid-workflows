@@ -28,12 +28,12 @@ raw_inputs:
   sars_cov_2:
     name: Is SARS CoV2?
     description: Is your sample SARS CoV2
-    type: boolean
+    type: bool
     default: False
   ncbi_index_version:
     name: NCBI Index Version 
     description: CZID's snapshot version of NCBI's index i.e. '2021-01-22'
-    type: string
+    type: str
     required: True
 input_loaders:
   - name: sample
@@ -43,6 +43,7 @@ input_loaders:
     outputs:
       name: sample
   - name: sequencing_read
+    version: ">=0.0.1"
     inputs:
       sequencing_read: ~
     outputs:
@@ -50,6 +51,7 @@ input_loaders:
       r1_file: fastqs_0
       r2_file: fastqs_1
   - name: ncbi_index
+    version: ">=0.0.1"
     inputs:
       ncbi_index_version: ~
     outputs:
