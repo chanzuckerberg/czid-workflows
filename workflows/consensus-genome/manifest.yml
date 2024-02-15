@@ -6,24 +6,25 @@ entity_inputs:
     name: Sample
     description: Your sample
     entity_type: sample
-    required: true
   sequencing_read:
     name: Sequencing Read
     description: Your sequencing read
     entity_type: sequencing_read
-    required: true
   accession:
     name: Accession
     description: "Your accession, optional if sars_cov_2 is true"
     entity_type: accession
+    required: False
   taxon:
     name: Taxon
     description: "Your taxon, optional if sars_cov_2 is true"
     entity_type: taxon
+    required: False
   reference_genome:
     name: Reference Genome
     description: Your reference genome, if ommitted it can be generated based on accession
     entity_type: reference_genome
+    required: False
 raw_inputs:
   sars_cov_2:
     name: Is SARS CoV2?
