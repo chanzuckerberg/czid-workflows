@@ -954,6 +954,7 @@ task ComputeStats {
         import collections
         import gzip
         import json
+        import math
         import re
         import pysam
         import sys
@@ -1060,6 +1061,47 @@ task ComputeStats {
         else:
             stats["n_gap"] = 0
         stats["n_ambiguous"] = sum(v for k, v in allele_counts.items() if k not in "ACTGUN-")
+
+        # migrated metrics from Ruby app
+        MAX_NUM_BINS = 500
+
+        stats["coverage_breadth"] = sum(1 for depth in depths if depth > 0) / len(depths)
+        stats["max_aligned_length"] = len(depths)
+        stats["total_length"] = len(depths)
+
+        if len(depths) <= MAX_NUM_BINS:
+            num_bins = len(depths)
+            bin_size = 1
+        else:
+            num_bins = MAX_NUM_BINS
+            bin_size = len(depths) / MAX_NUM_BINS
+        stats["coverage_bin_size"] = bin_size
+
+        coverage = []
+        for index in range(num_bins):
+            bin_start = index * bin_size
+            start_fraction = 1 - (bin_start % 1)
+            index_start = math.floor(bin_start)
+
+            bin_end = (index + 1) * bin_size
+            end_fraction = bin_end % 1
+            index_end = math.ceil(bin_end) - 1
+
+            # compute average depth accounting for partial start and end fraction
+            depths_bin = depths[index_start:index_end + 1]
+
+            weights = [1 for i in range(len(depths_bin))]
+            weights[0] = start_fraction
+            # set end fraction only if we loaded the last cell
+            if end_fraction > 0:
+                weights[-1] = end_fraction
+            average_depth = sum([depth * weight for depth, weight in zip(depths_bin, weights)]) / (bin_end - bin_start)
+
+            breadth_array = [1 if depth > 0 else 0 for depth in depths_bin]
+            average_breadth = sum([breadth * weight for breadth, weight in zip(breadth_array, weights)]) / (bin_end - bin_start)
+
+            coverage.append([index, round(average_depth, 3), round(average_breadth, 3), 1, 0])
+        stats["coverage"] = coverage
 
         with open("~{prefix}stats.json", "w") as f:
             json.dump(stats, f, indent=2)
