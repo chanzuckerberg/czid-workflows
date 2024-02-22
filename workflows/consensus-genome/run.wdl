@@ -1065,8 +1065,6 @@ task ComputeStats {
         # migrated metrics from Ruby app
         MAX_NUM_BINS = 500
 
-        stats = {"sample_name": "~{sample}"}
-
         stats["coverage_breadth"] = sum(1 for depth in depths if depth > 0) / len(depths)
         stats["max_aligned_length"] = len(depths)
         stats["total_length"] = len(depths)
