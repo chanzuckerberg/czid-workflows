@@ -287,6 +287,7 @@ workflow consensus_genome {
         File? compute_stats_out_depths_fig = ComputeStats.depths_fig
         File? compute_stats_out_output_stats = ComputeStats.output_stats
         File? compute_stats_out_sam_depths = ComputeStats.sam_depths
+        File? compute_stats_out_output_coverage = ComputeStats.output_coverage
         File? minion_log = RunMinion.log
         File zip_outputs_out_output_zip = ZipOutputs.output_zip
     }
@@ -954,6 +955,7 @@ task ComputeStats {
         import collections
         import gzip
         import json
+        import math
         import re
         import pysam
         import sys
@@ -963,13 +965,15 @@ task ComputeStats {
         import seaborn as sns
         
         error = lambda err, cause: sys.exit(json.dumps(dict(wdl_error_message=True, error=err, cause=cause)))
-        stats = {"sample_name": "~{sample}"}
 
         depths = open("~{prefix}samtools_depth.txt").read().splitlines()
         if depths:
             depths = np.array([int(d) for d in depths])
         else:
             error("InsufficientReadsError", "There was insufficient coverage so a consensus genome could not be created.")
+
+        ## create depths figure and output stats.json
+        stats = {"sample_name": "~{sample}"}
 
         stats["depth_avg"] = depths.mean()
         stats["depth_q.25"] = np.quantile(depths, .25)
@@ -1064,6 +1068,53 @@ task ComputeStats {
         with open("~{prefix}stats.json", "w") as f:
             json.dump(stats, f, indent=2)
 
+        ## create coverage data
+        MAX_NUM_BINS = 500
+
+        coverage_data = {"sample_name": "~{sample}"}
+
+        coverage_data["coverage_breadth"] = sum(1 for depth in depths if depth > 0) / len(depths)
+        coverage_data["coverage_depth"] = sum(depth for depth in depths if depth > 0) / len(depths)
+        coverage_data["max_aligned_length"] = len(depths)
+        coverage_data["total_length"] = len(depths)
+
+        if len(depths) <= MAX_NUM_BINS:
+            num_bins = len(depths)
+            bin_size = 1
+        else:
+            num_bins = MAX_NUM_BINS
+            bin_size = len(depths) / MAX_NUM_BINS
+        coverage_data["coverage_bin_size"] = bin_size
+
+        coverage = []
+        for index in range(num_bins):
+            bin_start = index * bin_size
+            start_fraction = 1 - (bin_start % 1)
+            index_start = math.floor(bin_start)
+
+            bin_end = (index + 1) * bin_size
+            end_fraction = bin_end % 1
+            index_end = math.ceil(bin_end) - 1
+
+            # compute average depth accounting for partial start and end fraction
+            depths_bin = depths[index_start:index_end + 1]
+
+            weights = [1 for i in range(len(depths_bin))]
+            weights[0] = start_fraction
+            # set end fraction only if we loaded the last cell
+            if end_fraction > 0:
+                weights[-1] = end_fraction
+            average_depth = sum([depth * weight for depth, weight in zip(depths_bin, weights)]) / (bin_end - bin_start)
+
+            breadth_array = [1 if depth > 0 else 0 for depth in depths_bin]
+            average_breadth = sum([breadth * weight for breadth, weight in zip(breadth_array, weights)]) / (bin_end - bin_start)
+
+            coverage.append([index, round(average_depth, 3), round(average_breadth, 3), 1, 0])
+        coverage_data["coverage"] = coverage
+
+        with open("~{prefix}coverage.json", "w") as f:
+            json.dump(coverage_data, f, indent=2)
+
         CODE
     >>>
 
@@ -1072,6 +1123,7 @@ task ComputeStats {
         File sam_stats = "~{prefix}samtools_stats.txt"
         File depths_fig = "~{prefix}depths.png"
         File output_stats = "~{prefix}stats.json"
+        File output_coverage = "~{prefix}coverage.json"
     }
 
     runtime {
