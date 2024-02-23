@@ -4,7 +4,11 @@ CZ ID's AMR workflow implements the [Resistance Gene Identifier (RGI)](https://g
 
 # Changelog
 
-## 1.3.3 - Tentative
+## 1.3.3 - 2024-02-23
+
+### Added
+
+- Adds a script to collect information from SPAdes logs when no contigs are assembled in RunSpades.
 
 ### Fixed
 
