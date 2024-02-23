@@ -2,6 +2,7 @@ import argparse
 import json
 import os
 
+
 def main(spades_log: str, warnings_log: str):
     failure_info = {
         "log_present": False,
@@ -14,10 +15,11 @@ def main(spades_log: str, warnings_log: str):
     failure_info = collect_warnings_log(failure_info)
     write_output(failure_info)
 
+
 def collect_spades_log(failure_info: dict, spades_log: str):
-    if os.path.isfile(SPADES_LOG):
+    if os.path.isfile(spades_log):
         failure_info["log_present"] = True
-        with open(SPADES_LOG) as log_file:
+        with open(spades_log) as log_file:
             log = log_file.readlines()
             error_lines = [line.replace("== Error ==", "*") for line in log if line.startswith("== Error ==")]
             if len(error_lines) > 0:
@@ -30,16 +32,19 @@ def collect_spades_log(failure_info: dict, spades_log: str):
                 pass
     return failure_info
 
+
 def collect_warnings_log(failure_info: dict, warnings_log: str):
-    if os.path.isfile(WARNINGS_LOG):
+    if os.path.isfile(warnings_log):
         failure_info["warnings_present"] = True
-        with open(WARNINGS_LOG) as warnings_file:
+        with open(warnings_log) as warnings_file:
             failure_info["warnings"] = "".join(warnings_file.readlines())
     return failure_info
+
 
 def write_output(failure_info: dict):
     with open("spades_failure.json", "w") as output_file:
         output_file.write(json.dumps(failure_info))
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Write SPAdes errors and warnings to a json file")
