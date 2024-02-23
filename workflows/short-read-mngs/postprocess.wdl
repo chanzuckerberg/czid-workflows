@@ -22,7 +22,7 @@ task RunAssembly {
   spades.py -v > assembly_version.txt
 
   if [[ $(head -n 1 assembly/contigs.fasta) ==  "" || $(head -n 1 assembly/contigs.fasta) ==  ";ASSEMBLY FAILED" ]]; then
-    python3 /usr/local/bin/log_assembly_fail.py
+    python3 /usr/local/bin/log_assembly_fail.py "assembly/spades/spades.log" "assembly/spades/warnings.log"
   fi
   >>>
   output {
