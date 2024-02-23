@@ -11,8 +11,8 @@ def main(spades_log: str, warnings_log: str):
         "stack_trace": None,
         "errors": None,
     }
-    failure_info = collect_spades_log(failure_info)
-    failure_info = collect_warnings_log(failure_info)
+    failure_info = collect_spades_log(failure_info, spades_log)
+    failure_info = collect_warnings_log(failure_info, warnings_log)
     write_output(failure_info)
 
 
