@@ -616,31 +616,32 @@ task RunSpades {
         String docker_image_id
     }
     command <<< 
-        set -euxo pipefail
-        function handle_failure() 
-        {
-            echo ";ASSEMBLY FAILED" > spades/contigs.fasta
-            echo ";ASSEMBLY FAILED" > spades/scaffolds.fasta
-            exit 0
+    set -euxo pipefail
+    function handle_failure()
+    {
+        echo ";ASSEMBLY FAILED" > spades/contigs.fasta
+        echo ";ASSEMBLY FAILED" > spades/scaffolds.fasta
+        python3 /usr/local/bin/log_assembly_fail.py "spades/spades.log" "spades/warnings.log"
+        exit 0
+    }
+    trap handle_failure ERR
+    if [[ "~{length(reduplicated_reads)}" -gt 1 ]]; then
+        spades.py -1 ~{sep=" -2 " reduplicated_reads} -o "spades/" -m 100 -t 36 --only-assembler 1>&2
+    else
+        spades.py -s ~{reduplicated_reads[0]} -o "spades/" -m 100 -t 36 --only-assembler 1>&2
+    fi
 
-        }
-        trap handle_failure ERR
-        if [[ "~{length(reduplicated_reads)}" -gt 1 ]]; then
-            spades.py -1 ~{sep=" -2 " reduplicated_reads} -o "spades/" -m 100 -t 36 --only-assembler 1>&2
-        else
-            spades.py -s ~{reduplicated_reads[0]} -o "spades/" -m 100 -t 36 --only-assembler 1>&2
-        fi
-
-        if [[ $(head -n 1 spades/contigs.fasta) ==  "" ]]; then
-            handle_failure
-        else
-            seqtk seq -L ~{min_contig_length} spades/contigs.fasta > spades/contigs_filtered.fasta
-            mv spades/contigs_filtered.fasta spades/contigs.fasta
-        fi
+    if [[ $(head -n 1 spades/contigs.fasta) ==  "" ]]; then
+        handle_failure
+    else
+        seqtk seq -L ~{min_contig_length} spades/contigs.fasta > spades/contigs_filtered.fasta
+        mv spades/contigs_filtered.fasta spades/contigs.fasta
+    fi
     >>>
     output { 
         File contigs = "spades/contigs.fasta"
         File? scaffolds = "spades/scaffolds.fasta"
+        File? failure_log = "spades_failure.json"
     }
     runtime { 
         docker: docker_image_id

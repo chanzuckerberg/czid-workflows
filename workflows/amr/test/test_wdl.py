@@ -178,6 +178,10 @@ class TestAMR(WDLTestCase):
             assert read_id in host_filter_2
             assert read_sequence == host_filter_2[read_id]
 
+    # NOTE: These two tests rely on the short-read-mngs docker image. An issue with this is that
+    # any PR that makes a change to AMR's RunSpades task that depends on a change also made to
+    # the short-read-mngs docker image will cause these tests to fail, because they can't use the
+    # updated image with our current setup.
     def testRunSpadesAssemblyFailedNonUniformCoverage(self):
         inputs = {
             "reduplicated_reads": [
