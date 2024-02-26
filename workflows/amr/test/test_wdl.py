@@ -194,7 +194,6 @@ class TestAMR(WDLTestCase):
         res = self.run_miniwdl(
             task="RunSpades",
             task_input=inputs,
-            docker_image_id="ghcr.io/chanzuckerberg/czid-workflows/czid-short-read-mngs-public"
         )
 
         with open(res["outputs"]["RunSpades.contigs"]) as contigs_fa:
@@ -213,7 +212,6 @@ class TestAMR(WDLTestCase):
         res = self.run_miniwdl(
             task="RunSpades",
             task_input=inputs,
-            docker_image_id="ghcr.io/chanzuckerberg/czid-workflows/czid-short-read-mngs-public"
         )
 
         with open(res["outputs"]["RunSpades.contigs"]) as contigs_fa:
