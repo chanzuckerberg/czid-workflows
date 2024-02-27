@@ -101,7 +101,7 @@ workflow index_generation {
         call CompressDatabase as CompressNT {
             input:
             database_type = "nt",
-            fasta = nt,
+            fasta = nt_download,
             accession2taxid_files = [unzipped_accession2taxid_nucl_wgs, unzipped_accession2taxid_nucl_gb],
             k = nt_compression_k,
             scaled = nt_compression_scaled,
@@ -149,12 +149,6 @@ workflow index_generation {
         }
     }
 
-    call DownloadDatabase {
-        input:
-        database_type = "nt",
-        docker_image_id = docker_image_id
-    }
-
     call GenerateIndexAccessions {
         input:
         nr = nr_or_compressed,
@@ -199,6 +193,7 @@ workflow index_generation {
         File? nr_contained_in_chunk = CompressNR.contained_in_chunk
         File? nt_contained_in_tree = CompressNT.contained_in_tree
         File? nt_contained_in_chunk = CompressNT.contained_in_chunk
+        File accession2taxid_db = GenerateIndexAccessions.accession2taxid_db
     #     Directory? nt_split_apart_taxid_dir = CompressNT.split_apart_taxid_dir
     #     Directory? nt_sorted_taxid_dir = CompressNT.sorted_taxid_dir
     #     Directory? nr_split_apart_taxid_dir = CompressNR.split_apart_taxid_dir
