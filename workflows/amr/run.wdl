@@ -61,7 +61,7 @@ workflow amr {
             input:
             reduplicated_reads = RunRedupRaw.redups_fa,
             min_contig_length = min_contig_length,
-            docker_image_id = host_filtering_docker_image_id,
+            docker_image_id = docker_image_id,
         }
     }
 
