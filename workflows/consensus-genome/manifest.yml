@@ -68,6 +68,7 @@ input_loaders:
       reference_genome: ~
       sars_cov_2: ~
     outputs:
+      ref_accession_id: ~
       ercc_fasta: ~
       kraken2_db_tar_gz: ~
       primer_bed: ~
