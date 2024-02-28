@@ -205,12 +205,13 @@ task DownloadDatabase {
     input {
         String database_type # nt or nr
         String docker_image_id
+        Int threads = 64
     }
 
     command <<<
         set -euxo pipefail
 
-        update_blastdb.pl --decompress ~{database_type} --num_threads 32
+        update_blastdb.pl --decompress ~{database_type} --num_threads ~{threads}
         blastdbcmd -db ~{database_type} -entry all -out ~{database_type}.fsa
 
     >>>
@@ -221,6 +222,7 @@ task DownloadDatabase {
 
     runtime {
         docker: docker_image_id
+        cpu: 64
     }
 
 }
