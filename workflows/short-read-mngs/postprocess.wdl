@@ -20,6 +20,10 @@ task RunAssembly {
     --additional-files '{}' \
     --additional-attributes '{"memory": 200, "min_contig_length": ~{min_contig_length}}'
   spades.py -v > assembly_version.txt
+
+  if [[ $(head -n 1 assembly/contigs.fasta) ==  "" || $(head -n 1 assembly/contigs.fasta) ==  ";ASSEMBLY FAILED" ]]; then
+    python3 /usr/local/bin/log_assembly_fail.py "assembly/spades/spades.log" "assembly/spades/warnings.log"
+  fi
   >>>
   output {
     String step_description_md = read_string("assembly_out.description.md")
@@ -31,6 +35,7 @@ task RunAssembly {
     File? assembly_spades_output_log = "assembly/spades/spades.log"
     File? output_read_count = "assembly_out.count"
     File? version = "assembly_version.txt"
+    File? failure_log = "spades_failure.json"
   }
   runtime {
     docker: docker_image_id
@@ -677,6 +682,7 @@ workflow czid_postprocess {
     File? assembly_out_assembly_spades_output_log = RunAssembly.assembly_spades_output_log
     File? spades_version = RunAssembly.version
     File? assembly_out_count = RunAssembly.output_read_count
+    File? spades_failure_tracking_log = RunAssembly.failure_log
     File coverage_out_assembly_contig_coverage_json = GenerateCoverageStats.assembly_contig_coverage_json
     File coverage_out_assembly_contig_coverage_summary_csv = GenerateCoverageStats.assembly_contig_coverage_summary_csv
     File? coverage_out_count = GenerateCoverageStats.output_read_count

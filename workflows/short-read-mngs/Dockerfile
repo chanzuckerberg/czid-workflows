@@ -12,9 +12,9 @@ RUN /go/bin/go version
 WORKDIR /go/src/s3quilt
 COPY --from=lib s3quilt/go.mod s3quilt/go.sum s3quilt/s3quilt.go ./
 
-RUN go get golang.org/x/tools/cmd/goimports
+RUN go get golang.org/x/tools/cmd/goimports@v0.2.0
 RUN go install golang.org/x/tools/cmd/goimports
-RUN go get github.com/go-python/gopy
+RUN go get github.com/go-python/gopy@v0.4.4
 RUN go install github.com/go-python/gopy
 
 RUN pip3 install pybindgen setuptools wheel
@@ -209,5 +209,6 @@ COPY --from=lib idseq_utils /tmp/idseq_utils
 RUN pip3 install /tmp/idseq_utils && rm -rf /tmp/idseq_utils
 
 COPY --from=lib /bin/raise_error /usr/local/bin/raise_error
+COPY --from=lib /bin/log_assembly_fail.py /usr/local/bin/log_assembly_fail.py
 
 COPY --from=s3quilt /usr/lib/python3/dist-packages/s3quilt/ /usr/lib/python3/dist-packages/s3quilt/

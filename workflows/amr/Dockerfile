@@ -23,6 +23,11 @@ RUN pip3 install -r requirements.txt
 # RGI version 6.0.3
 RUN pip3 install git+https://github.com/lvreynoso/rgi.git@a14f8dd5457a6220a06024b6aebd05e8cb6181d7
 
+# Install SPAdes
+RUN curl -LO https://github.com/ablab/spades/releases/download/v3.11.1/SPAdes-3.11.1-Linux.tar.gz && \
+    tar -xzf SPAdes-3.11.1-Linux.tar.gz && \
+    ln -s /SPAdes-3.11.1-Linux/bin/spades.py /usr/local/bin/spades.py
+
 # Install seqfu (used for interleaving input files)
 ARG SEQFU_VER="1.16.0"
 RUN curl -LO https://github.com/telatin/seqfu2/releases/download/v${SEQFU_VER}/SeqFu-v${SEQFU_VER}-Linux-x86_64.zip && \
@@ -38,5 +43,5 @@ RUN curl -LO https://czid-public-references.s3.us-west-2.amazonaws.com/card/2023
         --card_annotation card_database_v3.2.6.fasta \
         -i card.json 
 
-
+COPY --from=lib /bin/log_assembly_fail.py /usr/local/bin/log_assembly_fail.py
 COPY empty-main-header.txt /tmp/empty-main-header.txt 
