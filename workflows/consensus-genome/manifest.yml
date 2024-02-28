@@ -31,6 +31,14 @@ raw_inputs:
     description: Is your sample SARS CoV2
     type: bool
     default: False
+  creation_source:
+    description: This is an optional flag to store what flow of the czid web application created the worlflow run
+    type: str
+    required: False
+    values:
+      - "SARS-CoV-2 Upload",
+      - "Viral CG Upload",
+      - "mNGS Report",
   ncbi_index_version:
     name: NCBI Index Version 
     description: CZID's snapshot version of NCBI's index i.e. '2021-01-22'
