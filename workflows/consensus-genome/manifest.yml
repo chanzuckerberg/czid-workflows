@@ -36,9 +36,9 @@ raw_inputs:
     type: str
     required: False
     values:
-      - "SARS-CoV-2 Upload",
-      - "Viral CG Upload",
-      - "mNGS Report",
+      - "SARS-CoV-2 Upload"
+      - "Viral CG Upload"
+      - "mNGS Report"
   ncbi_index_version:
     name: NCBI Index Version 
     description: CZID's snapshot version of NCBI's index i.e. '2021-01-22'
