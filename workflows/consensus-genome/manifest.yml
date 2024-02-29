@@ -32,6 +32,7 @@ raw_inputs:
     type: bool
     default: False
   creation_source:
+    name: Creation Source
     description: This is an optional flag to store what flow of the czid web application created the worlflow run
     type: str
     required: False
