@@ -1,0 +1,109 @@
+workflow_name: consensus-genome 
+specification_language: WDL
+description: Build consensus genomes. Supports nanopore and illumina.
+entity_inputs:
+  sample:
+    name: Sample
+    description: Your sample
+    entity_type: sample
+  sequencing_read:
+    name: Sequencing Read
+    description: Your sequencing read
+    entity_type: sequencing_read
+  accession:
+    name: Accession
+    description: "Your accession, optional if sars_cov_2 is true"
+    entity_type: accession
+    required: False
+  taxon:
+    name: Taxon
+    description: "Your taxon, optional if sars_cov_2 is true"
+    entity_type: taxon
+    required: False
+  reference_genome:
+    name: Reference Genome
+    description: Your reference genome, if ommitted it can be generated based on accession
+    entity_type: reference_genome
+    required: False
+raw_inputs:
+  sars_cov_2:
+    name: Is SARS CoV2?
+    description: Is your sample SARS CoV2
+    type: bool
+    default: False
+  creation_source:
+    name: Creation Source
+    description: This is an optional flag to store what flow of the czid web application created the worlflow run
+    type: str
+    required: False
+    values:
+      - "SARS-CoV-2 Upload"
+      - "Viral CG Upload"
+      - "mNGS Report"
+  ncbi_index_version:
+    name: NCBI Index Version 
+    description: CZID's snapshot version of NCBI's index i.e. '2021-01-22'
+    type: str
+    required: True
+input_loaders:
+  - name: sample
+    version: ">=0.0.1"
+    inputs:
+      sample: ~
+    outputs:
+      name: sample
+  - name: sequencing_read
+    version: ">=0.0.1"
+    inputs:
+      sequencing_read: ~
+    outputs:
+      technology: ~
+      r1_file: fastqs_0
+      r2_file: fastqs_1
+  - name: ncbi_index
+    version: ">=0.0.1"
+    inputs:
+      ncbi_index_version: ~
+    outputs:
+      nr_loc: nr_loc_db
+      nr: nr_s3_path
+      nt_loc: nt_loc_db
+      nt: nt_s3_path
+  - name: consensus_genome
+    version: ">=0.0.1"
+    inputs:
+      sequencing_read: ~
+      accession: ~
+      reference_genome: ~
+      sars_cov_2: ~
+    outputs:
+      ref_accession_id: ~
+      ercc_fasta: ~
+      kraken2_db_tar_gz: ~
+      primer_bed: ~
+      primer_set: ~
+      ref_fasta: ~
+      ref_host: ~
+      vadr_model: ~
+      primer_schemes: ~
+  - name: czid_docker
+    version: ">=0.0.1"
+    outputs:
+      docker_image_id: ~
+output_loaders:
+  - name: consensus_genome
+    version: ">=0.0.1"
+    inputs:
+      sequencing_read: ~
+      accession: ~
+      taxon: ~
+      sars_cov_2: ~
+    workflow_outputs:
+      sequence: "consensus_genome.make_consensus_out_consensus_fa"
+      metrics_sam_depths: "consensus_genome.compute_stats_out_sam_depths"
+      metrics_quast: "consensus_genome.quast_out_quast_tsv"
+      metrics_stats: "consensus_genome.compute_stats_out_output_stats"
+      intermediate_outputs: "consensus_genome.zip_outputs_out_output_zip"
+
+
+
