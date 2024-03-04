@@ -22,8 +22,8 @@ workflow index_generation {
         Boolean skip_generate_nt_assets = false
         Boolean logging_enabled = false
 
-        File? provided_nt = ""
-        File? provided_nr = ""
+        File? provided_nt
+        File? provided_nr
         File provided_accession2taxid_nucl_gb = "~{ncbi_server}/pub/taxonomy/accession2taxid/nucl_gb.accession2taxid.gz"
         File provided_accession2taxid_nucl_wgs = "~{ncbi_server}/pub/taxonomy/accession2taxid/nucl_wgs.accession2taxid.gz" 
         File provided_accession2taxid_pdb = "~{ncbi_server}/pub/taxonomy/accession2taxid/pdb.accession2taxid.gz"
