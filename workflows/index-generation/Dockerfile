@@ -45,9 +45,7 @@ RUN apt-get update && \
     libbz2-dev \
     liblz4-dev \
     libzstd-dev \
-    clang \
-    # needed to download ncbi-blast
-    alien
+    clang
 
 # based on https://github.com/rust-lang/docker-rust/blob/dcb74d779e8a74263dc8b91d58d8ce7f3c0c805b/1.70.0/buster/Dockerfile
 ENV RUSTUP_HOME=/usr/local/rustup \
