@@ -13,6 +13,8 @@ class TestIndexGeneration(WDLTestCase):
     common_inputs = {
         "index_name": "2020-04-20",
         "ncbi_server": "https://idseq-samples-test.s3-us-west-2.amazonaws.com/index-generation/inputs",
+        "provided_nt": "https://idseq-samples-test.s3-us-west-2.amazonaws.com/index-generation/inputs/blast/nt",
+        "provided_nr": "https://idseq-samples-test.s3-us-west-2.amazonaws.com/index-generation/inputs/blast/nr",
     }
 
     def testIndexGeneration(self):

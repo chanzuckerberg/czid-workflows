@@ -22,29 +22,31 @@ workflow index_generation {
         Boolean skip_generate_nt_assets = false
         Boolean logging_enabled = false
 
-        File? provided_nt
-        File? provided_nr
-        File provided_accession2taxid_nucl_gb = "~{ncbi_server}/pub/taxonomy/accession2taxid/nucl_gb.accession2taxid.gz"
-        File provided_accession2taxid_nucl_wgs = "~{ncbi_server}/pub/taxonomy/accession2taxid/nucl_wgs.accession2taxid.gz" 
-        File provided_accession2taxid_pdb = "~{ncbi_server}/pub/taxonomy/accession2taxid/pdb.accession2taxid.gz"
-        File provided_accession2taxid_prot = "~{ncbi_server}/pub/taxonomy/accession2taxid/prot.accession2taxid.FULL.gz"
-        File provided_taxdump = "~{ncbi_server}/pub/taxonomy/taxdump.tar.gz"
+        String? provided_nt
+        String? provided_nr
+        String provided_accession2taxid_nucl_gb = "~{ncbi_server}/pub/taxonomy/accession2taxid/nucl_gb.accession2taxid.gz"
+        String provided_accession2taxid_nucl_wgs = "~{ncbi_server}/pub/taxonomy/accession2taxid/nucl_wgs.accession2taxid.gz"
+        String provided_accession2taxid_pdb = "~{ncbi_server}/pub/taxonomy/accession2taxid/pdb.accession2taxid.gz"
+        String provided_accession2taxid_prot = "~{ncbi_server}/pub/taxonomy/accession2taxid/prot.accession2taxid.FULL.gz"
+        String provided_taxdump = "~{ncbi_server}/pub/taxonomy/taxdump.tar.gz"
 
         String docker_image_id
     }
 
-    Array[File] possibly_zipped_files = [
+    Array[String?] possibly_zipped_files = [
         provided_accession2taxid_nucl_gb,
         provided_accession2taxid_nucl_wgs,
         provided_accession2taxid_pdb,
         provided_accession2taxid_prot,
         provided_taxdump,
+        provided_nt,
+        provided_nr
     ]
 
     # Download files if they are not provided
     scatter (file in possibly_zipped_files) {
         # if filename ends with gz
-        if (sub(basename(file), "\\.gz$", "") != basename(file)) {
+        if (sub(basename(file), "\\.gz$", "") != basename(file) && file != null) {
             call UnzipFile {
                 input:
                 zipped_file = file,
@@ -60,9 +62,15 @@ workflow index_generation {
     File unzipped_accession2taxid_pdb = unzipped_file[2]
     File unzipped_accession2taxid_prot = unzipped_file[3]
     File unzipped_taxdump = unzipped_file[4]
+    File provided_nt = unzipped_file[5]
+    File provided_nr = unzipped_file[6]
 
     Boolean is_nt_provided = defined(provided_nt)
     Boolean is_nr_provided = defined(provided_nr)
+
+    if (is_nt_provided) {
+        provided_nt = unzipped_nt
+    }
 
     if (!is_nt_provided) {
         call DownloadDatabase as DownloadNT {
@@ -229,7 +237,7 @@ task DownloadDatabase {
 
 task UnzipFile {
     input {
-        File zipped_file
+        String zipped_file
         Int cpu
         String docker_image_id
     }
