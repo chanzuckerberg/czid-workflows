@@ -45,7 +45,7 @@ workflow index_generation {
 
     # Download files if they are not provided
     scatter (file in possibly_zipped_files) {
-        if (defined(file) && file != "") {
+        if (defined(file) && select_first([file]) != "") {
             # if filename ends with gz
             String file_ = select_first([file]) # this is safe because we know it's defined and not empty
             if (sub(basename(file_), "\\.gz$", "") != basename(file_)) {
