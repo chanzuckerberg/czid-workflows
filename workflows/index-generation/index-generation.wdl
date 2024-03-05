@@ -46,7 +46,7 @@ workflow index_generation {
     # Download files if they are not provided
     scatter (file in possibly_zipped_files) {
         # if filename ends with gz
-        if (sub(basename(file), "\\.gz$", "") != basename(file) && file != null) {
+        if (sub(basename(file), "\\.gz$", "") != basename(file) && defined(file)) {
             call UnzipFile {
                 input:
                 zipped_file = file,
@@ -62,15 +62,11 @@ workflow index_generation {
     File unzipped_accession2taxid_pdb = unzipped_file[2]
     File unzipped_accession2taxid_prot = unzipped_file[3]
     File unzipped_taxdump = unzipped_file[4]
-    File provided_nt = unzipped_file[5]
-    File provided_nr = unzipped_file[6]
+    File provided_nt_unzipped = unzipped_file[5]
+    File provided_nr_unzipped = unzipped_file[6]
 
-    Boolean is_nt_provided = defined(provided_nt)
-    Boolean is_nr_provided = defined(provided_nr)
-
-    if (is_nt_provided) {
-        provided_nt = unzipped_nt
-    }
+    Boolean is_nt_provided = defined(provided_nt_unzipped)
+    Boolean is_nr_provided = defined(provided_nr_unzipped)
 
     if (!is_nt_provided) {
         call DownloadDatabase as DownloadNT {
@@ -87,8 +83,8 @@ workflow index_generation {
         }
     }
 
-    File nt_download = select_first([provided_nt, DownloadNT.database])
-    File nr_download = select_first([provided_nr, DownloadNR.database])
+    File nt_download = select_first([provided_nt_unzipped, DownloadNT.database])
+    File nr_download = select_first([provided_nr_unzipped, DownloadNR.database])
 
     if (!skip_protein_compression) {
         call CompressDatabase as CompressNR {
