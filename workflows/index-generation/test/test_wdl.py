@@ -9,12 +9,14 @@ import marisa_trie
 class TestIndexGeneration(WDLTestCase):
     """Tests the RunValidateInput function"""
 
+    base = "https://idseq-samples-test.s3-us-west-2.amazonaws.com/index-generation/inputs"
+
     wdl = os.path.join(os.path.dirname(__file__), "..", "index-generation.wdl")
     common_inputs = {
         "index_name": "2020-04-20",
-        "ncbi_server": "https://idseq-samples-test.s3-us-west-2.amazonaws.com/index-generation/inputs",
-        "provided_nt": "https://idseq-samples-test.s3-us-west-2.amazonaws.com/index-generation/inputs/blast/db/FASTA/nt.gz",
-        "provided_nr": "https://idseq-samples-test.s3-us-west-2.amazonaws.com/index-generation/inputs/blast/db/FASTA/nr.gz",
+        "ncbi_server": base,
+        "provided_nt": f"{base}/blast/db/FASTA/nt.gz",
+        "provided_nr": f"{base}/blast/db/FASTA/nr.gz",
     }
 
     def testIndexGeneration(self):
