@@ -32,6 +32,12 @@ input_loaders:
       files: ~
     outputs:
       files: ~
+  - name: passthrough
+    version: ">=0.0.1"
+    inputs:
+      bulk_download_type: ~
+    outputs:
+      bulk_download_type: action
 output_loaders:
   - name: bulk_download
     version: ">=0.0.1"
