@@ -38,6 +38,10 @@ input_loaders:
       bulk_download_type: ~
     outputs:
       bulk_download_type: action
+  - name: czid_docker
+    version: ">=0.0.1"
+    outputs:
+      docker_image_id: ~
 output_loaders:
   - name: bulk_download
     version: ">=0.0.1"
