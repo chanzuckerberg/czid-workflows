@@ -45,15 +45,19 @@ workflow index_generation {
 
     # Download files if they are not provided
     scatter (file in possibly_zipped_files) {
-        # if filename ends with gz
-        if (sub(basename(file), "\\.gz$", "") != basename(file) && defined(file)) {
-            call UnzipFile {
-                input:
-                zipped_file = file,
-                cpu = 8,
-                docker_image_id = docker_image_id,
+        if (defined(file) && file != "") {
+            # if filename ends with gz
+            String file_ = select_first([file]) # this is safe because we know it's defined and not empty
+            if (sub(basename(file_), "\\.gz$", "") != basename(file_)) {
+                call UnzipFile {
+                    input:
+                    zipped_file = file_,
+                    cpu = 8,
+                    docker_image_id = docker_image_id,
+                }
             }
         }
+
         
         File unzipped_file = select_first([UnzipFile.file, file])
     }
