@@ -4,7 +4,7 @@ description: Generate bulk downloads for the CZID web application
 entity_inputs:
   files:
     name: Files
-    description: Files to zip together 
+    description: Files to zip or concatenate together 
     entity_type: file
     multivalue: True
   samples:
@@ -15,8 +15,8 @@ entity_inputs:
     required: False
 raw_inputs:
   bulk_download_type:
-    name: Creation Source
-    description: 
+    name: Bulk Download Type
+    description: Concatenate or zip files to create bulk download
     type: str
     values:
       - concatenate
@@ -24,6 +24,7 @@ raw_inputs:
   download_display_name:
     name: Download Display Name
     description: User facing name for the download
+    type: str
 input_loaders:
   - name: files
     version: ">=0.0.1"
