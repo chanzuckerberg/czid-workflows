@@ -243,7 +243,12 @@ task UnzipFile {
     }
 
     command <<<
-        pigz -p ~{cpu} -dc ~{zipped_file} > ~{sub(basename(zipped_file), "\\.gz$", "")}
+        set -euxo pipefail
+        output="~{basename(zipped_file)}"
+        curl ~{zipped_file} -o $output
+        pigz -p ~{cpu} -dc $output > ~{sub(basename(zipped_file), "\\.gz$", "")}
+
+	#pigz -p ~{cpu} -dc ~{zipped_file} > ~{sub(basename(zipped_file), "\\.gz$", "")}
     >>>
 
     output {
