@@ -76,8 +76,13 @@ workflow index_generation {
             logging_enabled = logging_enabled,
             docker_image_id = docker_image_id,
         }
+        call ShuffleDatabase as ShuffleNR {
+            input:
+            fasta = CompressNR.compressed,
+            docker_image_id = docker_image_id
+        }
     }
-    File nr_or_compressed = select_first([CompressNR.compressed, unzipped_nr])
+    File nr_or_compressed = select_first([ShuffleNR.shuffled, unzipped_nr])
 
     if (!skip_nuc_compression) {
         call CompressDatabase as CompressNT {
@@ -91,8 +96,13 @@ workflow index_generation {
             logging_enabled = logging_enabled,
             docker_image_id = docker_image_id,
         }
+        call ShuffleDatabase as ShuffleNT {
+            input:
+            fasta = CompressNT.compressed,
+            docker_image_id = docker_image_id
+        }
     }
-    File nt_or_compressed = select_first([CompressNT.compressed, unzipped_nt])
+    File nt_or_compressed = select_first([ShuffleNT.shuffled, unzipped_nt])
 
     if (!skip_generate_nt_assets) {
         call GenerateLocDB as GenerateNTLocDB {
@@ -175,6 +185,11 @@ workflow index_generation {
         File? nr_contained_in_chunk = CompressNR.contained_in_chunk
         File? nt_contained_in_tree = CompressNT.contained_in_tree
         File? nt_contained_in_chunk = CompressNT.contained_in_chunk
+        File? compressed_nr = CompressNR.compressed
+        File? compressed_nt = CompressNT.compressed
+        File? shuffled_nt = ShuffleNT.shuffled
+        File? shuffled_nr = ShuffleNR.shuffled
+        File accession2taxid_db = GenerateIndexAccessions.accession2taxid_db
     #     Directory? nt_split_apart_taxid_dir = CompressNT.split_apart_taxid_dir
     #     Directory? nt_sorted_taxid_dir = CompressNT.sorted_taxid_dir
     #     Directory? nr_split_apart_taxid_dir = CompressNR.split_apart_taxid_dir
@@ -483,3 +498,32 @@ task CompressDatabase {
     }
 }
 
+task ShuffleDatabase {
+    input {
+        File fasta
+        String docker_image_id
+    }
+
+    command <<<
+        set -euxo pipefail
+
+        # shuffle compressed fasta to distribute the accessions evenly across the file
+        # this is important for spreading SC2 accessions (and any other large taxid) over
+        # the chunked minimap2 and diamond indexes which impacts alignment time.
+
+        shuffled_fasta="shuffled_~{basename(fasta)}"
+
+        ncbi-compress shuffle-fasta \
+            --input-fasta ~{fasta} \
+            --output-fasta $shuffled_fasta
+    >>>
+
+    output {
+        File shuffled = "shuffled_~{basename(fasta)}"
+    }
+
+    runtime {
+        docker: docker_image_id
+        cpu: 8 # shuffle function does not run in parallel
+    }
+}
