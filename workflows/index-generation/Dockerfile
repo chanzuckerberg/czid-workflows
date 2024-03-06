@@ -76,10 +76,10 @@ RUN set -eux; \
 COPY ncbi-compress /ncbi-compress
 RUN cd /ncbi-compress && cargo build --release
 
-
 FROM ubuntu:22.04
 ARG DEBIAN_FRONTEND
 # Install dependencies
+
 RUN apt-get update && \
     apt-get install -y \
         wget \
@@ -87,7 +87,12 @@ RUN apt-get update && \
         python3-pip \
         mysql-client \
         kraken2 \
+        curl \
         jq
+
+RUN wget https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/ncbi-blast-2.15.0+-x64-linux.tar.gz && \
+    tar -xzvf ncbi-blast-2.15.0+-x64-linux.tar.gz && \
+    cp ncbi-blast-2.15.0+/bin/* /usr/local/bin/
 
 COPY --from=builder /diamond/build/diamond /usr/local/bin
 COPY --from=builder /minimap2/minimap2 /usr/local/bin/
