@@ -511,7 +511,7 @@ task ShuffleDatabase {
         # this is important for spreading SC2 accessions (and any other large taxid) over
         # the chunked minimap2 and diamond indexes which impacts alignment time.
 
-        shuffled_fasta = "shuffled_~{basename(fasta)}"
+        shuffled_fasta="shuffled_~{basename(fasta)}"
 
         ncbi-compress shuffle-fasta \
             --input-fasta ~{fasta} \
