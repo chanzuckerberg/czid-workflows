@@ -1,0 +1,52 @@
+workflow_name: bulk-download
+specification_language: WDL
+description: Generate bulk downloads for the CZID web application
+entity_inputs:
+  files:
+    name: Files
+    description: Files to zip or concatenate together 
+    entity_type: file
+    multivalue: True
+  samples:
+    name: Samples
+    description: Optionally associate this bulk download with some samples
+    entity_type: sample
+    multivalue: True
+    required: False
+raw_inputs:
+  bulk_download_type:
+    name: Bulk Download Type
+    description: Concatenate or zip files to create bulk download
+    type: str
+    values:
+      - concatenate
+      - zip
+  download_display_name:
+    name: Download Display Name
+    description: User facing name for the download
+    type: str
+input_loaders:
+  - name: files
+    version: ">=0.0.1"
+    inputs:
+      files: ~
+    outputs:
+      files: ~
+  - name: passthrough
+    version: ">=0.0.1"
+    inputs:
+      bulk_download_type: ~
+    outputs:
+      bulk_download_type: action
+  - name: czid_docker
+    version: ">=0.0.1"
+    outputs:
+      docker_image_id: ~
+output_loaders:
+  - name: bulk_download
+    version: ">=0.0.1"
+    inputs:
+      bulk_download_type: ~
+      download_display_name: ~
+    workflow_outputs:
+      file: "bulk_download.file"

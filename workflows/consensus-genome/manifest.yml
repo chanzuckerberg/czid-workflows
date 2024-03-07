@@ -76,6 +76,7 @@ input_loaders:
       accession: ~
       reference_genome: ~
       sars_cov_2: ~
+      creation_source: ~
     outputs:
       ref_accession_id: ~
       ercc_fasta: ~
