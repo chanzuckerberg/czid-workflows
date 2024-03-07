@@ -66,8 +66,8 @@ workflow index_generation {
     File unzipped_accession2taxid_pdb = unzipped_file[2]
     File unzipped_accession2taxid_prot = unzipped_file[3]
     File unzipped_taxdump = unzipped_file[4]
-    File provided_nt_unzipped = unzipped_file[5]
-    File provided_nr_unzipped = unzipped_file[6]
+    File? provided_nt_unzipped = if defined(provided_nt) then unzipped_file[5] else None
+    File? provided_nr_unzipped = if defined(provided_nr) then unzipped_file[6] else None
 
     Boolean is_nt_provided = defined(provided_nt_unzipped)
     Boolean is_nr_provided = defined(provided_nr_unzipped)
