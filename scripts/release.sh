@@ -28,8 +28,6 @@ else
     exit 1
 fi
 
-TAG="long-read-mngs-v0.7.5-patch-contigscovviz"
-
 if [[ $( git branch --show-current) != "main" ]]; then 
     COMMIT=$(git rev-parse --short HEAD)
     TAG=$TAG"-$COMMIT"
