@@ -59,13 +59,13 @@ workflow index_generation {
         }
 
         
-        File unzipped_file = select_first([UnzipFile.file, file])
+        File? unzipped_file = if defined(file) then select_first([UnzipFile.file, file]) else None
     }
-    File unzipped_accession2taxid_nucl_gb = unzipped_file[0]
-    File unzipped_accession2taxid_nucl_wgs = unzipped_file[1]
-    File unzipped_accession2taxid_pdb = unzipped_file[2]
-    File unzipped_accession2taxid_prot = unzipped_file[3]
-    File unzipped_taxdump = unzipped_file[4]
+    File unzipped_accession2taxid_nucl_gb = select_first([unzipped_file[0]])
+    File unzipped_accession2taxid_nucl_wgs = select_first([unzipped_file[1]])
+    File unzipped_accession2taxid_pdb = select_first([unzipped_file[2]])
+    File unzipped_accession2taxid_prot = select_first([unzipped_file[3]])
+    File unzipped_taxdump = select_first([unzipped_file[4]])
     File? provided_nt_unzipped = if defined(provided_nt) then unzipped_file[5] else None
     File? provided_nr_unzipped = if defined(provided_nr) then unzipped_file[6] else None
 
