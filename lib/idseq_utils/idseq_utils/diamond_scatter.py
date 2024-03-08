@@ -1,3 +1,7 @@
+"""
+See diamond_scatter.md for a detailed description
+"""
+
 import os
 import shutil
 import sys
@@ -107,6 +111,9 @@ def zero_pad(n: int, m: int):
 
 
 def make_par_dir(cwd: str, par_tmpdir: str):
+    """
+    This creates a parallization coordination directory in the format diamond expects
+    """
     os.mkdir(join(cwd, par_tmpdir))
     p_dir = join(cwd, par_tmpdir, "parallelizer")
     os.mkdir(p_dir)
@@ -119,6 +126,11 @@ def make_par_dir(cwd: str, par_tmpdir: str):
 
 
 def make_db(reference_fasta: str, output_dir: str, chunks: int):
+    """
+    This creates a chunked diamond index. The chunks are named with a naming scheme such
+    that they have their chunk number, number of sequences, and number of letters. This
+    allows us to align these chunks without needing to store these parameteres separately.
+    """
     os.mkdir(output_dir)
     chunk_size = (sum(1 for _ in SeqIO.parse(reference_fasta, "fasta")) // chunks) + 1
     seqs = SeqIO.parse(reference_fasta, "fasta")
@@ -138,16 +150,22 @@ def make_db(reference_fasta: str, output_dir: str, chunks: int):
 
 
 def blastx_chunk(db_chunk: str, output_dir: str, diamond_args: str, *query: str):
+    """
+    Align one index chunk. Index chunks as created by `make_db`
+    """
     try:
         os.mkdir(output_dir)
     except OSError as e:
         if e.errno != errno.EEXIST:
             raise
+    # unpack the chunk number, n_seqs, and n_letters from the chunk naming scheme
     chunk, n_seqs, n_letters = basename(db_chunk)[:-5].split("-")
     with TemporaryDirectory() as tmp_dir:
         make_par_dir(tmp_dir, "par-tmp")
+        # specify in the parallelization directory that we need to align this one chunk
         with open(join(tmp_dir, "par-tmp", f"align_todo_{zero_pad(0, 6)}"), "w") as f:
             f.writelines([align_chunk(int(chunk), 0, int(n_seqs), 0)])
+        # run the alignment
         diamond_blastx(
             cwd=tmp_dir,
             par_tmpdir="par-tmp",
@@ -158,6 +176,8 @@ def blastx_chunk(db_chunk: str, output_dir: str, diamond_args: str, *query: str)
             diamond_args=diamond_args,
             queries=(abspath(q) for q in query),
         )
+        # the intermediate output files will be named with this scheme
+        # construct their names so we can copy them as outputs
         ref_block_name = f"ref_block_{zero_pad(0, 6)}_{zero_pad(int(chunk), 6)}"
         ref_dict_name = f"ref_dict_{zero_pad(0, 6)}_{zero_pad(int(chunk), 6)}"
         shutil.copy(
@@ -169,6 +189,12 @@ def blastx_chunk(db_chunk: str, output_dir: str, diamond_args: str, *query: str)
 
 
 def mock_reference_fasta(chunks: int, chunk_size: int):
+    """
+    This creates a dummy valid fasta which is required to build a dummy alignment index to feed
+    into the join command.
+
+    With the join flag the command doesn't actually use the index but the blastx command always expects a valid one
+    """
     letters = chunk = i = 0
     while chunk < chunks:
         n = 100
@@ -182,17 +208,25 @@ def mock_reference_fasta(chunks: int, chunk_size: int):
 def blastx_join(chunk_dir: str, out: str, diamond_args: str, *query: str):
     with TemporaryDirectory() as tmp_dir:
         make_par_dir(tmp_dir, "par-tmp")
+        # specify in the parallelization directory that we need to join all the chunks
         with open(join(tmp_dir, "par-tmp", f"join_todo_{zero_pad(0, 6)}"), "w") as f:
             f.write("TOKEN\n")
 
+        # copy all of the intermediate files into the right spot
         for f in os.listdir(chunk_dir):
             shutil.copy(join(chunk_dir, f), join(tmp_dir, "par-tmp", f))
 
         chunks = len(os.listdir(chunk_dir)) // 2
         with NamedTemporaryFile() as ref_fasta, NamedTemporaryFile() as db:
             # make fake db to appease diamond
+            # With the join flag the command doesn't actually use the index but the blastx command
+            #   always expects a valid one
+
+            # make a dummy fasta
             SeqIO.write(SeqRecord(Seq("M"), "ID"), ref_fasta.name, "fasta")
+            # turn it into a dummy index
             diamond_makedb(tmp_dir, ref_fasta.name, db.name)
+            # join the chunks with diamond
             diamond_blastx(
                 cwd=tmp_dir,
                 par_tmpdir="par-tmp",
@@ -203,7 +237,8 @@ def blastx_join(chunk_dir: str, out: str, diamond_args: str, *query: str):
                 diamond_args=diamond_args,
                 queries=(abspath(q) for q in query),
             )
-
+        
+        # the join outputs the final results in different files, concatenate them
         with open(out, "w") as out_f:
             for out_chunk in glob(join(tmp_dir, f"{out}_*")):
                 with open(out_chunk) as out_chunk_f:
