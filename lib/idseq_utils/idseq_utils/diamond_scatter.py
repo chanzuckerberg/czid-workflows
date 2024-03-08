@@ -237,7 +237,7 @@ def blastx_join(chunk_dir: str, out: str, diamond_args: str, *query: str):
                 diamond_args=diamond_args,
                 queries=(abspath(q) for q in query),
             )
-        
+
         # the join outputs the final results in different files, concatenate them
         with open(out, "w") as out_f:
             for out_chunk in glob(join(tmp_dir, f"{out}_*")):
