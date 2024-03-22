@@ -14,17 +14,20 @@ entity_inputs:
     multivalue: True
     required: False
 raw_inputs:
-  bulk_download_type:
-    name: Bulk Download Type
-    description: Concatenate or zip files to create bulk download
+  aggregate_action:
+    name: Aggregate Action
+    description: Concatenate or zip files to aggregate files to create the bulk download
     type: str
     values:
       - concatenate
       - zip
-  download_display_name:
-    name: Download Display Name
-    description: User facing name for the download
+  bulk_download_type:
+    name: Bulk Download Type
+    description: The type of bulk download this represents
     type: str
+    values:
+      - consensus_genome
+      - consensus_genome_intermediate_output_files
 input_loaders:
   - name: files
     version: ">=0.0.1"
@@ -35,9 +38,9 @@ input_loaders:
   - name: passthrough
     version: ">=0.0.1"
     inputs:
-      bulk_download_type: ~
+      aggregate_action: ~
     outputs:
-      bulk_download_type: action
+      aggregate_action: action
   - name: czid_docker
     version: ">=0.0.1"
     outputs:
@@ -47,6 +50,5 @@ output_loaders:
     version: ">=0.0.1"
     inputs:
       bulk_download_type: ~
-      download_display_name: ~
     workflow_outputs:
       file: "bulk_download.file"
