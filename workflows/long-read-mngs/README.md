@@ -7,11 +7,16 @@ The documentation presented here reflects the current CZ ID long-read-mngs pipel
 Further documentation on how to use the CZ ID long-read-mngs workflow can be found on the CZ ID help center -- including a [pipeline overview](https://chanzuckerberg.zendesk.com/hc/en-us/articles/13756558532884-CZ-ID-Pipeline-Overview) outlining the pipeline steps and details of the [initial validation](https://chanzuckerberg.zendesk.com/hc/en-us/articles/13895641006100-mNGS-Nanopore-Initial-Pipeline-Validation).
 ​
 ### Changelog
+
+**v0.7.6** -- March 8, 2024 -- Bugfix for coverage viz output
 ​
+ - Fixed a bug that caused coverage viz output files to output the wrong contig file byteranges for contigs. Previously, the byteranges being output were for an intermediate file (one that filtered out contigs that did not have a corresponding read). GenerateCoverageViz now uses the full contigs file, which is a workflow output, as input and generates contig byteranges for this file.
+​
+
 **v0.7.5** -- Nov 30, 2023 -- Expand scope of when we generate coverage vizualizations
 ​
  - Enable coverage vizualizations to be generated for taxa that only have loose NT reads (i.e., taxa with no contigs but that have at least 1 NT read).
-
+​
 
 **v0.7.3** -- May 19, 2023 -- Fix bug in reads to contigs step that caused it to fail for long contigs
 ​
