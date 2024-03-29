@@ -2,15 +2,10 @@ workflow_name: bulk-download
 specification_language: WDL
 description: Generate bulk downloads for the CZID web application
 entity_inputs:
-  files:
-    name: Files
-    description: Files to zip or concatenate together 
-    entity_type: file
-    multivalue: True
-  samples:
-    name: Samples
-    description: Optionally associate this bulk download with some samples
-    entity_type: sample
+  consensus_genomes:
+    name: Consensus Genomes
+    description: Consensus genomes to bulk download
+    entity_type: consensus_genome
     multivalue: True
     required: False
 raw_inputs:
@@ -29,10 +24,11 @@ raw_inputs:
       - consensus_genome
       - consensus_genome_intermediate_output_files
 input_loaders:
-  - name: files
+  - name: bulk_download
     version: ">=0.0.1"
     inputs:
-      files: ~
+      consensus_genomes: ~
+      bulk_download_type: ~
     outputs:
       files: ~
   - name: passthrough
