@@ -100,6 +100,7 @@ output_loaders:
       taxon: ~
       sars_cov_2: ~
       creation_source: ~
+      reference_genome: ~
     workflow_outputs:
       sequence: "consensus_genome.make_consensus_out_consensus_fa"
       metrics_sam_depths: "consensus_genome.compute_stats_out_sam_depths"
