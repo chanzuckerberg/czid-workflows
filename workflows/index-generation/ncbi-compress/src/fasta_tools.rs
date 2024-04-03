@@ -4,13 +4,12 @@ pub mod fasta_tools {
     use std::io::Write;
     use std::os::unix::prelude::FileExt;
 
-    use rand::thread_rng;
     use rand::seq::SliceRandom;
+    use rand::thread_rng;
 
     use bio::io::fasta;
-    use rayon::slice::ParallelSliceMut;
     use rayon::prelude::*;
-
+    use rayon::slice::ParallelSliceMut;
 
     struct OffsetWriter<'a> {
         file: &'a mut fs::File,
@@ -118,7 +117,7 @@ pub mod fasta_tools {
         let mut writer = fs::File::create(&output_fasta_path)?;
 
         let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
-        for (index, record) in reader.records().enumerate()  {
+        for (index, record) in reader.records().enumerate() {
             let record = record.unwrap();
             // It is safe to unwrap here because all indexes in the file are in the map from the
             // first pass
@@ -148,7 +147,6 @@ pub mod fasta_tools {
         let mut records = fasta::Reader::from_file(&input_fasta_path)
             .unwrap() // unwrap left here because this is an anyhow error
             .records();
-
 
         while let Some(Ok(record)) = records.next() {
             fasta::Writer::new(&mut scratch).write_record(&record)?;
@@ -215,19 +213,16 @@ pub mod fasta_tools {
 
         // Read the directory and collect entries
         let entries: Vec<_> = fs::read_dir(input_taxid_dir)
-        .expect("Failed to read directory")
-        .filter_map(Result::ok)
-        .collect();
+            .expect("Failed to read directory")
+            .filter_map(Result::ok)
+            .collect();
 
         entries.par_iter().for_each(|entry| {
             let path = entry.path();
             let input_fasta_path = path.to_str().unwrap();
             let input_fasta_basename = path.file_name().unwrap().to_str().unwrap();
             let output_fasta_path = format!("{}/{}", output_taxid_dir, input_fasta_basename);
-            let _ = sort_fasta_by_sequence_length(
-                input_fasta_path,
-                &output_fasta_path,
-            );
+            let _ = sort_fasta_by_sequence_length(input_fasta_path, &output_fasta_path);
         });
     }
 }
@@ -235,7 +230,6 @@ pub mod fasta_tools {
 #[cfg(test)]
 mod tests {
     use std::cmp::Ordering;
-    use std::fs::File;
 
     use tempfile::tempdir;
 
@@ -266,7 +260,8 @@ mod tests {
     fn test_sort_fasta_by_sequence_length() {
         let temp_dir = tempdir().unwrap();
         let temp_file = temp_dir.path().join("sorted.fa");
-        let output_truth_fasta_file = "test_data/fasta_tools/truth_outputs/sorted_taxids/9771.fasta";
+        let output_truth_fasta_file =
+            "test_data/fasta_tools/truth_outputs/sorted_taxids/9771.fasta";
         let input_fasta_file = "test_data/fasta_tools/inputs/unordered_taxids/9771.fasta";
 
         let temp_file_path_str = temp_file.to_str().unwrap();
@@ -277,7 +272,8 @@ mod tests {
 
     #[test]
     fn test_count_accessions_by_taxid() {
-        let output_truth_tsv_file = "test_data/fasta_tools/truth_outputs/count_accessions_by_taxid/output_counts.tsv";
+        let output_truth_tsv_file =
+            "test_data/fasta_tools/truth_outputs/count_accessions_by_taxid/output_counts.tsv";
 
         let test_truth_tsv_file = tempfile::NamedTempFile::new().unwrap();
         let test_truth_tsv_file_path_str = test_truth_tsv_file.path().to_str().unwrap();
@@ -287,7 +283,10 @@ mod tests {
             test_truth_tsv_file_path_str,
         );
 
-        assert!(util::are_files_equal(output_truth_tsv_file, test_truth_tsv_file_path_str))
+        assert!(util::are_files_equal(
+            output_truth_tsv_file,
+            test_truth_tsv_file_path_str
+        ))
     }
 
     #[test]
@@ -303,25 +302,24 @@ mod tests {
             let entry = entry.unwrap();
             let path = entry.path();
             let output_fasta_file = path.to_str().unwrap();
-            let truth_fasta_file = format!("{}/{}", output_truth_taxid_dir, path.file_name().unwrap().to_str().unwrap());
+            let truth_fasta_file = format!(
+                "{}/{}",
+                output_truth_taxid_dir,
+                path.file_name().unwrap().to_str().unwrap()
+            );
             assert!(util::are_files_equal(output_fasta_file, &truth_fasta_file));
         }
     }
 
     #[test]
     fn test_shuffle_fasta() {
-
         let input_fasta_file = "test_data/fasta_tools/inputs/nt";
 
         let temp_dir = tempdir().unwrap();
         let temp_file = temp_dir.path().join("shuffled.fa");
         let temp_file_path_str = temp_file.to_str().unwrap();
 
-
-        let _ = fasta_tools::shuffle_fasta_by_sequence_index(
-            input_fasta_file,
-            temp_file_path_str,
-        );
+        let _ = fasta_tools::shuffle_fasta_by_sequence_index(input_fasta_file, temp_file_path_str);
 
         // make sure the shuffled file contains the same records as the original
         util::compare_fasta_records_from_files(input_fasta_file, temp_file_path_str);

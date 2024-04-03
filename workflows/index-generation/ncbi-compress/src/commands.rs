@@ -3,57 +3,8 @@ pub mod commands {
 
     use bio::io::fasta;
 
-    use crate::ncbi_compress::ncbi_compress;
     use crate::fasta_tools::fasta_tools;
-
-    fn fasta_compress_w_logging_option(
-        input_fasta_path: &str,
-        writer: &mut fasta::Writer<std::fs::File>,
-        scaled: u64,
-        k: u32,
-        seed: u64,
-        similarity_threshold: f64,
-        chunk_size: usize,
-        branch_factor: usize,
-        is_protein_fasta: bool,
-        accession_count: &mut u64,
-        unique_accession_count: &mut u64,
-        enable_sequence_retention_logging: bool,
-        logging_contained_in_tree_fn: &str,
-        logging_contained_in_chunk_fn: &str,
-    ) {
-        if enable_sequence_retention_logging {
-            ncbi_compress::fasta_compress_taxid_w_logging(
-                input_fasta_path,
-                writer,
-                scaled,
-                k,
-                seed,
-                similarity_threshold,
-                chunk_size,
-                branch_factor,
-                is_protein_fasta,
-                accession_count,
-                unique_accession_count,
-                logging_contained_in_tree_fn,
-                logging_contained_in_chunk_fn,
-            );
-        } else {
-            ncbi_compress::fasta_compress_taxid(
-                input_fasta_path,
-                writer,
-                scaled,
-                k,
-                seed,
-                similarity_threshold,
-                chunk_size,
-                branch_factor,
-                is_protein_fasta,
-                accession_count,
-                unique_accession_count,
-            );
-        }
-    }
+    use crate::ncbi_compress::ncbi_compress;
 
     pub fn count_fasta_reads(input_fasta_path: &str) -> usize {
         let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
@@ -111,9 +62,6 @@ pub mod commands {
         branch_factor: usize,
         is_protein_fasta: bool,
         split_apart_taxid_dir: &str,
-        enable_sequence_retention_logging: bool,
-        logging_contained_in_tree_fn: &str,
-        logging_contained_in_chunk_fn: &str,
     ) {
         log::info!("Starting compression by taxid");
         let mut accession_count = 0;
@@ -148,17 +96,12 @@ pub mod commands {
                     "Finished breaking apart taxid {} into smaller chunks",
                     taxid
                 );
-                // remove original input fasta file since we just broke it apart into smaller chunks
-                // match fs::remove_file(input_fasta_path) {
-                //     Ok(()) => println!("input fasta deleted successfully"),
-                //     Err(e) => println!("Error deleting input fasta : {:?}", e),
-                // }
                 // recursively call fasta_compress_from_taxid_dir on the new directory containing the smaller chunks
                 for (_i, entry) in fs::read_dir(input_taxid_dir).unwrap().enumerate() {
                     let entry = entry.unwrap();
                     let path = entry.path();
                     let split_taxid_fasta_path = path.to_str().unwrap();
-                    fasta_compress_w_logging_option(
+                    ncbi_compress::fasta_compress_taxid(
                         split_taxid_fasta_path,
                         &mut writer,
                         scaled,
@@ -170,13 +113,10 @@ pub mod commands {
                         is_protein_fasta,
                         &mut accession_count,
                         &mut unique_accession_count,
-                        enable_sequence_retention_logging,
-                        logging_contained_in_tree_fn,
-                        logging_contained_in_chunk_fn,
                     );
                 }
             } else {
-                fasta_compress_w_logging_option(
+                ncbi_compress::fasta_compress_taxid(
                     input_fasta_path,
                     &mut writer,
                     scaled,
@@ -188,9 +128,6 @@ pub mod commands {
                     is_protein_fasta,
                     &mut accession_count,
                     &mut unique_accession_count,
-                    enable_sequence_retention_logging,
-                    logging_contained_in_tree_fn,
-                    logging_contained_in_chunk_fn,
                 );
             }
             log::info!("Finished compressing taxid {}", input_fasta_path);
@@ -207,14 +144,11 @@ pub mod commands {
         chunk_size: usize,
         branch_factor: usize,
         is_protein_fasta: bool,
-        enable_sequence_retention_logging: bool,
-        logging_contained_in_tree_fn: &str,
-        logging_contained_in_chunk_fn: &str,
     ) {
         let mut accession_count = 0;
         let mut unique_accession_count = 0;
         let mut writer = fasta::Writer::to_file(output_fasta_path).unwrap();
-        fasta_compress_w_logging_option(
+        ncbi_compress::fasta_compress_taxid(
             input_fasta_path,
             &mut writer,
             scaled,
@@ -226,9 +160,6 @@ pub mod commands {
             is_protein_fasta,
             &mut accession_count,
             &mut unique_accession_count,
-            enable_sequence_retention_logging,
-            logging_contained_in_tree_fn,
-            logging_contained_in_chunk_fn,
         );
     }
 
@@ -244,9 +175,6 @@ pub mod commands {
         chunk_size: usize,
         branch_factor: usize,
         is_protein_fasta: bool,
-        enable_sequence_retention_logging: bool,
-        logging_contained_in_tree_fn: &str,
-        logging_contained_in_chunk_fn: &str,
     ) {
         // compress from starting fasta file, splitting by taxid
 
@@ -269,7 +197,7 @@ pub mod commands {
             let entry = entry.unwrap();
             let path = entry.path();
             let input_fasta_path = path.to_str().unwrap();
-            fasta_compress_w_logging_option(
+            ncbi_compress::fasta_compress_taxid(
                 input_fasta_path,
                 &mut writer,
                 scaled,
@@ -281,13 +209,13 @@ pub mod commands {
                 is_protein_fasta,
                 &mut accession_count,
                 &mut unique_accession_count,
-                enable_sequence_retention_logging,
-                logging_contained_in_tree_fn,
-                logging_contained_in_chunk_fn,
             );
         }
         // shuffle output_fasta_path
-        fasta_tools::shuffle_fasta_by_sequence_index(output_fasta_path, &format!("shuffled_{}", output_fasta_path));
+        let _ = fasta_tools::shuffle_fasta_by_sequence_index(
+            output_fasta_path,
+            &format!("shuffled_{}", output_fasta_path),
+        );
     }
 }
 
@@ -313,9 +241,6 @@ mod tests {
         let chunk_size = 100;
         let branch_factor = 1000;
         let is_protein_fasta = false;
-        let enable_sequence_retention_logging = false;
-        let logging_contained_in_tree_fn = "";
-        let logging_contained_in_chunk_fn = "";
 
         commands::fasta_compress_from_fasta_skip_split_by_taxid(
             input_fasta_path,
@@ -327,16 +252,12 @@ mod tests {
             chunk_size,
             branch_factor,
             is_protein_fasta,
-            enable_sequence_retention_logging,
-            logging_contained_in_tree_fn,
-            logging_contained_in_chunk_fn,
         );
         util::compare_fasta_records_from_files(&truth_fasta_path, &test_fasta_path);
     }
 
     #[test]
     fn test_fasta_compress_from_fasta_end_to_end() {
-
         let input_fasta_path = "test_data/fasta_tools/inputs/nt";
         let truth_fasta_path = "test_data/commands/common_truth_output/nt_out.fa";
         let test_directory = tempdir().unwrap();
@@ -362,9 +283,7 @@ mod tests {
         let chunk_size = 100;
         let branch_factor = 1000;
         let is_protein_fasta = false;
-        let enable_sequence_retention_logging = false;
-        let logging_contained_in_tree_fn = "";
-        let logging_contained_in_chunk_fn = "";
+
         commands::fasta_compress_end_to_end(
             input_fasta_path,
             input_mapping_file_paths,
@@ -377,12 +296,8 @@ mod tests {
             chunk_size,
             branch_factor,
             is_protein_fasta,
-            enable_sequence_retention_logging,
-            logging_contained_in_tree_fn,
-            logging_contained_in_chunk_fn,
         );
         util::compare_fasta_records_from_files(&truth_fasta_path, &test_fasta_path);
-
     }
 
     #[test]
@@ -401,9 +316,6 @@ mod tests {
         let chunk_size = 100;
         let branch_factor = 1000;
         let is_protein_fasta = false;
-        let enable_sequence_retention_logging = false;
-        let logging_contained_in_tree_fn = "";
-        let logging_contained_in_chunk_fn = "";
 
         commands::fasta_compress_from_taxid_dir(
             input_taxid_dir,
@@ -416,9 +328,6 @@ mod tests {
             branch_factor,
             is_protein_fasta,
             temp_dir_path_str,
-            enable_sequence_retention_logging,
-            logging_contained_in_tree_fn,
-            logging_contained_in_chunk_fn,
         );
 
         util::compare_fasta_records_from_files(truth_fasta_path, &output_fasta_path);
@@ -466,10 +375,12 @@ mod tests {
         )
         .unwrap();
 
-        let mut chunk_1_reader =
-            util::create_fasta_records_from_file(format!("{}/123_1.fa", temp_dir_path_str).as_str());
-        let mut chunk_2_reader =
-            util::create_fasta_records_from_file(format!("{}/123_2.fa", temp_dir_path_str).as_str());
+        let mut chunk_1_reader = util::create_fasta_records_from_file(
+            format!("{}/123_1.fa", temp_dir_path_str).as_str(),
+        );
+        let mut chunk_2_reader = util::create_fasta_records_from_file(
+            format!("{}/123_2.fa", temp_dir_path_str).as_str(),
+        );
 
         let mut expected_chunk_1_records = vec![
             fasta::Record::with_attrs("1", None, b"ACGT"),
@@ -488,4 +399,3 @@ mod tests {
         assert_eq!(expected_chunk_2_records.sort(), chunk_2_reader.sort());
     }
 }
-

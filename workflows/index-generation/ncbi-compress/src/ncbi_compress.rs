@@ -12,72 +12,48 @@ pub mod ncbi_compress {
     use sourmash::signature::SigsTrait;
     use sourmash::sketch::minhash::KmerMinHash;
 
-    use crate::logging::logging;
-    use crate::minhashtree_w_logging::minhashtree_w_logging::{
-        MinHashTreeWithLogging, MinHashTreeWithLoggingFunctionality,
-    };
-
     pub fn containment(needle: &KmerMinHash, haystack: &KmerMinHash) -> Result<f64, SourmashError> {
         let (intersect_size, _) = needle.intersection_size(haystack)?;
         Ok(intersect_size as f64 / needle.mins().len() as f64)
     }
 
-    fn remove_accession_version(accession: &str) -> &str {
+    pub fn remove_accession_version(accession: &str) -> &str {
         accession.splitn(2, |c| c == '.').next().unwrap()
     }
 
-    pub fn split_accessions_by_taxid(
+    pub fn create_accession_to_taxid_db(
+        dir: &str,
         input_fasta_path: &str,
         mapping_file_path: Vec<String>,
-        output_dir: &str,
-    ) -> std::path::PathBuf {
-        // create a temp dir containing one file per taxid that input fasta accessions are sorted into
-        // based on taxid in the mapping files (input fasta does not have taxid in header)
-
-        log::info!("Splitting accessions by taxid");
-        // Use a random string for the rocksdb directoru name
-        // A tempdir can be removed by the operating system before we are done with it which
-        // break the rocksdb. We need a random name so we can call this function multiple
-        // times from different threads during testing.
-        let rng = rand::thread_rng();
-        let dir: String = rng
-            .sample_iter(&Alphanumeric)
-            .take(20)
-            .map(char::from)
-            .collect();
-        let accession_to_taxid = rocksdb::DB::open_default(&dir).unwrap();
-        fs::create_dir_all(&output_dir).expect("Error creating output directory");
-
+    ) -> rocksdb::DB {
         log::info!("Creating accession to taxid db");
 
-        log::info!("Creating taxid dir {:?}", output_dir);
+        let accession_to_taxid = rocksdb::DB::open_default(&dir).unwrap();
+
         let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
         // Build a trie of the accessions in the input fasta
-        reader.records().enumerate().par_bridge().for_each(|(i, result)| {
-        // records.par_iter().for_each(|(i, result)| {
-            let record = result.as_ref().unwrap();
-            let accession_id = record.id().split_whitespace().next().unwrap();
-            let accession_no_version = remove_accession_version(accession_id);
-            // RocksDB supports concurrent reads and writes so this is safe
-            accession_to_taxid.put(accession_no_version, b"").unwrap();
-            if i % 1_000_000 == 0 {
-                log::info!("  Processed {} accessions", i);
-            }
-        });
+        reader
+            .records()
+            .enumerate()
+            .par_bridge()
+            .for_each(|(i, result)| {
+                let record = result.as_ref().unwrap();
+                let accession_id = record.id().split_whitespace().next().unwrap();
+                let accession_no_version = remove_accession_version(accession_id);
+                // RocksDB supports concurrent reads and writes so this is safe
+                accession_to_taxid.put(accession_no_version, b"").unwrap();
+                if i % 1_000_000 == 0 {
+                    log::info!("  Processed {} accessions", i);
+                }
+            });
         log::info!(" Finished loading accessions");
-
         mapping_file_path.par_iter().for_each(|mapping_file_path| {
-            log::info!(" Processing mapping file {:?}", mapping_file_path);
             let reader = csv::ReaderBuilder::new()
                 .delimiter(b'\t')
                 .from_path(mapping_file_path)
                 .unwrap();
             let mut added = 0;
             reader.into_records().enumerate().for_each(|(_i, result)| {
-                // if i % 10_000 == 0 {
-                //     log::info!("  Processed {} mappings, added {}", i, added);
-                // }
-
                 let record = result.unwrap();
                 let accession = &record[0];
                 let accession_no_version = remove_accession_version(accession);
@@ -112,13 +88,39 @@ pub mod ncbi_compress {
             );
         });
         log::info!("Finished building accession to taxid db");
+        accession_to_taxid
+    }
 
+    pub fn split_accessions_by_taxid(
+        input_fasta_path: &str,
+        mapping_file_path: Vec<String>,
+        output_dir: &str,
+    ) -> std::path::PathBuf {
+        log::info!("Splitting accessions by taxid");
+        log::info!("Creating taxid dir {:?}", output_dir);
+        fs::create_dir_all(&output_dir).expect("Error creating output directory");
+        // Use a random string for the rocksdb directory name
+        // A tempdir can be removed by the operating system before we are done with it which
+        // break the rocksdb. We need a random name so we can call this function multiple
+        // times from different threads during testing.
+        let rng = rand::thread_rng();
+        let dir: String = rng
+            .sample_iter(&Alphanumeric)
+            .take(20)
+            .map(char::from)
+            .collect();
+        let accession_to_taxid =
+            create_accession_to_taxid_db(&dir, input_fasta_path, mapping_file_path);
         let outpath = write_accessions_to_taxid(input_fasta_path, &accession_to_taxid, output_dir);
         fs::remove_dir_all(dir).expect("Error removing db");
         outpath
     }
 
-    pub fn write_accessions_to_taxid(input_fasta_path: &str, accession_to_taxid: &rocksdb::DB, output_dir: &str) -> std::path::PathBuf {
+    pub fn write_accessions_to_taxid(
+        input_fasta_path: &str,
+        accession_to_taxid: &rocksdb::DB,
+        output_dir: &str,
+    ) -> std::path::PathBuf {
         log::info!("Splitting accessions by taxid");
         let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
         // Split the input fasta accessions into one file per taxid
@@ -151,170 +153,6 @@ pub mod ncbi_compress {
         Path::new(output_dir).to_path_buf()
     }
 
-    pub fn fasta_compress_taxid_w_logging(
-        input_fasta_path: &str,
-        writer: &mut fasta::Writer<std::fs::File>,
-        scaled: u64,
-        k: u32,
-        seed: u64,
-        similarity_threshold: f64,
-        chunk_size: usize,
-        branch_factor: usize,
-        is_protein_fasta: bool,
-        accession_count: &mut u64,
-        unique_accession_count: &mut u64,
-        logging_contained_in_tree_fn: &str,
-        logging_contained_in_chunk_fn: &str,
-    ) {
-        // take in a fasta file and output a fasta file with only unique accessions (based on similarity threshold)
-        let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
-        let mut tree = MinHashTreeWithLogging::new(branch_factor);
-
-        let mut records_iter = reader.records();
-        let mut chunk = records_iter
-            .borrow_mut()
-            .take(chunk_size)
-            .collect::<Vec<_>>();
-        while chunk.len() > 0 {
-            let chunk_signatures = chunk
-                .par_iter()
-                .filter_map(|r| {
-                    let record = r.as_ref().unwrap();
-                    let mut hash;
-                    if is_protein_fasta {
-                        hash = KmerMinHash::new(
-                            scaled,
-                            k,
-                            HashFunctions::murmur64_protein,
-                            seed,
-                            false,
-                            0,
-                        );
-                        hash.add_protein(record.seq()).unwrap();
-                    } else {
-                        hash = KmerMinHash::new(
-                            scaled,
-                            k,
-                            HashFunctions::murmur64_DNA,
-                            seed,
-                            false,
-                            0,
-                        );
-                        hash.add_sequence(record.seq(), true).unwrap();
-                    }
-                    // Run an initial similarity check here against the full tree, this is slow so we can parallelize it
-                    let contained_in_tree = tree.contains(&hash, similarity_threshold);
-                    match contained_in_tree {
-                        Ok(None) => {
-                            // If the tree doesn't contain the hash, we need to insert it
-                            Some((hash, record))
-                        }
-                        Ok(Some(found_accessions)) => {
-                            // log when tree already contains hash
-                            let accession_id = record.id().split_whitespace().next().unwrap();
-                            let found_accession_ids: Vec<String> = found_accessions
-                                .iter()
-                                .map(|(accession_id, _)| accession_id.to_string())
-                                .collect::<Vec<_>>();
-                            let found_accession_containments: Vec<String> = found_accessions
-                                .iter()
-                                .map(|(_, containment)| containment.to_string())
-                                .collect::<Vec<_>>();
-                            logging::write_to_file(
-                                // log discarded, retained, containment
-                                vec![
-                                    accession_id,
-                                    &found_accession_ids.join(", "),
-                                    &found_accession_containments.join(", "),
-                                ],
-                                logging_contained_in_tree_fn,
-                            );
-                            None
-                        }
-                        Err(e) => {
-                            // If there was an error, we need to log it and continue
-                            log::error!("Error checking similarity: {}", e);
-                            None
-                        }
-                    }
-                })
-                .collect::<Vec<_>>();
-
-            let mut tmp: Vec<(KmerMinHash, &str)> = Vec::with_capacity(chunk_signatures.len() / 2); // initialize with a guess of what you think the size will be
-            for (hash, record) in chunk_signatures {
-                let accession_id = record.id().split_whitespace().next().unwrap();
-                accession_count.add_assign(1); // += 1, used for logging
-                                               // Perform a faster similarity check over just this chunk because we may have similarities within a chunk
-                let similar_seqs = tmp
-                    .par_iter()
-                    .filter_map(|(other, accession_id)| {
-                        let containment_value = containment(&hash, &other).unwrap();
-                        if containment_value >= similarity_threshold {
-                            Some((accession_id.to_string(), containment_value.to_string()))
-                        } else {
-                            None
-                        }
-                    })
-                    .collect::<Vec<_>>();
-
-                let similar = !similar_seqs.is_empty();
-                if !similar {
-                    unique_accession_count.add_assign(1);
-                    tmp.push((hash, accession_id));
-                    writer.write_record(record).unwrap();
-
-                    if *unique_accession_count % 10_000 == 0 {
-                        log::info!(
-                            "Processed {} accessions, {} unique",
-                            accession_count,
-                            unique_accession_count
-                        );
-                    }
-                } else {
-                    let similar_accession_ids: Vec<String> = similar_seqs
-                        .iter()
-                        .map(|(accession_id, _)| accession_id.to_string())
-                        .collect::<Vec<_>>();
-                    let similar_accession_containments: Vec<String> = similar_seqs
-                        .iter()
-                        .map(|(_, containment)| containment.to_string())
-                        .collect::<Vec<_>>();
-                    logging::write_to_file(
-                        vec![
-                            accession_id,
-                            &similar_accession_ids.join(","),
-                            &similar_accession_containments.join(","),
-                        ],
-                        logging_contained_in_chunk_fn,
-                    );
-                }
-            }
-            for (hash, accession_id) in tmp {
-                tree.insert(hash, accession_id).unwrap();
-            }
-            chunk = records_iter
-                .borrow_mut()
-                .take(chunk_size)
-                .collect::<Vec<_>>();
-        }
-    }
-
-    // struct KMerMinHashWrapper {
-    //     sketch: KmerMinHash,
-    // }
-
-    // impl BloomSetTreeable for KMerMinHashWrapper {
-    //     fn hashes(&self) -> Vec<u64> {
-    //         self.sketch.mins()
-    //     }
-
-    //     fn containment(&self, haystack: &Self) -> f64 {
-    //         let (common, _) = self.sketch.intersection_size(&haystack.sketch).unwrap();
-    //         common as f64 / usize::max(1, self.sketch.size()) as f64
-    //     }
-    // }
-    //
-
     pub fn fasta_compress_taxid(
         input_fasta_path: &str,
         writer: &mut fasta::Writer<std::fs::File>,
@@ -335,7 +173,6 @@ pub mod ncbi_compress {
 
         // Initialize a temporary vector to store the unique items from each chunk
         let mut unique_in_chunk: Vec<(KmerMinHash, fasta::Record)> = Vec::with_capacity(chunk_size);
-        let mut unique_in_tree_and_chunk: Vec<(KmerMinHash, &fasta::Record)> = Vec::with_capacity(chunk_size);
 
         loop {
             let chunk = records_iter
@@ -351,41 +188,42 @@ pub mod ncbi_compress {
 
             // create signatures for each record in the chunk
             let chunk_signatures = chunk
-            .par_iter()
-            .map(|r| {
-                let record = r.as_ref().unwrap();
-                let mut hash;
-                if is_protein_fasta {
-                    hash = KmerMinHash::new(
-                        scaled,
-                        k,
-                        HashFunctions::murmur64_protein,
-                        seed,
-                        false,
-                        0,
-                    );
-                    hash.add_protein(record.seq()).unwrap();
-                    (hash, record.clone())
-                } else {
-                    hash = KmerMinHash::new(
-                        scaled,
-                        k,
-                        HashFunctions::murmur64_DNA,
-                        seed,
-                        false,
-                        0,
-                    );
-                    hash.add_sequence(record.seq(), true).unwrap();
-                    (hash, record.clone())
-                }
-            }).collect::<Vec<_>>();
+                .par_iter()
+                .map(|r| {
+                    let record = r.as_ref().unwrap();
+                    let mut hash;
+                    if is_protein_fasta {
+                        hash = KmerMinHash::new(
+                            scaled,
+                            k,
+                            HashFunctions::murmur64_protein,
+                            seed,
+                            false,
+                            0,
+                        );
+                        hash.add_protein(record.seq()).unwrap();
+                        (hash, record.clone())
+                    } else {
+                        hash = KmerMinHash::new(
+                            scaled,
+                            k,
+                            HashFunctions::murmur64_DNA,
+                            seed,
+                            false,
+                            0,
+                        );
+                        hash.add_sequence(record.seq(), true).unwrap();
+                        (hash, record.clone())
+                    }
+                })
+                .collect::<Vec<_>>();
 
             // we need to make sure records within the chunk arn't similar to each other before
             // we check them against the larger tree
             for (hash, record) in chunk_signatures {
-                let similar = unique_in_chunk
-                    .par_iter()
-                    .any(|(other, _record)| containment(&hash, &other).unwrap() >= similarity_threshold);
+                let similar = unique_in_chunk.par_iter().any(|(other, _record)| {
+                    containment(&hash, &other).unwrap() >= similarity_threshold
+                });
 
                 if !similar {
                     unique_in_chunk.push((hash, record));
@@ -434,22 +272,79 @@ pub mod ncbi_compress {
             // need to clear the vectors in this order because of the borrow checker
             unique_in_tree_and_chunk.clear();
             unique_in_chunk.clear();
-
-            // for hash in tmp {
-            //     tree.insert(hash);
-            // }
-
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use bio::io::fasta;
+    use sourmash::signature::SigsTrait;
     use tempfile::tempdir;
 
+    use crate::fasta_tools::fasta_tools;
     use crate::ncbi_compress::ncbi_compress;
     use crate::util::util;
     use std::fs;
+
+    #[test]
+    fn test_conversion() {
+        let taxid: u64 = 123;
+
+        let dir = tempdir().unwrap();
+        let db = rocksdb::DB::open_default(&dir).unwrap();
+        db.put(b"test", taxid.to_be_bytes()).unwrap();
+
+        let result = db.get(b"test").unwrap().unwrap();
+        let second_taxid = u64::from_be_bytes(result.as_slice().try_into().unwrap());
+
+        assert_eq!(taxid, second_taxid);
+    }
+
+    #[test]
+    fn test_remove_accession_version() {
+        let accession = "NC_000913.3";
+        let accession_no_version = ncbi_compress::remove_accession_version(accession);
+        assert_eq!(accession_no_version, "NC_000913");
+    }
+
+    #[test]
+    fn test_containment() {
+        let ksize = 31;
+        let mut haystack_hash = sourmash::sketch::minhash::KmerMinHash::new(
+            1,
+            ksize.try_into().unwrap(),
+            sourmash::encodings::HashFunctions::murmur64_DNA,
+            62,
+            false,
+            0,
+        );
+        let mut needle_hash = sourmash::sketch::minhash::KmerMinHash::new(
+            1,
+            ksize.try_into().unwrap(),
+            sourmash::encodings::HashFunctions::murmur64_DNA,
+            62,
+            false,
+            0,
+        );
+
+        let needle = util::create_random_sequence(ksize, 25);
+        let desired_containment = 0.6;
+        let haystack_w_containment =
+            util::create_sequence_w_containment(&needle, ksize, 25, desired_containment);
+        haystack_hash
+            .add_sequence(haystack_w_containment.as_bytes(), true)
+            .unwrap();
+        needle_hash.add_sequence(needle.as_bytes(), true).unwrap();
+
+        let result = ncbi_compress::containment(&needle_hash, &haystack_hash).unwrap();
+        // Assert that value is greater than 0.58 and less than 0.62
+        assert!(
+            result > (desired_containment - 0.02) && result < desired_containment + 0.02,
+            "{}",
+            format!("Containment is not between 0.58 and 0.62: {}", result)
+        );
+    }
 
     #[test]
     fn test_split_accessions_by_taxid() {
@@ -476,12 +371,9 @@ mod tests {
             test_dir_path_str,
         );
 
-        let entries = fs::read_dir(test_dir_path_str)
-        .expect("Failed to read directory");
+        let entries = fs::read_dir(test_dir_path_str).expect("Failed to read directory");
 
-        let entries: Vec<_> = entries
-        .filter_map(Result::ok)
-        .collect();
+        let entries: Vec<_> = entries.filter_map(Result::ok).collect();
 
         // Assert that the directory is not empty
         assert!(!entries.is_empty(), "Directory is empty");
@@ -495,21 +387,204 @@ mod tests {
 
             // get the test file path
             let test_file_path = format!("{}/{}", test_dir_path_str, truth_file_name);
-            util::compare_fasta_records_from_files(&test_file_path, &truth_file_path.to_str().unwrap());
+            util::compare_fasta_records_from_files(
+                &test_file_path,
+                &truth_file_path.to_str().unwrap(),
+            );
         }
     }
 
     #[test]
-    fn test_conversion() {
-        let taxid: u64 = 123;
+    fn test_create_accession_to_taxid_db() {
+        let input_fasta_path = "test_data/fasta_tools/inputs/nt";
+        let mapping_files_directory =
+            "test_data/ncbi_compress/split_accessions_by_taxid/inputs/accession2taxid";
+        let input_mapping_file_paths = vec![
+            format!("{}/{}", mapping_files_directory, "nucl_gb.accession2taxid"),
+            format!("{}/{}", mapping_files_directory, "nucl_wgs.accession2taxid"),
+            format!("{}/{}", mapping_files_directory, "pdb.accession2taxid"),
+            format!(
+                "{}/{}",
+                mapping_files_directory, "prot.accession2taxid.FULL"
+            ),
+        ];
 
         let dir = tempdir().unwrap();
-        let db = rocksdb::DB::open_default(&dir).unwrap();
-        db.put(b"test", taxid.to_be_bytes()).unwrap();
+        let db = ncbi_compress::create_accession_to_taxid_db(
+            dir.path().to_str().unwrap(),
+            input_fasta_path,
+            input_mapping_file_paths,
+        );
 
-        let result = db.get(b"test").unwrap().unwrap();
-        let second_taxid = u64::from_be_bytes(result.as_slice().try_into().unwrap());
+        let result = db.get(b"X52703").unwrap().unwrap();
+        let taxid = u64::from_be_bytes(result.as_slice().try_into().unwrap());
+        assert_eq!(taxid, 9771);
 
-        assert_eq!(taxid, second_taxid);
+        let result = db.get(b"Z14040").unwrap().unwrap();
+        let taxid = u64::from_be_bytes(result.as_slice().try_into().unwrap());
+        assert_eq!(taxid, 9913);
+    }
+
+    #[test]
+    fn test_write_accessions_to_taxid() {
+        // a little redundant compared to the split_accessions_by_taxid test
+        let input_fasta_path = "test_data/fasta_tools/inputs/nt";
+        let mapping_files_directory =
+            "test_data/ncbi_compress/split_accessions_by_taxid/inputs/accession2taxid";
+        let input_mapping_file_paths = vec![
+            format!("{}/{}", mapping_files_directory, "nucl_gb.accession2taxid"),
+            format!("{}/{}", mapping_files_directory, "nucl_wgs.accession2taxid"),
+            format!("{}/{}", mapping_files_directory, "pdb.accession2taxid"),
+            format!(
+                "{}/{}",
+                mapping_files_directory, "prot.accession2taxid.FULL"
+            ),
+        ];
+        let truth_output_dir = "test_data/ncbi_compress/split_accessions_by_taxid/truth_outputs";
+
+        let dir = tempdir().unwrap();
+        let db = ncbi_compress::create_accession_to_taxid_db(
+            dir.path().to_str().unwrap(),
+            input_fasta_path,
+            input_mapping_file_paths,
+        );
+
+        let output_dir = tempdir().unwrap();
+        let output_dir_path_str = output_dir.path().to_str().unwrap();
+        let outpath =
+            ncbi_compress::write_accessions_to_taxid(input_fasta_path, &db, output_dir_path_str);
+
+        let entries = fs::read_dir(output_dir_path_str).expect("Failed to read directory");
+
+        let entries: Vec<_> = entries.filter_map(Result::ok).collect();
+
+        // Assert that the directory is not empty
+        assert!(!entries.is_empty(), "Directory is empty");
+
+        for entry in fs::read_dir(outpath).unwrap() {
+            // get test file path
+            let entry = entry.unwrap();
+            let test_file_path = entry.path();
+            let test_file_name = test_file_path.file_name().unwrap().to_str().unwrap();
+
+            // get the truth file path
+            let truth_file_path = format!("{}/{}", truth_output_dir, test_file_name);
+            util::compare_fasta_records_from_files(
+                &test_file_path.to_str().unwrap(),
+                &truth_file_path,
+            );
+        }
+    }
+
+    #[test]
+    fn test_fasta_compress_taxid() {
+        let ksize = 31;
+        // create some sequences with containment between them
+        let seq_shortest = util::create_random_sequence(ksize, 50);
+        let seq_short = util::create_sequence_w_containment(&seq_shortest, ksize, 100, 0.65);
+        let seq_medium = util::create_sequence_w_containment(&seq_short, ksize, 250, 0.65);
+        let seq_long = util::create_sequence_w_containment(&seq_medium, ksize, 500, 0.65);
+        let seq_longest = util::create_sequence_w_containment(&seq_long, ksize, 1000, 0.65);
+
+        // create some "unique sequences" from the above sequences
+        let unique_1 = util::create_sequence_w_containment(&seq_shortest, ksize, 100, 0.2);
+        let unique_2 = util::create_sequence_w_containment(&seq_long, ksize, 600, 0.3);
+
+        // organize the sequences into what we expect to be kept and what we expect to be discarded after compression
+        let records_that_should_be_discarded = vec![
+            fasta::Record::with_attrs("seq_long", None, seq_long.as_bytes()),
+            fasta::Record::with_attrs("seq_medium", None, seq_medium.as_bytes()),
+            fasta::Record::with_attrs("seq_short", None, seq_short.as_bytes()),
+            fasta::Record::with_attrs("seq_shortest", None, seq_shortest.as_bytes()),
+        ];
+        let records_that_should_be_kept = vec![
+            fasta::Record::with_attrs("seq_longest", None, seq_longest.as_bytes()),
+            fasta::Record::with_attrs("unique_1", None, unique_1.as_bytes()),
+            fasta::Record::with_attrs("unique_2", None, unique_2.as_bytes()),
+        ];
+
+        // combine the records into a single vector and write to file
+        let combined_records: Vec<fasta::Record> = records_that_should_be_discarded
+            .iter() // Borrow each element of the first vector.
+            .cloned() // Clone each element (needed because fasta::Record likely doesn't implement Copy).
+            .chain(records_that_should_be_kept.iter().cloned()) // Do the same for the second vector.
+            .collect(); // Collect into a new Vec<fasta::Record>.
+
+        // write records to file
+        let output_path = "test.fa";
+        let mut writer = fasta::Writer::to_file(output_path).unwrap();
+        for record in combined_records {
+            writer.write_record(&record).unwrap();
+        }
+
+        // sort the fasta
+        let sorted_outpath = "test_sorted.fa";
+        let _ = fasta_tools::sort_fasta_by_sequence_length(output_path, sorted_outpath);
+
+        // compress the fasta
+        let output_fasta_path = "test_compressed_output.fa";
+        let mut writer = fasta::Writer::to_file(output_fasta_path).unwrap();
+        let scaled = 1;
+        let k = 31;
+        let seed = 62;
+        let similarity_threshold = 0.6;
+        let chunk_size = 1000;
+        let branch_factor = 100;
+        let is_protein_fasta = false;
+        let mut accession_count = 0;
+        let mut unique_accession_count = 0;
+
+        ncbi_compress::fasta_compress_taxid(
+            sorted_outpath,
+            &mut writer,
+            scaled,
+            k,
+            seed,
+            similarity_threshold,
+            chunk_size,
+            branch_factor,
+            is_protein_fasta,
+            &mut accession_count,
+            &mut unique_accession_count,
+        );
+        drop(writer);
+
+        // get the records after compression
+        let output_fasta_records = util::create_fasta_records_from_file(output_fasta_path);
+
+        // convert the records to a format that can be compared and logged easily
+        let actual_output_fasta_records = output_fasta_records
+            .into_iter()
+            .map(|record| (record.id().to_owned(), record.seq().to_owned()))
+            .collect::<Vec<_>>();
+
+        let mut expected_records_tuples = vec![];
+        for record in &records_that_should_be_kept {
+            expected_records_tuples.push((record.id().to_owned(), record.seq().to_owned()));
+        }
+
+        let mut records_that_should_be_discarded_tuples = vec![];
+        for record in &records_that_should_be_discarded {
+            records_that_should_be_discarded_tuples
+                .push((record.id().to_owned(), record.seq().to_owned()));
+        }
+
+        // verify that the records that should be kept are in the output fasta
+        for record in expected_records_tuples {
+            assert!(
+                actual_output_fasta_records.contains(&record),
+                "Record {:?} is missing from the output fasta",
+                record.0
+            );
+        }
+
+        // verify that the records that should be discarded are not in the output fasta
+        for record in &records_that_should_be_discarded_tuples {
+            assert!(
+                !actual_output_fasta_records.contains(&record),
+                "Record {:?} should not be in the output fasta",
+                record.0
+            );
+        }
     }
 }

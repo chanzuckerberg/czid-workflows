@@ -5,10 +5,8 @@ use ncbi_compress::commands::commands::{
     fasta_compress_from_taxid_dir,
 };
 use ncbi_compress::fasta_tools::fasta_tools::{
-    sort_fasta_by_sequence_length,
-    count_accessions_by_taxid,
+    count_accessions_by_taxid, shuffle_fasta_by_sequence_index, sort_fasta_by_sequence_length,
     sort_taxid_dir_by_sequence_length,
-    shuffle_fasta_by_sequence_index
 };
 use ncbi_compress::ncbi_compress::ncbi_compress::split_accessions_by_taxid;
 
@@ -18,8 +16,6 @@ pub fn main() {
     logging::init_stdout_logging();
     let matches = Command::new("ncbi-compress")
         .version("1.0")
-        .author("Your Name")
-        .about("Does awesome things with sequences")
         .subcommand(
             Command::new("sort-fasta-by-sequence-length")
                 .about("sort_fasta_by_sequence_length")
@@ -83,7 +79,7 @@ pub fn main() {
                         .long("accession-mapping-files")
                         .required(true)
                         .num_args(1..=4),
-                ) // Allows the flag to appear multiple times
+                )
                 .arg(
                     Arg::new("output_dir")
                         .help("Output directory for the split fasta files")
@@ -104,8 +100,8 @@ pub fn main() {
                     Arg::new("output-summary-path")
                         .help("output-summary-path")
                         .long("output-summary-path")
-                        .required(true)
-                )
+                        .required(true),
+                ),
         )
         .subcommand(
             Command::new("fasta-compress-from-fasta-skip-split-by-taxid")
@@ -169,22 +165,6 @@ pub fn main() {
                         .help("Is protein fasta")
                         .long("is-protein-fasta")
                         .action(clap::ArgAction::SetTrue),
-                )
-                .arg(
-                    Arg::new("enable_sequence_retention_logging")
-                        .help("Enable sequence retention logging")
-                        .long("enable-sequence-retention-logging")
-                        .action(clap::ArgAction::SetTrue),
-                )
-                .arg(
-                    Arg::new("logging_contained_in_tree_fn")
-                        .help("Logging file for containment in the tree")
-                        .long("logging-contained-in-tree-fn"),
-                )
-                .arg(
-                    Arg::new("logging_contained_in_chunk_fn")
-                        .help("Logging file for containment in the chunk")
-                        .long("logging-contained-in-chunk-fn"),
                 ),
         )
         .subcommand(
@@ -255,22 +235,6 @@ pub fn main() {
                         .help("Is protein fasta")
                         .long("is-protein-fasta")
                         .action(clap::ArgAction::SetTrue),
-                )
-                .arg(
-                    Arg::new("enable_sequence_retention_logging")
-                        .help("Enable sequence retention logging")
-                        .long("enable-sequence-retention-logging")
-                        .action(clap::ArgAction::SetTrue),
-                )
-                .arg(
-                    Arg::new("logging_contained_in_tree_fn")
-                        .help("Logging file for containment in the tree")
-                        .long("logging-contained-in-tree-fn"),
-                )
-                .arg(
-                    Arg::new("logging_contained_in_chunk_fn")
-                        .help("Logging file for containment in the chunk")
-                        .long("logging-contained-in-chunk-fn"),
                 ),
         )
         .subcommand(
@@ -348,22 +312,6 @@ pub fn main() {
                         .help("Is protein fasta")
                         .long("is-protein-fasta")
                         .action(clap::ArgAction::SetTrue),
-                )
-                .arg(
-                    Arg::new("enable_sequence_retention_logging")
-                        .help("Enable sequence retention logging")
-                        .long("enable-sequence-retention-logging")
-                        .action(clap::ArgAction::SetTrue),
-                )
-                .arg(
-                    Arg::new("logging_contained_in_tree_fn")
-                        .help("Logging file for containment in the tree")
-                        .long("logging-contained-in-tree-fn"),
-                )
-                .arg(
-                    Arg::new("logging_contained_in_chunk_fn")
-                        .help("Logging file for containment in the chunk")
-                        .long("logging-contained-in-chunk-fn"),
                 ),
         )
         .get_matches();
@@ -409,29 +357,6 @@ pub fn main() {
             let chunk_size = sub_m.get_one("chunk_size").unwrap();
             let branch_factor = sub_m.get_one("branch_factor").unwrap();
             let is_protein_fasta = sub_m.get_flag("is_protein_fasta");
-            let enable_sequence_retention_logging =
-                sub_m.get_flag("enable_sequence_retention_logging");
-
-            let mut logging_contained_in_tree_fn = "";
-            let mut logging_contained_in_chunk_fn = "";
-
-            if enable_sequence_retention_logging {
-                // log discarded, retained, containment
-                logging_contained_in_tree_fn = sub_m
-                    .get_one::<String>("logging_contained_in_tree_fn")
-                    .unwrap();
-                logging_contained_in_chunk_fn = sub_m
-                    .get_one::<String>("logging_contained_in_chunk_fn")
-                    .unwrap();
-                logging::initialize_tsv(
-                    logging_contained_in_tree_fn,
-                    vec!["discarded", "retained", "containment"],
-                );
-                logging::initialize_tsv(
-                    logging_contained_in_chunk_fn,
-                    vec!["discarded", "retained", "containment"],
-                );
-            }
 
             fasta_compress_from_fasta_skip_split_by_taxid(
                 input_fasta,
@@ -443,9 +368,6 @@ pub fn main() {
                 *chunk_size,
                 *branch_factor,
                 is_protein_fasta,
-                enable_sequence_retention_logging,
-                logging_contained_in_tree_fn,
-                logging_contained_in_chunk_fn,
             );
         }
         Some(("fasta-compress-from-taxid-dir", sub_m)) => {
@@ -458,32 +380,9 @@ pub fn main() {
             let split_apart_taxid_dir_name = sub_m
                 .get_one::<String>("split_apart_taxid_dir_name")
                 .unwrap();
-            let enable_sequence_retention_logging =
-                sub_m.get_flag("enable_sequence_retention_logging");
             let chunk_size = sub_m.get_one("chunk_size").unwrap();
             let branch_factor = sub_m.get_one("branch_factor").unwrap();
             let is_protein_fasta = sub_m.get_one("is_protein_fasta").unwrap();
-
-            let mut logging_contained_in_tree_fn = "";
-            let mut logging_contained_in_chunk_fn = "";
-
-            if enable_sequence_retention_logging {
-                // log discarded, retained, containment
-                logging_contained_in_tree_fn = sub_m
-                    .get_one::<String>("logging_contained_in_tree_fn")
-                    .unwrap();
-                logging_contained_in_chunk_fn = sub_m
-                    .get_one::<String>("logging_contained_in_chunk_fn")
-                    .unwrap();
-                logging::initialize_tsv(
-                    logging_contained_in_tree_fn,
-                    vec!["discarded", "retained", "containment"],
-                );
-                logging::initialize_tsv(
-                    logging_contained_in_chunk_fn,
-                    vec!["discarded", "retained", "containment"],
-                );
-            }
 
             fasta_compress_from_taxid_dir(
                 input_fasta_dir,
@@ -496,9 +395,6 @@ pub fn main() {
                 *branch_factor,
                 *is_protein_fasta,
                 split_apart_taxid_dir_name,
-                enable_sequence_retention_logging,
-                logging_contained_in_tree_fn,
-                logging_contained_in_chunk_fn,
             );
         }
         Some(("fasta-compress-end-to-end", sub_m)) => {
@@ -516,31 +412,9 @@ pub fn main() {
             let k = sub_m.get_one("k").unwrap();
             let seed = sub_m.get_one("seed").unwrap();
             let similarity_threshold = sub_m.get_one("similarity_threshold").unwrap();
-            let enable_sequence_retention_logging =
-                sub_m.get_flag("enable_sequence_retention_logging");
             let chunk_size = sub_m.get_one("chunk_size").unwrap();
             let branch_factor = sub_m.get_one("branch_factor").unwrap();
             let is_protein_fasta = sub_m.get_one("is_protein_fasta").unwrap();
-
-            let mut logging_contained_in_tree_fn = "";
-            let mut logging_contained_in_chunk_fn = "";
-            if enable_sequence_retention_logging {
-                // log discarded, retained, containment
-                logging_contained_in_tree_fn = sub_m
-                    .get_one::<String>("logging_contained_in_tree_fn")
-                    .unwrap();
-                logging_contained_in_chunk_fn = sub_m
-                    .get_one::<String>("logging_contained_in_chunk_fn")
-                    .unwrap();
-                logging::initialize_tsv(
-                    logging_contained_in_tree_fn,
-                    vec!["discarded", "retained", "containment"],
-                );
-                logging::initialize_tsv(
-                    logging_contained_in_chunk_fn,
-                    vec!["discarded", "retained", "containment"],
-                );
-            }
 
             fasta_compress_end_to_end(
                 input_fasta,
@@ -554,13 +428,8 @@ pub fn main() {
                 *chunk_size,
                 *branch_factor,
                 *is_protein_fasta,
-                enable_sequence_retention_logging,
-                logging_contained_in_tree_fn,
-                logging_contained_in_chunk_fn,
             );
         }
         _ => unreachable!("Command not found"),
     }
 }
-
-// #[test]
