@@ -10,26 +10,6 @@ pub mod util {
     use bio::io::fasta;
     use rand::Rng;
 
-    // Define a struct to hold both ID and sequence
-    #[derive(Eq, PartialEq)]
-    struct FastaRecord {
-        id: String,
-        seq: String,
-    }
-
-    // Implement Ord and PartialOrd for FastaRecord to enable sorting by ID
-    impl Ord for FastaRecord {
-        fn cmp(&self, other: &Self) -> Ordering {
-            // order based on id
-            self.id.cmp(&other.id)
-        }
-    }
-    impl PartialOrd for FastaRecord {
-        fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-            Some(self.cmp(other))
-        }
-    }
-
     pub fn create_fasta_records_from_file(input_fasta_path: &str) -> Vec<fasta::Record> {
         let reader = fasta::Reader::from_file(&input_fasta_path).unwrap();
         let mut records_iter = reader.records();
@@ -50,26 +30,6 @@ pub mod util {
         false
     }
 
-    pub fn are_file_records_similar(file1: &str, file2: &str) -> f64 {
-        let mut records1 = create_fasta_records_from_file(file1);
-        let mut records2 = create_fasta_records_from_file(file2);
-
-        records1.sort();
-        records2.sort();
-
-        let total_elements = records1.len();
-        let mut similar_elements = 0;
-
-        for (elem1, elem2) in records1.iter().zip(records2.iter()) {
-            if elem1 == elem2 {
-                similar_elements += 1;
-            }
-        }
-
-        let similarity = similar_elements as f64 / total_elements as f64;
-        similarity
-    }
-
     pub fn compare_fasta_records_from_files(file1: &str, file2: &str) {
         let mut records1 = create_fasta_records_from_file(file1);
         let mut records2 = create_fasta_records_from_file(file2);
@@ -78,27 +38,6 @@ pub mod util {
         records2.sort();
 
         assert_eq!(records1, records2, "Records do not match",);
-    }
-
-    pub fn write_to_file(filename: &str, content: &str) -> std::io::Result<()> {
-        let mut file = fs::File::create(filename)?;
-        println!("{}", format!("Wrote to file: {}", filename));
-        file.write_all(content.as_bytes())?;
-        Ok(())
-    }
-
-    pub fn read_contents(input_fasta_path: &str) -> String {
-        let mut file_content = String::new();
-        let mut file = std::fs::File::open(&input_fasta_path).expect("Failed to open file");
-        file.read_to_string(&mut file_content)
-            .expect("Failed to read from file");
-        file_content
-    }
-
-    pub fn read_and_write_to_file(input_fasta_path: &str, output_fasta_path: &str) {
-        let file_content = read_contents(input_fasta_path);
-        println!("{}", format!("writing to file: {}", output_fasta_path));
-        let _ = write_to_file(&output_fasta_path, &file_content);
     }
 
     pub fn create_sequence_w_containment(
