@@ -1,10 +1,7 @@
 pub mod logging {
-    use std::fs;
-    use std::fs::OpenOptions;
     use std::io::Write;
 
     use chrono::Local;
-    use csv::WriterBuilder;
     use env_logger;
     use log::LevelFilter;
 

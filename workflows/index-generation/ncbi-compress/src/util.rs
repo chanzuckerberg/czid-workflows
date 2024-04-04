@@ -2,10 +2,7 @@
 
 pub mod util {
 
-    use std::cmp::Ordering;
     use std::fs;
-    use std::io::Read;
-    use std::io::Write;
 
     use bio::io::fasta;
     use rand::Rng;

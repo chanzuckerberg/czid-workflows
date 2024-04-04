@@ -510,19 +510,22 @@ mod tests {
             .chain(records_that_should_be_kept.iter().cloned()) // Do the same for the second vector.
             .collect(); // Collect into a new Vec<fasta::Record>.
 
-        // write records to file
-        let output_path = "test.fa";
-        let mut writer = fasta::Writer::to_file(output_path).unwrap();
+        // write test records to file
+        let test_file = tempfile::NamedTempFile::new().unwrap();
+        let test_file_path = test_file.path().to_str().unwrap();
+        let mut writer = fasta::Writer::to_file(test_file_path).unwrap();
         for record in combined_records {
             writer.write_record(&record).unwrap();
         }
 
         // sort the fasta
-        let sorted_outpath = "test_sorted.fa";
-        let _ = fasta_tools::sort_fasta_by_sequence_length(output_path, sorted_outpath);
+        let test_sorted_file = tempfile::NamedTempFile::new().unwrap();
+        let test_sorted_path = test_sorted_file.path().to_str().unwrap();
+        let _ = fasta_tools::sort_fasta_by_sequence_length(test_file_path, test_sorted_path);
 
         // compress the fasta
-        let output_fasta_path = "test_compressed_output.fa";
+        let output_fasta_path = tempfile::NamedTempFile::new().unwrap();
+        let output_fasta_path = output_fasta_path.path().to_str().unwrap();
         let mut writer = fasta::Writer::to_file(output_fasta_path).unwrap();
         let scaled = 1;
         let k = 31;
@@ -535,7 +538,7 @@ mod tests {
         let mut unique_accession_count = 0;
 
         ncbi_compress::fasta_compress_taxid(
-            sorted_outpath,
+            test_sorted_path,
             &mut writer,
             scaled,
             k,
