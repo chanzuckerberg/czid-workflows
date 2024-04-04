@@ -20,7 +20,6 @@ workflow index_generation {
         Boolean skip_generate_nr_assets = false
         Boolean skip_nuc_compression = false
         Boolean skip_generate_nt_assets = false
-        Boolean logging_enabled = false
 
         String? provided_nt
         String? provided_nr
@@ -58,7 +57,7 @@ workflow index_generation {
             }
         }
 
-        
+
         File? unzipped_file = if defined(file) then select_first([UnzipFile.file, file]) else None
     }
     File unzipped_accession2taxid_nucl_gb = select_first([unzipped_file[0]])
@@ -99,7 +98,6 @@ workflow index_generation {
             k = nr_compression_k,
             scaled = nr_compression_scaled,
             similarity_threshold = nr_compression_similarity_threshold,
-            logging_enabled = logging_enabled,
             docker_image_id = docker_image_id,
         }
         call ShuffleDatabase as ShuffleNR {
@@ -120,7 +118,6 @@ workflow index_generation {
             k = nt_compression_k,
             scaled = nt_compression_scaled,
             similarity_threshold = nt_compression_similarity_threshold,
-            logging_enabled = logging_enabled,
             docker_image_id = docker_image_id,
         }
         call ShuffleDatabase as ShuffleNT {
@@ -209,20 +206,11 @@ workflow index_generation {
         File changed_taxa_log = GenerateIndexLineages.changed_taxa_log
         File deleted_taxa_log = GenerateIndexLineages.deleted_taxa_log
         File new_taxa_log = GenerateIndexLineages.new_taxa_log
-        File? nr_contained_in_tree = CompressNR.contained_in_tree
-        File? nr_contained_in_chunk = CompressNR.contained_in_chunk
-        File? nt_contained_in_tree = CompressNT.contained_in_tree
-        File? nt_contained_in_chunk = CompressNT.contained_in_chunk
         File? compressed_nr = CompressNR.compressed
         File? compressed_nt = CompressNT.compressed
         File? shuffled_nt = ShuffleNT.shuffled
         File? shuffled_nr = ShuffleNR.shuffled
-
         File accession2taxid_db = GenerateIndexAccessions.accession2taxid_db
-    #     Directory? nt_split_apart_taxid_dir = CompressNT.split_apart_taxid_dir
-    #     Directory? nt_sorted_taxid_dir = CompressNT.sorted_taxid_dir
-    #     Directory? nr_split_apart_taxid_dir = CompressNR.split_apart_taxid_dir
-    #     Directory? nr_sorted_taxid_dir = CompressNR.sorted_taxid_dir
     }
 }
 
@@ -486,11 +474,10 @@ task CompressDatabase {
         Int k
         Int scaled
         Float similarity_threshold
-        Boolean logging_enabled
         String docker_image_id
     }
 
-    command <<< 
+    command <<<
         set -euxo pipefail
 
         READS_BY_TAXID_PATH=reads_by_taxid
@@ -510,33 +497,13 @@ task CompressDatabase {
 
         mkdir $SPLIT_APART_TAXID_DIR_NAME
 
-        if [ "~{logging_enabled}" == "true" ]; then
-            ncbi-compress fasta-compress-from-taxid-dir ~{if database_type == "nr" then "--is-protein-fasta" else ""} \
-                --input-fasta-dir $SORTED_TAXID_DIR_NAME \
-                --output-fasta ~{database_type}_compressed.fa \
-                --k ~{k} \
-                --scaled ~{scaled} \
-                --similarity-threshold ~{similarity_threshold} \
-                --split-apart-taxid-dir-name $SPLIT_APART_TAXID_DIR_NAME \
-                --enable-sequence-retention-logging \
-                --logging-contained-in-tree-fn ~{database_type}_contained_in_tree.tsv \
-                --logging-contained-in-chunk-fn ~{database_type}_contained_in_chunk.tsv
-        else
-            ncbi-compress fasta-compress-from-taxid-dir  ~{if database_type == "nr" then "--is-protein-fasta" else ""} \
-                --input-fasta-dir $SORTED_TAXID_DIR_NAME \
-                --output-fasta ~{database_type}_compressed.fa \
-                --k ~{k} \
-                --scaled ~{scaled} \
-                --similarity-threshold ~{similarity_threshold} \
-                --split-apart-taxid-dir-name $SPLIT_APART_TAXID_DIR_NAME
-        fi
-
-        # shuffle compressed fasta to distribute the accessions evenly across the file
-        # this is important for spreading SC2 accessions (and any other large taxid) over
-        # the chunked minimap2 and diamond indexes which impacts alignment time.
-        ncbi-compress shuffle-fasta \
-            --input-fasta ~{database_type}_compressed.fa \
-            --output-fasta ~{database_type}_compressed_shuffled.fa
+        ncbi-compress fasta-compress-from-taxid-dir  ~{if database_type == "nr" then "--is-protein-fasta" else ""} \
+            --input-fasta-dir $SORTED_TAXID_DIR_NAME \
+            --output-fasta ~{database_type}_compressed.fa \
+            --k ~{k} \
+            --scaled ~{scaled} \
+            --similarity-threshold ~{similarity_threshold} \
+            --split-apart-taxid-dir-name $SPLIT_APART_TAXID_DIR_NAME
 
         # Remove to save space, intermediate files are not cleaned up within a run
         rm -rf $READS_BY_TAXID_PATH
@@ -544,10 +511,7 @@ task CompressDatabase {
     >>>
 
     output {
-        File compressed = "~{database_type}_compressed_shuffled.fa"
-        File? contained_in_tree = "~{database_type}_contained_in_tree.tsv"
-        File? contained_in_chunk = "~{database_type}_contained_in_chunk.tsv"
-        # Directory sorted_taxid_dir = "sorted_taxid_~{database_type}"
+        File compressed = "~{database_type}_compressed.fa"
     }
 
     runtime {
