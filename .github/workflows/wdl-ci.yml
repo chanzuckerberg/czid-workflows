@@ -137,15 +137,4 @@ jobs:
           echo "TAG=${TAG}" >> $GITHUB_ENV
       - name: run cargo tests
         run: |
-          # explicitly block EC2 IMDS endpoint to work around awscli issue:
-          # https://github.com/aws/aws-cli/issues/5234#issuecomment-635459464
-          # https://github.com/aws/aws-cli/issues/5262
-          sudo ip route add blackhole 169.254.169.254
-
-          source /etc/profile
-          sudo apt-get -qq update
-          sudo apt-get -qq install --yes jq moreutils make virtualenv zip unzip httpie git shellcheck
-
-          export DOCKER_IMAGE_ID="${IMAGE_URI}:${TAG}"
-
           make cargo-test-index-generation
