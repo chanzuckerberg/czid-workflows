@@ -1,3 +1,6 @@
+// this code is unused at this point, leaving in case we want to recover this later
+// there was an issue with less containment being found than expected
+
 use rayon::prelude::*;
 
 pub struct BloomSet<const N: usize> {
