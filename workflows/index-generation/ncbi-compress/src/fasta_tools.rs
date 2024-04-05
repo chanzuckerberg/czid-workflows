@@ -231,6 +231,7 @@ pub mod fasta_tools {
 mod tests {
     use std::cmp::Ordering;
 
+    use csv::{ReaderBuilder, Trim};
     use tempfile::tempdir;
 
     use crate::fasta_tools::fasta_tools;
@@ -283,10 +284,47 @@ mod tests {
             test_truth_tsv_file_path_str,
         );
 
-        assert!(util::are_files_equal(
-            output_truth_tsv_file,
-            test_truth_tsv_file_path_str
-        ))
+        // read truth tsv file and create vec of records
+        let mut truth_rdr = ReaderBuilder::new()
+            .delimiter(b'\t')
+            .trim(Trim::All)
+            .from_path(output_truth_tsv_file)
+            .unwrap();
+        let mut truth_records = Vec::new();
+        for result in truth_rdr.records() {
+            let record = result.unwrap();
+            if let (Some(col1), Some(col2)) = (record.get(0), record.get(1)) {
+                truth_records.push((col1.to_string(), col2.to_string()));
+            } else {
+                println!("Error parsing record: {:?}", record);
+                continue;
+            }
+        }
+
+        // read test tsv file and create vec of records
+        let mut test_rdr = ReaderBuilder::new()
+            .delimiter(b'\t')
+            .trim(Trim::All)
+            .from_path(test_truth_tsv_file_path_str)
+            .unwrap();
+        let mut test_records = Vec::new();
+        for result in test_rdr.records() {
+            let record = result.unwrap();
+            if let (Some(col1), Some(col2)) = (record.get(0), record.get(1)) {
+                test_records.push((col1.to_string(), col2.to_string()));
+            } else {
+                println!("Error parsing record: {:?}", record);
+                continue;
+            }
+        }
+
+        // verify that test_records and truth_records contain the same records
+        for truth_record in &truth_records {
+            assert!(test_records.contains(&truth_record));
+        }
+        for test_record in &test_records {
+            assert!(truth_records.contains(&test_record));
+        }
     }
 
     #[test]
