@@ -107,3 +107,45 @@ jobs:
           export DOCKER_IMAGE_ID="${IMAGE_URI}:${TAG}"
 
           make test-${{ matrix.workflow_dir }}
+
+  cargo-test:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: docker login ghcr.io
+        uses: docker/login-action@v1
+        with:
+            registry: ghcr.io
+            username: ${{ github.repository_owner }}
+            password: ${{ secrets.GITHUB_TOKEN }}
+      - name: docker build + push to ghcr.io
+        run: |
+          TAG=$(git describe --long --tags --always --dirty)
+          IMAGE_NAME=czid-index-generation-public
+          IMAGE_URI="ghcr.io/${GITHUB_REPOSITORY}/${IMAGE_NAME}"
+
+          CACHE_FROM=""; docker pull "$IMAGE_URI" && CACHE_FROM="--cache-from $IMAGE_URI"
+          ./scripts/docker-build.sh "workflows/index-generation" --tag "${IMAGE_URI}:${TAG}" $CACHE_FROM \
+            || ./scripts/docker-build.sh "workflows/index-generation" --tag "${IMAGE_URI}:${TAG}"
+          docker push "${IMAGE_URI}:${TAG}"
+          if [[ ${GITHUB_REF##*/} == "main" ]]; then
+            docker tag "${IMAGE_URI}:${TAG}" "${IMAGE_URI}:latest"
+            docker push "${IMAGE_URI}:latest"
+          fi
+
+          echo "IMAGE_URI=${IMAGE_URI}" >> $GITHUB_ENV
+          echo "TAG=${TAG}" >> $GITHUB_ENV
+      - name: run cargo tests
+        run: |
+          # explicitly block EC2 IMDS endpoint to work around awscli issue:
+          # https://github.com/aws/aws-cli/issues/5234#issuecomment-635459464
+          # https://github.com/aws/aws-cli/issues/5262
+          sudo ip route add blackhole 169.254.169.254
+
+          source /etc/profile
+          sudo apt-get -qq update
+          sudo apt-get -qq install --yes jq moreutils make virtualenv zip unzip httpie git shellcheck
+
+          export DOCKER_IMAGE_ID="${IMAGE_URI}:${TAG}"
+
+          make cargo-test-index-generation

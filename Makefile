@@ -56,14 +56,14 @@ release:
 	scripts/release.sh
 
 test-%: ## run miniwdl step tests eg. make test-short-read-mngs
-	@if [ "$*" = "index-generation" ]; then \
-		echo "Running cargo test for index-generation"; \
-		(cd workflows/$*/ncbi-compress && cargo test); \
-	fi
 	pytest -v -n $$(( $$(nproc) - 1)) --durations=0 --tb=short --log-cli-level=11 workflows/$*/test
 
 integration-test-%: ## run miniwdl integration tests eg. make integration-test-short-read-mngs
 	pytest -v -n $$(( $$(nproc) - 1)) --durations=0 --tb=short --log-cli-level=11 workflows/$*/integration_test
+
+.PHONY: cargo-test-index-generation
+cargo-test-index-generation: ## run cargo test for index-generation
+	(cd workflows/index-generation/ncbi-compress && cargo test)
 
 .PHONY: test
 test: ## run miniwdl step tests for all workflows eg. make test
