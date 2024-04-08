@@ -1,3 +1,5 @@
+// Wrappers around common actions / groups of actions for the CLI
+
 pub mod commands {
     use std::fs;
 
