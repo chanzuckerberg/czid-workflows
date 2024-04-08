@@ -28,6 +28,8 @@ else
     exit 1
 fi
 
+TAG="amr-v1.4.1-branch-smngsassembly"
+
 if [[ $( git branch --show-current) != "main" ]]; then 
     COMMIT=$(git rev-parse --short HEAD)
     TAG=$TAG"-$COMMIT"
