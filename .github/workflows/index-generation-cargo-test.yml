@@ -2,8 +2,8 @@ name: Index Generation NCBI Compress cargo tests
 
 on:
   push:
-    # paths:
-    #   - 'workflows/index-generation/ncbi-compress/*'
+    paths:
+      - 'workflows/index-generation/ncbi-compress/**'
 
 env:
   LC_ALL: C.UTF-8
