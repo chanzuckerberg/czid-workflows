@@ -4,6 +4,12 @@ CZ ID's AMR workflow implements the [Resistance Gene Identifier (RGI)](https://g
 
 # Changelog
 
+## 1.4.2 - 2024-04-08
+
+### Fixed
+
+- Fixed an issue that caused assembly to fail for RawSample inputs.
+
 ## 1.4.1 - 2024-04-07
 
 ### Changed
