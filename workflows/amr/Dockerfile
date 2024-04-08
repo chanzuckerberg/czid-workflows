@@ -21,7 +21,11 @@ COPY requirements.txt requirements.txt
 RUN pip3 install -r requirements.txt
 
 # RGI version 6.0.3
-RUN pip3 install git+https://github.com/lvreynoso/rgi.git@a14f8dd5457a6220a06024b6aebd05e8cb6181d7
+COPY rgi_bam_parsing.patch rgi_bam_parsing.patch
+RUN curl -L https://github.com/arpcard/rgi/archive/refs/tags/6.0.3.tar.gz | tar xz && \
+    cd rgi-6.0.3/ && \
+    git apply ../rgi_bam_parsing.patch && \
+    pip3 install .
 
 # Install SPAdes
 RUN curl -LO https://github.com/ablab/spades/releases/download/v3.11.1/SPAdes-3.11.1-Linux.tar.gz && \
