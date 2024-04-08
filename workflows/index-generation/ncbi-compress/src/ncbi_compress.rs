@@ -1,3 +1,5 @@
+// contains compression code for NCBI data and code to split accessions by taxid
+
 pub mod ncbi_compress {
     use std::ops::AddAssign;
     use std::path::Path;

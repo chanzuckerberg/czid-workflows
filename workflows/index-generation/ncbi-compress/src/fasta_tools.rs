@@ -1,3 +1,5 @@
+// Module for working with fasta files, including low memory sorting by sequence length and shuffling fasta.
+
 pub mod fasta_tools {
     use std::collections::HashMap;
     use std::fs;
