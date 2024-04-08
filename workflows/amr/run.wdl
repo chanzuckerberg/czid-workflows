@@ -61,7 +61,7 @@ workflow amr {
             input:
             reduplicated_reads = RunRedupRaw.redups_fa,
             min_contig_length = min_contig_length,
-            docker_image_id = docker_image_id,
+            docker_image_id = host_filtering_docker_image_id,
         }
     }
 
@@ -621,7 +621,6 @@ task RunSpades {
     {
         echo ";ASSEMBLY FAILED" > spades/contigs.fasta
         echo ";ASSEMBLY FAILED" > spades/scaffolds.fasta
-        python3 /usr/local/bin/log_assembly_fail.py "spades/spades.log" "spades/warnings.log"
         exit 0
     }
     trap handle_failure ERR
@@ -641,7 +640,6 @@ task RunSpades {
     output { 
         File contigs = "spades/contigs.fasta"
         File? scaffolds = "spades/scaffolds.fasta"
-        File? failure_log = "spades_failure.json"
     }
     runtime { 
         docker: docker_image_id
