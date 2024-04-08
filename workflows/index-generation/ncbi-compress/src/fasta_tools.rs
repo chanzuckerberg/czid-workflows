@@ -70,6 +70,7 @@ pub mod fasta_tools {
                 .open(&output_tsv_path)?;
 
             writer.write_all(format!("{}\t{}\n", taxid, records.count()).as_bytes())?;
+            writer.flush()?;
         }
         Ok(())
     }
@@ -288,6 +289,7 @@ mod tests {
         let mut truth_rdr = ReaderBuilder::new()
             .delimiter(b'\t')
             .trim(Trim::All)
+            .has_headers(false)
             .from_path(output_truth_tsv_file)
             .unwrap();
         let mut truth_records = Vec::new();
@@ -305,6 +307,7 @@ mod tests {
         let mut test_rdr = ReaderBuilder::new()
             .delimiter(b'\t')
             .trim(Trim::All)
+            .has_headers(false)
             .from_path(test_truth_tsv_file_path_str)
             .unwrap();
         let mut test_records = Vec::new();

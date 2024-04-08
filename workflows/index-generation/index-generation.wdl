@@ -495,7 +495,7 @@ task CompressDatabase {
             --input-taxid-dir $READS_BY_TAXID_PATH \
             --output-taxid-dir $SORTED_TAXID_DIR_NAME
 
-        mkdir $SPLIT_APART_TAXID_DIR_NAME
+        mkdir $SPLIT_APART_TAXID_DIR_NAME # this is needed to split up large taxids into smaller chunks to reduce memory usage
 
         ncbi-compress fasta-compress-from-taxid-dir  ~{if database_type == "nr" then "--is-protein-fasta" else ""} \
             --input-fasta-dir $SORTED_TAXID_DIR_NAME \
