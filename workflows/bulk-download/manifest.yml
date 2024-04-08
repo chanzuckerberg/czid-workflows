@@ -1,0 +1,50 @@
+workflow_name: bulk-download
+specification_language: WDL
+description: Generate bulk downloads for the CZID web application
+entity_inputs:
+  consensus_genomes:
+    name: Consensus Genomes
+    description: Consensus genomes to bulk download
+    entity_type: consensus_genome
+    multivalue: True
+    required: False
+raw_inputs:
+  aggregate_action:
+    name: Aggregate Action
+    description: Concatenate or zip files to aggregate files to create the bulk download
+    type: str
+    values:
+      - concatenate
+      - zip
+  bulk_download_type:
+    name: Bulk Download Type
+    description: The type of bulk download this represents
+    type: str
+    values:
+      - consensus_genome
+      - consensus_genome_intermediate_output_files
+input_loaders:
+  - name: bulk_download
+    version: ">=0.0.1"
+    inputs:
+      consensus_genomes: ~
+      bulk_download_type: ~
+    outputs:
+      files: ~
+  - name: passthrough
+    version: ">=0.0.1"
+    inputs:
+      aggregate_action: ~
+    outputs:
+      aggregate_action: action
+  - name: czid_docker
+    version: ">=0.0.1"
+    outputs:
+      docker_image_id: ~
+output_loaders:
+  - name: bulk_download
+    version: ">=0.0.1"
+    inputs:
+      bulk_download_type: ~
+    workflow_outputs:
+      file: "bulk_download.file"

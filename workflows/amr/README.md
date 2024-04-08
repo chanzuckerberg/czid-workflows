@@ -4,6 +4,12 @@ CZ ID's AMR workflow implements the [Resistance Gene Identifier (RGI)](https://g
 
 # Changelog
 
+## 1.4.1 - 2024-04-07
+
+### Changed
+
+- Docker build now uses the official RGI 6.0.3 release and applies a patch, instead of installing from a fork.
+
 ## 1.4.0 - 2024-02-26
 
 ### Added

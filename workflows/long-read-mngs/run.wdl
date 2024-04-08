@@ -1553,7 +1553,7 @@ workflow czid_long_read_mngs {
             nt_top_m8 = FindTopHitsNT.nt_top_m8,
             contig_in_contig_coverage_json = GenerateCoverageStats.contig_coverage_json,
             contig_in_contig_stats_json = GenerateContigStats.contig_stats_json,
-            contig_in_contigs_fasta = RemoveUnmappedContigs.mapped_contigs_fasta,
+            contig_in_contigs_fasta = RunAssembly.assembled_fasta,
             nt_info_db = nt_info_db,
             docker_image_id = docker_image_id,
     }
