@@ -378,7 +378,6 @@ mod tests {
         // Assert that the directory is not empty
         assert!(!entries.is_empty(), "Directory is empty");
 
-        // for entry in fs::read_dir(test_dir_path_str).unwrap() {
         for entry in fs::read_dir(truth_output_dir).unwrap() {
             // get test file path
             let entry = entry.unwrap();
