@@ -42,3 +42,40 @@ used to generate nt_loc.marisa and nr_loc.marisa
 
 #### **generate_lineage_csvs.py**
 used to generate versioned-taxid-lineages.csv file used to populate taxon_lineage database table, also generates changelogs for deleted taxa, changed taxa, and new taxa. 
+
+### Debugging Notes:
+* usually you need to launch an EC2 instance to test this workflow out at scale: `aegea launch --instance-type i3.16xlarge --no-provision-user --storage /=128GB --iam-role idseq-on-call <instance-name>`
+* install rust: `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
+* install python:
+  ```
+  curl -O https://repo.anaconda.com/archive/Anaconda3-2023.09-0-Linux-x86_64.sh
+  chmod u+x Anaconda3-2023.09-0-Linux-x86_64.sh
+  ./Anaconda3-2023.09-0-Linux-x86_64.sh
+  ```
+  
+* if running miniwdl:
+     make sure the version is 1.5.1 (`pip3 install miniwdl==1.5.1`) 
+    * downgrade importlib-metadata: `pip3 install importlib-metadata==4.13.0`
+      
+* if building the images on an EC2 machine:
+    Follow [these instructions](https://docs.docker.com/engine/install/ubuntu/) to update docker before building
+
+    * change docker build directory to be on /mnt:
+        ```
+        sudo systemctl stop docker
+        sudo mv /var/lib/docker /mnt/docker
+        sudo ln -s /mnt/docker /var/lib/docker
+        sudo systemctl start docker
+        ```
+        
+    * add the current user to the docker group: 
+        * `sudo usermod -aG docker $USER`
+        * logout and login to reflect new group status
+          
+* build index-generation docker image: `make rebuild WORKFLOW=index-generation`
+* run and exec into container: `docker run -v /mnt:/mnt --rm -it index-generation:latest bash`
+* to run a certain task in index-geneation.wdl with miniwdl:
+* `miniwdl run index-generation.wdl --task GenerateLocDB --input generate_loc_db_input.json`
+
+
+  
