@@ -2,8 +2,7 @@
 
 ### install: 
 1. [install rust and cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html)
-2. install ncbi-compress:
-3. `cargo build --release` (only necessary if you want a release vesion of the code that is more performant)
+2. install ncbi-compress: `cargo build --release` (only necessary if you want a release vesion of the code that is more performant)
 
 ### test:
 * to run all tests: `cargo test  -- --nocapture`
