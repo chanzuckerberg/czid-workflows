@@ -19,15 +19,18 @@ workflow code to create the following assets:
 * nt_info.marisa and nr_info.marisa:
   * index to quickly go from accession ID to accession name, sequence length, and offset information from either NT and NR
   * mainly used to generate JSON files for coverage viz to be consumed by the web app.
-* Minimap indexes - chunked minimap index for non host alignment for NT
-* diamond indexes - chunked diamond index for non host alignment for NR
-* accession2taxid.marisa - index to quickly go from accession ID to taxon ID - used for determining the optimal taxon assignment for each read from the alignment
-   results
+* Minimap indexes:
+  * chunked minimap index - used for non host alignment to generate hits to NT
+* diamond indexes:
+  * chunked diamond index - used for non host alignment to generate hits to NR
+* accession2taxid.marisa:
+  * index to quickly go from accession ID to taxon ID
+  * used for determining the optimal taxon assignment for each read from hits generated from minimap and diamond.
 * taxid-lineages.marisa:
   * index used to go from tax ID to taxonomy IDs (taxid for species, genus, family)
   * used for determining the optimal taxon assignment for each read from the alignment
    results (calling hits), for example if a read aligns to multiple distinct references, we need to assess at which level in the taxonomic hierarchy the multiple alignments reach consensus.
-  * We also use this file for generating taxon counts.
+  * We also use this file for generating taxon counts in the postprocess step of mNGSs
 * deuterostome_taxids.txt - used to filter out eukaryotic sequences which helps narrow down taxon_counts to microbial DNA (bacteria, viruses, fungi, and parasites).
 * taxon_ignore_list.txt - taxa that we would like to ignore (synthetic, constructs, plasmids, vectors, etc) in taxon_counts from non host alignment
 
@@ -38,7 +41,7 @@ compression code written in rust to remove redundant sequences from NT and NR
 #### **helpful_for_analysis**
 jupyter notebooks used for helpful common analysis steps including:
 * querying NCBI for an accession and lineage (used to investigate reads in the "all taxa with neither family nor genus classification" report for mNGS)
-* querying marisa trie files - notebook to easily query all marisa trie files generated from index generation workflow
+* querying marisa trie files - notebook to easily query all marisa trie files generated from index generation workflow above.
 * compare non host alignment times between two projects - this was used to benchmark how long it took to do non host alignment on old and new indexes.
 * generate taxon lineage changelog for a sample report - get a readout on which reads from a sample report have a taxon / lineage change between new and old index runs. Used for comp bio validation purposes mainly.
 * checking sequence retention for different index compression runs - this notebook was handy for running multiple compression runs and summarizing which reads were dropped, helpful for early analysis and benchmarking of compression workflow.
@@ -55,7 +58,10 @@ used to generate nt_loc.marisa and nr_loc.marisa
 #### **generate_lineage_csvs.py**
 used to generate versioned-taxid-lineages.csv file used to populate taxon_lineage database table, also generates changelogs for deleted taxa, changed taxa, and new taxa.
 
-### Debugging Notes:
+### Updating The Webapp to use the new Index Generation Assets:
+  * Follow the wiki page [here](https://github.com/chanzuckerberg/czid-web-private/wiki/%5BDEV%5D-How-to-update-the-webapp-to-use-new-index-assets-and-taxon_lineage-table-update) to update the webapp to use new assets and switch over all projects to start pinning the new index version.
+
+### Debugging Notes for EC2:
 * usually you need to launch an EC2 instance to test this workflow out at scale: `aegea launch --instance-type i3.16xlarge --no-provision-user --storage /=128GB --iam-role idseq-on-call <instance-name>`
 * install rust: `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
 * install python:
@@ -88,6 +94,3 @@ used to generate versioned-taxid-lineages.csv file used to populate taxon_lineag
 * run and exec into container: `docker run -v /mnt:/mnt --rm -it index-generation:latest bash`
 * to run a certain task in index-geneation.wdl with miniwdl:
 * `miniwdl run index-generation.wdl --task GenerateLocDB --input generate_loc_db_input.json`
-
-
-
