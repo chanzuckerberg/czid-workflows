@@ -25,7 +25,7 @@ workflow code to create the following assets:
   * chunked diamond index - used for non host alignment to generate hits to NR
 * accession2taxid.marisa:
   * index to quickly go from accession ID to taxon ID
-  * used for determining the optimal taxon assignment for each read from hits generated from minimap and diamond.
+  * used for determine taxon assignment for each read from hits generated from minimap and diamond.
 * taxid-lineages.marisa:
   * index used to go from tax ID to taxonomy IDs (taxid for species, genus, family)
   * used for determining the optimal taxon assignment for each read from the alignment
