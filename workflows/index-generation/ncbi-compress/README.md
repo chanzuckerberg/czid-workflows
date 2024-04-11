@@ -8,7 +8,10 @@
 * to run all tests: `cargo test  -- --nocapture`
 * to run only tests for one file: `cargo test util -- --nocapture`
 
+
 ### usage:
+
+[Lucidchart](https://lucid.app/lucidchart/19dd8822-fec8-4c9b-b0cb-8199ea0c9ae4/edit?viewport_loc=-6806%2C-2082%2C13130%2C6583%2C0_0&invitationId=inv_275ac20b-9677-470f-8238-d10208629a4c) for algorithm overview with compute resources
 
 #### sorting:
 
@@ -57,7 +60,7 @@ target/release/ncbi-compress fasta-compress-from-taxid-dir \
     --k 31 \
     --scaled 1000 \
     --similarity-threshold 0.9 \
-    --split-apart-taxid-dir-name split_nt_2 # this is used for if we have any taxids with accessions over 
+    --split-apart-taxid-dir-name split_nt_2 # this is used for if we have any taxids with accessions over
 
 # compress single fasta
 target/release/ncbi-compress fasta-compress-from-fasta-skip-split-by-taxid \
