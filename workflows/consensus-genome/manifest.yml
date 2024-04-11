@@ -45,6 +45,26 @@ raw_inputs:
     description: CZID's snapshot version of NCBI's index i.e. '2021-01-22'
     type: str
     required: True
+  accession_name:
+    name: Accession Name
+    description: accession name
+    type: str
+    required: False
+  accession_id:
+    name: Accession ID
+    description: accession id
+    type: str
+    required: False
+  taxon: 
+    name: Taxon
+    description: taxon
+    type: str
+    required: False
+  taxon_level:
+    name: Taxon Level
+    description: taxon level
+    type: str
+    required: False
 input_loaders:
   - name: sample
     version: ">=0.0.1"
