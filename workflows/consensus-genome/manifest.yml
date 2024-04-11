@@ -55,9 +55,9 @@ raw_inputs:
     description: accession id
     type: str
     required: False
-  taxon: 
+  taxon_name: 
     name: Taxon
-    description: taxon
+    description: taxon name
     type: str
     required: False
   taxon_level:
