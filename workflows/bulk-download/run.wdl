@@ -9,6 +9,7 @@ workflow bulk_download {
     input {
         String action
         Array[BulkDownloads] files
+        String concatenated_output_name = "concatenated.txt"
         String docker_image_id = "czid-bulk-download"
     }
 
@@ -25,6 +26,7 @@ workflow bulk_download {
         call concatenate { 
             input:
                 files = rename.file,
+                concatenated_output_name = concatenated_output_name,
                 docker_image_id = docker_image_id
         }
     }
@@ -63,14 +65,15 @@ task rename {
 task concatenate {
     input {
         String docker_image_id
+        String concatenated_output_name = "concatenated.txt"
         Array[File] files
     }
     command <<<
         set -euxo pipefail
-        cat ~{sep=" " files} > concatenated.txt
+        cat ~{sep=" " files} > "~{concatenated_output_name}"
     >>>
     output {
-        File file = "concatenated.txt"
+        File file = "~{concatenated_output_name}"
     }
     runtime {
         docker: docker_image_id
@@ -85,7 +88,14 @@ task zip {
     command <<<
         set -euxo pipefail
         # Don't store full path of original files in the .zip file
-        zip --junk-paths result.zip ~{sep=" " files}
+        if [[ "~{select_first(files)}" == *.zip ]]; then
+            mkdir zip_folders
+            for f in ~{sep=" " files}; do unzip "$f" -d zip_folders/$(basename "${f%.zip}"); done
+            cd zip_folders
+            zip ../result.zip *
+        else
+            zip --junk-paths result.zip ~{sep=" " files}
+        fi 
     >>>
     output {
         File file = "result.zip"
