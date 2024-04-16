@@ -65,7 +65,7 @@ task rename {
 task concatenate {
     input {
         String docker_image_id
-        String concatenated_output_name
+        String concatenated_output_name = "concatenated.txt"
         Array[File] files
     }
     command <<<
