@@ -28,6 +28,14 @@ else
     exit 1
 fi
 
+if [[ $WORKFLOW_NAME == "long-read-mngs" ]]; then
+    TAG=$WORKFLOW_NAME"-v0.7.6-branch-speciehit"
+fi
+
+if [[ $WORKFLOW_NAME == "short-read-mngs" ]]; then
+    TAG=$WORKFLOW_NAME"-v8.3.1-branch-speciehit"
+fi
+
 if [[ $( git branch --show-current) != "main" ]]; then 
     COMMIT=$(git rev-parse --short HEAD)
     TAG=$TAG"-$COMMIT"
