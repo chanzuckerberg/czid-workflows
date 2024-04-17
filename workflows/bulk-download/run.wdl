@@ -92,7 +92,7 @@ task zip {
             mkdir zip_folders
             for f in ~{sep=" " files}; do unzip "$f" -d zip_folders/$(basename "${f%.zip}"); done
             cd zip_folders
-            zip ../result.zip *
+            zip -r ../result.zip *
         else
             zip --junk-paths result.zip ~{sep=" " files}
         fi 
