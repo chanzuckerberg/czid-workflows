@@ -644,6 +644,8 @@ task RunNRAlignment {
 task FindTopHitsNT {
     input {
         File nt_m8
+        File lineage_db
+        File accession2taxid_db
         String docker_image_id
     }
 
@@ -652,7 +654,12 @@ task FindTopHitsNT {
         python3 <<CODE
         from idseq_dag.steps.blast_contigs import get_top_m8_nt
 
-        get_top_m8_nt("~{nt_m8}", "gsnap.blast.top.m8")
+        get_top_m8_nt(
+            "~{nt_m8}",
+            "~{lineage_db}",
+            "~{accession2taxid_db}",
+            "gsnap.blast.top.m8",
+        )
         CODE
 
         python3 - << 'EOF'
