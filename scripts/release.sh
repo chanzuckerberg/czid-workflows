@@ -28,6 +28,10 @@ else
     exit 1
 fi
 
+if [[ $WORKFLOW_NAME == long-read-mngs ]]; then
+    TAG="long-read-mngs-v0.7.6-branch-diamondsensitive"
+fi
+
 if [[ $( git branch --show-current) != "main" ]]; then 
     COMMIT=$(git rev-parse --short HEAD)
     TAG=$TAG"-$COMMIT"

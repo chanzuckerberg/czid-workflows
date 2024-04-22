@@ -612,7 +612,7 @@ task RunNRAlignment {
 
         if [[ "~{run_locally}" == true ]]; then
           diamond makedb --in "~{local_diamond_index}" -d reference
-          diamond blastx -d reference -q "~{assembled_reads_fa}" -o "diamond.m8" "--~{diamond_args}"
+          diamond blastx -d reference -q "~{assembled_reads_fa}" -o "diamond.m8" "~{diamond_args}"
         else
           python3 <<CODE
         import os
@@ -1297,7 +1297,7 @@ workflow czid_long_read_mngs {
         String minimap2_prefix = "gsnap"
 
         String? diamond_db
-        String diamond_args = "long-reads"
+        String diamond_args = "--long-reads --sensitive"
 
         Boolean use_deuterostome_filter = true
         Boolean use_taxon_whitelist = false

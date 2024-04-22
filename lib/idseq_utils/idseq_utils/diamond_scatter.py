@@ -3,6 +3,7 @@ See diamond_scatter.md for a detailed description
 """
 
 import os
+import shlex
 import shutil
 import sys
 import errno
@@ -71,8 +72,10 @@ def diamond_blastx(
         database,
         "--out",
         out,
-        f"--{diamond_args}",
     ]
+
+    cmd.extend(shlex.split(diamond_args))
+
     for query in queries:
         cmd += ["--query", query]
     if chunk:
