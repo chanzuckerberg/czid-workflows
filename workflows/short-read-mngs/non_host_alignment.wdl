@@ -299,7 +299,7 @@ workflow czid_non_host_alignment {
     String minimap2_db = "s3://czid-public-references/minimap2-test/2021-01-22/nt_k14_w8_20/"
     String diamond_db = "s3://czid-public-references/diamond-test/2021-01-22/"
     String minimap2_args = "-cx sr --secondary=yes"
-    String diamond_args = "mid-sensitive"
+    String diamond_args = "--mid-sensitive"
     String minimap2_prefix = "gsnap"
     String diamond_prefix = "rapsearch2"
 
