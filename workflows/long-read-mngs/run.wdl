@@ -612,7 +612,7 @@ task RunNRAlignment {
 
         if [[ "~{run_locally}" == true ]]; then
           diamond makedb --in "~{local_diamond_index}" -d reference
-          diamond blastx -d reference -q "~{assembled_reads_fa}" -o "diamond.m8" "~{diamond_args}"
+          diamond blastx -d reference -q "~{assembled_reads_fa}" -o "diamond.m8" ~{diamond_args}
         else
           python3 <<CODE
         import os
