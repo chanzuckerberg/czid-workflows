@@ -157,6 +157,7 @@ task BlastContigs_refined_gsnap_out {
     File assembly_nt_refseq_fasta
     File duplicate_cluster_sizes_tsv
     File lineage_db
+    File accession2taxid
     File taxon_blacklist
     File deuterostome_db
     Boolean use_deuterostome_filter
@@ -171,7 +172,7 @@ task BlastContigs_refined_gsnap_out {
     --input-files '[["~{gsnap_out_gsnap_m8}", "~{gsnap_out_gsnap_deduped_m8}", "~{gsnap_out_gsnap_hitsummary_tab}", "~{gsnap_out_gsnap_counts_with_dcr_json}"], ["~{assembly_contigs_fasta}", "~{assembly_scaffolds_fasta}", "~{assembly_read_contig_sam}", "~{assembly_contig_stats_json}"], ["~{assembly_nt_refseq_fasta}"], ["~{duplicate_cluster_sizes_tsv}"]]' \
     --output-files '["assembly/gsnap.blast.m8", "assembly/gsnap.reassigned.m8", "assembly/gsnap.hitsummary2.tab", "assembly/refined_gsnap_counts_with_dcr.json", "assembly/gsnap_contig_summary.json", "assembly/gsnap.blast.top.m8"]' \
     --output-dir-s3 '~{s3_wd_uri}' \
-    --additional-files '{"lineage_db": "~{lineage_db}", "taxon_blacklist": "~{taxon_blacklist}", "deuterostome_db": "~{if use_deuterostome_filter then '~{deuterostome_db}' else ''}"}' \
+    --additional-files '{"lineage_db": "~{lineage_db}", "accession2taxid": "~{accession2taxid}", "taxon_blacklist": "~{taxon_blacklist}", "deuterostome_db": "~{if use_deuterostome_filter then '~{deuterostome_db}' else ''}"}' \
     --additional-attributes '{"db_type": "nt", "use_taxon_whitelist": ~{use_taxon_whitelist}}'
   >>>
   output {
@@ -204,6 +205,7 @@ task BlastContigs_refined_rapsearch2_out {
     File assembly_nr_refseq_fasta
     File duplicate_cluster_sizes_tsv
     File lineage_db
+    File accession2taxid
     File taxon_blacklist
     Boolean use_taxon_whitelist
   }
@@ -216,7 +218,7 @@ task BlastContigs_refined_rapsearch2_out {
     --input-files '[["~{rapsearch2_out_rapsearch2_m8}", "~{rapsearch2_out_rapsearch2_deduped_m8}", "~{rapsearch2_out_rapsearch2_hitsummary_tab}", "~{rapsearch2_out_rapsearch2_counts_with_dcr_json}"], ["~{assembly_contigs_fasta}", "~{assembly_scaffolds_fasta}", "~{assembly_read_contig_sam}", "~{assembly_contig_stats_json}"], ["~{assembly_nr_refseq_fasta}"], ["~{duplicate_cluster_sizes_tsv}"]]' \
     --output-files '["assembly/rapsearch2.blast.m8", "assembly/rapsearch2.reassigned.m8", "assembly/rapsearch2.hitsummary2.tab", "assembly/refined_rapsearch2_counts_with_dcr.json", "assembly/rapsearch2_contig_summary.json", "assembly/rapsearch2.blast.top.m8"]' \
     --output-dir-s3 '~{s3_wd_uri}' \
-    --additional-files '{"lineage_db": "~{lineage_db}", "taxon_blacklist": "~{taxon_blacklist}"}' \
+    --additional-files '{"lineage_db": "~{lineage_db}", "accession2taxid": "~{accession2taxid}", "taxon_blacklist": "~{taxon_blacklist}"}' \
     --additional-attributes '{"db_type": "nr", "use_taxon_whitelist": ~{use_taxon_whitelist}}'
   >>>
   output {
@@ -489,6 +491,7 @@ workflow czid_postprocess {
     String nr_db = "s3://czid-public-references/ncbi-sources/2021-01-22/nr"
     File nr_loc_db = "s3://czid-public-references/alignment_data/2021-01-22/nr_loc.db"
     File lineage_db = "s3://czid-public-references/taxonomy/2021-01-22/taxid-lineages.db"
+    File accession2taxid_db = "s3://czid-public-references/ncbi-indexes-prod/2021-01-22/index-generation-2/accession2taxid.marisa"
     File taxon_blacklist = "s3://czid-public-references/taxonomy/2021-01-22/taxon_blacklist.txt"
     File deuterostome_db = "s3://czid-public-references/taxonomy/2021-01-22/deuterostome_taxids.txt"
     Boolean use_deuterostome_filter = true
@@ -556,6 +559,7 @@ workflow czid_postprocess {
       assembly_nt_refseq_fasta = DownloadAccessions_gsnap_accessions_out.assembly_nt_refseq_fasta,
       duplicate_cluster_sizes_tsv = duplicate_cluster_sizes_tsv,
       lineage_db = lineage_db,
+      accession2taxid = accession2taxid_db,
       taxon_blacklist = taxon_blacklist,
       deuterostome_db = deuterostome_db,
       use_deuterostome_filter = use_deuterostome_filter,
@@ -577,6 +581,7 @@ workflow czid_postprocess {
       assembly_nr_refseq_fasta = DownloadAccessions_rapsearch2_accessions_out.assembly_nr_refseq_fasta,
       duplicate_cluster_sizes_tsv = duplicate_cluster_sizes_tsv,
       lineage_db = lineage_db,
+      accession2taxid = accession2taxid_db,
       taxon_blacklist = taxon_blacklist,
       use_taxon_whitelist = use_taxon_whitelist
   }

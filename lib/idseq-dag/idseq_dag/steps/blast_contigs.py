@@ -94,8 +94,15 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
             command.write_text_to_file('[]', contig_summary_json)
             return  # return in the middle of the function
 
+        lineage_db = s3.fetch_reference(
+            self.additional_files["lineage_db"],
+            self.ref_dir_local,
+            allow_s3mi=False)  # Too small to waste s3mi
+
+        accession2taxid_dict = s3.fetch_reference(self.additional_files["accession2taxid"], self.ref_dir_local)
+
         (read_dict, accession_dict, _selected_genera) = m8.summarize_hits(hit_summary)
-        PipelineStepBlastContigs.run_blast(db_type, blast_m8, assembled_contig, reference_fasta, blast_top_m8)
+        PipelineStepBlastContigs.run_blast(db_type, blast_m8, assembled_contig, reference_fasta, blast_top_m8, lineage_db, accession2taxid_dict)
         read2contig = {}
         generate_info_from_sam(bowtie_sam, read2contig, duplicate_cluster_sizes_path=duplicate_cluster_sizes_path)
 
@@ -106,11 +113,6 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
                                          refined_hit_summary, refined_m8)
 
         # Generating taxon counts based on updated results
-        lineage_db = s3.fetch_reference(
-            self.additional_files["lineage_db"],
-            self.ref_dir_local,
-            allow_s3mi=False)  # Too small to waste s3mi
-
         deuterostome_db = None
         if self.additional_files.get("deuterostome_db"):
             deuterostome_db = s3.fetch_reference(self.additional_files["deuterostome_db"],
@@ -264,7 +266,7 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
             return (consolidated_dict, read2blastm8, contig2lineage, added_reads)
 
     @staticmethod
-    def run_blast_nt(blast_index_path, blast_m8, assembled_contig, reference_fasta, blast_top_m8):
+    def run_blast_nt(blast_index_path, blast_m8, assembled_contig, reference_fasta, blast_top_m8, lineage_db, accession2taxid_dict):
         blast_type = 'nucl'
         blast_command = 'blastn'
         command.execute(
@@ -308,10 +310,10 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
             )
         )
         # further processing of getting the top m8 entry for each contig.
-        get_top_m8_nt(blast_m8, blast_top_m8)
+        get_top_m8_nt(blast_m8, lineage_db, accession2taxid_dict, blast_top_m8)
 
     @staticmethod
-    def run_blast_nr(blast_index_path, blast_m8, assembled_contig, reference_fasta, blast_top_m8):
+    def run_blast_nr(blast_index_path, blast_m8, assembled_contig, reference_fasta, blast_top_m8, lineage_db, accession2taxid_dict):
         blast_type = 'prot'
         blast_command = 'blastx'
         command.execute(
@@ -349,4 +351,4 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
             )
         )
         # further processing of getting the top m8 entry for each contig.
-        get_top_m8_nr(blast_m8, blast_top_m8)
+        get_top_m8_nr(blast_m8, lineage_db, accession2taxid_dict, blast_top_m8)
