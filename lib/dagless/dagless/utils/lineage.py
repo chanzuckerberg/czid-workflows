@@ -1,13 +1,15 @@
 from typing import List, Sequence, Iterator
 
-INVALID_CALL_BASE_ID = -(10**8)
+INVALID_CALL_BASE_ID = -(10 ** 8)
 NULL_SPECIES_ID = "-100"
 NULL_GENUS_ID = "-200"
 NULL_FAMILY_ID = "-300"
 NULL_LINEAGE = (NULL_SPECIES_ID, NULL_GENUS_ID, NULL_FAMILY_ID)
 
-DEFAULT_BLACKLIST_S3 = 's3://czid-public-references/taxonomy/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/taxon_blacklist.txt'
-DEFAULT_WHITELIST_S3 = 's3://czid-public-references/taxonomy/2020-02-10/respiratory_taxon_whitelist.txt'
+DEFAULT_BLACKLIST_S3 = "s3://czid-public-references/taxonomy/2018-04-01-utc-1522569777-unixtime__2018-04-04-utc-1522862260-unixtime/taxon_blacklist.txt"
+DEFAULT_WHITELIST_S3 = (
+    "s3://czid-public-references/taxonomy/2020-02-10/respiratory_taxon_whitelist.txt"
+)
 
 # Notes for lineage and taxonomy ID functions:
 #
@@ -28,7 +30,9 @@ DEFAULT_WHITELIST_S3 = 's3://czid-public-references/taxonomy/2020-02-10/respirat
 # See also comments under call_hits_m8().
 
 
-def _cleaned_taxid_lineage(taxid_lineage: Sequence[str], hit_taxid: str, hit_level: int) -> Iterator[str]:
+def _cleaned_taxid_lineage(
+    taxid_lineage: Sequence[str], hit_taxid: str, hit_level: int
+) -> Iterator[str]:
     """Take the taxon lineage and mark meaningless calls with fake taxids."""
     # This assumption is being made in postprocessing
     assert len(taxid_lineage) == 3
@@ -59,7 +63,9 @@ def _fill_missing_calls(cleaned_lineage: Sequence[str]) -> List[str]:
         if me >= 0:
             closest_real_hit_just_above_me = me
         elif closest_real_hit_just_above_me >= 0 and _blank(me):
-            result[tax_level - 1] = str(tax_level * INVALID_CALL_BASE_ID - closest_real_hit_just_above_me)
+            result[tax_level - 1] = str(
+                tax_level * INVALID_CALL_BASE_ID - closest_real_hit_just_above_me
+            )
     return result
 
 
@@ -72,15 +78,23 @@ def fill_missing_calls_tests():
     # -200 => -200001534
     assert _fill_missing_calls(("55", "-200", "1534")) == ["55", "-200001534", "1534"]
     # -100 => -100005888
-    assert _fill_missing_calls(("-100", "5888", "-300")) == ["-100005888", "5888", "-300"]
+    assert _fill_missing_calls(("-100", "5888", "-300")) == [
+        "-100005888",
+        "5888",
+        "-300",
+    ]
     # -100 => -100001534, -200 => -200001534
-    assert _fill_missing_calls(("-100", "-200",
-                               "1534")) == ["-100001534", "-200001534", "1534"]
+    assert _fill_missing_calls(("-100", "-200", "1534")) == [
+        "-100001534",
+        "-200001534",
+        "1534",
+    ]
     # no change
     assert _fill_missing_calls(("55", "-200", "-300")) == ["55", "-200", "-300"]
 
 
-def validate_taxid_lineage(taxid_lineage: Sequence[str], hit_taxid: str, hit_level: int) -> List[str]:
+def validate_taxid_lineage(
+    taxid_lineage: Sequence[str], hit_taxid: str, hit_level: int
+) -> List[str]:
     cleaned = _cleaned_taxid_lineage(taxid_lineage, hit_taxid, hit_level)
     return _fill_missing_calls(list(cleaned))
-

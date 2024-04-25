@@ -12,13 +12,16 @@ from collections import namedtuple
 
 from contextlib import contextmanager
 
-print_lock = multiprocessing.RLock()  # print_lock is needed outside this module for voodoo magic in run_in_subprocess
+print_lock = (
+    multiprocessing.RLock()
+)  # print_lock is needed outside this module for voodoo magic in run_in_subprocess
 
-LogContext = namedtuple('LogContext', ['values', 'extra_fields'])
+LogContext = namedtuple("LogContext", ["values", "extra_fields"])
+
 
 def configure_logger(log_file=None):
     # reduce log noise from aws boto3
-    for s in ['boto3', 'botocore', 's3transfer', 'urlib3']:
+    for s in ["boto3", "botocore", "s3transfer", "urlib3"]:
         logging.getLogger(s).setLevel(logging.WARNING)
 
     logger = logging.getLogger(__name__)
@@ -38,9 +41,14 @@ def configure_logger(log_file=None):
     logger.addHandler(handler)
 
 
-def write(message: str = None, warning: bool = False, flush: bool = True,
-          debug: bool = False, obj_data: object = None):
-    '''
+def write(
+    message: str = None,
+    warning: bool = False,
+    flush: bool = True,
+    debug: bool = False,
+    obj_data: object = None,
+):
+    """
     Write a new log entry.
 
     Parameters:
@@ -51,7 +59,7 @@ def write(message: str = None, warning: bool = False, flush: bool = True,
     warning(boolean): Optional. Log this event using warning level. This level has precedence over debug.
     debug(boolean): Optional. Log this event using debug level.
     flush(boolean): Optional (default true). Flush stdout after logging.
-    '''
+    """
     with print_lock:
         logger = logging.getLogger(__name__)
         if warning:
@@ -68,10 +76,16 @@ def _get_current_time():
     return datetime.datetime.now()
 
 
-def log_event(event_name: str, values: object = None, start_time: datetime.datetime = None,
-              warning: bool = False, debug: bool = False, flush: bool = True,
-              extra_fields: dict = {}):
-    '''
+def log_event(
+    event_name: str,
+    values: object = None,
+    start_time: datetime.datetime = None,
+    warning: bool = False,
+    debug: bool = False,
+    flush: bool = True,
+    extra_fields: dict = {},
+):
+    """
     Write a new log event.
 
     Parameters:
@@ -90,7 +104,7 @@ def log_event(event_name: str, values: object = None, start_time: datetime.datet
     start = log_event("downloaded_started", {"file":"abc"})
     # ... download your file here ...
     log_event("downloaded_completed", {"file":"abc"}, start_time=start)
-    '''
+    """
     obj_data = {"event": event_name, **extra_fields}
     if values is not None:
         obj_data["values"] = values
@@ -102,7 +116,7 @@ def log_event(event_name: str, values: object = None, start_time: datetime.datet
 
 
 def log_function_execution(values: dict = None):
-    '''
+    """
     Decorates a function and write to logs fn_start and fn_end events.
 
     Parameters:
@@ -118,7 +132,8 @@ def log_function_execution(values: dict = None):
     The code above will generate two log entries:
     Event fn_start {"n": "my_function"}
     Event fn_end {"n": "my_function"} (0.3 sec)
-    '''
+    """
+
     def decorator_fn(func):
         @functools.wraps(func)
         def wrapper_fn(*args, **kwargs):
@@ -136,7 +151,9 @@ def log_function_execution(values: dict = None):
                 val["error_args"] = e.args
                 log_event("fn_error", val, start_time=start)
                 raise e
+
         return wrapper_fn
+
     return decorator_fn
 
 
@@ -144,7 +161,11 @@ def get_caller_info(frame_depth):
     try:
         frame = sys._getframe(frame_depth)
         f_code = frame.f_code
-        return {"filename": os.path.basename(f_code.co_filename), "method": f_code.co_name, "f_lineno": frame.f_lineno}
+        return {
+            "filename": os.path.basename(f_code.co_filename),
+            "method": f_code.co_name,
+            "f_lineno": frame.f_lineno,
+        }
     except Exception as e:
         return {"error": "cannot retrieve caller info", **parse_exception(e)}
 
@@ -154,12 +175,19 @@ def parse_exception(e):
 
 
 class LogContextMode(Enum):
-    START_END_LOG_EVENTS = 'START_END_LOG_EVENTS'
-    EXEC_LOG_EVENT = 'EXEC_LOG_EVENT'
+    START_END_LOG_EVENTS = "START_END_LOG_EVENTS"
+    EXEC_LOG_EVENT = "EXEC_LOG_EVENT"
+
 
 @contextmanager
-def log_context(context_name: str, values: dict = None, log_caller_info: bool = False, log_caller_info_depth: int = 0, log_context_mode: LogContextMode = LogContextMode.START_END_LOG_EVENTS):
-    '''
+def log_context(
+    context_name: str,
+    values: dict = None,
+    log_caller_info: bool = False,
+    log_caller_info_depth: int = 0,
+    log_context_mode: LogContextMode = LogContextMode.START_END_LOG_EVENTS,
+):
+    """
     Log context manager to track started and completed events for a block of code
 
     Parameters:
@@ -207,8 +235,11 @@ def log_context(context_name: str, values: dict = None, log_caller_info: bool = 
     In both cases:
         - When code block terminated with an error
             {"event": "ctx_error", "context_name": "sub_step", "uid": "BA31CF", "extra_fields": {"error_type": "RuntimeError", "error_args": ["Error message"]} "caller": {"filename": "some_file.py", "method": "some_method"}, "values": {"abc": 123}}
-    '''
-    context = LogContext(values=values, extra_fields={"context_name": context_name, "uid": secrets.token_hex(6)})
+    """
+    context = LogContext(
+        values=values,
+        extra_fields={"context_name": context_name, "uid": secrets.token_hex(6)},
+    )
 
     if log_caller_info:
         context.extra_fields["caller"] = get_caller_info(3 + log_caller_info_depth)
@@ -220,30 +251,47 @@ def log_context(context_name: str, values: dict = None, log_caller_info: bool = 
     try:
         yield context
         if log_context_mode == LogContextMode.START_END_LOG_EVENTS:
-            log_event("ctx_end", context.values, start_time=start, extra_fields=context.extra_fields)
+            log_event(
+                "ctx_end",
+                context.values,
+                start_time=start,
+                extra_fields=context.extra_fields,
+            )
         elif log_context_mode == LogContextMode.EXEC_LOG_EVENT:
-            log_event("ctx_exec", values, start_time=start, extra_fields=context.extra_fields)
+            log_event(
+                "ctx_exec", values, start_time=start, extra_fields=context.extra_fields
+            )
     except Exception as e:
         context.extra_fields.update(parse_exception(e))
-        log_event("ctx_error", context.values, start_time=start, extra_fields=context.extra_fields)
+        log_event(
+            "ctx_error",
+            context.values,
+            start_time=start,
+            extra_fields=context.extra_fields,
+        )
         raise e
 
 
 def default_json_serializer(obj):
-    '''Default serializer that returns string <<non-sertializable: TYPE_NAME>> for that type'''
+    """Default serializer that returns string <<non-sertializable: TYPE_NAME>> for that type"""
     return f"<<non-serializable: {type(obj).__qualname__}>>"
 
 
 class JsonFormatter(logging.Formatter):
-    default_time_format = '%Y-%m-%dT%H:%M:%S'
-    default_msec_format = '%s.%03d'
+    default_time_format = "%Y-%m-%dT%H:%M:%S"
+    default_msec_format = "%s.%03d"
 
     def format(self, record):
         obj = {"time": self.formatTime(record)}
         if record.msg is not None:
-            obj['msg'] = super().format(record)
-        if hasattr(record, 'obj_data') and (record.obj_data is not None):
-            obj['data'] = record.obj_data
-        obj.update({"thread": record.threadName, "pid": record.process, "level": record.levelname})
+            obj["msg"] = super().format(record)
+        if hasattr(record, "obj_data") and (record.obj_data is not None):
+            obj["data"] = record.obj_data
+        obj.update(
+            {
+                "thread": record.threadName,
+                "pid": record.process,
+                "level": record.levelname,
+            }
+        )
         return json.dumps(obj, default=default_json_serializer)
-

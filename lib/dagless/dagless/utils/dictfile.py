@@ -10,7 +10,10 @@ class WrappedTrie:
 
     def _extract(self, raw):
         if self.stringify:
-            head = [elem.decode() if isinstance(elem, bytes) else str(elem) for elem in raw[0]]
+            head = [
+                elem.decode() if isinstance(elem, bytes) else str(elem)
+                for elem in raw[0]
+            ]
         else:
             head = list(raw[0])
         if len(head) == 1:
@@ -36,9 +39,10 @@ class WrappedTrie:
         return default
 
 
-def open_file_db_by_extension(db_path: str, fmt: Union[str, None] = None, stringify=True):
+def open_file_db_by_extension(
+    db_path: str, fmt: Union[str, None] = None, stringify=True
+):
     if db_path.endswith(".db"):
-        return shelve.open(db_path.replace('.db', ''), 'r')
+        return shelve.open(db_path.replace(".db", ""), "r")
     assert fmt, "fmt is required for loading marisa trie key value stores"
     return WrappedTrie(marisa_trie.RecordTrie(fmt).mmap(db_path), stringify)
-
