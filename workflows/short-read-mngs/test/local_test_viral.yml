@@ -26,6 +26,7 @@ postprocess.nt_db: s3://czid-public-references/test/viral-alignment-indexes/vira
 postprocess.nt_loc_db: s3://czid-public-references/test/viral-alignment-indexes/viral_nt_loc.marisa
 postprocess.nr_db: s3://czid-public-references/test/viral-alignment-indexes/viral_nr
 postprocess.nr_loc_db: s3://czid-public-references/test/viral-alignment-indexes/viral_nr_loc.marisa
+postprocess.accession2taxid_db: s3://czid-public-references/mini-database/alignment_indexes/2020-08-20-viral/viral_accessions2taxid.marisa
 experimental.nt_db: s3://czid-public-references/test/viral-alignment-indexes/viral_nt
 experimental.nt_loc_db: s3://czid-public-references/test/viral-alignment-indexes/viral_nt_loc.marisa
 experimental.nt_info_db: s3://czid-public-references/test/viral-alignment-indexes/viral_nt_info.marisa

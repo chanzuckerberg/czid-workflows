@@ -1,5 +1,8 @@
 from collections import defaultdict
 
+import idseq_dag.util.lineage as lineage
+
+from idseq_dag.util.dict import open_file_db_by_extension
 from idseq_dag.util.m8 import NT_MIN_ALIGNMENT_LEN
 from idseq_dag.util.parsing import BlastnOutput6Reader, BlastnOutput6Writer
 from idseq_dag.util.parsing import BlastnOutput6NTReader
@@ -56,6 +59,14 @@ def _intersects(needle, haystack):
     ''' Return True iff needle intersects haystack.  Ignore overlap < NT_MIN_OVERLAP_FRACTION. '''
     return any(_hsp_overlap(needle, hay) for hay in haystack)
 
+def _get_lineage(accession_id, lineage_map, accession2taxid_dict, lineage_cache={}):
+    if accession_id in lineage_cache:
+        return lineage_cache[accession_id]
+    accession_taxid = accession2taxid_dict.get(
+        accession_id.split(".")[0], "NA")
+    result = lineage_map.get(accession_taxid, lineage.NULL_LINEAGE)
+    lineage_cache[accession_id] = result
+    return result
 
 class BlastCandidate:
     '''Documented in function get_top_m8_nt() below.'''
@@ -64,6 +75,7 @@ class BlastCandidate:
         self.hsps = hsps
         self.optimal_cover = None
         self.total_score = None
+
         if hsps:
             # All HSPs here must be for the same query and subject sequence.
             h_0 = hsps[0]
@@ -105,23 +117,34 @@ class BlastCandidate:
         return r
 
 
-def _optimal_hit_for_each_query_nr(blast_output_path, max_evalue):
+def _optimal_hit_for_each_query_nr(blast_output_path, lineage_map, accession2taxid_dict, max_evalue):
     contigs_to_best_alignments = defaultdict(list)
     accession_counts = defaultdict(lambda: 0)
 
     with open(blast_output_path) as blastn_6_f:
         # For each contig, get the alignments that have the best total score (may be multiple if there are ties).
+        # Prioritize the specificity of the hit.
+        specificity_to_best_alignments = defaultdict(dict)
         for alignment in BlastnOutput6Reader(blastn_6_f):
             if alignment["evalue"] > max_evalue:
                 continue
             query = alignment["qseqid"]
-            best_alignments = contigs_to_best_alignments[query]
 
-            if len(best_alignments) == 0 or best_alignments[0]["bitscore"] < alignment["bitscore"]:
-                contigs_to_best_alignments[query] = [alignment]
+            lineage_taxids = _get_lineage(alignment["sseqid"], lineage_map, accession2taxid_dict)
+            specificity = next((level for level, taxid_at_level in enumerate(lineage_taxids) if int(taxid_at_level) > 0), float("inf"))
+
+            best_alignments = specificity_to_best_alignments[query]
+
+            if (specificity not in best_alignments) or best_alignments[specificity][0]["bitscore"] < alignment["bitscore"]:
+                specificity_to_best_alignments[query][specificity] = [alignment]
             # Add all ties to best_hits.
-            elif len(best_alignments) > 0 and best_alignments[0]["bitscore"] == alignment["bitscore"]:
-                contigs_to_best_alignments[query].append(alignment)
+            elif len(best_alignments[specificity]) > 0 and best_alignments[specificity][0]["bitscore"] == alignment["bitscore"]:
+                specificity_to_best_alignments[query][specificity].append(alignment)
+
+        # Choose the best alignments with the most specific taxid information.
+        for contig_id, specificity_alignment_dict in specificity_to_best_alignments.items():
+            specific_best_alignments = next(specificity_alignment_dict[specificity] for specificity in sorted(specificity_alignment_dict.keys()))
+            contigs_to_best_alignments[contig_id] = specific_best_alignments
 
         # Create a map of accession to best alignment count.
         for _contig_id, alignments in contigs_to_best_alignments.items():
@@ -170,26 +193,33 @@ def _filter_and_group_hits_by_query(blast_output_path, min_alignment_length, min
 
 
 # An iterator that, for contig, yields to optimal hit for the contig in the nt blast_output.
-def _optimal_hit_for_each_query_nt(blast_output, min_alignment_length, min_pident, max_evalue, summary=True):
+def _optimal_hit_for_each_query_nt(blast_output, lineage_map, accession2taxid_dict,
+                                   min_alignment_length, min_pident, max_evalue, summary=True):
     contigs_to_blast_candidates = {}
     accession_counts = defaultdict(lambda: 0)
 
     # For each contig, get the collection of blast candidates that have the best total score (may be multiple if there are ties).
     for query_hits in _filter_and_group_hits_by_query(blast_output, min_alignment_length, min_pident, max_evalue):
-        best_hits = []
+        best_hits = {}
         for _subject, hit_fragments in query_hits.items():
             # For NT, we take a special approach where we try to find a subset of disjoint HSPs
             # with maximum sum of bitscores.
             hit = BlastCandidate(hit_fragments)
             hit.optimize()
 
-            if len(best_hits) == 0 or best_hits[0].total_score < hit.total_score:
-                best_hits = [hit]
-            # Add all ties to best_hits.
-            elif len(best_hits) > 0 and best_hits[0].total_score == hit.total_score:
-                best_hits.append(hit)
+            # We prioritize the specificity of the hit; hits with species taxids are taken before hits without
+            # Specificity is just the index of the tuple returned by _get_lineage(); 0 for species, 1 for genus, etc.
+            lineage_taxids = _get_lineage(hit.sseqid, lineage_map, accession2taxid_dict)
+            specificity = next((level for level, taxid_at_level in enumerate(lineage_taxids) if int(taxid_at_level) > 0), float("inf"))
 
-        contigs_to_blast_candidates[best_hits[0].qseqid] = best_hits
+            if (specificity not in best_hits) or best_hits[specificity][0].total_score < hit.total_score:
+                best_hits[specificity] = [hit]
+            # Add all ties to best_hits[specificity].
+            elif len(best_hits[specificity]) > 0 and best_hits[specificity][0].total_score == hit.total_score:
+                best_hits[specificity].append(hit)
+
+        specific_best_hits = next(best_hits[specificity] for specificity in sorted(best_hits.keys()))
+        contigs_to_blast_candidates[specific_best_hits[0].qseqid] = specific_best_hits
 
     # Create a map of accession to blast candidate count.
     for _contig_id, blast_candidates in contigs_to_blast_candidates.items():
@@ -213,18 +243,24 @@ def _optimal_hit_for_each_query_nt(blast_output, min_alignment_length, min_piden
 
 def get_top_m8_nr(
     blast_output,
+    lineage_map_path,
+    accession2taxid_dict_path,
     blast_top_blastn_6_path,
     max_evalue=MAX_EVALUE_THRESHOLD,
 ):
     ''' Get top m8 file entry for each contig from blast_output and output to blast_top_m8 '''
-    with open(blast_top_blastn_6_path, "w") as blast_top_blastn_6_f:
+    with open(blast_top_blastn_6_path, "w") as blast_top_blastn_6_f, \
+        open_file_db_by_extension(lineage_map_path, "lll") as lineage_map, \
+        open_file_db_by_extension(accession2taxid_dict_path, "L") as accession2taxid_dict:  # noqa
         BlastnOutput6Writer(blast_top_blastn_6_f).writerows(
-            _optimal_hit_for_each_query_nr(blast_output, max_evalue)
+            _optimal_hit_for_each_query_nr(blast_output, lineage_map, accession2taxid_dict, max_evalue)
         )
 
 
 def get_top_m8_nt(
     blast_output,
+    lineage_map_path,
+    accession2taxid_dict_path,
     blast_top_blastn_6_path,
     min_alignment_length=NT_MIN_ALIGNMENT_LEN,
     min_pident=_NT_MIN_PIDENT,
@@ -251,7 +287,9 @@ def get_top_m8_nt(
 
     # Output the optimal hit for each query.
 
-    with open(blast_top_blastn_6_path, "w") as blast_top_blastn_6_f:
+    with open(blast_top_blastn_6_path, "w") as blast_top_blastn_6_f, \
+        open_file_db_by_extension(lineage_map_path, "lll") as lineage_map, \
+        open_file_db_by_extension(accession2taxid_dict_path, "L") as accession2taxid_dict:  # noqa
         BlastnOutput6NTRerankedWriter(blast_top_blastn_6_f).writerows(
-            _optimal_hit_for_each_query_nt(blast_output, min_alignment_length, min_pident, max_evalue, False)
+            _optimal_hit_for_each_query_nt(blast_output, lineage_map, accession2taxid_dict, min_alignment_length, min_pident, max_evalue, False)
         )
