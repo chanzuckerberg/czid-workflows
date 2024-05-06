@@ -644,6 +644,8 @@ task RunNRAlignment {
 task FindTopHitsNT {
     input {
         File nt_m8
+        File lineage_db
+        File accession2taxid_db
         String docker_image_id
     }
 
@@ -652,7 +654,12 @@ task FindTopHitsNT {
         python3 <<CODE
         from idseq_dag.steps.blast_contigs import get_top_m8_nt
 
-        get_top_m8_nt("~{nt_m8}", "gsnap.blast.top.m8")
+        get_top_m8_nt(
+            "~{nt_m8}",
+            "~{lineage_db}",
+            "~{accession2taxid_db}",
+            "gsnap.blast.top.m8",
+        )
         CODE
 
         python3 - << 'EOF'
@@ -680,6 +687,8 @@ task FindTopHitsNT {
 task FindTopHitsNR {
     input {
         File nr_m8
+        File lineage_db
+        File accession2taxid_db
         String docker_image_id
     }
 
@@ -688,7 +697,12 @@ task FindTopHitsNR {
         python3 <<CODE
         from idseq_dag.steps.blast_contigs import get_top_m8_nr
 
-        get_top_m8_nr("~{nr_m8}", "rapsearch2.blast.top.m8")
+        get_top_m8_nr(
+            "~{nr_m8}",
+            "~{lineage_db}",
+            "~{accession2taxid_db}",
+            "rapsearch2.blast.top.m8"
+        )
         CODE
 
         python3 - << 'EOF'
@@ -1399,12 +1413,16 @@ workflow czid_long_read_mngs {
     call FindTopHitsNT {
         input:
             nt_m8 = RunNTAlignment.nt_m8,
+            lineage_db = lineage_db,
+            accession2taxid_db = accession2taxid_db,
             docker_image_id = docker_image_id,
     }
 
     call FindTopHitsNR {
         input:
             nr_m8 = RunNRAlignment.nr_m8,
+            lineage_db = lineage_db,
+            accession2taxid_db = accession2taxid_db,
             docker_image_id = docker_image_id,
     }
 

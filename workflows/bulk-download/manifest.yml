@@ -31,6 +31,7 @@ input_loaders:
       bulk_download_type: ~
     outputs:
       files: ~
+      concatenated_output_name: ~
   - name: passthrough
     version: ">=0.0.1"
     inputs:
