@@ -74,6 +74,11 @@ def diamond_blastx(
         out,
     ]
 
+    # backwards compatibility for function calls that expect this function
+    # to automatically append "--" to diamond_args
+    if diamond_args == "long-reads" or diamond_args == "mid-sensitive":
+        diamond_args = "--" + diamond_args
+
     cmd.extend(shlex.split(diamond_args))
 
     for query in queries:
