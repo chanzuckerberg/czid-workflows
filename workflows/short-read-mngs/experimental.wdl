@@ -113,7 +113,8 @@ task GenerateAlignmentViz {
   }
   runtime {
     docker: docker_image_id
-  }}
+  }
+}
 
 task GenerateCoverageViz {
   input {
