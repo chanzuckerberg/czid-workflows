@@ -22,10 +22,6 @@ from botocore.config import Config
 log = logging.getLogger(__name__)
 
 MAX_CHUNKS_IN_FLIGHT = 30  # TODO: remove this constant, currently does nothing since we have at most 30 index chunks
-ALIGNMENT_WDL_VERSIONS: Dict[str, str] = {
-    "diamond": "v1.0.0",
-    "minimap2": "v1.0.0",
-}
 
 # mitigation for TooManyRequestExceptions
 config = Config(
@@ -158,6 +154,7 @@ def _run_chunk(
     chunk_dir: str,
     aligner: str,
     aligner_args: str,
+    aligner_wdl_version: str,
     queries: List[str],
     chunk_id: int,
     db_chunk: str,
@@ -185,7 +182,7 @@ def _run_chunk(
         "query_0": query_uris[0],
         "extra_args": aligner_args,
         "db_chunk": db_chunk,
-        "docker_image_id": f"{account_id}.dkr.ecr.us-west-2.amazonaws.com/{aligner}:{ALIGNMENT_WDL_VERSIONS[aligner]}",
+        "docker_image_id": f"{account_id}.dkr.ecr.us-west-2.amazonaws.com/{aligner}:{aligner_wdl_version}",
     }
 
     if len(query_uris) > 1:
@@ -193,7 +190,7 @@ def _run_chunk(
 
     wdl_input_uri = os.path.join(chunk_dir, f"{chunk_id}-input.json")
     wdl_output_uri = os.path.join(chunk_dir, f"{chunk_id}-output.json")
-    wdl_workflow_uri = f"s3://idseq-workflows/{aligner}-{ALIGNMENT_WDL_VERSIONS[aligner]}/{aligner}.wdl"
+    wdl_workflow_uri = f"s3://idseq-workflows/{aligner}-{aligner_wdl_version}/{aligner}.wdl"
 
     input_bucket, input_key = _bucket_and_key(wdl_input_uri)
     _s3_client.put_object(
@@ -245,6 +242,7 @@ def run_alignment(
     result_path: str,
     aligner: str,
     aligner_args: str,
+    aligner_wdl_version: str,
     queries: List[str],
 ):
     bucket, prefix = _bucket_and_key(db_path)
@@ -255,6 +253,7 @@ def run_alignment(
             chunk_dir,
             aligner,
             aligner_args,
+            aligner_wdl_version,
             queries,
             chunk_id,
             f"s3://{bucket}/{db_chunk}",

@@ -77,6 +77,7 @@ task RunAlignment_minimap2_out {
         Boolean? run_locally = false
         File? local_minimap2_index 
         String prefix
+        String minimap2_wdl_version
     }
 
     command <<<
@@ -96,6 +97,7 @@ task RunAlignment_minimap2_out {
             result_path="gsnap.paf",
             aligner="minimap2",
             aligner_args="~{minimap2_args}",
+            aligner_wdl_version="~{minimap2_wdl_version}",
             queries=["~{sep='", "' fastas}"],
         )
         CODE
@@ -124,6 +126,7 @@ task RunAlignment_diamond_out {
         Boolean? run_locally = false
         File? local_diamond_index
         String prefix
+        String diamond_wdl_version
     }
 
     command <<<
@@ -143,6 +146,7 @@ task RunAlignment_diamond_out {
             result_path="rapsearch2.m8",
             aligner="diamond",
             aligner_args="~{diamond_args}",
+            aligner_wdl_version="~{diamond_wdl_version}",
             queries=["~{sep='", "' fastas}"],
         )
         CODE
@@ -302,6 +306,8 @@ workflow czid_non_host_alignment {
     String diamond_args = "mid-sensitive"
     String minimap2_prefix = "gsnap"
     String diamond_prefix = "rapsearch2"
+    String minimap2_wdl_version = "v1.0.0"
+    String diamond_wdl_version = "v1.0.0"
 
   }
   call RunAlignment_minimap2_out { 
@@ -313,7 +319,8 @@ workflow czid_non_host_alignment {
       minimap2_args = minimap2_args,
       run_locally = defined(minimap2_local_db_path),
       local_minimap2_index = minimap2_local_db_path,
-      prefix= minimap2_prefix
+      prefix= minimap2_prefix,
+      minimap2_wdl_version=minimap2_wdl_version
   }
   call RunCallHitsMinimap2{ 
     input:
@@ -337,6 +344,7 @@ workflow czid_non_host_alignment {
       prefix = diamond_prefix,
       run_locally = defined(diamond_local_db_path),
       local_diamond_index = diamond_local_db_path,
+      diamond_wdl_version=diamond_wdl_version,
       docker_image_id = docker_image_id
   }
   call RunCallHitsDiamond { 
