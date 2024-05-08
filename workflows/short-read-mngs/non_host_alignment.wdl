@@ -131,7 +131,7 @@ task RunAlignment_diamond_out {
         set -euxo pipefail  
         if [[ "~{run_locally}" == true ]]; then 
           diamond makedb --in "~{local_diamond_index}" -d reference
-          diamond blastx -d reference -q "~{sep=' ' fastas}" -o "rapsearch2.m8" "--~{diamond_args}"
+          diamond blastx -d reference -q "~{sep=' ' fastas}" -o "rapsearch2.m8" "~{diamond_args}"
         else
           python3 <<CODE
         import os 
