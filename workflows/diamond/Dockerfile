@@ -19,7 +19,7 @@ WORKDIR /tmp
 RUN git clone https://github.com/chanzuckerberg/czid-workflows
 WORKDIR /tmp/czid-workflows
 RUN pip3 install -r requirements-dev.txt
-
-COPY --from=lib idseq_utils/idseq_utils/diamond_scatter.py /usr/local/bin/
+RUN git checkout rlim-add-diamond-modification
+RUN cp short-read-mngs/idseq_utils/idseq_utils/diamond_scatter.py /usr/local/bin/
 
 WORKDIR /workdir

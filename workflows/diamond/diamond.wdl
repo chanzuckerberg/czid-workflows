@@ -34,7 +34,7 @@ task RunDiamond {
     }
 
     command <<<
-        python3 /usr/local/bin/diamond_scatter.py blastx-chunk --db ~{db_chunk} --query ~{query_0} ~{if defined(query_1) then '--query ~{query_1}' else ''} --out-dir chunks --diamond-args="~{extra_args}"
+        python3 /usr/local/bin/diamond_scatter.py blastx-chunk --db ~{db_chunk} --query ~{query_0} ~{if defined(query_1) then '--query ~{query_1}' else ''} --out-dir chunks --diamond-args "~{extra_args}"
     >>>
 
     output {
