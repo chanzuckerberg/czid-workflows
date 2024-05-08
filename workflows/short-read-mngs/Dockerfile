@@ -119,11 +119,6 @@ RUN curl -Ls https://github.com/chanzuckerberg/s3parcp/releases/download/v0.2.0-
 # FIXME: check if use of pandas, pysam is necessary
 RUN pip3 install pysam==0.14.1 pandas==1.1.5
 
-# Workaround for srst2 refusing to work with upstream bowtie2 and samtools
-# FIXME: replace srst2 with a more appropriate tool
-RUN apt-get -q install -y srst2
-RUN sed -i '/Incorrect version/ s/\w.*/return "1.7"/' /usr/bin/srst2
-
 # Picard for average fragment size https://github.com/broadinstitute/picard
 # r-base is a dependency of collecting input size metrics https://github.com/bioconda/bioconda-recipes/pull/16398
 RUN apt-get install -y r-base
