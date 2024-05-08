@@ -1,102 +1,204 @@
 version development
 
+
 workflow index_generation {
     input {
         String index_name
         String ncbi_server = "https://ftp.ncbi.nih.gov"
-        Boolean write_to_db = false
-        String? environ
-        # TODO: (alignment_config) remove after alignment config table is removed
-        String? s3_dir
         File? previous_lineages
+
+        # Compression Parameters
+        Int nt_compression_k = 31
+        Int nt_compression_scaled = 1000
+        Float nt_compression_similarity_threshold = 0.5
+
+        Int nr_compression_k = 31
+        Int nr_compression_scaled = 100
+        Float nr_compression_similarity_threshold = 0.5
+
+        Boolean skip_protein_compression = false
+        Boolean skip_generate_nr_assets = false
+        Boolean skip_nuc_compression = false
+        Boolean skip_generate_nt_assets = false
+
+        String? provided_nt
+        String? provided_nr
+        String provided_accession2taxid_nucl_gb = "~{ncbi_server}/pub/taxonomy/accession2taxid/nucl_gb.accession2taxid.gz"
+        String provided_accession2taxid_nucl_wgs = "~{ncbi_server}/pub/taxonomy/accession2taxid/nucl_wgs.accession2taxid.gz"
+        String provided_accession2taxid_pdb = "~{ncbi_server}/pub/taxonomy/accession2taxid/pdb.accession2taxid.gz"
+        String provided_accession2taxid_prot = "~{ncbi_server}/pub/taxonomy/accession2taxid/prot.accession2taxid.FULL.gz"
+        String provided_taxdump = "~{ncbi_server}/pub/taxonomy/taxdump.tar.gz"
+
         String docker_image_id
     }
 
-    call DownloadNR {
-        input:
-        ncbi_server = ncbi_server,
-        docker_image_id = docker_image_id
+    Array[String?] possibly_zipped_files = [
+        provided_accession2taxid_nucl_gb,
+        provided_accession2taxid_nucl_wgs,
+        provided_accession2taxid_pdb,
+        provided_accession2taxid_prot,
+        provided_taxdump,
+        provided_nt,
+        provided_nr
+    ]
+
+    # Download files if they are not provided
+    scatter (file in possibly_zipped_files) {
+        if (defined(file) && select_first([file]) != "") {
+            # if filename ends with gz
+            String file_ = select_first([file]) # this is safe because we know it's defined and not empty
+            if (sub(basename(file_), "\\.gz$", "") != basename(file_)) {
+                call UnzipFile {
+                    input:
+                    zipped_file = file_,
+                    cpu = 8,
+                    docker_image_id = docker_image_id,
+                }
+            }
+        }
+
+
+        File? unzipped_file = if defined(file) then select_first([UnzipFile.file, file]) else None
+    }
+    File unzipped_accession2taxid_nucl_gb = select_first([unzipped_file[0]])
+    File unzipped_accession2taxid_nucl_wgs = select_first([unzipped_file[1]])
+    File unzipped_accession2taxid_pdb = select_first([unzipped_file[2]])
+    File unzipped_accession2taxid_prot = select_first([unzipped_file[3]])
+    File unzipped_taxdump = select_first([unzipped_file[4]])
+    File? provided_nt_unzipped = if defined(provided_nt) then unzipped_file[5] else None
+    File? provided_nr_unzipped = if defined(provided_nr) then unzipped_file[6] else None
+
+    Boolean is_nt_provided = defined(provided_nt_unzipped)
+    Boolean is_nr_provided = defined(provided_nr_unzipped)
+
+    if (!is_nt_provided) {
+        call DownloadDatabase as DownloadNT {
+            input:
+            database_type = "nt",
+            docker_image_id = docker_image_id
+        }
+    }
+    if (!is_nr_provided) {
+        call DownloadDatabase as DownloadNR {
+            input:
+            database_type = "nr",
+            docker_image_id = docker_image_id
+        }
     }
 
-    call DownloadNT {
-        input:
-        ncbi_server = ncbi_server,
-        docker_image_id = docker_image_id
+    File nt_download = select_first([provided_nt_unzipped, DownloadNT.database])
+    File nr_download = select_first([provided_nr_unzipped, DownloadNR.database])
+
+    if (!skip_protein_compression) {
+        call CompressDatabase as CompressNR {
+            input:
+            database_type = "nr",
+            fasta = nr_download,
+            accession2taxid_files = [unzipped_accession2taxid_pdb, unzipped_accession2taxid_prot],
+            k = nr_compression_k,
+            scaled = nr_compression_scaled,
+            similarity_threshold = nr_compression_similarity_threshold,
+            docker_image_id = docker_image_id,
+        }
+        call ShuffleDatabase as ShuffleNR {
+            input:
+            fasta = CompressNR.compressed,
+            docker_image_id = docker_image_id
+        }
     }
 
-    call DownloadAccession2Taxid {
-        input:
-        ncbi_server = ncbi_server,
-        docker_image_id = docker_image_id
+    File nr_or_compressed = select_first([CompressNR.compressed, nr_download])
+
+    if (!skip_nuc_compression) {
+        call CompressDatabase as CompressNT {
+            input:
+            database_type = "nt",
+            fasta = nt_download,
+            accession2taxid_files = [unzipped_accession2taxid_nucl_wgs, unzipped_accession2taxid_nucl_gb],
+            k = nt_compression_k,
+            scaled = nt_compression_scaled,
+            similarity_threshold = nt_compression_similarity_threshold,
+            docker_image_id = docker_image_id,
+        }
+        call ShuffleDatabase as ShuffleNT {
+            input:
+            fasta = CompressNT.compressed,
+            docker_image_id = docker_image_id
+        }
     }
 
-    call DownloadTaxdump {
-        input:
-        ncbi_server = ncbi_server,
-        docker_image_id = docker_image_id
+    File nt_or_compressed = select_first([CompressNT.compressed, nt_download])
+
+    if (!skip_generate_nt_assets) {
+        call GenerateLocDB as GenerateNTLocDB {
+            input:
+            db_fasta = nt_or_compressed,
+            database_type = "nt",
+            docker_image_id = docker_image_id
+        }
+
+        call GenerateInfoDB as GenerateNTInfoDB {
+            input:
+            db_fasta = nt_or_compressed,
+            database_type = "nt",
+            docker_image_id = docker_image_id
+        }
+
+        call GenerateIndexMinimap2 as GenerateIndexMinimap2 {
+            input:
+            nt = nt_or_compressed,
+            docker_image_id = docker_image_id
+        }
+    }
+
+    if (!skip_generate_nr_assets) {
+        call GenerateLocDB as GenerateNRLocDB {
+            input:
+            db_fasta = nr_or_compressed,
+            database_type = "nr",
+            docker_image_id = docker_image_id
+        }
+
+        call GenerateIndexDiamond as GenerateIndexDiamond {
+            input:
+            nr = nr_or_compressed,
+            docker_image_id = docker_image_id
+        }
     }
 
     call GenerateIndexAccessions {
         input:
-        nr = DownloadNR.nr,
-        nt = DownloadNT.nt,
-        accession2taxid = DownloadAccession2Taxid.accession2taxid,
-        docker_image_id = docker_image_id
-    }
-
-    call GenerateNTDB {
-        input:
-        nt = DownloadNT.nt,
-        docker_image_id = docker_image_id
-    }
-
-    call GenerateNRDB {
-        input:
-        nr = DownloadNR.nr,
-        docker_image_id = docker_image_id
-    }
-
-    call GenerateIndexDiamond {
-        input:
-        nr = DownloadNR.nr,
+        nr = nr_or_compressed,
+        nt = nt_or_compressed,
+        accession2taxid_files = [
+            unzipped_accession2taxid_nucl_wgs,
+            unzipped_accession2taxid_nucl_gb,
+            unzipped_accession2taxid_pdb,
+            unzipped_accession2taxid_prot,
+        ],
         docker_image_id = docker_image_id
     }
 
     call GenerateIndexLineages {
         input:
-        taxdump = DownloadTaxdump.taxdump,
+        taxdump = unzipped_taxdump,
         index_name = index_name,
         previous_lineages = previous_lineages,
         docker_image_id = docker_image_id
     }
-    
-    call GenerateIndexMinimap2 {
-        input:
-        nt = DownloadNT.nt,
-        docker_image_id = docker_image_id
-    }
-
-
-    if (write_to_db && defined(environ) && defined(s3_dir)) {
-        call LoadTaxonLineages {
-            input:
-            environ = environ,
-            index_name = index_name,
-            s3_dir = s3_dir,
-            versioned_taxid_lineages_csv = GenerateIndexLineages.versioned_taxid_lineages_csv,
-            docker_image_id = docker_image_id
-        } 
-    }
-
 
     output {
-        File nr = DownloadNR.nr
-        File nt = DownloadNT.nt
-        File accession2taxid_db = GenerateIndexAccessions.accession2taxid_db
-        File nt_loc_db = GenerateNTDB.nt_loc_db
-        File nt_info_db = GenerateNTDB.nt_info_db
-        File nr_loc_db = GenerateNRDB.nr_loc_db
-        Directory diamond_index = GenerateIndexDiamond.diamond_index
+        File nr = nr_or_compressed
+        File nt = nt_or_compressed
+        File accession2taxid_nucl_wgs = unzipped_accession2taxid_nucl_wgs
+        File accession2taxid_nucl_gb = unzipped_accession2taxid_nucl_gb
+        File accession2taxid_pdb = unzipped_accession2taxid_pdb
+        File accession2taxid_prot = unzipped_accession2taxid_prot
+        File? nt_loc_db = GenerateNTLocDB.loc_db
+        File? nt_info_db = GenerateNTInfoDB.info_db
+        File? nr_loc_db = GenerateNRLocDB.loc_db
+        Directory? minimap2_index = GenerateIndexMinimap2.minimap2_index
+        Directory? diamond_index = GenerateIndexDiamond.diamond_index
         File taxid_lineages_db = GenerateIndexLineages.taxid_lineages_db
         File versioned_taxid_lineages_csv = GenerateIndexLineages.versioned_taxid_lineages_csv
         File deuterostome_taxids = GenerateIndexLineages.deuterostome_taxids
@@ -104,87 +206,61 @@ workflow index_generation {
         File changed_taxa_log = GenerateIndexLineages.changed_taxa_log
         File deleted_taxa_log = GenerateIndexLineages.deleted_taxa_log
         File new_taxa_log = GenerateIndexLineages.new_taxa_log
-        Directory minimap2_index = GenerateIndexMinimap2.minimap2_index
+        File? compressed_nr = CompressNR.compressed
+        File? compressed_nt = CompressNT.compressed
+        File? shuffled_nt = ShuffleNT.shuffled
+        File? shuffled_nr = ShuffleNR.shuffled
+        File accession2taxid_db = GenerateIndexAccessions.accession2taxid_db
     }
 }
 
-task DownloadNR {
+task DownloadDatabase {
     input {
-        String ncbi_server
+        String database_type # nt or nr
         String docker_image_id
+        Int threads = 64
     }
 
     command <<<
-        ncbi_download "~{ncbi_server}" blast/db/FASTA/nr.gz
+        set -euxo pipefail
+
+        update_blastdb.pl --decompress ~{database_type} --num_threads ~{threads}
+        blastdbcmd -db ~{database_type} -entry all -out ~{database_type}.fsa
+
     >>>
 
     output {
-        File nr = "blast/db/FASTA/nr"
+        File database = "~{database_type}.fsa"
     }
 
     runtime {
         docker: docker_image_id
+        cpu: 64
     }
+
 }
 
-task DownloadNT {
+task UnzipFile {
     input {
-        String ncbi_server
+        String zipped_file
+        Int cpu
         String docker_image_id
     }
 
     command <<<
-        ncbi_download "~{ncbi_server}" blast/db/FASTA/nt.gz
-        
+        set -euxo pipefail
+        output="~{basename(zipped_file)}"
+        curl ~{zipped_file} -o $output
+        pigz -p ~{cpu} -dc $output > ~{sub(basename(zipped_file), "\\.gz$", "")}
     >>>
 
     output {
-        File nt = "blast/db/FASTA/nt"
+        File file = sub(basename(zipped_file), "\\.gz$", "")
     }
 
     runtime {
         docker: docker_image_id
-    }
-}
-
-task DownloadAccession2Taxid {
-    input {
-        String ncbi_server
-        String docker_image_id
-    }
-
-    command <<<
-        ncbi_download "~{ncbi_server}" pub/taxonomy/accession2taxid/nucl_gb.accession2taxid.gz
-        ncbi_download "~{ncbi_server}" pub/taxonomy/accession2taxid/nucl_wgs.accession2taxid.gz
-        ncbi_download "~{ncbi_server}" pub/taxonomy/accession2taxid/pdb.accession2taxid.gz
-        ncbi_download "~{ncbi_server}" pub/taxonomy/accession2taxid/prot.accession2taxid.FULL.gz
-    >>>
-
-    output {
-        Directory accession2taxid = "pub/taxonomy/accession2taxid"
-    }
-
-    runtime {
-        docker: docker_image_id
-    }
-}
-
-task DownloadTaxdump {
-    input {
-        String ncbi_server
-        String docker_image_id
-    }
-
-    command <<<
-        ncbi_download "~{ncbi_server}" pub/taxonomy/taxdump.tar.gz
-    >>>
-
-    output {
-        File taxdump = "pub/taxonomy/taxdump.tar"
-    }
-
-    runtime {
-        docker: docker_image_id
+        cpu: cpu
     }
 }
 
@@ -192,8 +268,7 @@ task GenerateIndexAccessions {
     input {
         File nr
         File nt
-        Int parallelism = 1
-        Directory accession2taxid
+        Array[File] accession2taxid_files
         String docker_image_id
     }
 
@@ -201,15 +276,10 @@ task GenerateIndexAccessions {
         set -euxo pipefail
 
         # Build index
-        python3 /usr/local/bin/generate_accession2taxid.py \
-            ~{accession2taxid}/nucl_wgs.accession2taxid \
-            ~{accession2taxid}/nucl_gb.accession2taxid \
-            ~{accession2taxid}/pdb.accession2taxid \
-            ~{accession2taxid}/prot.accession2taxid.FULL \
-            --parallelism ~{parallelism} \
+        python3 /usr/local/bin/generate_accession2taxid.py ~{sep=" " accession2taxid_files} \
             --nt_file ~{nt} \
             --nr_file ~{nr} \
-            --accession2taxid_db accession2taxid.marisa \
+            --accession2taxid_db accession2taxid.marisa
     >>>
 
     output {
@@ -218,43 +288,39 @@ task GenerateIndexAccessions {
 
     runtime {
         docker: docker_image_id
+        cpu: 8
     }
 }
 
-task GenerateNTDB {
+task GenerateLocDB {
     input {
-        File nt
+        File db_fasta
+        String database_type # nt or nr
         String docker_image_id
     }
-
     command <<<
-        python3 /usr/local/bin/generate_loc_db.py ~{nt} nt_loc.marisa nt_info.marisa
+        python3 /usr/local/bin/generate_ncbi_db_index.py loc ~{db_fasta} ~{database_type}_loc.marisa
     >>>
-
     output {
-        File nt_loc_db = "nt_loc.marisa"
-        File nt_info_db = "nt_info.marisa"
+        File loc_db = "~{database_type}_loc.marisa"
     }
-
     runtime {
         docker: docker_image_id
     }
 }
 
-task GenerateNRDB {
+task GenerateInfoDB {
     input {
-        File nr
+        File db_fasta
+        String database_type # nt or nr
         String docker_image_id
     }
-
     command <<<
-        python3 /usr/local/bin/generate_loc_db.py ~{nr} nr_loc.marisa nr_info.marisa
+        python3 /usr/local/bin/generate_ncbi_db_index.py info ~{db_fasta} ~{database_type}_info.marisa
     >>>
-
     output {
-        File nr_loc_db = "nr_loc.marisa"
+        File info_db = "~{database_type}_info.marisa"
     }
-
     runtime {
         docker: docker_image_id
     }
@@ -270,6 +336,22 @@ task GenerateIndexDiamond {
     command <<<
         # Ignore warning is needed because sometimes NR has sequences of only DNA characters which causes this to fail
         diamond makedb --ignore-warnings --in ~{nr} -d diamond_index_chunksize_~{chunksize} --scatter-gather -b ~{chunksize}
+        cd diamond_index_chunksize_~{chunksize}
+        for dmnd_file in *.dmnd; do
+            output=$(diamond dbinfo -d "$dmnd_file")
+
+            # Extract the number of Letters and Sequences from the output
+            letters=$(echo "$output" | grep "Letters" | awk '{print $NF}')
+            sequences=$(echo "$output" | grep "Sequences" | awk '{print $NF}')
+
+            # Extract the chunk identifier from the current dmnd file name
+            chunk_number="${dmnd_file##*_}"
+            chunk_number="${chunk_number%.dmnd}"
+
+            # Rename the file
+            mv "$dmnd_file" "${chunk_number}-${sequences}-${letters}.dmnd"
+        done
+
     >>>
 
     output {
@@ -278,6 +360,7 @@ task GenerateIndexDiamond {
 
     runtime {
         docker: docker_image_id
+        cpu: 16
     }
 }
 
@@ -340,89 +423,7 @@ task GenerateIndexLineages {
 
     runtime {
         docker: docker_image_id
-    }
-}
-
-task LoadTaxonLineages {
-    input {
-        String? environ
-        String index_name
-        String? s3_dir
-        File versioned_taxid_lineages_csv
-        String docker_image_id
-    }
-
-    command <<<
-        set -euxo pipefail
-
-        get_param () {
-            aws ssm get-parameter --name "$1" --with-decryption | jq -r '.Parameter.Value'
-        }
-
-        HOST=$(get_param "/idseq-~{environ}-web/RDS_ADDRESS")
-        USER=$(get_param "/idseq-~{environ}-web/DB_USERNAME")
-        DATABASE="idseq_~{environ}"
-
-        {
-            echo "[client]"
-            echo "protocol=tcp"
-            echo "host=$HOST"
-            echo "user=$USER"
-        } > my.cnf
-
-        # Add the password without making it a part of the command so we can print commands via set -x without exposing the password
-        # Add the password= for the config
-        echo "password=" >> my.cnf
-        # Remove the newline at end of file
-        truncate -s -1 my.cnf
-        # Append the password after the =
-        get_param "/idseq-~{environ}-web/db_password" >> my.cnf
-
-        gzip -dc ~{versioned_taxid_lineages_csv} > "taxon_lineages_new.csv"
-        COLS=$(head -n 1 "taxon_lineages_new.csv")
-        mysql --defaults-extra-file=my.cnf -D "$DATABASE" -e "CREATE TABLE taxon_lineages_new LIKE taxon_lineages"
-        mysqlimport --defaults-extra-file=my.cnf --verbose --local --columns="$COLS" --fields-terminated-by=',' --fields-optionally-enclosed-by='"' --ignore-lines 1 "$DATABASE" "taxon_lineages_new.csv"
-        mysql --defaults-extra-file=my.cnf -D "$DATABASE" -e "RENAME TABLE taxon_lineages TO taxon_lineages_old, taxon_lineages_new To taxon_lineages"
-        # TODO: remove old table once we feel safe
-        # mysql --defaults-extra-file=my.cnf -D "$DATABASE" -e "DROP TABLE taxon_lineages_old"
-        # TODO: (alignment_config) remove after alignment config table is removed
-        mysql --defaults-extra-file=my.cnf -D "$DATABASE" -e "
-            INSERT INTO alignment_configs(
-                name,
-                s3_nt_db_path,
-                s3_nt_loc_db_path,
-                s3_nr_db_path,
-                s3_nr_loc_db_path,
-                s3_lineage_path,
-                s3_accession2taxid_path,
-                s3_deuterostome_db_path,
-                s3_nt_info_db_path,
-                s3_taxon_blacklist_path,
-                lineage_version,
-                created_at,
-                updated_at
-            ) VALUES(
-                '~{index_name}',
-                '~{s3_dir}/nt',
-                '~{s3_dir}/nt_loc.marisa',
-                '~{s3_dir}/nr',
-                '~{s3_dir}/nr_loc.marisa',
-                '~{s3_dir}/taxid-lineages.marisa',
-                '~{s3_dir}/accession2taxid.marisa',
-                '~{s3_dir}/deuterostome_taxids.txt',
-                '~{s3_dir}/nt_info.marisa',
-                '~{s3_dir}/taxon_ignore_list.txt',
-                '~{index_name}',
-                NOW(),
-                NOW()
-            ); 
-        "
-    >>>
-
-    output {}
-
-    runtime {
-        docker: docker_image_id
+        cpu: 8
     }
 }
 
@@ -433,7 +434,7 @@ task GenerateIndexMinimap2 {
         Int w = 8 # Minimizer window size default is 11 for short reads option
         String I = "9999G" # Load at most NUM target bases into RAM for indexing
         Int t = 20 # number of threads, doesn't really work for indexing I don't think
-        Int n_chunks = 20
+        Int n_chunks = 50
         String docker_image_id
     }
 
@@ -461,5 +462,90 @@ task GenerateIndexMinimap2 {
 
     runtime {
         docker: docker_image_id
+        cpu: 16
+    }
+}
+
+task CompressDatabase {
+    input {
+        String database_type = "nt" # nt or nr
+        File fasta
+        Array[File] accession2taxid_files
+        Int k
+        Int scaled
+        Float similarity_threshold
+        String docker_image_id
+    }
+
+    command <<<
+        set -euxo pipefail
+
+        READS_BY_TAXID_PATH=reads_by_taxid
+        SPLIT_APART_TAXID_DIR_NAME="split_apart_taxid_~{database_type}"
+        SORTED_TAXID_DIR_NAME="sorted_taxid_~{database_type}"
+
+        # It is critical that this split happens in the same step as the compression
+        # If the directory is a step output it will be uploaded, which takes an enormous amount of time
+        ncbi-compress break-into-individual-taxids-only \
+            --input-fasta ~{fasta} \
+            --accession-mapping-files ~{sep=" " accession2taxid_files} \
+            --output-dir $READS_BY_TAXID_PATH
+
+        ncbi-compress sort-taxid-dir-by-sequence-length \
+            --input-taxid-dir $READS_BY_TAXID_PATH \
+            --output-taxid-dir $SORTED_TAXID_DIR_NAME
+
+        mkdir $SPLIT_APART_TAXID_DIR_NAME # this is needed to split up large taxids into smaller chunks to reduce memory usage
+
+        ncbi-compress fasta-compress-from-taxid-dir  ~{if database_type == "nr" then "--is-protein-fasta" else ""} \
+            --input-fasta-dir $SORTED_TAXID_DIR_NAME \
+            --output-fasta ~{database_type}_compressed.fa \
+            --k ~{k} \
+            --scaled ~{scaled} \
+            --similarity-threshold ~{similarity_threshold} \
+            --split-apart-taxid-dir-name $SPLIT_APART_TAXID_DIR_NAME
+
+        # Remove to save space, intermediate files are not cleaned up within a run
+        rm -rf $READS_BY_TAXID_PATH
+        rm -rf $SPLIT_APART_TAXID_DIR_NAME
+    >>>
+
+    output {
+        File compressed = "~{database_type}_compressed.fa"
+    }
+
+    runtime {
+        docker: docker_image_id
+        cpu: 88
+    }
+}
+
+task ShuffleDatabase {
+    input {
+        File fasta
+        String docker_image_id
+    }
+
+    command <<<
+        set -euxo pipefail
+
+        # shuffle compressed fasta to distribute the accessions evenly across the file
+        # this is important for spreading SC2 accessions (and any other large taxid) over
+        # the chunked minimap2 and diamond indexes which impacts alignment time.
+
+        shuffled_fasta="shuffled_~{basename(fasta)}"
+
+        ncbi-compress shuffle-fasta \
+            --input-fasta ~{fasta} \
+            --output-fasta $shuffled_fasta
+    >>>
+
+    output {
+        File shuffled = "shuffled_~{basename(fasta)}"
+    }
+
+    runtime {
+        docker: docker_image_id
+        cpu: 8 # shuffle function does not run in parallel
     }
 }
