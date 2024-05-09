@@ -1303,7 +1303,7 @@ workflow czid_long_read_mngs {
         String? diamond_db
         String diamond_args = "--long-reads --sensitive"
 
-        String diamond_wdl_version = "v1.0.0"
+        String diamond_wdl_version = "v1.1.0"
         String minimap2_wdl_version = "v1.0.0"
 
         Boolean use_deuterostome_filter = true
