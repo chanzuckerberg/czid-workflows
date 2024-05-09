@@ -554,6 +554,7 @@ task RunNTAlignment {
         File? local_minimap2_index
         String prefix
         # only required for remote alignment
+        String minimap2_wdl_version
         String? s3_wd_uri
         String docker_image_id
     }
@@ -573,6 +574,7 @@ task RunNTAlignment {
             result_path="gsnap.paf",
             aligner="minimap2",
             aligner_args="~{minimap2_args}",
+            aligner_wdl_version="~{minimap2_wdl_version}",
             queries=["~{all_sequences_to_align}"],
         )
         CODE
@@ -599,6 +601,7 @@ task RunNRAlignment {
         Boolean run_locally = false
         File? local_diamond_index
         # only required for remote alignment
+        String diamond_wdl_version
         String? s3_wd_uri
         String docker_image_id
     }
@@ -624,6 +627,7 @@ task RunNRAlignment {
             result_path="diamond.m8",
             aligner="diamond",
             aligner_args="~{diamond_args}",
+            aligner_wdl_version="~{diamond_wdl_version}",
             queries=["~{assembled_reads_fa}"],
         )
         CODE
@@ -1299,6 +1303,9 @@ workflow czid_long_read_mngs {
         String? diamond_db
         String diamond_args = "--long-reads --sensitive"
 
+        String diamond_wdl_version = "v1.0.0"
+        String minimap2_wdl_version = "v1.0.0"
+
         Boolean use_deuterostome_filter = true
         Boolean use_taxon_whitelist = false
     }
@@ -1396,6 +1403,7 @@ workflow czid_long_read_mngs {
             run_locally = defined(minimap2_local_db_path),
             local_minimap2_index = minimap2_local_db_path,
             prefix= minimap2_prefix,
+            minimap2_wdl_version=minimap2_wdl_version,
             docker_image_id = docker_image_id,
     }
 
@@ -1406,6 +1414,7 @@ workflow czid_long_read_mngs {
             diamond_args=diamond_args,
             run_locally=defined(diamond_local_db_path),
             local_diamond_index=diamond_local_db_path,
+            diamond_wdl_version=diamond_wdl_version,
             s3_wd_uri=s3_wd_uri,
             docker_image_id=docker_image_id,
     }
