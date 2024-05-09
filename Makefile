@@ -60,7 +60,11 @@ test-%: ## run miniwdl step tests eg. make test-short-read-mngs
 
 integration-test-%: ## run miniwdl integration tests eg. make integration-test-short-read-mngs
 	pytest -v -n $$(( $$(nproc) - 1)) --durations=0 --tb=short --log-cli-level=11 workflows/$*/integration_test
-	
+
+.PHONY: cargo-test-index-generation
+cargo-test-index-generation: ## run cargo test for index-generation
+	(cd workflows/index-generation/ncbi-compress && cargo test)
+
 .PHONY: test
 test: ## run miniwdl step tests for all workflows eg. make test
 	for i in $$(ls workflows); do $(MAKE) test-$$i; done
@@ -83,12 +87,15 @@ python-dependencies: .python_dependencies_installed # install python dependencie
 run: build python-dependencies ## run a miniwdl workflow. eg. make run WORKFLOW=consensus-genome. args: WORKFLOW,EXTRA_INPUT,INPUT,TASK_CMD
 	if [ "$(WORKFLOW)" = "short-read-mngs" ]; then \
 		RUNFILE="local_driver.wdl"; \
+	elif [ $$(ls workflows/$(WORKFLOW)/*.wdl | wc -l) -eq 1 ]; then \
+		RUNFILE=$$(ls workflows/$(WORKFLOW)/*.wdl); \
+		RUNFILE=$$(basename $$RUNFILE); \
 	elif [ -f "workflows/$(WORKFLOW)/$(WORKFLOW).wdl" ]; then \
 		RUNFILE="$(WORKFLOW).wdl"; \
 	else \
 		RUNFILE="run.wdl"; \
 	fi; \
-	.venv/bin/miniwdl run workflows/$(WORKFLOW)/$$RUNFILE docker_image_id=czid-$(WORKFLOW) $(EXTRA_INPUTS) $(INPUT) $(TASK_CMD)
+	.venv/bin/miniwdl run workflows/$(WORKFLOW)/$$RUNFILE docker_image_id=czid-$(WORKFLOW) $(INPUT) $(EXTRA_INPUTS) $(TASK_CMD)
 
 .PHONY: miniwdl-explore
 miniwdl-explore: ## !ADVANCED! explore a previous miniwdl workflow run in the cli. eg. make miniwdl-explore OUTPATH='/mnt/path/to/output/'

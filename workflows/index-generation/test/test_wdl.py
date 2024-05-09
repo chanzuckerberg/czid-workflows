@@ -9,13 +9,19 @@ import marisa_trie
 class TestIndexGeneration(WDLTestCase):
     """Tests the RunValidateInput function"""
 
+    base = "https://idseq-samples-test.s3-us-west-2.amazonaws.com/index-generation/inputs"
+
     wdl = os.path.join(os.path.dirname(__file__), "..", "index-generation.wdl")
     common_inputs = {
-        "ncbi_server": "https://idseq-samples-test.s3-us-west-2.amazonaws.com/index-generation/inputs",
+        "index_name": "2020-04-20",
+        "ncbi_server": base,
+        "provided_nt": f"{base}/blast/db/FASTA/nt.gz",
+        "provided_nr": f"{base}/blast/db/FASTA/nr.gz",
     }
 
     def testIndexGeneration(self):
-        res = self.run_miniwdl(["index_name=2020-04-20"])
+        # res = self.run_miniwdl(["index_name=2020-04-20"])
+        res = self.run_miniwdl()
         outputs = res["outputs"]
         with gzip.open(outputs["index_generation.versioned_taxid_lineages_csv"], "rt") as f:
             for row in csv.DictReader(f):
