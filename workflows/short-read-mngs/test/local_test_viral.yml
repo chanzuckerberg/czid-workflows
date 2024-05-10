@@ -21,7 +21,7 @@ non_host_alignment.accession2taxid_db: s3://czid-public-references/mini-database
 non_host_alignment.alignment_scalability: true
 minimap2_local_db_path: s3://czid-public-references/test/viral-alignment-indexes/viral_nt
 diamond_local_db_path: s3://czid-public-references/test/viral-alignment-indexes/viral_nr
-diamond_args: "mid-sensitive"
+diamond_args: "--mid-sensitive"
 postprocess.nt_db: s3://czid-public-references/test/viral-alignment-indexes/viral_nt
 postprocess.nt_loc_db: s3://czid-public-references/test/viral-alignment-indexes/viral_nt_loc.marisa
 postprocess.nr_db: s3://czid-public-references/test/viral-alignment-indexes/viral_nr
