@@ -29,6 +29,14 @@ else
     exit 1
 fi
 
+if [[ $WORKFLOW_NAME == "long-read-mngs" ]]; then
+    TAG="${WORKFLOW_NAME}-v0.7.7-dev-diamondsensitive"
+fi
+
+if [[ $WORKFLOW_NAME == "short-read-mngs" ]]; then
+    TAG="${WORKFLOW_NAME}-v8.3.1-dev-diamondsensitive"
+fi
+
 if [[ $( git branch --show-current) != "main" ]]; then 
     COMMIT=$(git rev-parse --short HEAD)
     TAG=$TAG"-$COMMIT"
