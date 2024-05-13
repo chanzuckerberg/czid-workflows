@@ -641,6 +641,7 @@ task RunSpades {
     output { 
         File contigs = "spades/contigs.fasta"
         File? scaffolds = "spades/scaffolds.fasta"
+        File? spades_output_log = "spades/spades.log"
         File? failure_log = "spades_failure.json"
     }
     runtime { 
