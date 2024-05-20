@@ -189,10 +189,23 @@ def _run_chunk(
         inputs["query_1"] = query_uris[1]
 
     wdl_input_uri = os.path.join(chunk_dir, f"{chunk_id}-input.json")
+    input_bucket, input_key = _bucket_and_key(wdl_input_uri)
+
     wdl_output_uri = os.path.join(chunk_dir, f"{chunk_id}-output.json")
+    output_bucket, output_key = _bucket_and_key(wdl_output_uri)
+
     wdl_workflow_uri = f"s3://idseq-workflows/{aligner}-{aligner_wdl_version}/{aligner}.wdl"
 
-    input_bucket, input_key = _bucket_and_key(wdl_input_uri)
+    # if this job fails we don't want to re-run chunks that have already been processed
+    #   the presence of the output file means the chunk has already been processed
+    try:
+        _s3_client.head_object(Bucket=output_bucket, Key=output_key)
+        log.info(f"skipping chunk, output already exists: {wdl_output_uri}")
+        return
+    except ClientError as e:
+        if e.response["Error"]["Code"] != "404":
+            raise e
+
     _s3_client.put_object(
         Bucket=input_bucket,
         Key=input_key,
