@@ -8,6 +8,18 @@ Further documentation on how to use the CZ ID long-read-mngs workflow can be fou
 ​
 ### Changelog
 
+**v0.7.8** -- May 21, 2024 -- Adjust Diamond sensitivity
+​
+ - Parameterizes the WDL version for the Diamond workflow. It is now a top-level input to the long-read-mngs WDL workflow.
+ - Added the `--sensitive` flag to Diamond invocations.
+ - Fixed an issue where certain network requests failed due to an interaction between Docker and the Python requests module.
+​
+
+**v0.7.7** -- April 29, 2024 -- Prioritize more specific taxon-level hits
+​
+ - Changed some of the code that calls hits for read and contig queries to prioritize more specific hits over more general ones, i.e. species-level hits will be prioritized over genus-level, and genus-level over family-level. The most specific hit available will be chosen.
+​
+
 **v0.7.6** -- March 8, 2024 -- Bugfix for coverage viz output
 ​
  - Fixed a bug that caused coverage viz output files to output the wrong contig file byteranges for contigs. Previously, the byteranges being output were for an intermediate file (one that filtered out contigs that did not have a corresponding read). GenerateCoverageViz now uses the full contigs file, which is a workflow output, as input and generates contig byteranges for this file.
