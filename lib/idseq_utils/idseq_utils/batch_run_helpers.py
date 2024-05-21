@@ -33,7 +33,9 @@ config = Config(
 
 
 _batch_client = boto3.client("batch", config=config)
-_s3_client = boto3.client("s3")
+# the retries are less necessary for S3 because rate limiting is more generous but we have hit the limit
+#   and it is costly for this job to be re-run
+_s3_client = boto3.client("s3", config=config)
 
 try:
     account_id = boto3.client("sts").get_caller_identity()["Account"]
@@ -203,6 +205,7 @@ def _run_chunk(
         log.info(f"skipping chunk, output already exists: {wdl_output_uri}")
         return
     except ClientError as e:
+        # raise the error if it is anything other than "not found"
         if e.response["Error"]["Code"] != "404":
             raise e
 
