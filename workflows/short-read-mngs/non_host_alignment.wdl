@@ -134,7 +134,7 @@ task RunAlignment_diamond_out {
         set -euxo pipefail  
         if [[ "~{run_locally}" == true ]]; then 
           diamond makedb --in "~{local_diamond_index}" -d reference
-          diamond blastx -d reference -q "~{sep=' ' fastas}" -o "rapsearch2.m8" "--~{diamond_args}"
+          diamond blastx -d reference -q "~{sep=' ' fastas}" -o "rapsearch2.m8" "~{diamond_args}"
         else
           python3 <<CODE
         import os 
@@ -303,11 +303,11 @@ workflow czid_non_host_alignment {
     String minimap2_db = "s3://czid-public-references/minimap2-test/2021-01-22/nt_k14_w8_20/"
     String diamond_db = "s3://czid-public-references/diamond-test/2021-01-22/"
     String minimap2_args = "-cx sr --secondary=yes"
-    String diamond_args = "mid-sensitive"
+    String diamond_args = "--mid-sensitive"
     String minimap2_prefix = "gsnap"
     String diamond_prefix = "rapsearch2"
     String minimap2_wdl_version = "v1.0.0"
-    String diamond_wdl_version = "v1.0.0"
+    String diamond_wdl_version = "v1.1.0"
 
   }
   call RunAlignment_minimap2_out { 
