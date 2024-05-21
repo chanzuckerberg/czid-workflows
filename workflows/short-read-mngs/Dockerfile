@@ -78,7 +78,7 @@ RUN apt-get -q install -y \
         spades \
         ncbi-blast+
 
-RUN pip3 install boto3==1.23.10 marisa-trie==0.7.7 pytest requests==2.31.0
+RUN pip3 install boto3==1.23.10 marisa-trie==0.7.7 pytest requests==2.27.1
 RUN pip3 install miniwdl==${MINIWDL_VERSION} miniwdl-s3parcp==0.0.5 miniwdl-s3upload==0.0.4
 RUN pip3 install https://github.com/chanzuckerberg/miniwdl-plugins/archive/f0465b0.zip#subdirectory=sfn-wdl
 RUN pip3 install https://github.com/chanzuckerberg/s3mi/archive/v0.8.0.tar.gz
