@@ -237,7 +237,7 @@ class PipelineStepRunAssembly(PipelineStep):
                 args=samtools_sort_params
             )
         )
-        
+
         contig_stats, _ = generate_info_from_sam(output_bowtie_sam, read2contig, duplicate_cluster_sizes_path=duplicate_cluster_sizes_path)
         with open(output_contig_stats, 'w') as ocf:
             json.dump(contig_stats, ocf)
