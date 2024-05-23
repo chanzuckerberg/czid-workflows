@@ -276,6 +276,8 @@ task ercc_bowtie2_filter {
 
     ~{bowtie2_invocation}
 
+    samtools sort -n -O sam -o /tmp/bowtie2_ercc.sam /tmp/bowtie2_ercc.sam
+
     # Extract reads [pairs] that did NOT map to the index
     if [[ '~{paired}' == 'true' ]]; then
         #    1 (read paired)
