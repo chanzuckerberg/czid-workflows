@@ -400,10 +400,7 @@ workflow czid_non_host_alignment {
     File rapsearch2_out_rapsearch2_counts_with_dcr_json = RunCallHitsDiamond.counts_json
     File? diamond_version = RunAlignment_diamond_out.version
     File? rapsearch2_out_count = RunCallHitsDiamond.output_read_count
-    File taxon_count_out_taxon_counts_with_dcr_json = CombineTaxonCounts.taxon_counts_with_dcr_json
     File? taxon_count_out_count = CombineTaxonCounts.output_read_count
-    File annotated_out_annotated_merged_fa = GenerateAnnotatedFasta.annotated_merged_fa
-    File annotated_out_unidentified_fa = GenerateAnnotatedFasta.unidentified_fa
     File? annotated_out_count = GenerateAnnotatedFasta.output_read_count
   }
 }
