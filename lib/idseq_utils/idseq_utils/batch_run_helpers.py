@@ -33,7 +33,9 @@ config = Config(
 
 
 _batch_client = boto3.client("batch", config=config)
-_s3_client = boto3.client("s3")
+# the retries are less necessary for S3 because rate limiting is more generous but we have hit the limit
+#   and it is costly for this job to be re-run
+_s3_client = boto3.client("s3", config=config)
 
 try:
     account_id = boto3.client("sts").get_caller_identity()["Account"]
@@ -189,10 +191,24 @@ def _run_chunk(
         inputs["query_1"] = query_uris[1]
 
     wdl_input_uri = os.path.join(chunk_dir, f"{chunk_id}-input.json")
+    input_bucket, input_key = _bucket_and_key(wdl_input_uri)
+
     wdl_output_uri = os.path.join(chunk_dir, f"{chunk_id}-output.json")
+    output_bucket, output_key = _bucket_and_key(wdl_output_uri)
+
     wdl_workflow_uri = f"s3://idseq-workflows/{aligner}-{aligner_wdl_version}/{aligner}.wdl"
 
-    input_bucket, input_key = _bucket_and_key(wdl_input_uri)
+    # if this job fails we don't want to re-run chunks that have already been processed
+    #   the presence of the output file means the chunk has already been processed
+    try:
+        _s3_client.head_object(Bucket=output_bucket, Key=output_key)
+        log.info(f"skipping chunk, output already exists: {wdl_output_uri}")
+        return
+    except ClientError as e:
+        # raise the error if it is anything other than "not found"
+        if e.response["Error"]["Code"] != "404":
+            raise e
+
     _s3_client.put_object(
         Bucket=input_bucket,
         Key=input_key,
