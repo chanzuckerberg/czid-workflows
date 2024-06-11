@@ -17,10 +17,6 @@ workflow minimap {
         db_chunk = db_chunk,
         docker_image_id = docker_image_id
     }
-
-    output {
-        Array[File] chunks = RunMinimap2.chunks
-    }
 }
 
 task RunMinimap2 {

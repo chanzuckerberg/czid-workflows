@@ -6,7 +6,7 @@ flake8
 ruamel.yaml
 taxadb
 boto3
-requests==2.32.2
+requests
 scikit-learn
 biopython
 marisa-trie

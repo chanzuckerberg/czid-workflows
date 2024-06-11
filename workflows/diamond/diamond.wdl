@@ -17,11 +17,6 @@ workflow diamond {
         db_chunk = db_chunk,
         docker_image_id = docker_image_id
     }
-
-    output {
-        Array[File] ref_blocks = RunDiamond.ref_blocks
-        Array[File] ref_dicts = RunDiamond.ref_dicts
-    }
 }
 
 task RunDiamond {

@@ -306,8 +306,8 @@ workflow czid_non_host_alignment {
     String diamond_args = "--mid-sensitive"
     String minimap2_prefix = "gsnap"
     String diamond_prefix = "rapsearch2"
-    String minimap2_wdl_version = "v1.0.0"
-    String diamond_wdl_version = "v1.1.0"
+    String minimap2_wdl_version = "v1.0.1"
+    String diamond_wdl_version = "v1.1.1"
 
   }
   call RunAlignment_minimap2_out { 
