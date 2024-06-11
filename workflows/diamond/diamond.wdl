@@ -17,6 +17,7 @@ workflow diamond {
         db_chunk = db_chunk,
         docker_image_id = docker_image_id
     }
+    output {} # explicitly mark empty output for intermediate_output tagging
 }
 
 task RunDiamond {
