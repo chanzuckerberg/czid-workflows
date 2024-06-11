@@ -18,7 +18,7 @@ workflow minimap {
         docker_image_id = docker_image_id
     }
 
-    output {}
+    output {} # explicitly mark empty output for intermediate_output tagging
 }
 
 task RunMinimap2 {
