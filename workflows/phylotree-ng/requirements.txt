@@ -2,7 +2,7 @@ biopython==1.78
 matplotlib==3.4.2
 numpy==1.22.0
 pandas==1.2.4
-requests==2.31.0
+requests==2.32.2
 seaborn==0.11.1
 marisa_trie==0.7.7
 boto3==1.24.34
