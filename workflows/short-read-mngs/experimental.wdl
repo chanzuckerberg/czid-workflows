@@ -278,19 +278,6 @@ workflow czid_experimental {
   output {
     File taxid_fasta_out_taxid_annot_fasta = GenerateTaxidFasta.taxid_annot_fasta
     File? taxid_fasta_out_count = GenerateTaxidFasta.output_read_count
-    File taxid_locator_out_taxid_annot_sorted_nt_fasta = GenerateTaxidLocator.taxid_annot_sorted_nt_fasta
-    File taxid_locator_out_taxid_locations_nt_json = GenerateTaxidLocator.taxid_locations_nt_json
-    File taxid_locator_out_taxid_annot_sorted_nr_fasta = GenerateTaxidLocator.taxid_annot_sorted_nr_fasta
-    File taxid_locator_out_taxid_locations_nr_json = GenerateTaxidLocator.taxid_locations_nr_json
-    File taxid_locator_out_taxid_annot_sorted_genus_nt_fasta = GenerateTaxidLocator.taxid_annot_sorted_genus_nt_fasta
-    File taxid_locator_out_taxid_locations_genus_nt_json = GenerateTaxidLocator.taxid_locations_genus_nt_json
-    File taxid_locator_out_taxid_annot_sorted_genus_nr_fasta = GenerateTaxidLocator.taxid_annot_sorted_genus_nr_fasta
-    File taxid_locator_out_taxid_locations_genus_nr_json = GenerateTaxidLocator.taxid_locations_genus_nr_json
-    File taxid_locator_out_taxid_annot_sorted_family_nt_fasta = GenerateTaxidLocator.taxid_annot_sorted_family_nt_fasta
-    File taxid_locator_out_taxid_locations_family_nt_json = GenerateTaxidLocator.taxid_locations_family_nt_json
-    File taxid_locator_out_taxid_annot_sorted_family_nr_fasta = GenerateTaxidLocator.taxid_annot_sorted_family_nr_fasta
-    File taxid_locator_out_taxid_locations_family_nr_json = GenerateTaxidLocator.taxid_locations_family_nr_json
-    File taxid_locator_out_taxid_locations_combined_json = GenerateTaxidLocator.taxid_locations_combined_json
     File? taxid_locator_out_count = GenerateTaxidLocator.output_read_count
     File alignment_viz_out_align_viz_summary = GenerateAlignmentViz.align_viz_summary
     File? alignment_viz_out_count = GenerateAlignmentViz.output_read_count
