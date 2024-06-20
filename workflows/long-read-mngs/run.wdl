@@ -268,7 +268,9 @@ task RunSubsampling {
 
     command <<<
         set -euxo pipefail
-        head -"~{subsample_depth}" "~{input_fastq}" > sample.subsampled.fastq
+
+        # set seed to 42 for reproducibility
+        seqtk sample -s42 "~{input_fastq}" "~{subsample_depth}" > sample.subsampled.fastq
 
         # We should always have reads after subsampling, but adding for consistency with other steps
         filter_count sample.subsampled.fastq subsampled "No reads remaining after subsampling"
