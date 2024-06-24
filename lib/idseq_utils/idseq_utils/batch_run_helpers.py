@@ -84,24 +84,36 @@ def _get_job_status(job_id, use_batch_api=False):
             raise e
 
 
-def _hash_dict(d: dict) -> str:
-    hash = hashlib.sha256()
-    hash.update(json.dumps(d, sort_keys=True).encode())
-    return hash.hexdigest()
+class BatchJobCache:
+    """
+    BatchJobCache saves job IDs so the coordinator can re-attach to running batch jobs when the coordinator fails
+
+    The output should always be the same if the inputs are the same, however we also incorporate the batch_args
+    into the cache because a retry on spot vs on demand will result in a different batch queue.
+    """
+    def __init__(self, bucket: str, prefix: str, inputs: dict[str, str]):
+        self.bucket = bucket
+        self.prefix = prefix
+        self.inputs = inputs
 
 
-def _get_cached_job_id(bucket: str, prefix: str, d: dict) -> Optional[str]:
-    try:
-        _s3_client.get_object(Bucket=bucket, Key=f"{prefix}/{_hash_dict(d)}")["Body"].read()
-    except ClientError as e:
-        if e.response["Error"]["Code"] == "NoSuchKey":
-            return None
-        else:
-            raise e
+    def _key(self, batch_args: dict) -> str:
+        hash = hashlib.sha256()
+        cache_dict = { "inputs": self.inputs, "batch_args": batch_args }
+        hash.update(json.dumps(cache_dict, sort_keys=True).encode())
+        return os.path.join(self.prefix, hash.hexdigest())
 
+    def get(self, batch_args: dict) -> Optional[str]:
+        try:
+            _s3_client.get_object(Bucket=self.bucket, Key=self._key(batch_args))["Body"].read()
+        except ClientError as e:
+            if e.response["Error"]["Code"] == "NoSuchKey":
+                return None
+            else:
+                raise e
 
-def _put_cached_job_id(bucket: str, prefix: str, d: dict, job_id: str):
-    _s3_client.put_object(Bucket=bucket, Key=f"{prefix}/{_hash_dict(d)}", Body=job_id.encode())
+    def put(self, batch_args: dict, job_id: str):
+        _s3_client.put_object(Bucket=self.bucket, Key=self._key(batch_args), Body=job_id.encode())
 
 
 def _run_batch_job(
@@ -110,8 +122,7 @@ def _run_batch_job(
     job_definition: str,
     environment: Dict[str, str],
     retries: int,
-    cache_bucket: str,
-    cache_prefix: str,
+    cache: BatchJobCache,
 ):
     submit_args = {
         "jobName": job_name,
@@ -124,11 +135,11 @@ def _run_batch_job(
         },
         "retryStrategy": {"attempts": retries},
     }
-    job_id = _get_cached_job_id(cache_bucket, cache_prefix, submit_args)
+    job_id = cache.get(submit_args)
     if not job_id:
         response = _batch_client.submit_job(**submit_args)
         job_id = response["jobId"]
-        _put_cached_job_id(cache_bucket, cache_prefix, submit_args, job_id)
+        cache.put(submit_args, job_id)
 
     def _log_status(status: str):
         level = logging.INFO if status != "FAILED" else logging.ERROR
@@ -221,23 +232,12 @@ def _run_chunk(
     input_bucket, input_key = _bucket_and_key(wdl_input_uri)
 
     wdl_output_uri = os.path.join(chunk_dir, f"{chunk_id}-output.json")
-    output_bucket, output_key = _bucket_and_key(wdl_output_uri)
 
     wdl_workflow_uri = f"s3://idseq-workflows/{aligner}-{aligner_wdl_version}/{aligner}.wdl"
 
     cache_prefix_uri = os.path.join(chunk_dir, "batch_job_cache/")
     cache_bucket, cache_prefix = _bucket_and_key(cache_prefix_uri)
-
-    # if this job fails we don't want to re-run chunks that have already been processed
-    #   the presence of the output file means the chunk has already been processed
-    try:
-        _s3_client.head_object(Bucket=output_bucket, Key=output_key)
-        log.info(f"skipping chunk, output already exists: {wdl_output_uri}")
-        return
-    except ClientError as e:
-        # raise the error if it is anything other than "not found"
-        if e.response["Error"]["Code"] != "404":
-            raise e
+    cache = BatchJobCache(cache_bucket, cache_prefix, inputs)
 
     _s3_client.put_object(
         Bucket=input_bucket,
@@ -261,8 +261,7 @@ def _run_chunk(
             job_definition=job_definition,
             environment=environment,
             retries=2,
-            cache_bucket=cache_bucket,
-            cache_prefix=cache_prefix,
+            cache=cache,
         )
     except BatchJobFailed:
         _run_batch_job(
@@ -271,8 +270,7 @@ def _run_chunk(
             job_definition=job_definition,
             environment=environment,
             retries=1,
-            cache_bucket=cache_bucket,
-            cache_prefix=cache_prefix,
+            cache=cache,
         )
 
 
