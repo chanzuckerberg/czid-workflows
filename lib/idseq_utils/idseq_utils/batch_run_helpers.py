@@ -1,3 +1,4 @@
+import hashlib
 import json
 import logging
 import os
@@ -9,7 +10,7 @@ import time
 from os import listdir
 from multiprocessing import Pool
 from subprocess import run
-from typing import Dict, List
+from typing import Dict, List, Optional
 from urllib.parse import urlparse
 
 from idseq_utils.diamond_scatter import blastx_join
@@ -83,25 +84,51 @@ def _get_job_status(job_id, use_batch_api=False):
             raise e
 
 
+def _hash_dict(d: dict) -> str:
+    hash = hashlib.sha256()
+    hash.update(json.dumps(d, sort_keys=True).encode())
+    return hash.hexdigest()
+
+
+def _get_cached_job_id(bucket: str, prefix: str, d: dict) -> Optional[str]:
+    try:
+        _s3_client.get_object(Bucket=bucket, Key=f"{prefix}/{_hash_dict(d)}")["Body"].read()
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "NoSuchKey":
+            return None
+        else:
+            raise e
+
+
+def _put_cached_job_id(bucket: str, prefix: str, d: dict, job_id: str):
+    _s3_client.put_object(Bucket=bucket, Key=f"{prefix}/{_hash_dict(d)}", Body=job_id.encode())
+
+
 def _run_batch_job(
     job_name: str,
     job_queue: str,
     job_definition: str,
     environment: Dict[str, str],
     retries: int,
+    cache_bucket: str,
+    cache_prefix: str,
 ):
-    response = _batch_client.submit_job(
-        jobName=job_name,
-        jobQueue=job_queue,
-        jobDefinition=job_definition,
-        containerOverrides={
+    submit_args = {
+        "jobName": job_name,
+        "jobQueue": job_queue,
+        "jobDefinition": job_definition,
+        "containerOverrides": {
             "environment": [{"name": k, "value": v} for k, v in environment.items()],
             "memory": 130816,
             "vcpus": 24,
         },
-        retryStrategy={"attempts": retries},
-    )
-    job_id = response["jobId"]
+        "retryStrategy": {"attempts": retries},
+    }
+    job_id = _get_cached_job_id(cache_bucket, cache_prefix, submit_args)
+    if not job_id:
+        response = _batch_client.submit_job(**submit_args)
+        job_id = response["jobId"]
+        _put_cached_job_id(cache_bucket, cache_prefix, submit_args, job_id)
 
     def _log_status(status: str):
         level = logging.INFO if status != "FAILED" else logging.ERROR
@@ -198,6 +225,9 @@ def _run_chunk(
 
     wdl_workflow_uri = f"s3://idseq-workflows/{aligner}-{aligner_wdl_version}/{aligner}.wdl"
 
+    cache_prefix_uri = os.path.join(chunk_dir, "batch_job_cache/")
+    cache_bucket, cache_prefix = _bucket_and_key(cache_prefix_uri)
+
     # if this job fails we don't want to re-run chunks that have already been processed
     #   the presence of the output file means the chunk has already been processed
     try:
@@ -231,6 +261,8 @@ def _run_chunk(
             job_definition=job_definition,
             environment=environment,
             retries=2,
+            cache_bucket=cache_bucket,
+            cache_prefix=cache_prefix,
         )
     except BatchJobFailed:
         _run_batch_job(
@@ -239,6 +271,8 @@ def _run_chunk(
             job_definition=job_definition,
             environment=environment,
             retries=1,
+            cache_bucket=cache_bucket,
+            cache_prefix=cache_prefix,
         )
 
 
