@@ -319,9 +319,16 @@ def run_alignment(
     run(["s3parcp", "--recursive", chunk_dir, "chunks"], check=True)
     if os.path.exists(os.path.join("chunks", "cache")):
         shutil.rmtree(os.path.join("chunks", "cache"))
+    if os.path.exists(os.path.join("chunks", "batch_job_cache")):
+        shutil.rmtree(os.path.join("chunks", "batch_job_cache"))
     for fn in listdir("chunks"):
         if fn.endswith("json"):
             os.remove(os.path.join("chunks", fn))
+            _s3_client.put_object_tagging(
+                Bucket=bucket,
+                Key=os.path.join(chunk_dir, fn),
+                Tagging={"TagSet": [{"Key": "AlignmentCoordination", "Value": "True"}]},
+            )
     if aligner == "diamond":
         blastx_join("chunks", result_path, aligner_args, *queries)
     else:
