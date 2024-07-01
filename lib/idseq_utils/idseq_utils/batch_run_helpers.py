@@ -21,6 +21,7 @@ from botocore.exceptions import ClientError
 from botocore.config import Config
 
 log = logging.getLogger(__name__)
+log.setLevel(logging.DEBUG)
 
 MAX_CHUNKS_IN_FLIGHT = 30  # TODO: remove this constant, currently does nothing since we have at most 30 index chunks
 
@@ -324,6 +325,7 @@ def run_alignment(
     for fn in listdir("chunks"):
         if fn.endswith("json"):
             os.remove(os.path.join("chunks", fn))
+            log.debug(f"deleting from S3: {os.path.join(chunk_dir, fn)} ({chunk_dir}, {fn})")
             _s3_client.put_object_tagging(
                 Bucket=bucket,
                 Key=os.path.join(chunk_dir, fn),
