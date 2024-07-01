@@ -91,18 +91,18 @@ class BatchJobCache:
     The output should always be the same if the inputs are the same, however we also incorporate the batch_args
     into the cache because a retry on spot vs on demand will result in a different batch queue.
     """
-    def __init__(self, bucket: str, prefix: str, inputs: dict[str, str]):
+    def __init__(self, bucket: str, prefix: str, inputs: Dict[str, str]):
         self.bucket = bucket
         self.prefix = prefix
         self.inputs = inputs
 
-    def _key(self, batch_args: dict) -> str:
+    def _key(self, batch_args: Dict) -> str:
         hash = hashlib.sha256()
         cache_dict = {"inputs": self.inputs, "batch_args": batch_args}
         hash.update(json.dumps(cache_dict, sort_keys=True).encode())
         return os.path.join(self.prefix, hash.hexdigest())
 
-    def get(self, batch_args: dict) -> Optional[str]:
+    def get(self, batch_args: Dict) -> Optional[str]:
         try:
             resp = _s3_client.get_object(Bucket=self.bucket, Key=self._key(batch_args))
             resp["Body"].read().decode()
@@ -112,7 +112,7 @@ class BatchJobCache:
             else:
                 raise e
 
-    def put(self, batch_args: dict, job_id: str):
+    def put(self, batch_args: Dict, job_id: str):
         _s3_client.put_object(
             Bucket=self.bucket,
             Key=self._key(batch_args),
