@@ -21,7 +21,7 @@ from botocore.exceptions import ClientError
 from botocore.config import Config
 
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S',
 )
@@ -145,11 +145,6 @@ def _run_batch_job(
         },
         "retryStrategy": {"attempts": retries},
     }
-    job_id = cache.get(submit_args)
-    if not job_id:
-        response = _batch_client.submit_job(**submit_args)
-        job_id = response["jobId"]
-        cache.put(submit_args, job_id)
 
     def _log_status(status: str):
         level = logging.INFO if status != "FAILED" else logging.ERROR
@@ -167,7 +162,14 @@ def _run_batch_job(
             ),
         )
 
-    _log_status("SUBMITTED")
+    job_id = cache.get(submit_args)
+    if job_id:
+        log.info(f"reattach to batch job: {job_id}")
+    else:
+        response = _batch_client.submit_job(**submit_args)
+        job_id = response["jobId"]
+        cache.put(submit_args, job_id)
+        _log_status("SUBMITTED")
 
     delay = 60 + random.randint(
         -60 // 2, 60 // 2
@@ -306,6 +308,7 @@ def run_alignment(
 ):
     bucket, prefix = _bucket_and_key(db_path)
     chunk_dir = os.path.join(input_dir, f"{aligner}-chunks")
+    _, chunk_prefix = _bucket_and_key(chunk_dir)
     chunks = (
         [
             input_dir,
@@ -329,10 +332,9 @@ def run_alignment(
     for fn in listdir("chunks"):
         if fn.endswith("json"):
             os.remove(os.path.join("chunks", fn))
-            log.debug(f"deleting from S3: {os.path.join(chunk_dir, fn)} ({chunk_dir}, {fn})")
             _s3_client.put_object_tagging(
                 Bucket=bucket,
-                Key=os.path.join(chunk_dir, fn),
+                Key=os.path.join(chunk_prefix, fn),
                 Tagging={"TagSet": [{"Key": "AlignmentCoordination", "Value": "True"}]},
             )
     if aligner == "diamond":
