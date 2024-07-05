@@ -7,7 +7,6 @@ import re
 import requests
 import shutil
 import time
-import sys
 from os import listdir
 from multiprocessing import Pool
 from subprocess import run
@@ -20,6 +19,9 @@ from idseq_utils.minimap2_scatter import minimap2_merge
 import boto3
 from botocore.exceptions import ClientError
 from botocore.config import Config
+
+log = logging.getLogger(__name__)
+log.setLevel(logging.DEBUG)
 
 MAX_CHUNKS_IN_FLIGHT = 30  # TODO: remove this constant, currently does nothing since we have at most 30 index chunks
 
@@ -63,7 +65,7 @@ def _get_job_status(job_id, use_batch_api=False):
     if use_batch_api:
         jobs = _batch_client.describe_jobs(jobs=[job_id])["jobs"]
         if not jobs:
-            print(f"missing_job_description_from_api: {job_id}", file=sys.stderr)
+            log.debug(f"missing_job_description_from_api: {job_id}")
             return "SUBMITTED"
         return jobs[0]["status"]
     batch_job_desc_bucket = boto3.resource("s3").Bucket(
@@ -76,7 +78,7 @@ def _get_job_status(job_id, use_batch_api=False):
     except ClientError as e:
         if e.response["Error"]["Code"] == "NoSuchKey":
             # Warn that the object is missing so any issue with the s3 mechanism can be identified
-            print(f"missing_job_description_object key: {key}", file=sys.stderr)
+            log.debug(f"missing_job_description_object key: {key}")
             # Return submitted because a missing job status probably means it hasn't been added yet
             return "SUBMITTED"
         else:
@@ -146,7 +148,9 @@ def _run_batch_job(
         cache.put(submit_args, job_id)
 
     def _log_status(status: str):
-        print(
+        level = logging.INFO if status != "FAILED" else logging.ERROR
+        log.log(
+            level,
             "batch_job_status " + json.dumps(
                 {
                     "job_id": job_id,
@@ -157,7 +161,6 @@ def _run_batch_job(
                     "environment": environment,
                 }
             ),
-            file=sys.stderr,
         )
 
     _log_status("SUBMITTED")
@@ -174,12 +177,11 @@ def _run_batch_job(
         except ClientError as e:
             # If we get throttled, randomly wait to de-synchronize the requests
             if e.response["Error"]["Code"] == "TooManyRequestsException":
-                print(f"describe_jobs_rate_limit_error for job_id: {job_id}", file=sys.stderr)
+                log.warn(f"describe_jobs_rate_limit_error for job_id: {job_id}")
                 # Possibly implement a backoff here if throttling becomes an issue
             else:
-                print(
+                log.error(
                     f"unexpected_client_error_while_polling_job_status for job_id: {job_id}",
-                    file=sys.stderr,
                 )
                 raise e
 
@@ -282,7 +284,7 @@ def _run_chunk(
 def _db_chunks(bucket: str, prefix):
     s3_client = boto3.client("s3")
     paginator = s3_client.get_paginator("list_objects_v2")
-    print("db chunks", file=sys.stderr)
+    log.debug("db chunks")
 
     for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
         for obj in page["Contents"]:
@@ -323,7 +325,7 @@ def run_alignment(
     for fn in listdir("chunks"):
         if fn.endswith("json"):
             os.remove(os.path.join("chunks", fn))
-            print(f"deleting from S3: {os.path.join(chunk_dir, fn)} ({chunk_dir}, {fn})", file=sys.stderr)
+            log.debug(f"deleting from S3: {os.path.join(chunk_dir, fn)} ({chunk_dir}, {fn})")
             _s3_client.put_object_tagging(
                 Bucket=bucket,
                 Key=os.path.join(chunk_dir, fn),
