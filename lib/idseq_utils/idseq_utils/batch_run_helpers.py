@@ -101,15 +101,19 @@ class BatchJobCache:
         self.prefix = prefix
         self.inputs = inputs
 
+    def _cache_value(self, batch_args: Dict) -> str:
+        return json.dumps({"inputs": self.inputs, "batch_args": batch_args}, sort_keys=True)
+
     def _key(self, batch_args: Dict) -> str:
         hash = hashlib.sha256()
-        cache_dict = {"inputs": self.inputs, "batch_args": batch_args}
-        hash.update(json.dumps(cache_dict, sort_keys=True).encode())
+        hash.update(self._cache_value(batch_args).encode())
         return os.path.join(self.prefix, hash.hexdigest())
 
     def get(self, batch_args: Dict) -> Optional[str]:
+        key = self._key(batch_args)
+        log.info(f"cache_get ({key}): {self._cache_value(batch_args)}")
         try:
-            resp = _s3_client.get_object(Bucket=self.bucket, Key=self._key(batch_args))
+            resp = _s3_client.get_object(Bucket=self.bucket, Key=key)
             resp["Body"].read().decode()
         except ClientError as e:
             if e.response["Error"]["Code"] == "NoSuchKey":
@@ -118,9 +122,11 @@ class BatchJobCache:
                 raise e
 
     def put(self, batch_args: Dict, job_id: str):
+        key = self._key(batch_args)
+        log.info(f"cache_put ({key}, {job_id}): {self._cache_value(batch_args)}")
         _s3_client.put_object(
             Bucket=self.bucket,
-            Key=self._key(batch_args),
+            Key=key,
             Body=job_id.encode(),
             Tagging="AlignmentCoordination=True",
         )
