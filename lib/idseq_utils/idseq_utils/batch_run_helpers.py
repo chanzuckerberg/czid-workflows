@@ -20,8 +20,12 @@ import boto3
 from botocore.exceptions import ClientError
 from botocore.config import Config
 
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
+)
 log = logging.getLogger(__name__)
-log.setLevel(logging.DEBUG)
 
 MAX_CHUNKS_IN_FLIGHT = 30  # TODO: remove this constant, currently does nothing since we have at most 30 index chunks
 
