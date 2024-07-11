@@ -71,51 +71,6 @@ task GenerateTaxidLocator {
   }
 }
 
-task GenerateAlignmentViz {
-  input {
-    String docker_image_id
-    String s3_wd_uri
-    File gsnap_m8_gsnap_deduped_m8
-    File taxid_annot_sorted_nt_fasta
-    File taxid_locations_nt_json
-    File taxid_annot_sorted_nr_fasta
-    File taxid_locations_nr_json
-    File taxid_annot_sorted_genus_nt_fasta
-    File taxid_locations_genus_nt_json
-    File taxid_annot_sorted_genus_nr_fasta
-    File taxid_locations_genus_nr_json
-    File taxid_annot_sorted_family_nt_fasta
-    File taxid_locations_family_nt_json
-    File taxid_annot_sorted_family_nr_fasta
-    File taxid_locations_family_nr_json
-    File taxid_locations_combined_json
-    String nt_db
-    File nt_loc_db
-  }
-  command<<<
-  set -euxo pipefail
-  idseq-dag-run-step --workflow-name experimental \
-    --step-module idseq_dag.steps.generate_alignment_viz \
-    --step-class PipelineStepGenerateAlignmentViz \
-    --step-name alignment_viz_out \
-    --input-files '[["~{gsnap_m8_gsnap_deduped_m8}"], ["~{taxid_annot_sorted_nt_fasta}", "~{taxid_locations_nt_json}", "~{taxid_annot_sorted_nr_fasta}", "~{taxid_locations_nr_json}", "~{taxid_annot_sorted_genus_nt_fasta}", "~{taxid_locations_genus_nt_json}", "~{taxid_annot_sorted_genus_nr_fasta}", "~{taxid_locations_genus_nr_json}", "~{taxid_annot_sorted_family_nt_fasta}", "~{taxid_locations_family_nt_json}", "~{taxid_annot_sorted_family_nr_fasta}", "~{taxid_locations_family_nr_json}", "~{taxid_locations_combined_json}"]]' \
-    --output-files '["align_viz.summary"]' \
-    --output-dir-s3 '~{s3_wd_uri}' \
-    --additional-files '{"nt_loc_db": "~{nt_loc_db}", "nt_db": "~{nt_db}"}' \
-    --additional-attributes '{"nt_db": "~{nt_db}"}'
-  >>>
-  output {
-    String step_description_md = read_string("alignment_viz_out.description.md")
-    File align_viz_summary = "align_viz.summary"
-    File? output_read_count = "alignment_viz_out.count"
-    Array[File] align_viz = glob("align_viz/*.align_viz.json")
-    Array[File] longest_reads = glob("longest_reads/*.longest_5_reads.fasta")
-  }
-  runtime {
-    docker: docker_image_id
-  }
-}
-
 task GenerateCoverageViz {
   input {
     String docker_image_id
@@ -229,28 +184,6 @@ workflow czid_experimental {
       taxid_annot_fasta = GenerateTaxidFasta.taxid_annot_fasta
   }
 
-  call GenerateAlignmentViz {
-    input:
-      docker_image_id = docker_image_id,
-      s3_wd_uri = s3_wd_uri,
-      gsnap_m8_gsnap_deduped_m8 = gsnap_m8_gsnap_deduped_m8,
-      taxid_annot_sorted_nt_fasta = GenerateTaxidLocator.taxid_annot_sorted_nt_fasta,
-      taxid_locations_nt_json = GenerateTaxidLocator.taxid_locations_nt_json,
-      taxid_annot_sorted_nr_fasta = GenerateTaxidLocator.taxid_annot_sorted_nr_fasta,
-      taxid_locations_nr_json = GenerateTaxidLocator.taxid_locations_nr_json,
-      taxid_annot_sorted_genus_nt_fasta = GenerateTaxidLocator.taxid_annot_sorted_genus_nt_fasta,
-      taxid_locations_genus_nt_json = GenerateTaxidLocator.taxid_locations_genus_nt_json,
-      taxid_annot_sorted_genus_nr_fasta = GenerateTaxidLocator.taxid_annot_sorted_genus_nr_fasta,
-      taxid_locations_genus_nr_json = GenerateTaxidLocator.taxid_locations_genus_nr_json,
-      taxid_annot_sorted_family_nt_fasta = GenerateTaxidLocator.taxid_annot_sorted_family_nt_fasta,
-      taxid_locations_family_nt_json = GenerateTaxidLocator.taxid_locations_family_nt_json,
-      taxid_annot_sorted_family_nr_fasta = GenerateTaxidLocator.taxid_annot_sorted_family_nr_fasta,
-      taxid_locations_family_nr_json = GenerateTaxidLocator.taxid_locations_family_nr_json,
-      taxid_locations_combined_json = GenerateTaxidLocator.taxid_locations_combined_json,
-      nt_db = nt_db,
-      nt_loc_db = nt_loc_db
-  }
-
   call GenerateCoverageViz {
     input:
       docker_image_id = docker_image_id,
@@ -279,15 +212,11 @@ workflow czid_experimental {
     File taxid_fasta_out_taxid_annot_fasta = GenerateTaxidFasta.taxid_annot_fasta
     File? taxid_fasta_out_count = GenerateTaxidFasta.output_read_count
     File? taxid_locator_out_count = GenerateTaxidLocator.output_read_count
-    File alignment_viz_out_align_viz_summary = GenerateAlignmentViz.align_viz_summary
-    File? alignment_viz_out_count = GenerateAlignmentViz.output_read_count
     File coverage_viz_out_coverage_viz_summary_json = GenerateCoverageViz.coverage_viz_summary_json
     File? coverage_viz_out_count = GenerateCoverageViz.output_read_count
     File nonhost_fastq_out_nonhost_R1_fastq = NonhostFastq.nonhost_R1_fastq
     File? nonhost_fastq_out_nonhost_R2_fastq = NonhostFastq.nonhost_R2_fastq
     File? nonhost_fastq_out_count = NonhostFastq.output_read_count
-    Array[File] align_viz = GenerateAlignmentViz.align_viz
-    Array[File] longest_reads = GenerateAlignmentViz.longest_reads
     Array[File] coverage_viz = GenerateCoverageViz.coverage_viz
   }
 }
