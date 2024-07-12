@@ -339,7 +339,7 @@ def run_alignment(
                     Tagging={"TagSet": [{"Key": "AlignmentCoordination", "Value": "True"}]},
                 )
             except ClientError as e:
-                log.error(f"failed to tag '{os.path.join(chunk_prefix, fn)}'")
+                log.error(f"failed to tag 's3://{chunk_bucket}/{os.path.join(chunk_prefix, fn)}'")
                 raise e
     if aligner == "diamond":
         blastx_join("chunks", result_path, aligner_args, *queries)
