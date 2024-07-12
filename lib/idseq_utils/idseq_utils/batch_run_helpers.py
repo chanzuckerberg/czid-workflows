@@ -110,7 +110,7 @@ class BatchJobCache:
     def get(self, batch_args: Dict) -> Optional[str]:
         try:
             resp = _s3_client.get_object(Bucket=self.bucket, Key=self._key(batch_args))
-            return resp["Body"].read().decode()
+            resp["Body"].read().decode()
         except ClientError as e:
             if e.response["Error"]["Code"] == "NoSuchKey":
                 return None
@@ -332,11 +332,15 @@ def run_alignment(
     for fn in listdir("chunks"):
         if fn.endswith("json"):
             os.remove(os.path.join("chunks", fn))
-            _s3_client.put_object_tagging(
-                Bucket=bucket,
-                Key=os.path.join(chunk_prefix, fn),
-                Tagging={"TagSet": [{"Key": "AlignmentCoordination", "Value": "True"}]},
-            )
+            try:
+                _s3_client.put_object_tagging(
+                    Bucket=bucket,
+                    Key=os.path.join(chunk_prefix, fn),
+                    Tagging={"TagSet": [{"Key": "AlignmentCoordination", "Value": "True"}]},
+                )
+            except ClientError as e:
+                log.error(f"failed to tag '{os.path.join(chunk_prefix, fn)}'")
+                raise e
     if aligner == "diamond":
         blastx_join("chunks", result_path, aligner_args, *queries)
     else:
