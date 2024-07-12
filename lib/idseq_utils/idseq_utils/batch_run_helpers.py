@@ -345,4 +345,3 @@ def run_alignment(
         blastx_join("chunks", result_path, aligner_args, *queries)
     else:
         minimap2_merge("chunks", result_path, aligner_args, *queries)
-
