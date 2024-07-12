@@ -110,7 +110,7 @@ class BatchJobCache:
     def get(self, batch_args: Dict) -> Optional[str]:
         try:
             resp = _s3_client.get_object(Bucket=self.bucket, Key=self._key(batch_args))
-            resp["Body"].read().decode()
+            return resp["Body"].read().decode()
         except ClientError as e:
             if e.response["Error"]["Code"] == "NoSuchKey":
                 return None
