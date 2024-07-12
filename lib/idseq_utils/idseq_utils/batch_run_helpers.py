@@ -306,9 +306,9 @@ def run_alignment(
     aligner_wdl_version: str,
     queries: List[str],
 ):
-    bucket, prefix = _bucket_and_key(db_path)
+    db_bucket, db_prefix = _bucket_and_key(db_path)
     chunk_dir = os.path.join(input_dir, f"{aligner}-chunks")
-    _, chunk_prefix = _bucket_and_key(chunk_dir)
+    chunk_bucket, chunk_prefix = _bucket_and_key(chunk_dir)
     chunks = (
         [
             input_dir,
@@ -318,9 +318,9 @@ def run_alignment(
             aligner_wdl_version,
             queries,
             chunk_id,
-            f"s3://{bucket}/{db_chunk}",
+            f"s3://{db_bucket}/{db_chunk}",
         ]
-        for chunk_id, db_chunk in enumerate(_db_chunks(bucket, prefix))
+        for chunk_id, db_chunk in enumerate(_db_chunks(db_bucket, db_prefix))
     )
     with Pool(MAX_CHUNKS_IN_FLIGHT) as p:
         p.starmap(_run_chunk, chunks)
@@ -334,7 +334,7 @@ def run_alignment(
             os.remove(os.path.join("chunks", fn))
             try:
                 _s3_client.put_object_tagging(
-                    Bucket=bucket,
+                    Bucket=chunk_bucket,
                     Key=os.path.join(chunk_prefix, fn),
                     Tagging={"TagSet": [{"Key": "AlignmentCoordination", "Value": "True"}]},
                 )
@@ -345,3 +345,4 @@ def run_alignment(
         blastx_join("chunks", result_path, aligner_args, *queries)
     else:
         minimap2_merge("chunks", result_path, aligner_args, *queries)
+
