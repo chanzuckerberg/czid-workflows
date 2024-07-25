@@ -27,7 +27,6 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-MAX_CHUNKS_IN_FLIGHT = 30  # TODO: remove this constant, currently does nothing since we have at most 30 index chunks
 
 # mitigation for TooManyRequestExceptions
 config = Config(
@@ -322,7 +321,7 @@ def run_alignment(
         ]
         for chunk_id, db_chunk in enumerate(_db_chunks(db_bucket, db_prefix))
     )
-    with Pool(MAX_CHUNKS_IN_FLIGHT) as p:
+    with Pool(len(chunks)) as p:
         p.starmap(_run_chunk, chunks)
     run(["s3parcp", "--recursive", chunk_dir, "chunks"], check=True)
     if os.path.exists(os.path.join("chunks", "cache")):
