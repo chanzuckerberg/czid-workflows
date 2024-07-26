@@ -321,7 +321,7 @@ def run_alignment(
         ]
         for chunk_id, db_chunk in enumerate(_db_chunks(db_bucket, db_prefix))
     )
-    with Pool(len(chunks)) as p:
+    with Pool(len(list(chunks))) as p:
         p.starmap(_run_chunk, chunks)
     run(["s3parcp", "--recursive", chunk_dir, "chunks"], check=True)
     if os.path.exists(os.path.join("chunks", "cache")):
