@@ -297,10 +297,12 @@ def _db_chunks(bucket: str, prefix):
         for obj in page["Contents"]:
             yield obj["Key"]
 
+
 def count_generator(gen):
     gen, gen_copy = tee(gen)
     generator_length = sum(1 for _ in gen_copy)
     return generator_length, gen
+
 
 def run_alignment(
     input_dir: str,
