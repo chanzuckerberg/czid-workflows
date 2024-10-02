@@ -1280,7 +1280,9 @@ workflow czid_long_read_mngs {
         String library_type = "RNA"
         String guppy_basecaller_setting = "hac" # fast, hac, super
 
-        Int subsample_depth = 4000000 # should be 4x the number of reads desired
+        # The subsample_depth used to be 4000000 because to get 1 million reads we need to get 
+        # 4 * 1000000 lines. But since we switched to using seqtk, we only need to provide the total number of reads.
+        Int subsample_depth = 1000000 
 
         File minimap_host_db
         File minimap_human_db
