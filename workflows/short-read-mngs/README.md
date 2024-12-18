@@ -91,19 +91,29 @@ Where `fastqs_0` and `fastqs_1` are paired-end fastq files. For single-end reads
 
 The `.yml` file contains default databases for host filtering and alignment as well as supplemental helper files. You can change the values in these files to suit your analysis. 
 
-#### Files and Databases
-In the local_test.yml file and within the `wdl` files, there are references to some default files and databases. A description of some of these files is below:  
+#### Files and NCBI Indexes
+In the local_test.yml file and within the `wdl` files, there are references to some default files and databases. 
+
+For host read filtering, two versions of the human genomes are available: [GRCh38 or HG38](https://www.ncbi.nlm.nih.gov/datasets/genome/GCF_000001405.26/) and the latest assembly from the Telomere-to-Telomore (T2T) Consortium completed in 2022 [T2T-CHM13v2.0](https://www.ncbi.nlm.nih.gov/datasets/genome/GCF_009914755.1/). 
+
+GRCh38 | T2T-CHM13
+-------|----------
+s3://public-test-bucket-idseq/host_filter/human/2022/bowtie2_index_tar/GRCh38_ERCC.bowtie2.tar | s3://czid-public-references/host_filter/human_telomere/2023-07-05/host-genome-generation-1/human_telomere.bowtie2.tar
+s3://public-test-bucket-idseq/host_filter/human/2022/hisat2_index_tar/GRCh38_ERCC.hisat2.tar | s3://czid-public-references/host_filter/human_telomere/2023-07-05/host-genome-generation-1/human_telomere.hisat2.tar
+s3://public-test-bucket-idseq/host_filter/human/2022/kallisto_idx/GRCh38_ERCC.kallisto.idx | s3://czid-public-references/host_filter/human_telomere/2023-07-05/host-genome-generation-1/human_telomere.kallisto.idx
+
+<br>
+
+We generate our databases regularly from NCBI. The files are available at `s3://czid-public-references/ncbi-indexes-prod/{date}/index-generation-2/`. The `{date}` used on the web application is either `2021-01-22` or `2024-02-06`.
 
 Filename | Description
 ---------|------------
-s3://czid-public-references/host_filter/human/2018-02-15-utc-1518652800-unixtime__2018-02-15-utc-1518652800-unixtime/human_STAR_genome.tar | The database used to filter human reads using STAR. Other host genomes can be found at s3://czid-public-references/host_filter/
-s3://czid-public-references/ncbi-indexes-prod/2021-01-22/index-generation-2/nt | The NT database downloaded from NCBI
-s3://czid-public-references/ncbi-indexes-prod/2021-01-22/index-generation-2/nr | The NR database downloaded from NCBI
-s3://czid-public-references/ncbi-indexes-prod/2021-01-22/index-generation-2/accession2taxid.marisa | A mapping from accession to tax id generated from the NCBI databases using the `marisa-trie` package
-s3://czid-public-references/ncbi-indexes-prod/2021-01-22/index-generation-2/nt_loc.marisa | A mapping from accession to the location of the accession in NT. Generated using the `marisa-trie` package
-s3://czid-public-references/ncbi-indexes-prod/2021-01-22/index-generation-2/nr_loc.marisa | A mapping from accession to the location of the accession in NR. Generated using the `marisa-trie` package
-s3://czid-public-references/ncbi-indexes-prod/2021-01-22/index-generation-2/nt_info.marisa | A mapping from accession to the name and length of the entry generated using the `marisa-trie` package
+s3://czid-public-references/ncbi-indexes-prod/{date}/index-generation-2/nt | The NT database downloaded from NCBI
+s3://czid-public-references/ncbi-indexes-prod/{date}/index-generation-2/nr | The NR database downloaded from NCBI
+s3://czid-public-references/ncbi-indexes-prod/{date}/index-generation-2/accession2taxid.marisa | A mapping from accession to tax id generated from the NCBI databases using the `marisa-trie` package
+s3://czid-public-references/ncbi-indexes-prod/{date}/index-generation-2/nt_loc.marisa | A mapping from accession to the location of the accession in NT. Generated using the `marisa-trie` package
+s3://czid-public-references/ncbi-indexes-prod/{date}/index-generation-2/nr_loc.marisa | A mapping from accession to the location of the accession in NR. Generated using the `marisa-trie` package
+s3://czid-public-references/ncbi-indexes-prod/{date}/index-generation-2/nt_info.marisa | A mapping from accession to the name and length of the entry generated using the `marisa-trie` package
 
-#### NCBI Indexes
-We generate our databases regularly from NCBI. The files are available at `s3://czid-public-references/ncbi-indexes-prod/{date}/index-generation-2/` 
+
 
