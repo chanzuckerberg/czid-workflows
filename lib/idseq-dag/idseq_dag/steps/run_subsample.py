@@ -14,7 +14,7 @@ class PipelineStepRunSubsample(PipelineCountingStep):
 
     For samples with a high fraction of non-host reads (ie stool samples), the .fasta outputs
     following bowtie alignment may contain large numbers of sequences.
-    GSNAP alignment to NT and NR databases is a resource-intensive step.
+    Alignment to NT and NR databases is a resource-intensive step.
     To reduce computational time, the reads are randomly sub-sampled to
     1 million total fragments (1 million single-end reads or 2 million paired-end reads).
     """

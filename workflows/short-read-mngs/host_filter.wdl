@@ -315,7 +315,7 @@ task ercc_bowtie2_filter {
       `bowtie2 ~{bowtie2_options}` using a precomputed index, then uses
       [samtools](http://www.htslib.org/) to keep reads *not* mapping to the ercc genome.
 
-      Bowtie2 is run on the fastp-filtered FASTQ(s):
+      Bowtie2 is run on validated FASTQ files:
 
       ```
       ~{bowtie2_invocation}
@@ -393,7 +393,7 @@ task fastp_qc {
       5. Complexity filter ([custom feature](https://github.com/mlin/fastp/tree/mlin/sdust)
          using the [SDUST algorithm](https://pubmed.ncbi.nlm.nih.gov/16796549/))
 
-      fastp is run on the FASTQ file(s) from input validation:
+      fastp is run on ERCC-filtered FASTQ files:
       ```
       ~{fastp_invocation}
       ```
@@ -504,10 +504,8 @@ task kallisto {
       **kallisto RNA quantification**
 
       Quantifies host transcripts using [kallisto](https://pachterlab.github.io/kallisto/about).
-      The host transcript sequences are sourced from GENCODE, along with
-      [ERCC control sequences](https://www.nist.gov/programs-projects/external-rna-controls-consortium).
-      Not all CZ ID host species have transcripts indexed; for those without, kallisto is run using ERCC
-      sequences only.
+      The host transcript sequences are sourced from GENCODE. 
+      Not all CZ ID host species have transcripts indexed, so transcripts are not calculated for all hosts. 
 
       kallisto is run on the fastp-filtered FASTQ(s):
 
