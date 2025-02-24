@@ -16,7 +16,7 @@ Go to the czid-workflows repo
 ### Boot and mount the colima VM
 ``` 
 # uses 4GB of memory & 4 CPUs, change this to suit your needs 
-colima start --mount $PWD:/work:w -m 4 -c 4
+colima start --mount $PWD:/work:w -m 4 -c 4 -a x86_64
 
 ```
 
