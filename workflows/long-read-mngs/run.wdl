@@ -268,7 +268,9 @@ task RunSubsampling {
 
     command <<<
         set -euxo pipefail
-        head -"~{subsample_depth}" "~{input_fastq}" > sample.subsampled.fastq
+
+        # set seed to 42 for reproducibility
+        seqtk sample -s42 "~{input_fastq}" "~{subsample_depth}" > sample.subsampled.fastq
 
         # We should always have reads after subsampling, but adding for consistency with other steps
         filter_count sample.subsampled.fastq subsampled "No reads remaining after subsampling"
@@ -554,6 +556,7 @@ task RunNTAlignment {
         File? local_minimap2_index
         String prefix
         # only required for remote alignment
+        String minimap2_wdl_version
         String? s3_wd_uri
         String docker_image_id
     }
@@ -573,6 +576,7 @@ task RunNTAlignment {
             result_path="gsnap.paf",
             aligner="minimap2",
             aligner_args="~{minimap2_args}",
+            aligner_wdl_version="~{minimap2_wdl_version}",
             queries=["~{all_sequences_to_align}"],
         )
         CODE
@@ -599,6 +603,7 @@ task RunNRAlignment {
         Boolean run_locally = false
         File? local_diamond_index
         # only required for remote alignment
+        String diamond_wdl_version
         String? s3_wd_uri
         String docker_image_id
     }
@@ -612,7 +617,7 @@ task RunNRAlignment {
 
         if [[ "~{run_locally}" == true ]]; then
           diamond makedb --in "~{local_diamond_index}" -d reference
-          diamond blastx -d reference -q "~{assembled_reads_fa}" -o "diamond.m8" "--~{diamond_args}"
+          diamond blastx -d reference -q "~{assembled_reads_fa}" -o "diamond.m8" ~{diamond_args}
         else
           python3 <<CODE
         import os
@@ -624,6 +629,7 @@ task RunNRAlignment {
             result_path="diamond.m8",
             aligner="diamond",
             aligner_args="~{diamond_args}",
+            aligner_wdl_version="~{diamond_wdl_version}",
             queries=["~{assembled_reads_fa}"],
         )
         CODE
@@ -1274,7 +1280,9 @@ workflow czid_long_read_mngs {
         String library_type = "RNA"
         String guppy_basecaller_setting = "hac" # fast, hac, super
 
-        Int subsample_depth = 4000000 # should be 4x the number of reads desired
+        # The subsample_depth used to be 4000000 because to get 1 million reads we need to get 
+        # 4 * 1000000 lines. But since we switched to using seqtk, we only need to provide the total number of reads.
+        Int subsample_depth = 1000000 
 
         File minimap_host_db
         File minimap_human_db
@@ -1297,7 +1305,10 @@ workflow czid_long_read_mngs {
         String minimap2_prefix = "gsnap"
 
         String? diamond_db
-        String diamond_args = "long-reads"
+        String diamond_args = "--long-reads --sensitive"
+
+        String diamond_wdl_version = "v1.1.0"
+        String minimap2_wdl_version = "v1.0.0"
 
         Boolean use_deuterostome_filter = true
         Boolean use_taxon_whitelist = false
@@ -1396,6 +1407,7 @@ workflow czid_long_read_mngs {
             run_locally = defined(minimap2_local_db_path),
             local_minimap2_index = minimap2_local_db_path,
             prefix= minimap2_prefix,
+            minimap2_wdl_version=minimap2_wdl_version,
             docker_image_id = docker_image_id,
     }
 
@@ -1406,6 +1418,7 @@ workflow czid_long_read_mngs {
             diamond_args=diamond_args,
             run_locally=defined(diamond_local_db_path),
             local_diamond_index=diamond_local_db_path,
+            diamond_wdl_version=diamond_wdl_version,
             s3_wd_uri=s3_wd_uri,
             docker_image_id=docker_image_id,
     }

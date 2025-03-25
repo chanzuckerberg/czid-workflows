@@ -16,6 +16,13 @@ In addition, if a modification is made that may affect the results of a pipeline
 
 ### Unreleased
 
+### short-read-mngs-v8.3.2
+- Parameterize WDL version for Diamond workflow
+- Remove SRST2 task
+- Additional code to prioritize hits that are more specific in taxon-level
+- Fixed an issue where certain network requests failed due to an interaction between Docker and the Python requests module.
+### short-read-mngs-v8.3.1
+- Add more logging output for SPAdes
 ### short-read-mngs-v8.3.0
 - Convert Kallisto gene count to transcript count
 ### short-read-mngs-v8.2.7

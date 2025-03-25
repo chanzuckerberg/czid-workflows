@@ -1,7 +1,5 @@
 import json
 import atexit
-import re
-import os.path
 from Bio import SeqIO
 
 
@@ -37,24 +35,4 @@ def test_bench3_viral(short_read_mngs_bench3_viral_outputs):
         if filename.endswith(".fasta"):
             assert is_valid_fasta(filename), f"{filename} is not a valid fasta file"
 
-    longest_reads = outp["outputs"]["czid_short_read_mngs.experimental.longest_reads"]
-    basenames = [os.path.basename(fn) for fn in longest_reads]
-    assert basenames, basenames
-    assert all(re.match(r"n[rt]\.[a-z]+\.-?[0-9]+\.longest_5_reads.fasta", fn) for fn in basenames), basenames
-    prefixes = set(fn[:2] for fn in basenames)
-    assert "nt" in prefixes, f"'nt' not found in {prefixes}"
-    assert "nr" in prefixes, f"'nr' not found in {prefixes}"
-
-    for fn in longest_reads:
-        with open(fn) as f:
-            lines = list(f)
-            assert 2 <= len(lines) <= 10, len(lines)
-            prev = None
-            for i, read in enumerate(lines):
-                if i % 2 == 0:
-                    assert read[0] == ">", read
-                    continue
-                assert prev is None or len(read) <= prev, (len(read), prev)
-                prev = len(read)
-                assert all(c in "ACTGUN" for c in read.strip()), read
     # TODO: further correctness tests

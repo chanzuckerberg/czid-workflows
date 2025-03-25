@@ -1,3 +1,4 @@
+import hashlib
 import json
 import logging
 import os
@@ -9,8 +10,10 @@ import time
 from os import listdir
 from multiprocessing import Pool
 from subprocess import run
-from typing import Dict, List
+from typing import Dict, List, Optional
 from urllib.parse import urlparse
+
+from itertools import tee
 
 from idseq_utils.diamond_scatter import blastx_join
 from idseq_utils.minimap2_scatter import minimap2_merge
@@ -19,13 +22,13 @@ import boto3
 from botocore.exceptions import ClientError
 from botocore.config import Config
 
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
+)
 log = logging.getLogger(__name__)
 
-MAX_CHUNKS_IN_FLIGHT = 30  # TODO: remove this constant, currently does nothing since we have at most 30 index chunks
-ALIGNMENT_WDL_VERSIONS: Dict[str, str] = {
-    "diamond": "v1.0.0",
-    "minimap2": "v1.0.0",
-}
 
 # mitigation for TooManyRequestExceptions
 config = Config(
@@ -37,7 +40,9 @@ config = Config(
 
 
 _batch_client = boto3.client("batch", config=config)
-_s3_client = boto3.client("s3")
+# the retries are less necessary for S3 because rate limiting is more generous but we have hit the limit
+#   and it is costly for this job to be re-run
+_s3_client = boto3.client("s3", config=config)
 
 try:
     account_id = boto3.client("sts").get_caller_identity()["Account"]
@@ -85,25 +90,62 @@ def _get_job_status(job_id, use_batch_api=False):
             raise e
 
 
+class BatchJobCache:
+    """
+    BatchJobCache saves job IDs so the coordinator can re-attach to running batch jobs when the coordinator fails
+
+    The output should always be the same if the inputs are the same, however we also incorporate the batch_args
+    into the cache because a retry on spot vs on demand will result in a different batch queue.
+    """
+    def __init__(self, bucket: str, prefix: str, inputs: Dict[str, str]):
+        self.bucket = bucket
+        self.prefix = prefix
+        self.inputs = inputs
+
+    def _key(self, batch_args: Dict) -> str:
+        hash = hashlib.sha256()
+        cache_dict = {"inputs": self.inputs, "batch_args": batch_args}
+        hash.update(json.dumps(cache_dict, sort_keys=True).encode())
+        return os.path.join(self.prefix, hash.hexdigest())
+
+    def get(self, batch_args: Dict) -> Optional[str]:
+        try:
+            resp = _s3_client.get_object(Bucket=self.bucket, Key=self._key(batch_args))
+            return resp["Body"].read().decode()
+        except ClientError as e:
+            if e.response["Error"]["Code"] == "NoSuchKey":
+                return None
+            else:
+                raise e
+
+    def put(self, batch_args: Dict, job_id: str):
+        _s3_client.put_object(
+            Bucket=self.bucket,
+            Key=self._key(batch_args),
+            Body=job_id.encode(),
+            Tagging="AlignmentCoordination=True",
+        )
+
+
 def _run_batch_job(
     job_name: str,
     job_queue: str,
     job_definition: str,
     environment: Dict[str, str],
     retries: int,
+    cache: BatchJobCache,
 ):
-    response = _batch_client.submit_job(
-        jobName=job_name,
-        jobQueue=job_queue,
-        jobDefinition=job_definition,
-        containerOverrides={
+    submit_args = {
+        "jobName": job_name,
+        "jobQueue": job_queue,
+        "jobDefinition": job_definition,
+        "containerOverrides": {
             "environment": [{"name": k, "value": v} for k, v in environment.items()],
             "memory": 130816,
             "vcpus": 24,
         },
-        retryStrategy={"attempts": retries},
-    )
-    job_id = response["jobId"]
+        "retryStrategy": {"attempts": retries},
+    }
 
     def _log_status(status: str):
         level = logging.INFO if status != "FAILED" else logging.ERROR
@@ -121,7 +163,14 @@ def _run_batch_job(
             ),
         )
 
-    _log_status("SUBMITTED")
+    job_id = cache.get(submit_args)
+    if job_id:
+        log.info(f"reattach to batch job: {job_id}")
+    else:
+        response = _batch_client.submit_job(**submit_args)
+        job_id = response["jobId"]
+        cache.put(submit_args, job_id)
+        _log_status("SUBMITTED")
 
     delay = 60 + random.randint(
         -60 // 2, 60 // 2
@@ -158,6 +207,7 @@ def _run_chunk(
     chunk_dir: str,
     aligner: str,
     aligner_args: str,
+    aligner_wdl_version: str,
     queries: List[str],
     chunk_id: int,
     db_chunk: str,
@@ -185,22 +235,29 @@ def _run_chunk(
         "query_0": query_uris[0],
         "extra_args": aligner_args,
         "db_chunk": db_chunk,
-        "docker_image_id": f"{account_id}.dkr.ecr.us-west-2.amazonaws.com/{aligner}:{ALIGNMENT_WDL_VERSIONS[aligner]}",
+        "docker_image_id": f"{account_id}.dkr.ecr.us-west-2.amazonaws.com/{aligner}:{aligner_wdl_version}",
     }
 
     if len(query_uris) > 1:
         inputs["query_1"] = query_uris[1]
 
     wdl_input_uri = os.path.join(chunk_dir, f"{chunk_id}-input.json")
-    wdl_output_uri = os.path.join(chunk_dir, f"{chunk_id}-output.json")
-    wdl_workflow_uri = f"s3://idseq-workflows/{aligner}-{ALIGNMENT_WDL_VERSIONS[aligner]}/{aligner}.wdl"
-
     input_bucket, input_key = _bucket_and_key(wdl_input_uri)
+
+    wdl_output_uri = os.path.join(chunk_dir, f"{chunk_id}-output.json")
+
+    wdl_workflow_uri = f"s3://idseq-workflows/{aligner}-{aligner_wdl_version}/{aligner}.wdl"
+
+    cache_prefix_uri = os.path.join(chunk_dir, "batch_job_cache/")
+    cache_bucket, cache_prefix = _bucket_and_key(cache_prefix_uri)
+    cache = BatchJobCache(cache_bucket, cache_prefix, inputs)
+
     _s3_client.put_object(
         Bucket=input_bucket,
         Key=input_key,
         Body=json.dumps(inputs).encode(),
         ContentType="application/json",
+        Tagging="AlignmentCoordination=True",
     )
 
     environment = {
@@ -218,6 +275,7 @@ def _run_chunk(
             job_definition=job_definition,
             environment=environment,
             retries=2,
+            cache=cache,
         )
     except BatchJobFailed:
         _run_batch_job(
@@ -226,6 +284,7 @@ def _run_chunk(
             job_definition=job_definition,
             environment=environment,
             retries=1,
+            cache=cache,
         )
 
 
@@ -239,36 +298,57 @@ def _db_chunks(bucket: str, prefix):
             yield obj["Key"]
 
 
+def count_generator(gen):
+    gen, gen_copy = tee(gen)
+    generator_length = sum(1 for _ in gen_copy)
+    return generator_length, gen
+
+
 def run_alignment(
     input_dir: str,
     db_path: str,
     result_path: str,
     aligner: str,
     aligner_args: str,
+    aligner_wdl_version: str,
     queries: List[str],
 ):
-    bucket, prefix = _bucket_and_key(db_path)
+    db_bucket, db_prefix = _bucket_and_key(db_path)
     chunk_dir = os.path.join(input_dir, f"{aligner}-chunks")
+    chunk_bucket, chunk_prefix = _bucket_and_key(chunk_dir)
     chunks = (
         [
             input_dir,
             chunk_dir,
             aligner,
             aligner_args,
+            aligner_wdl_version,
             queries,
             chunk_id,
-            f"s3://{bucket}/{db_chunk}",
+            f"s3://{db_bucket}/{db_chunk}",
         ]
-        for chunk_id, db_chunk in enumerate(_db_chunks(bucket, prefix))
+        for chunk_id, db_chunk in enumerate(_db_chunks(db_bucket, db_prefix))
     )
-    with Pool(MAX_CHUNKS_IN_FLIGHT) as p:
+    chunk_length, chunks = count_generator(chunks)
+    with Pool(chunk_length) as p:
         p.starmap(_run_chunk, chunks)
     run(["s3parcp", "--recursive", chunk_dir, "chunks"], check=True)
     if os.path.exists(os.path.join("chunks", "cache")):
         shutil.rmtree(os.path.join("chunks", "cache"))
+    if os.path.exists(os.path.join("chunks", "batch_job_cache")):
+        shutil.rmtree(os.path.join("chunks", "batch_job_cache"))
     for fn in listdir("chunks"):
         if fn.endswith("json"):
             os.remove(os.path.join("chunks", fn))
+            try:
+                _s3_client.put_object_tagging(
+                    Bucket=chunk_bucket,
+                    Key=os.path.join(chunk_prefix, fn),
+                    Tagging={"TagSet": [{"Key": "AlignmentCoordination", "Value": "True"}]},
+                )
+            except ClientError as e:
+                log.error(f"failed to tag 's3://{chunk_bucket}/{os.path.join(chunk_prefix, fn)}'")
+                raise e
     if aligner == "diamond":
         blastx_join("chunks", result_path, aligner_args, *queries)
     else:

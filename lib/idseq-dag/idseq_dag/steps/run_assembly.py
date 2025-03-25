@@ -221,6 +221,23 @@ class PipelineStepRunAssembly(PipelineStep):
                 }
             )
         )
+
+        # sort bowtie2 output file
+        # samtools sort -n -O sam -o bowtie2.sam bowtie2.sam
+        samtools_sort_params = [
+            "sort",
+            "-n",
+            "-O", "sam",
+            "-o", output_bowtie_sam,
+            output_bowtie_sam
+        ]
+        command.execute(
+            command_patterns.SingleCommand(
+                cmd="samtools",
+                args=samtools_sort_params
+            )
+        )
+
         contig_stats, _ = generate_info_from_sam(output_bowtie_sam, read2contig, duplicate_cluster_sizes_path=duplicate_cluster_sizes_path)
         with open(output_contig_stats, 'w') as ocf:
             json.dump(contig_stats, ocf)

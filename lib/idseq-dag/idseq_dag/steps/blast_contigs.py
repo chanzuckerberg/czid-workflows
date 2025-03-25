@@ -346,7 +346,7 @@ class PipelineStepBlastContigs(PipelineStep):  # pylint: disable=abstract-method
                     "-num_alignments",
                     5,
                     "-num_threads",
-                    16
+                    32  # blastx times out occasionally so bumping to 32
                 ]
             )
         )

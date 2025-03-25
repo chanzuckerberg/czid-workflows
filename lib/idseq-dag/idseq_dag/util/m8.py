@@ -431,7 +431,7 @@ def generate_taxon_count_json_from_m8(
                 agg_bucket["base_count"],
             }
             if agg_bucket.get('source_count_type'):
-                taxon_counts_row['source_count_type'] = list(agg_bucket['source_count_type'])
+                taxon_counts_row['source_count_type'] = sorted(list(agg_bucket['source_count_type']))
 
             taxon_counts_attributes.append(taxon_counts_row)
         output_dict = {
