@@ -50,6 +50,34 @@ jobs:
       - id: list_dirs
         run: echo "matrix=$(./scripts/diff-workflows.sh |jq -cnR '[inputs|select(length>0)]')" >> $GITHUB_OUTPUT
 
+  check-changelog:
+    runs-on: ubuntu-22.04
+    needs: list-workflow-dirs
+    if: ${{ needs['list-workflow-dirs'].outputs.matrix != '[]' && needs['list-workflow-dirs'].outputs.matrix != '' }}
+    strategy:
+      matrix:
+        workflow_dir: ${{fromJson(needs['list-workflow-dirs'].outputs.matrix)}}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Check for Changelog Update
+        run: |
+          if git diff --name-only origin/main...HEAD | grep 'CHANGELOG.md' > /dev/null; then
+            echo "Changelog updated."
+          else
+            echo "::error::Changelog not updated!"
+            exit 1
+          fi
+      - name: Check for Changelog Format
+        run: |
+          # Count the number of occurrences of the workflow-unreleased string in the changelog
+          COUNT=$(grep -c "^### ${{ matrix.workflow_dir }}-unreleased" CHANGELOG.md)
+          if [ "$COUNT" -eq "1" ]; then
+            echo "Workflow unreleased version only appears once in changelog."
+          else
+            echo "::error::Workflow has multiple unreleased versions in changelog"
+            exit 1
+          fi
+
   wdl-ci:
     runs-on: ubuntu-22.04
     needs: list-workflow-dirs
