@@ -888,7 +888,7 @@ task Quast {
         export BAM=$(basename "~{bam}")
         cp "~{assembly}" .
         export ASSEMBLY=$(basename "~{assembly}")
-        if [ $(seqkit grep -v -r -p '^[ACGTNacgtn]+$' ~{ref_fasta} | wc -l) -gt 0 ]; then
+        if [ $(seqkit grep -v -s -i -r -p '^[ACGTN]+$' ~{ref_fasta} | wc -l) -gt 0 ]; then
          raise_error InvalidInputFileError "The reference fasta contains invalid bases (not in ACGTN)"
        fi
 
