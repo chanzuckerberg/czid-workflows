@@ -64,7 +64,7 @@ workflow czid_short_read_mngs {
         taxid_fasta_in_annotated_merged_fa = non_host_alignment.annotated_out_annotated_merged_fa,
         taxid_fasta_in_gsnap_hitsummary_tab = non_host_alignment.gsnap_out_gsnap_hitsummary_tab,
         taxid_fasta_in_rapsearch2_hitsummary_tab = non_host_alignment.rapsearch2_out_rapsearch2_hitsummary_tab,
-        gsnap_m8_gsnap_deduped_m8 = non_host_alignment.gsnap_out_gsnap_m8,
+        gsnap_m8_gsnap_deduped_m8 = non_host_alignment.gsnap_out_gsnap_deduped_m8,
         refined_gsnap_in_gsnap_reassigned_m8 = postprocess.refined_gsnap_out_assembly_gsnap_reassigned_m8,
         refined_gsnap_in_gsnap_hitsummary2_tab = postprocess.refined_gsnap_out_assembly_gsnap_hitsummary2_tab,
         refined_gsnap_in_gsnap_blast_top_m8 = postprocess.refined_gsnap_out_assembly_gsnap_blast_top_m8,
