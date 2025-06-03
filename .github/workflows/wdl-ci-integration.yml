@@ -21,7 +21,7 @@ jobs:
     outputs:
       matrix: ${{steps.list_dirs.outputs.matrix}}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 2
       - id: list_dirs
@@ -36,7 +36,7 @@ jobs:
       matrix:
         workflow_dir: ${{fromJson(needs['list-workflow-dirs'].outputs.matrix)}}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: docker build + push to ghcr.io
         run: |
           TAG=$(git describe --long --tags --always --dirty)
