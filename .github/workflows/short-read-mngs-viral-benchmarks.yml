@@ -21,7 +21,7 @@ jobs:
     outputs:
       has_diff: ${{steps.check_for_diff.outputs.has_diff}}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 2
       - id: check_for_diff
@@ -37,7 +37,7 @@ jobs:
         sample: [idseq_bench_3, idseq_bench_5]
         settings: [default]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: docker build
         run: |
             IMAGE_NAME=czid-short-read-mngs-public
@@ -83,7 +83,7 @@ jobs:
       matrix:
         settings: [default]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: fetch idseq_bench_3
         uses: actions/download-artifact@v4.1.7
         with:
