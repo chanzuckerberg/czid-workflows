@@ -87,7 +87,6 @@ RUN /bin/bash -c "set -e; mkdir -p /usr/local/lib/site_perl; \
   make install; \
   popd; \
   perl Makefile.PL; \
-  make -j8; \
   make install; \
   popd; \
   rm -rf Bio-Easel; \
