@@ -146,7 +146,7 @@ RUN apt-get install -y \
 #  we are also using a different version for host filtering so we append -208-10-26 to each binary.
 WORKDIR /gmap-gsnap-2018-10-26
 RUN curl -L  https://idseq-gsnap-prerelease.s3-us-west-2.amazonaws.com/gmap-2018-10-26.tar.gz | tar xz -C /gmap-gsnap-2018-10-26 --strip-components 1
-RUN ./configure --prefix=/gmap-gsnap-2018-10-26 --with-simd-level=avx2 && make -j 8 && make install
+RUN CFLAGS="-O3 -mavx2 -mssse3" ./configure --prefix=/gmap-gsnap-2018-10-26 --with-simd-level=avx2 && make -j 8 && make install
 RUN ls bin | xargs -I % mv bin/% bin/%-2018-10-26
 ENV PATH="${PATH}:/gmap-gsnap-2018-10-26/bin/"
 
