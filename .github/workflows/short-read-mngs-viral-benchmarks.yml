@@ -21,7 +21,7 @@ jobs:
     outputs:
       has_diff: ${{steps.check_for_diff.outputs.has_diff}}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 2
       - id: check_for_diff
@@ -37,7 +37,7 @@ jobs:
         sample: [idseq_bench_3, idseq_bench_5]
         settings: [default]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: docker build
         run: |
             IMAGE_NAME=czid-short-read-mngs-public
@@ -71,7 +71,7 @@ jobs:
           taxadb create -i taxadb --dbname taxadb.sqlite || true  # exits nonzero w/o accessions
           workflows/short-read-mngs/auto_benchmark/harvest.py ${{ matrix.sample }}=testrun/${{ matrix.sample }} \
             --taxadb taxadb.sqlite > ${{ matrix.sample }}.${{ matrix.settings }}_viral.json
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: ${{ matrix.sample }}.${{ matrix.settings }}_viral.json
           path: ${{ matrix.sample }}.${{ matrix.settings }}_viral.json
@@ -83,7 +83,7 @@ jobs:
       matrix:
         settings: [default]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: fetch idseq_bench_3
         uses: actions/download-artifact@v4.1.7
         with:
@@ -120,11 +120,11 @@ jobs:
           cp -r workflows/short-read-mngs/auto_benchmark/ref_libs/${{ matrix.settings }}_viral ref_libs/
       - name: test harvest2.py
         run: workflows/short-read-mngs/auto_benchmark/harvest2.py *_viral.json --version "$(git describe --long --tags --always --dirty)" --index-version 2021-01-22 --wall 999
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: short-read-mngs-benchmarks.${{ matrix.settings }}_viral.html
           path: short-read-mngs-benchmarks.${{ matrix.settings }}_viral.html
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: short-read-mngs-benchmarks.${{ matrix.settings }}_viral.ipynb
           path: |
