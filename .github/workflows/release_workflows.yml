@@ -9,7 +9,7 @@ on:
         description: major, minor, or patch
         default: patch
       release_notes:
-        description: A text message summarizing the changes in this release
+        description: A text message summarizing the changes in this release, only used for branch releases
 
 env:
   GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
