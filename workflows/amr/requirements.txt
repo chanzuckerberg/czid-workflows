@@ -9,6 +9,6 @@ pyahocorasick==1.4.0
 pyfaidx==0.7.1
 pysam==0.16.0.1
 pytest==7.1.2
-requests==2.31.0
+requests==2.32.4
 seaborn==0.11.2
 dask==2023.5.0
